@@ -1,6 +1,5 @@
 /** \class HLTDisplacedEgammaFilter
  *
- * $Id: HLTDisplacedEgammaFilter.cc,v 1.9 2012/04/11 08:54:12 gruen Exp $
  *
  *  \author Monica Vazquez Acosta (CERN)
  *
@@ -10,29 +9,23 @@
 
 #include "DataFormats/Common/interface/Handle.h"
 
-#include "DataFormats/HLTReco/interface/TriggerFilterObjectWithRefs.h"
-
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 
 #include "DataFormats/RecoCandidate/interface/RecoEcalCandidate.h"
-
-#include "DataFormats/EcalRecHit/interface/EcalRecHitCollections.h"
 #include "RecoEcal/EgammaCoreTools/interface/EcalClusterTools.h"
 #include "RecoTracker/TrackProducer/plugins/TrackProducer.h"
-#include "DataFormats/TrackReco/interface/Track.h"
-#include "DataFormats/TrackReco/interface/TrackFwd.h"
 #include "DataFormats/Math/interface/LorentzVector.h"
 
 //
 // constructors and destructor
 //
-HLTDisplacedEgammaFilter::HLTDisplacedEgammaFilter(const edm::ParameterSet& iConfig) : HLTFilter(iConfig) 
+HLTDisplacedEgammaFilter::HLTDisplacedEgammaFilter(const edm::ParameterSet& iConfig) : HLTFilter(iConfig)
 {
   inputTag_    = iConfig.getParameter< edm::InputTag > ("inputTag");
   ncandcut_    = iConfig.getParameter<int> ("ncandcut");
   relaxed_     = iConfig.getParameter<bool> ("relaxed") ;
-  L1IsoCollTag_= iConfig.getParameter< edm::InputTag > ("L1IsoCand"); 
-  L1NonIsoCollTag_= iConfig.getParameter< edm::InputTag > ("L1NonIsoCand"); 
+  L1IsoCollTag_= iConfig.getParameter< edm::InputTag > ("L1IsoCand");
+  L1NonIsoCollTag_= iConfig.getParameter< edm::InputTag > ("L1NonIsoCand");
 
   inputTrk   = iConfig.getParameter< edm::InputTag > ("inputTrack");
   trkPtCut   = iConfig.getParameter<double> ("trackPtCut");
@@ -41,7 +34,7 @@ HLTDisplacedEgammaFilter::HLTDisplacedEgammaFilter(const edm::ParameterSet& iCon
 
   rechitsEB  = iConfig.getParameter< edm::InputTag > ("RecHitsEB");
   rechitsEE  = iConfig.getParameter< edm::InputTag > ("RecHitsEE");
-  
+
   EBOnly       = iConfig.getParameter<bool> ("EBOnly") ;
   sMin_min     = iConfig.getParameter<double> ("sMin_min");
   sMin_max     = iConfig.getParameter<double> ("sMin_max");
@@ -50,20 +43,24 @@ HLTDisplacedEgammaFilter::HLTDisplacedEgammaFilter(const edm::ParameterSet& iCon
   seedTimeMin  = iConfig.getParameter<double> ("seedTimeMin");
   seedTimeMax  = iConfig.getParameter<double> ("seedTimeMax");
 
+  inputToken_ = consumes<trigger::TriggerFilterObjectWithRefs>(inputTag_);
+  rechitsEBToken_ = consumes<EcalRecHitCollection>(rechitsEB);
+  rechitsEEToken_ = consumes<EcalRecHitCollection>(rechitsEE);
+  inputTrkToken_ = consumes<reco::TrackCollection>(inputTrk);
+
 }
 
 HLTDisplacedEgammaFilter::~HLTDisplacedEgammaFilter(){}
 
-
-// ------------ method called to produce the data  ------------
-void HLTDisplacedEgammaFilter::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+void
+HLTDisplacedEgammaFilter::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
    edm::ParameterSetDescription desc;
    makeHLTFilterDescription(desc);
    desc.add<edm::InputTag>("inputTag",edm::InputTag("hltEGRegionalL1SingleEG22"));
    desc.add<edm::InputTag>("L1IsoCand",edm::InputTag("hltL1IsoRecoEcalCandidate"));
    desc.add<edm::InputTag>("L1NonIsoCand",edm::InputTag("hltL1NonIsoRecoEcalCandidate"));
-   desc.add<edm::InputTag>("RecHitsEB",edm::InputTag("hltEcalRecHitAll", "EcalRecHitsEB"));
-   desc.add<edm::InputTag>("RecHitsEE",edm::InputTag("hltEcalRecHitAll", "EcalRecHitsEE"));
+   desc.add<edm::InputTag>("RecHitsEB",edm::InputTag("hltEcalRecHit", "EcalRecHitsEB"));
+   desc.add<edm::InputTag>("RecHitsEE",edm::InputTag("hltEcalRecHit", "EcalRecHitsEE"));
    desc.add<edm::InputTag>("inputTrack",edm::InputTag("hltL1SeededEgammaRegionalCTFFinalFitWithMaterial"));
    desc.add<bool>("relaxed",false);
    desc.add<int>("ncandcut",1);
@@ -80,8 +77,10 @@ void HLTDisplacedEgammaFilter::fillDescriptions(edm::ConfigurationDescriptions& 
    descriptions.add("hltDisplacedEgammaFilter",desc);
 }
 
+// ------------ method called to produce the data  ------------
+
 bool
-HLTDisplacedEgammaFilter::hltFilter(edm::Event& iEvent, const edm::EventSetup& iSetup, trigger::TriggerFilterObjectWithRefs & filterproduct)
+HLTDisplacedEgammaFilter::hltFilter(edm::Event& iEvent, const edm::EventSetup& iSetup, trigger::TriggerFilterObjectWithRefs & filterproduct) const
 {
   using namespace trigger;
 
@@ -97,26 +96,27 @@ HLTDisplacedEgammaFilter::hltFilter(edm::Event& iEvent, const edm::EventSetup& i
   // get hold of filtered candidates
   //edm::Handle<reco::HLTFilterObjectWithRefs> recoecalcands;
   edm::Handle<trigger::TriggerFilterObjectWithRefs> PrevFilterOutput;
-  iEvent.getByLabel (inputTag_,PrevFilterOutput);
+  iEvent.getByToken (inputToken_,PrevFilterOutput);
 
   // get hold of collection of objects
   edm::Handle<reco::TrackCollection> tracks;
-  iEvent.getByLabel( inputTrk , tracks);
+  iEvent.getByToken( inputTrkToken_ , tracks);
 
   // get the EcalRecHit
   edm::Handle<EcalRecHitCollection>      rechitsEB_ ;
   edm::Handle<EcalRecHitCollection>      rechitsEE_ ;
-  iEvent.getByLabel( rechitsEB,     rechitsEB_ );
-  iEvent.getByLabel( rechitsEE,     rechitsEE_ );
+  iEvent.getByToken( rechitsEBToken_, rechitsEB_ );
+  iEvent.getByToken( rechitsEEToken_, rechitsEE_ );
 
-  std::vector<edm::Ref<reco::RecoEcalCandidateCollection> > recoecalcands;   
+  std::vector<edm::Ref<reco::RecoEcalCandidateCollection> > recoecalcands;
   PrevFilterOutput->getObjects(TriggerCluster, recoecalcands);
- 
+  if(recoecalcands.empty()) PrevFilterOutput->getObjects(TriggerPhoton, recoecalcands);
+  
   // look at all candidates,  check cuts and add to filter object
   int n(0);
 
   for (unsigned int i=0; i<recoecalcands.size(); i++) {
-    
+
     ref = recoecalcands[i] ;
     if ( EBOnly &&  std::abs( ref->eta() ) >= 1.479  ) continue ;
 
@@ -131,15 +131,15 @@ HLTDisplacedEgammaFilter::hltFilter(edm::Event& iEvent, const edm::EventSetup& i
     if ( sMin < sMin_min || sMin > sMin_max ) continue ;
     if ( sMaj < sMaj_min || sMaj > sMaj_max ) continue ;
 
-    // seed Time 
+    // seed Time
     std::pair<DetId, float> maxRH = EcalClusterTools::getMaximum( *SCseed, rechits );
     DetId seedCrystalId = maxRH.first;
     EcalRecHitCollection::const_iterator seedRH = rechits->find(seedCrystalId);
     float seedTime = (float)seedRH->time();
     if ( seedTime < seedTimeMin || seedTime > seedTimeMax ) continue ;
- 
+
     //Track Veto
-    
+
     int nTrk = 0 ;
     for (reco::TrackCollection::const_iterator it = tracks->begin(); it != tracks->end(); it++ )  {
         if ( it->pt() < trkPtCut ) continue ;
@@ -148,17 +148,17 @@ HLTDisplacedEgammaFilter::hltFilter(edm::Event& iEvent, const edm::EventSetup& i
         if ( dR < trkdRCut )  nTrk++ ;
         if ( nTrk > maxTrkCut ) break ;
     }
-    if ( nTrk > maxTrkCut ) continue ;     
-    
+    if ( nTrk > maxTrkCut ) continue ;
+
 
     n++;
     // std::cout << "Passed eta: " << ref->eta() << std::endl;
     filterproduct.addObject(TriggerCluster, ref);
   }
-  
-  
+
+
   // filter decision
   bool accept(n>=ncandcut_);
-  
+
   return accept;
 }

@@ -40,6 +40,7 @@ const EcalLinearCorrections* EcalLaserDbService::getLinearCorrections () const {
 }
 
 
+
 float EcalLaserDbService::getLaserCorrection (DetId const & xid, edm::Timestamp const & iTime) const {
   
   float correctionFactor = 1.0;
@@ -59,34 +60,25 @@ float EcalLaserDbService::getLaserCorrection (DetId const & xid, edm::Timestamp 
   EcalLinearCorrections::Times linTimes;
 
   if (xid.det()==DetId::Ecal) {
-    //    std::cout << " XID is in Ecal : ";
+
   } else {
-    //    std::cout << " XID is NOT in Ecal : ";
+
     edm::LogError("EcalLaserDbService") << " DetId is NOT in ECAL" << endl;
     return correctionFactor;
   } 
 
-//  int hi = -1;
-//  if (xid.subdetId()==EcalBarrel) {
-//    //    std::cout << "EcalBarrel" << std::endl;
-//    //    std::cout << "--> rawId() = " << xid.rawId() << "   id() = " << EBDetId( xid ).hashedIndex() << std::endl;
-//    hi = EBDetId( xid ).hashedIndex();
-//  } else if (xid.subdetId()==EcalEndcap) {
-//    //    std::cout << "EcalEndcap" << std::endl;
-//    hi = EEDetId( xid ).hashedIndex() + EBDetId::MAX_HASH + 1;
-//
-//  } else {
-//    //    std::cout << "NOT EcalBarrel or EcalEndCap" << std::endl;
-//    edm::LogError("EcalLaserDbService") << " DetId is NOT in ECAL Barrel or Endcap" << endl;
-//    return correctionFactor;
-//  }
 
   int iLM;
+  int xind;
+  bool isBarrel=true;
   if (xid.subdetId()==EcalBarrel) {
     EBDetId ebid( xid.rawId() );
+    xind = ebid.hashedIndex();
     iLM = MEEBGeom::lmr(ebid.ieta(), ebid.iphi());
   } else if (xid.subdetId()==EcalEndcap) {
-    EEDetId eeid( xid.rawId() );
+    isBarrel=false;
+    EEDetId eeid( xid.rawId() );  
+    xind = eeid.hashedIndex();
     // SuperCrystal coordinates
     MEEEGeom::SuperCrysCoord iX = (eeid.ix()-1)/5 + 1;
     MEEEGeom::SuperCrysCoord iY = (eeid.iy()-1)/5 + 1;    
@@ -99,6 +91,8 @@ float EcalLaserDbService::getLaserCorrection (DetId const & xid, edm::Timestamp 
 
   // get alpha, apd/pn ref, apd/pn pairs and timestamps for interpolation
 
+
+#ifdef VERIFY_LASER
   EcalLaserAPDPNRatios::EcalLaserAPDPNRatiosMap::const_iterator itratio = laserRatiosMap.find(xid);
   if (itratio != laserRatiosMap.end()) {
     apdpnpair = (*itratio);
@@ -145,11 +139,45 @@ float EcalLaserDbService::getLaserCorrection (DetId const & xid, edm::Timestamp 
     return correctionFactor;
   }
 
-  //    std::cout << " APDPN pair " << apdpnpair.p1 << " , " << apdpnpair.p2 << std::endl; 
-  //    std::cout << " TIME pair " << timestamp.t1.value() << " , " << timestamp.t2.value() << " iLM " << iLM << std::endl; 
-  //    std::cout << " LM module " << iLM << std::endl;
-  //    std::cout << " APDPN ref " << apdpnref << std::endl; 
-  //    std::cout << " ALPHA " << alpha << std::endl; 
+#else
+    
+  // waiting for templated lambdas
+  auto getCond =[=](EcalFloatCondObjectContainer const & cond)->float {
+    return isBarrel ? cond.barrel(xind) : cond.endcap(xind);
+  };
+
+  auto getPair =[=](EcalLaserAPDPNRatios::EcalLaserAPDPNRatiosMap const & cond)->EcalLaserAPDPNRatios::EcalLaserAPDPNpair {
+    return isBarrel ? cond.barrel(xind) : cond.endcap(xind);
+  };
+
+  auto getLinear =[=](EcalLinearCorrections::EcalValueMap const & cond)->EcalLinearCorrections::Values {
+    return isBarrel ? cond.barrel(xind) : cond.endcap(xind);
+  };
+
+
+  apdpnpair = getPair(laserRatiosMap);
+  linValues = getLinear(linearValueMap);
+  apdpnref  = getCond(laserRefMap);
+  alpha     = getCond(laserAlphaMap);
+
+  if (iLM-1< (int)laserTimeMap.size()) {
+    timestamp = laserTimeMap[iLM-1];
+  } else {
+    edm::LogError("EcalLaserDbService") << "error with laserTimeMap!" << endl;
+    return correctionFactor;
+  }
+
+  if (iLM-1< (int)linearTimeMap.size()) {
+    linTimes = linearTimeMap[iLM-1];
+  } else {
+    edm::LogError("EcalLaserDbService") << "error with laserTimeMap!" << endl;
+    return correctionFactor;
+  }
+
+
+#endif
+
+
   
   // should implement some default in case of error...
 
@@ -182,15 +210,13 @@ float EcalLaserDbService::getLaserCorrection (DetId const & xid, edm::Timestamp 
           t_f = timestamp.t2.value();
           p_i = apdpnpair.p1;
           p_f = apdpnpair.p2;
-          //edm::LogWarning("EcalLaserDbService") << "The event timestamp t=" << t 
-          //        << " is lower than t1=" << t_i << ". Extrapolating...";
+
   } else if ( t > timestamp.t3.value() ) {
           t_i = timestamp.t2.value();
           t_f = timestamp.t3.value();
           p_i = apdpnpair.p2;
           p_f = apdpnpair.p3;
-          //edm::LogWarning("EcalLaserDbService") << "The event timestamp t=" << t 
-          //        << " is greater than t3=" << t_f << ". Extrapolating...";
+
   }
 
   if ( t >= linTimes.t1.value() && t < linTimes.t2.value() ) {
@@ -208,31 +234,38 @@ float EcalLaserDbService::getLaserCorrection (DetId const & xid, edm::Timestamp 
           lt_f = linTimes.t2.value();
           lp_i = linValues.p1;
           lp_f = linValues.p2;
-          //edm::LogWarning("EcalLaserDbService") << "The event timestamp t=" << t 
-          //        << " is lower than t1=" << t_i << ". Extrapolating...";
+
   } else if ( t > linTimes.t3.value() ) {
           lt_i = linTimes.t2.value();
           lt_f = linTimes.t3.value();
           lp_i = linValues.p2;
           lp_f = linValues.p3;
-          //edm::LogWarning("EcalLaserDbService") << "The event timestamp t=" << t 
-          //        << " is greater than t3=" << t_f << ". Extrapolating...";
+
   }
 
   if ( apdpnref != 0 && (t_i - t_f) != 0 && (lt_i - lt_f) != 0) {
-    float interpolatedLaserResponse = p_i/apdpnref + (t-t_i)*(p_f-p_i)/apdpnref/(t_f-t_i); 
-    float interpolatedLinearResponse = lp_i/apdpnref + (t-lt_i)*(lp_f-lp_i)/apdpnref/(lt_f-lt_i); // FIXED BY FC
+    float interpolatedLaserResponse = p_i/apdpnref + float(t-t_i)*(p_f-p_i)/(apdpnref*float(t_f-t_i)); 
+    float interpolatedLinearResponse = lp_i/apdpnref + float(t-lt_i)*(lp_f-lp_i)/(apdpnref*float(lt_f-lt_i)); // FIXED BY FC
 
-    if(interpolatedLinearResponse >2 || interpolatedLinearResponse <0.1) interpolatedLinearResponse=1;
-    if ( interpolatedLaserResponse <= 0 ) {
-      edm::LogWarning("EcalLaserDbService") << "The interpolated laser correction is <= zero! (" 
-                    << interpolatedLaserResponse << "). Using 1. as correction factor.";
-            return correctionFactor;
+    if(interpolatedLinearResponse >2.f || interpolatedLinearResponse <0.1f) 
+		interpolatedLinearResponse=1.f;
+    if ( interpolatedLaserResponse <= 0. ) {
+
+		// print message only if it is the first time we see < 0
+        // on this detid
+		if(channelsWithInvalidCorrection_.insert(xid.rawId()).second) {
+			edm::LogError("EcalLaserDbService")
+				<< "Interpolated Laser correction <0 for detid "<<xid.rawId(); 
+
+		}
+	
+		return correctionFactor;	
+
     } else {
 
       float interpolatedTransparencyResponse = interpolatedLaserResponse / interpolatedLinearResponse;
 
-      correctionFactor =  1/( pow(interpolatedTransparencyResponse,alpha) *interpolatedLinearResponse  );
+      correctionFactor =  1.f/( std::pow(interpolatedTransparencyResponse,alpha) *interpolatedLinearResponse  );
       
     }
     
@@ -245,6 +278,8 @@ float EcalLaserDbService::getLaserCorrection (DetId const & xid, edm::Timestamp 
   
   return correctionFactor;
 }
+
+
 
 
 TYPELOOKUP_DATA_REG(EcalLaserDbService);

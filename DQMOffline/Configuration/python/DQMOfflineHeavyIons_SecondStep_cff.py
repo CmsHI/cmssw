@@ -3,6 +3,7 @@ import FWCore.ParameterSet.Config as cms
 from CondTools.DQM.DQMReferenceHistogramRootFileEventSetupAnalyzer_cfi import *
 from DQMServices.Components.DQMMessageLoggerClient_cff import *
 from DQMServices.Components.DQMDcsInfoClient_cfi import *
+from DQMServices.Components.DQMFastTimerServiceClient_cfi import *
 
 from DQMOffline.Ecal.ecal_dqm_client_offline_cff import *
 from DQM.HcalMonitorModule.hcal_dqm_client_fileT0_cff import *
@@ -35,18 +36,21 @@ from DQMOffline.EGamma.photonOfflineDQMClient_cff import *
 from DQMOffline.L1Trigger.L1TriggerDqmOffline_cff import *
 from DQMOffline.Trigger.DQMOffline_Trigger_Client_cff import *
 from DQMOffline.Trigger.DQMOffline_HLT_Client_cff import *
+from DQM.TrackingMonitorClient.TrackingDQMClientHeavyIons_cfi import *
 
 DQMOfflineHeavyIons_SecondStep_PrePOG = cms.Sequence( muonQualityTests 
                                                       * photonOfflineDQMClient
                                                       * l1TriggerDqmOfflineClient
                                                       * triggerOfflineDQMClient 
                                                       * hltOfflineDQMClient
-                                                      * alcaBeamMonitorClient 
+                                                      * alcaBeamMonitorClient
+                                                      * hiTrackingDqmClientHeavyIons
                                                       )
 
 DQMOfflineHeavyIons_SecondStepPOG = cms.Sequence( dqmRefHistoRootFileGetter *
                                                   DQMOfflineHeavyIons_SecondStep_PrePOG *
-                                                  DQMMessageLoggerClientSeq )
+                                                  DQMMessageLoggerClientSeq *
+                                                  dqmFastTimerServiceClient)
 
 DQMOfflineHeavyIons_SecondStep = cms.Sequence( dqmRefHistoRootFileGetter *
                                                DQMOfflineHeavyIons_SecondStep_PreDPG *

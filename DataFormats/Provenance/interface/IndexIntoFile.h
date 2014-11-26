@@ -110,9 +110,7 @@ hold the information giving the event numbers and
 event entry numbers.
 
 eventNumbers_ is a std::vector containing EventNumber_t's.
-Each element is a 4 byte int.  eventEntries_ is a
-std::vector containing EventEntry's.  Each EventEntry
-contains a 4 byte event number and an 8 byte entry number.
+eventEntries_ is a std::vector containing EventEntry's.
 If filled, both vectors contain the same number of
 entries with identical event numbers sorted in the
 same order.  The only difference is that one includes
@@ -170,13 +168,15 @@ The interface is too complex for general use.
 #include "DataFormats/Provenance/interface/RunID.h"
 #include "FWCore/Utilities/interface/value_ptr.h"
 
-#include "boost/shared_ptr.hpp"
+#include <memory>
 
 #include <cassert>
 #include <iosfwd>
 #include <map>
 #include <set>
 #include <vector>
+
+#include "FWCore/Utilities/interface/HideStdSharedPtrFromRoot.h"
 
 namespace edm {
 
@@ -920,9 +920,9 @@ namespace edm {
       /// This implies the client needs to define a class that inherits from
       /// EventFinder and then create one.  This function is used to pass in a
       /// pointer to its base class.
-      void setEventFinder(boost::shared_ptr<EventFinder> ptr) const {transient_.eventFinder_ = ptr;}
+      void setEventFinder(std::shared_ptr<EventFinder> ptr) const {transient_.eventFinder_ = ptr;}
 
-      /// Fills a vector of 4 byte event numbers.
+      /// Fills a vector of event numbers.
       /// Not filling it reduces the memory used by IndexIntoFile.
       /// As long as the event finder is still pointing at an open file
       /// this will automatically be called on demand (when the event
@@ -937,8 +937,8 @@ namespace edm {
       /// in the current file without reading them.
       void fillEventNumbers() const;
 
-      /// Fills a vector of objects that contain a 4 byte event number and
-      /// the corresponding TTree entry number (8 bytes) for the event.
+      /// Fills a vector of objects that contain an event number and
+      /// the corresponding TTree entry number for the event.
       /// Not filling it reduces the memory used by IndexIntoFile.
       /// As long as the event finder is still pointing at an open file
       /// this will automatically be called on demand (when the event
@@ -1009,7 +1009,7 @@ namespace edm {
         RunNumber_t currentRun_;
         LuminosityBlockNumber_t currentLumi_;
         EntryNumber_t numberOfEvents_;
-        boost::shared_ptr<EventFinder> eventFinder_;
+        std::shared_ptr<EventFinder> eventFinder_;
         std::vector<RunOrLumiIndexes> runOrLumiIndexes_;
         std::vector<EventNumber_t> eventNumbers_;
         std::vector<EventEntry> eventEntries_;

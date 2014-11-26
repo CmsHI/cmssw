@@ -15,7 +15,27 @@ from FastSimulation.Tracking.IterativePixelLessStep_cff import *
 from FastSimulation.Tracking.IterativeTobTecStep_cff import *
 from FastSimulation.Tracking.MuonSeededStep_cff import *
 
-iterativeTracking = cms.Sequence(pixelTracking+pixelVertexing
+# this block is to switch between defaul behaviour (MixingMode=='GenMixing') and new mixing
+from FastSimulation.Configuration.CommonInputs_cff import MixingMode
+if (MixingMode=='DigiRecoMixing'):
+#    generalTracksBeforeMixing = FastSimulation.Tracking.GeneralTracks_cfi.generalTracks.clone()
+    trackExtrapolator.trackSrc = cms.InputTag("generalTracksBeforeMixing")
+    lastTrackingSteps = cms.Sequence(generalTracksBeforeMixing+trackExtrapolator)
+elif (MixingMode=='GenMixing'):
+    lastTrackingSteps = cms.Sequence(generalTracks+trackExtrapolator)
+else:
+    print 'unsupported MixingMode label'
+        
+import RecoTracker.MeasurementDet.MeasurementTrackerEventProducer_cfi
+MeasurementTrackerEvent = RecoTracker.MeasurementDet.MeasurementTrackerEventProducer_cfi.MeasurementTrackerEvent.clone(
+    pixelClusterProducer = '',
+    stripClusterProducer = '',
+    inactivePixelDetectorLabels = cms.VInputTag(),
+    inactiveStripDetectorLabels = cms.VInputTag(),
+    switchOffPixelsIfEmpty = False
+)
+iterativeTracking = cms.Sequence( 
+                                 MeasurementTrackerEvent 
                                  +iterativeInitialStep
                                  +iterativeLowPtTripletStep
                                  +iterativePixelPairStep
@@ -24,7 +44,7 @@ iterativeTracking = cms.Sequence(pixelTracking+pixelVertexing
                                  +iterativePixelLessStep
                                  +iterativeTobTecStep
 # not validated yet:                                 +muonSeededStep 
-                                 +generalTracks
-                                 +trackExtrapolator)
-
+#                                 +generalTracks
+#                                 +trackExtrapolator)
+                                 +lastTrackingSteps)
 

@@ -6,7 +6,6 @@
 //
 // Original Author:
 //         Created:  Thu Dec  6 18:01:21 PST 2007
-// $Id: FWSiPixelDigiProxyBuilder.cc,v 1.16 2010/09/03 14:47:59 yana Exp $
 //
 
 #include "TEveCompound.h"
@@ -35,6 +34,7 @@ private:
   // Disable default assignment operator
   const FWSiPixelDigiProxyBuilder& operator=( const FWSiPixelDigiProxyBuilder& );
 
+  using FWProxyBuilderBase::build;
   virtual void build( const FWEventItem* iItem, TEveElementList* product, const FWViewContext* ) override;
 };
 

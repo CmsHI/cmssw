@@ -68,7 +68,6 @@
 #include "FWCore/Framework/interface/WorkerManager.h"
 #include "FWCore/Framework/interface/EDProducer.h"
 #include "FWCore/Framework/src/Path.h"
-#include "FWCore/Framework/src/RunStopwatch.h"
 #include "FWCore/Framework/src/Worker.h"
 #include "FWCore/Framework/src/WorkerRegistry.h"
 #include "FWCore/Framework/src/EarlyDeleteHelper.h"
@@ -82,8 +81,6 @@
 #include "FWCore/Utilities/interface/ConvertException.h"
 #include "FWCore/Utilities/interface/Exception.h"
 #include "FWCore/Utilities/interface/StreamID.h"
-
-#include "boost/shared_ptr.hpp"
 
 #include <map>
 #include <memory>
@@ -100,10 +97,8 @@ namespace edm {
   class ExceptionCollector;
   class OutputModuleCommunicator;
   class ProcessContext;
-  class RunStopwatch;
   class UnscheduledCallProducer;
   class WorkerInPath;
-  class TriggerTimingReport;
   class ModuleRegistry;
   class TriggerResultInserter;
   class PreallocationConfiguration;
@@ -116,20 +111,27 @@ namespace edm {
     template <typename T>
     class StreamScheduleSignalSentry {
     public:
-      StreamScheduleSignalSentry(ActivityRegistry* a, typename T::MyPrincipal* principal, EventSetup const* es, typename T::Context const* context) :
-        a_(a), principal_(principal), es_(es), context_(context) {
-        if (a_) T::preScheduleSignal(a_, principal_, context_);
+      StreamScheduleSignalSentry(ActivityRegistry* a, typename T::Context const* context) :
+        a_(a), context_(context), allowThrow_(false) {
+        if (a_) T::preScheduleSignal(a_, context_);
       }
-      ~StreamScheduleSignalSentry() {
-        if (a_) if (principal_) T::postScheduleSignal(a_, principal_, es_, context_);
+      ~StreamScheduleSignalSentry() noexcept(false) {
+        try {
+          if (a_) { T::postScheduleSignal(a_, context_); }
+        } catch(...) {
+          if(allowThrow_) {throw;}
+        }
+      }
+      
+      void allowThrow() {
+        allowThrow_ = true;
       }
 
     private:
       // We own none of these resources.
       ActivityRegistry* a_;
-      typename T::MyPrincipal* principal_;
-      EventSetup const* es_;
       typename T::Context const* context_;
+      bool allowThrow_;
     };
   }
   
@@ -138,25 +140,25 @@ namespace edm {
     typedef std::vector<std::string> vstring;
     typedef std::vector<Path> TrigPaths;
     typedef std::vector<Path> NonTrigPaths;
-    typedef boost::shared_ptr<HLTGlobalStatus> TrigResPtr;
-    typedef boost::shared_ptr<Worker> WorkerPtr;
+    typedef std::shared_ptr<HLTGlobalStatus> TrigResPtr;
+    typedef std::shared_ptr<Worker> WorkerPtr;
     typedef std::vector<Worker*> AllWorkers;
-    typedef std::vector<boost::shared_ptr<OutputModuleCommunicator>> AllOutputModuleCommunicators;
+    typedef std::vector<std::shared_ptr<OutputModuleCommunicator> > AllOutputModuleCommunicators;
 
     typedef std::vector<Worker*> Workers;
 
     typedef std::vector<WorkerInPath> PathWorkers;
 
-    StreamSchedule(TriggerResultInserter* inserter,
-                   boost::shared_ptr<ModuleRegistry>,
+    StreamSchedule(std::shared_ptr<TriggerResultInserter> inserter,
+                   std::shared_ptr<ModuleRegistry>,
                    ParameterSet& proc_pset,
                    service::TriggerNamesService& tns,
                    PreallocationConfiguration const& prealloc,
                    ProductRegistry& pregistry,
                    BranchIDListHelper& branchIDListHelper,
                    ExceptionToActionTable const& actions,
-                   boost::shared_ptr<ActivityRegistry> areg,
-                   boost::shared_ptr<ProcessConfiguration> processConfiguration,
+                   std::shared_ptr<ActivityRegistry> areg,
+                   std::shared_ptr<ProcessConfiguration> processConfiguration,
                    bool allowEarlyDelete,
                    StreamID streamID,
                    ProcessContext const* processContext);
@@ -178,10 +180,6 @@ namespace edm {
 
     StreamID streamID() const { return streamID_; }
     
-    std::pair<double, double> timeCpuReal() const {
-      return std::pair<double, double>(stopwatch_->cpuTime(), stopwatch_->realTime());
-    }
-
     /// Return a vector allowing const access to all the
     /// ModuleDescriptions for this StreamSchedule.
 
@@ -228,10 +226,6 @@ namespace edm {
     /// modules-in-path, modules-in-endpath, and modules.
     void getTriggerReport(TriggerReport& rep) const;
 
-    /// Return the trigger timing report information on paths,
-    /// modules-in-path, modules-in-endpath, and modules.
-    void getTriggerTimingReport(TriggerTimingReport& rep) const;
-    
     ///  Clear all the counters in the trigger report.
     void clearCounters();
 
@@ -248,6 +242,28 @@ namespace edm {
     }
     
   private:
+    //Sentry class to only send a signal if an
+    // exception occurs. An exception is identified
+    // by the destructor being called without first
+    // calling completedSuccessfully().
+    class SendTerminationSignalIfException {
+    public:
+      SendTerminationSignalIfException(edm::ActivityRegistry* iReg, edm::StreamContext const* iContext):
+      reg_(iReg),
+      context_(iContext){}
+      ~SendTerminationSignalIfException() {
+        if(reg_) {
+          reg_->preStreamEarlyTerminationSignal_(*context_,TerminationOrigin::ExceptionFromThisContext);
+        }
+      }
+      void completedSuccessfully() {
+        reg_ = nullptr;
+      }
+    private:
+      edm::ActivityRegistry* reg_;
+      StreamContext const* context_;
+    };
+
     /// returns the action table
     ExceptionToActionTable const& actionTable() const {
       return workerManager_.actionTable();
@@ -267,19 +283,19 @@ namespace edm {
     void fillWorkers(ParameterSet& proc_pset,
                      ProductRegistry& preg,
                      PreallocationConfiguration const* prealloc,
-                     boost::shared_ptr<ProcessConfiguration const> processConfiguration,
+                     std::shared_ptr<ProcessConfiguration const> processConfiguration,
                      std::string const& name, bool ignoreFilters, PathWorkers& out,
                      vstring* labelsOnPaths);
     void fillTrigPath(ParameterSet& proc_pset,
                       ProductRegistry& preg,
                       PreallocationConfiguration const* prealloc,
-                      boost::shared_ptr<ProcessConfiguration const> processConfiguration,
+                      std::shared_ptr<ProcessConfiguration const> processConfiguration,
                       int bitpos, std::string const& name, TrigResPtr,
                       vstring* labelsOnTriggerPaths);
     void fillEndPath(ParameterSet& proc_pset,
                      ProductRegistry& preg,
                      PreallocationConfiguration const* prealloc,
-                     boost::shared_ptr<ProcessConfiguration const> processConfiguration,
+                     std::shared_ptr<ProcessConfiguration const> processConfiguration,
                      int bitpos, std::string const& name);
 
     void addToAllWorkers(Worker* w);
@@ -291,7 +307,7 @@ namespace edm {
                                bool allowEarlyDelete);
 
     WorkerManager            workerManager_;
-    boost::shared_ptr<ActivityRegistry>           actReg_;
+    std::shared_ptr<ActivityRegistry>           actReg_;
 
     vstring                  trig_name_list_;
     vstring                  end_path_name_list_;
@@ -319,14 +335,12 @@ namespace edm {
     // has been marked for early deletion
     std::vector<EarlyDeleteHelper> earlyDeleteHelpers_;
 
-    RunStopwatch::StopwatchPointer stopwatch_;
     int                            total_events_;
     int                            total_passed_;
     unsigned int                   number_of_unscheduled_modules_;
     
     StreamID                streamID_;
     StreamContext           streamContext_;
-    bool                           wantSummary_;
     volatile bool           endpathsAreActive_;
   };
 
@@ -347,17 +361,15 @@ namespace edm {
     }
 
     T::setStreamContext(streamContext_, ep);
-    StreamScheduleSignalSentry<T> sentry(actReg_.get(), &ep, &es, &streamContext_);
+    StreamScheduleSignalSentry<T> sentry(actReg_.get(), &streamContext_);
 
-    // A RunStopwatch, but only if we are processing an event.
-    RunStopwatch stopwatch(stopwatch_);
-
+    SendTerminationSignalIfException terminationSentry(actReg_.get(), &streamContext_);
     // This call takes care of the unscheduled processing.
     workerManager_.processOneOccurrence<T>(ep, es, streamID_, &streamContext_, &streamContext_, cleaningUpAfterException);
 
     ++total_events_;
     try {
-      try {
+      convertException::wrap([&]() {
         try {
           if (runTriggerPaths<T>(ep, es, &streamContext_)) {
             ++total_passed_;
@@ -375,15 +387,14 @@ namespace edm {
         }
 
         try {
-          CPUTimer timer;
           ParentContext parentContext(&streamContext_);
-          if (results_inserter_.get()) results_inserter_->doWork<T>(ep, es, &timer,streamID_, parentContext, &streamContext_);
+          if (results_inserter_.get()) results_inserter_->doWork<T>(ep, es, streamID_, parentContext, &streamContext_);
         }
         catch (cms::Exception & ex) {
           if (T::isEvent_) {
             ex.addContext("Calling produce method for module TriggerResultInserter");
           }
-	  std::ostringstream ost;
+          std::ostringstream ost;
           ost << "Processing " << ep.id();
           ex.addContext(ost.str());
           throw;
@@ -391,13 +402,7 @@ namespace edm {
 
         if (endpathsAreActive_) runEndPaths<T>(ep, es, &streamContext_);
         resetEarlyDelete();
-      }
-      catch (cms::Exception& e) { throw; }
-      catch(std::bad_alloc& bda) { convertException::badAllocToEDM(); }
-      catch (std::exception& e) { convertException::stdToEDM(e); }
-      catch(std::string& s) { convertException::stringToEDM(s); }
-      catch(char const* c) { convertException::charPtrToEDM(c); }
-      catch (...) { convertException::unknownToEDM(); }
+      });
     }
     catch(cms::Exception& ex) {
       if (ex.context().empty()) {
@@ -407,6 +412,10 @@ namespace edm {
       }
       throw;
     }
+    terminationSentry.completedSuccessfully();
+    
+    //If we got here no other exception has happened so we can propogate any Service related exceptions
+    sentry.allowThrow();
   }
 
   template <typename T>
@@ -416,23 +425,19 @@ namespace edm {
     this->resetAll();
 
     T::setStreamContext(streamContext_, ep);
-    StreamScheduleSignalSentry<T> sentry(actReg_.get(), &ep, &es, &streamContext_);
+    StreamScheduleSignalSentry<T> sentry(actReg_.get(), &streamContext_);
+
+    SendTerminationSignalIfException terminationSentry(actReg_.get(), &streamContext_);
 
     // This call takes care of the unscheduled processing.
     workerManager_.processOneOccurrence<T>(ep, es, streamID_, &streamContext_, &streamContext_, cleaningUpAfterException);
 
     try {
-      try {
+      convertException::wrap([&]() {
         runTriggerPaths<T>(ep, es, &streamContext_);
 
         if (endpathsAreActive_) runEndPaths<T>(ep, es, &streamContext_);
-      }
-      catch (cms::Exception& e) { throw; }
-      catch(std::bad_alloc& bda) { convertException::badAllocToEDM(); }
-      catch (std::exception& e) { convertException::stdToEDM(e); }
-      catch(std::string& s) { convertException::stringToEDM(s); }
-      catch(char const* c) { convertException::charPtrToEDM(c); }
-      catch (...) { convertException::unknownToEDM(); }
+      });
     }
     catch(cms::Exception& ex) {
       if (ex.context().empty()) {
@@ -442,6 +447,10 @@ namespace edm {
       }
       throw;
     }
+    terminationSentry.completedSuccessfully();
+
+    //If we got here no other exception has happened so we can propogate any Service related exceptions
+    sentry.allowThrow();
   }
 
   template <typename T>

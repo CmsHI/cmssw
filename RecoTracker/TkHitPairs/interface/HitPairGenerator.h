@@ -11,6 +11,8 @@
 #include "RecoTracker/TkTrackingRegions/interface/OrderedHitsGenerator.h"
 #include "RecoTracker/TkHitPairs/interface/OrderedHitPairs.h"
 #include "RecoTracker/TkHitPairs/interface/RecHitsSortedInPhi.h"
+#include "TrackingTools/TransientTrackingRecHit/interface/SeedingLayerSetsHits.h"
+#include "FWCore/Utilities/interface/RunningAverage.h"
 
 class TrackingRegion;
 namespace edm { class Event; class EventSetup; }
@@ -18,9 +20,12 @@ namespace edm { class Event; class EventSetup; }
 class HitPairGenerator : public OrderedHitsGenerator {
 public:
 
-  explicit HitPairGenerator(unsigned int size=7500);
+  explicit HitPairGenerator(unsigned int size=4000);
+  HitPairGenerator(HitPairGenerator const & other) : localRA(other.localRA.mean()){}
 
   virtual ~HitPairGenerator() { }
+
+  virtual void setSeedingLayers(SeedingLayerSetsHits::SeedingLayerSet layers) = 0;
 
   virtual const OrderedHitPairs & run(
     const TrackingRegion& region, const edm::Event & ev, const edm::EventSetup& es);
@@ -41,17 +46,11 @@ public:
 
   virtual HitPairGenerator* clone() const = 0;
 
-  virtual void clear() {
-     // back to initial allocation if too large
-     if (thePairs.capacity()> 4*m_capacity) {
-       OrderedHitPairs tmp; tmp.reserve(m_capacity); tmp.swap(thePairs);
-     } 
-     thePairs.clear(); 
-  } 
+  virtual void clear() final;
 
 private:
   OrderedHitPairs thePairs;
-  unsigned int m_capacity;
+  edm::RunningAverage localRA;
 
 };
 

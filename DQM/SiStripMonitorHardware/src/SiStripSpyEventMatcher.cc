@@ -13,6 +13,7 @@
 #include "DataFormats/Provenance/interface/BranchIDListHelper.h"
 #include "DataFormats/Provenance/interface/EventID.h"
 #include "DataFormats/Provenance/interface/ModuleDescription.h"
+#include "DataFormats/Provenance/interface/ThinnedAssociationsHelper.h"
 #include "CondFormats/SiStripObjects/interface/SiStripFedCabling.h"
 #include "DataFormats/SiStripCommon/interface/SiStripFedKey.h"
 #include "FWCore/ServiceRegistry/interface/ActivityRegistry.h"
@@ -21,9 +22,9 @@
 #include "FWCore/Version/interface/GetReleaseVersion.h"
 #include "DQM/SiStripMonitorHardware/interface/SiStripSpyUtilities.h"
 #include "boost/bind.hpp"
-#include "boost/shared_ptr.hpp"
 #include <algorithm>
 #include <limits>
+#include <memory>
 
 using edm::LogInfo;
 using edm::LogWarning;
@@ -65,6 +66,7 @@ namespace sistrip {
 
     eventPrincipal_.reset(new edm::EventPrincipal(source_->productRegistry(),
                                                   source_->branchIDListHelper(),
+                                                  source_->thinnedAssociationsHelper(),
                                                   *processConfiguration_,
                                                   nullptr));
   }
@@ -74,9 +76,11 @@ namespace sistrip {
     const edm::VectorInputSourceFactory* sourceFactory = edm::VectorInputSourceFactory::get();
     edm::InputSourceDescription description(edm::ModuleDescription(),
                                             *productRegistry_,
-                                            boost::shared_ptr<edm::BranchIDListHelper>(new edm::BranchIDListHelper),
-                                            boost::shared_ptr<edm::ActivityRegistry>(new edm::ActivityRegistry),
-                                            -1, -1);
+                                            std::make_shared<edm::BranchIDListHelper>(),
+                                            std::make_shared<edm::ThinnedAssociationsHelper>(),
+                                            std::make_shared<edm::ActivityRegistry>(),
+                                            -1, -1, -1,
+                                            edm::PreallocationConfiguration());
     return sourceFactory->makeVectorInputSource(sourceConfig, description);
   }
 
@@ -324,8 +328,8 @@ namespace sistrip {
       }
       if (inputVirginRawDigis) {
         std::set<uint32_t> fedDetIds;
-        const std::vector<FedChannelConnection>& conns = cabling.connections(fedId);
-        for (std::vector<FedChannelConnection>::const_iterator iConn = conns.begin(); iConn != conns.end(); ++iConn) {
+        auto conns = cabling.fedConnections(fedId);
+        for (auto iConn = conns.begin(); iConn != conns.end(); ++iConn) {
           if (!iConn->isConnected()) continue;
           const uint32_t detId = iConn->detId();
           if (usedDetIds.find(detId) != usedDetIds.end()) {

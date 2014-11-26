@@ -3,7 +3,6 @@
 // Package:     Muons
 // Class  :     FWDTRecHitProxyBuilder
 //
-// $Id: FWDTRecHitProxyBuilder.cc,v 1.12 2010/09/07 15:46:48 yana Exp $
 //
 
 #include "TEvePointSet.h"
@@ -35,6 +34,7 @@ private:
   // Disable default assignment operator
   const FWDTRecHitProxyBuilder& operator=( const FWDTRecHitProxyBuilder& );
 
+  using FWSimpleProxyBuilderTemplate<DTRecHit1DPair>::buildViewType;
   virtual void buildViewType( const DTRecHit1DPair& iData, unsigned int iIndex, TEveElement& oItemHolder, FWViewType::EType type , const FWViewContext* ) override;
 };
 

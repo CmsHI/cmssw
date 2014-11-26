@@ -1,5 +1,5 @@
-#ifndef MuonNumbering_MuonBaseNumber_h
-#define MuonNumbering_MuonBaseNumber_h
+#ifndef Geometry_MuonNumbering_MuonBaseNumber_h
+#define Geometry_MuonNumbering_MuonBaseNumber_h
 
 /** \class MuonBaseNumber
  *
@@ -10,8 +10,6 @@
  * a packed version of the MuonBaseNumber may replace 
  * the current numbering scheme in future
  *  
- *  $Date: 2005/10/18 16:54:41 $
- *  $Revision: 1.1 $
  * \author Arno Straessner, CERN <arno.straessner@cern.ch>
  *
  */

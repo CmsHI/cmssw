@@ -6,6 +6,9 @@
  *
  */
 
+#if !defined(__CINT__) && !defined(__MAKECINT__) && !defined(__REFLEX__)
+#include <atomic>
+#endif
 #include <iosfwd>
 
 #include "DataFormats/Math/interface/Point3D.h"
@@ -13,6 +16,7 @@
 #include "DataFormats/Candidate/interface/CompositeCandidate.h"
 #include "DataFormats/ParticleFlowReco/interface/PFBlockFwd.h"
 #include "DataFormats/TrackReco/interface/TrackFwd.h"
+#include "DataFormats/GsfTrackReco/interface/GsfTrack.h"
 #include "DataFormats/GsfTrackReco/interface/GsfTrackFwd.h"
 #include "DataFormats/MuonReco/interface/Muon.h"
 #include "DataFormats/MuonReco/interface/MuonFwd.h"
@@ -77,7 +81,8 @@ namespace reco {
       kTrkMuonVertex=4,
       kGSFVertex=5,
       kTPFMSMuonVertex=6,
-      kPickyMuonVertex=7
+      kPickyMuonVertex=7,
+      kDYTMuonVertex=8
     };
 
 
@@ -95,8 +100,13 @@ namespace reco {
                  const LorentzVector & p4, 
                  ParticleType particleId );
 
+    /// copy constructor
+    PFCandidate( const PFCandidate&);
+
     /// destructor
     virtual ~PFCandidate();
+
+    PFCandidate& operator=(PFCandidate const&);
 
     /// return a clone
     virtual PFCandidate * clone() const;
@@ -111,7 +121,7 @@ namespace reco {
     /*       return  CandidateBaseRef(sourceRef_); */
     /*     } */
 
-    //using reco::Candidate::setSourceCandidatePtr;
+    using reco::Candidate::setSourceCandidatePtr;
     void setSourceCandidatePtr(const PFCandidatePtr& ptr) { sourcePtr_ = ptr; }
 
     size_t numberOfSourceCandidatePtrs() const { 
@@ -145,6 +155,17 @@ namespace reco {
     /// return a reference to the corresponding track, if charged. 
     /// otherwise, return a null reference
     reco::TrackRef trackRef() const;
+
+    /// return a pointer to the best track, if available.
+    /// otherwise, return a null pointer
+    virtual const reco::Track * bestTrack() const {
+      if ( (abs(pdgId()) == 11 || pdgId() == 22) && gsfTrackRef().isNonnull() && gsfTrackRef().isAvailable() )
+        return &(*gsfTrackRef());
+      else if ( trackRef().isNonnull() && trackRef().isAvailable() )
+        return &(*trackRef());
+      else
+        return nullptr;
+    }
 
     /// set gsftrack reference 
     void setGsfTrackRef(const reco::GsfTrackRef& ref);   
@@ -279,12 +300,13 @@ namespace reco {
     ///   to 1 otherwise
     /// For neutral particles, it is set to the default value
 
+    void set_mva_Isolated( float mvaI ){ mva_Isolated_=mvaI;}
+    // mva for isolated electrons
+    float mva_Isolated() const { return mva_Isolated_;}
 
-    void set_mva_e_pi( float mva ){ mva_e_pi_=mva;}
-    
+    void set_mva_e_pi( float mvaNI ){ mva_e_pi_=mvaNI;}
     /// mva for electron-pion discrimination
     float mva_e_pi() const { return mva_e_pi_;}
-
     
     /// set mva for electron-muon discrimination
     void set_mva_e_mu( float mva ) { mva_e_mu_=mva;}
@@ -362,18 +384,7 @@ namespace reco {
     typedef edm::RefVector<reco::PFBlockCollection> Blocks;
     typedef std::vector<unsigned> Elements;
 
-    const ElementsInBlocks& elementsInBlocks() const { 
-      
-      if (elementsInBlocks_.size()!=blocksStorage_.size())
-	{
-	  elementsInBlocks_.resize(blocksStorage_.size());
-	  for(unsigned int icopy=0;icopy!=blocksStorage_.size();++icopy)
-	    elementsInBlocks_[icopy]=std::make_pair(blocksStorage_[icopy],elementsStorage_[icopy]);
-	}
-      return elementsInBlocks_;
-    }
-    
-  
+    const ElementsInBlocks& elementsInBlocks() const;
 
     static const float bigMva_;
 
@@ -390,7 +401,7 @@ namespace reco {
     // and modify the vertex() method accordingly.
     void setVertexSource( PFVertexType vt) { vertexType_=vt; if (vertexType_!=kCandVertex) vertex_=Point(0.,0.,0.);}
 
-    virtual void setVertex( math::XYZPoint p) {
+    virtual void setVertex( const math::XYZPoint& p) {
       vertex_=p; vertexType_ = kCandVertex;
     }
 
@@ -408,7 +419,11 @@ namespace reco {
     bool flag(unsigned shift, unsigned flag) const;
    
    
-    mutable ElementsInBlocks elementsInBlocks_;
+#if !defined(__CINT__) && !defined(__MAKECINT__) && !defined(__REFLEX__)
+    mutable std::atomic<ElementsInBlocks*> elementsInBlocks_;
+#else
+    mutable ElementsInBlocks* elementsInBlocks_;
+#endif
     Blocks blocksStorage_;
     Elements elementsStorage_;
 
@@ -452,6 +467,9 @@ namespace reco {
     float      deltaP_;
 
     PFVertexType vertexType_;
+
+    // mva for isolated electrons
+    float       mva_Isolated_;
 
     /// mva for electron-pion discrimination
     float       mva_e_pi_;

@@ -20,6 +20,7 @@
 #include "DataFormats/JetReco/interface/GenJet.h"
 #include "DataFormats/JetReco/interface/GenJetCollection.h"
 #include "RecoJets/JetProducers/interface/JetMatchingTools.h"
+#include "DataFormats/HepMCCandidate/interface/GenParticleFwd.h"
 
 // root objects
 #include "TROOT.h"
@@ -46,14 +47,14 @@ private:
   void    clearTreeVectors();
   
   bool             debug;
-  edm::InputTag    jetSrc, partSrc;
   edm::Service<TFileService> fs;
   TTree            *tree;
 
-  std::vector<int> *t_gjetN;
+  edm::EDGetTokenT<reco::GenJetCollection>      tok_jets_;
+  edm::EDGetTokenT<reco::GenParticleCollection> tok_parts_;
 
+  std::vector<int>    *t_gjetN;
   std::vector<double> *t_gjetE, *t_gjetPt, *t_gjetEta, *t_gjetPhi;
-
   std::vector< std::vector<double> > *t_jetTrkP;
   std::vector< std::vector<double> > *t_jetTrkPt;
   std::vector< std::vector<double> > *t_jetTrkEta;

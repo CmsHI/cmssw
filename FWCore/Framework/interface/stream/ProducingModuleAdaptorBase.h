@@ -41,7 +41,10 @@ namespace edm {
   class ProductHolderIndexHelper;
   class EDConsumerBase;
   class PreallocationConfiguration;
-  
+  class ProductHolderIndexAndSkipBit;
+  class ProductRegistry;
+  class ThinnedAssociationsHelper;
+
   namespace maker {
     template<typename T> class ModuleHolderT;
   }
@@ -68,16 +71,22 @@ namespace edm {
       void
       registerProductsAndCallbacks(ProducingModuleAdaptorBase const*, ProductRegistry* reg);
       
-      void itemsToGet(BranchType, std::vector<ProductHolderIndex>&) const;
-      void itemsMayGet(BranchType, std::vector<ProductHolderIndex>&) const;
+      void itemsToGet(BranchType, std::vector<ProductHolderIndexAndSkipBit>&) const;
+      void itemsMayGet(BranchType, std::vector<ProductHolderIndexAndSkipBit>&) const;
+      std::vector<ProductHolderIndexAndSkipBit> const& itemsToGetFromEvent() const;
+
       void updateLookup(BranchType iBranchType,
                         ProductHolderIndexHelper const&);
+
+      void modulesDependentUpon(const std::string& iProcessName,
+                                std::vector<const char*>& oModuleLabels) const;
 
 
     protected:
       template<typename F> void createStreamModules(F iFunc) {
         for(auto& m: m_streamModules) {
           m = iFunc();
+          m->setModuleDescriptionPtr(&moduleDescription_);
         }
       }
       
@@ -141,11 +150,14 @@ namespace edm {
                                         EventSetup const& c,
                                         ModuleCallingContext const*)=0;
       
+      void doPreForkReleaseResources();
+      void doPostForkReacquireResources(unsigned int iChildIndex, unsigned int iNumberOfChildren);
+
       //For now, the following are just dummy implemenations with no ability for users to override
       void doRespondToOpenInputFile(FileBlock const& fb);
       void doRespondToCloseInputFile(FileBlock const& fb);
-      void doPreForkReleaseResources();
-      void doPostForkReacquireResources(unsigned int iChildIndex, unsigned int iNumberOfChildren);
+      void doRegisterThinnedAssociations(ProductRegistry const&,
+                                         ThinnedAssociationsHelper&);
 
       // ---------- member data --------------------------------
       void setModuleDescription(ModuleDescription const& md) {

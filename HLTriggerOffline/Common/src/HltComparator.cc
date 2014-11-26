@@ -1,6 +1,5 @@
 // Originally written by James Jackson
 // modified by Peter Wittich
-// $Id: HltComparator.cc,v 1.7 2010/01/12 06:33:18 hegner Exp $
 
 // user include files
 #include "HLTriggerOffline/Common/interface/HltComparator.h"
@@ -12,6 +11,7 @@
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
 
 #include <TH1.h>
+#include <iostream>
 #include <vector>
 #include <string>
 
@@ -30,8 +30,8 @@ enum {
 
 // Analyser constructor
 HltComparator::HltComparator(const edm::ParameterSet & iConfig):
-  hltOnlineResults_(iConfig.getParameter<edm::InputTag>("OnlineResults")),
-  hltOfflineResults_(iConfig.getParameter<edm::InputTag>("OfflineResults")),
+  hltOnlineResults_(consumes<edm::TriggerResults>(iConfig.getParameter<edm::InputTag>("OnlineResults"))),
+  hltOfflineResults_(consumes<edm::TriggerResults>(iConfig.getParameter<edm::InputTag>("OfflineResults"))),
   init_(false),
   verbose_(iConfig.getUntrackedParameter<bool>("verbose")),
   skipPathList_(iConfig.getUntrackedParameter<std::vector<std::string> >("skipPaths")),
@@ -161,8 +161,8 @@ HltComparator::filter(edm::Event & event,
   // Get trigger results
   edm::Handle<edm::TriggerResults> onlineResults;
   edm::Handle<edm::TriggerResults> offlineResults;
-  event.getByLabel(hltOnlineResults_, onlineResults);
-  event.getByLabel(hltOfflineResults_, offlineResults);
+  event.getByToken(hltOnlineResults_, onlineResults);
+  event.getByToken(hltOfflineResults_, offlineResults);
 
   std::auto_ptr<StringCollection> resultDescription(new StringCollection);
   

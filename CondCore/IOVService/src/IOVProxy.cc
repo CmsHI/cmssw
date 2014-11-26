@@ -1,7 +1,10 @@
 #include "CondCore/IOVService/interface/IOVProxy.h"
+#include "CondCore/DBCommon/interface/Exception.h"
 #include "CondFormats/Common/interface/TimeConversions.h"
 
+#include <iostream>
 void cond::IOVProxyData::refresh(){
+  if( token.empty() ) return;
   data = dbSession.getTypedObject<cond::IOVSequence>( token );
   // loading the lazy-loading Queryable vector...
   data->loadAll();
@@ -181,7 +184,7 @@ cond::IOVProxy::IOVProxy(cond::DbSession& dbSession,
   m_iov(new IOVProxyData(dbSession,token)){
 }
 
-cond::IOVProxy::IOVProxy( boost::shared_ptr<IOVProxyData>& data ):
+cond::IOVProxy::IOVProxy( const boost::shared_ptr<IOVProxyData>& data ):
   m_iov( data ){
 }
 
@@ -221,17 +224,14 @@ bool cond::IOVProxy::isValid( cond::Time_t currenttime ){
 }
 
 std::pair<cond::Time_t, cond::Time_t> cond::IOVProxy::validity( cond::Time_t currenttime ){  
-  cond::Time_t since=iov().firstSince();
-  cond::Time_t till=iov().lastTill();
+  cond::Time_t since = iov().lastTill();
+  cond::Time_t till = iov().lastTill();
   IOVSequence::const_iterator iter=iov().find(currenttime);
   if (iter!=iov().iovs().end())  {
     since=iter->sinceTime();
     iter++;
     if (iter!=iov().iovs().end()) 
       till = iter->sinceTime()-1;
-  }
-  else {
-    since=iov().lastTill();
   }
   return std::pair<cond::Time_t, cond::Time_t>(since,till);
 }
@@ -274,6 +274,7 @@ int cond::IOVProxy::size() const {
 }
 
 cond::IOVSequence const & cond::IOVProxy::iov() const {
+  if( !m_iov->data.get() ) throwException( "No data found.", "IOVProxy::iov" );
   return *(m_iov->data);
 }
 
@@ -308,7 +309,7 @@ cond::Time_t cond::IOVProxy::timestamp() const {
   return iov().timestamp();
 }
 
-cond::DbSession& cond::IOVProxy::db() const {
+cond::DbSession& cond::IOVProxy::db() {
   return m_iov->dbSession;
 }
 

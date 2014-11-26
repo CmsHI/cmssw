@@ -16,22 +16,33 @@
 TrackerGeometry::TrackerGeometry(GeometricDet const* gd) :  theTrackerDet(gd){}
 
 TrackerGeometry::~TrackerGeometry() {
-    for (DetContainer::iterator     it = theDets.begin(),     ed = theDets.end();     it != ed; ++it) delete *it;
-    for (DetTypeContainer::iterator it = theDetTypes.begin(), ed = theDetTypes.end(); it != ed; ++it) delete *it;
+    for (auto d : theDets) delete const_cast<GeomDet*>(d);
+    for (auto d : theDetTypes) delete const_cast<GeomDetType*>(d);
 }
 
-GeometricDet const * TrackerGeometry::trackerDet() const {
-  return  theTrackerDet;
+void TrackerGeometry::finalize() {
+    theDetTypes.shrink_to_fit();  // owns the DetTypes
+    theDetUnits.shrink_to_fit();  // they're all also into 'theDets', so we assume 'theDets' owns them
+    theDets.shrink_to_fit();     // owns *ONLY* the GeomDet * corresponding to GluedDets.
+    theDetUnitIds.shrink_to_fit();
+    theDetIds.shrink_to_fit();
+  
+    thePXBDets.shrink_to_fit(); // not owned: they're also in 'theDets'
+    thePXFDets.shrink_to_fit(); // not owned: they're also in 'theDets'
+    theTIBDets.shrink_to_fit(); // not owned: they're also in 'theDets'
+    theTIDDets.shrink_to_fit(); // not owned: they're also in 'theDets'
+    theTOBDets.shrink_to_fit(); // not owned: they're also in 'theDets'
+    theTECDets.shrink_to_fit(); // not owned: they're also in 'theDets'
 }
 
 
-void TrackerGeometry::addType(GeomDetType* p) {
+void TrackerGeometry::addType(GeomDetType const * p) {
   theDetTypes.push_back(p);  // add to vector
 }
 
-void TrackerGeometry::addDetUnit(GeomDetUnit* p) {
+void TrackerGeometry::addDetUnit(GeomDetUnit const * p) {
   // set index
-  p->setIndex(theDetUnits.size());
+  const_cast<GeomDetUnit *>(p)->setIndex(theDetUnits.size());
   theDetUnits.push_back(p);  // add to vector
   theMapUnit.insert(std::make_pair(p->geographicalId().rawId(),p));
 }
@@ -40,7 +51,7 @@ void TrackerGeometry::addDetUnitId(DetId p){
   theDetUnitIds.push_back(p);
 }
 
-void TrackerGeometry::addDet(GeomDet* p) {
+void TrackerGeometry::addDet(GeomDet const * p) {
   theDets.push_back(p);  // add to vector
   theMap.insert(std::make_pair(p->geographicalId().rawId(),p));
   DetId id(p->geographicalId());
@@ -122,26 +133,24 @@ TrackerGeometry::detsTEC() const
   return theTECDets;
 }
 
-const GeomDetUnit* 
+const TrackerGeomDet * 
 TrackerGeometry::idToDetUnit(DetId s)const
 {
   mapIdToDetUnit::const_iterator p=theMapUnit.find(s.rawId());
   if (p != theMapUnit.end())
-    return (p)->second;
+    return static_cast<const TrackerGeomDet *>(p->second);
   edm::LogError("TrackerGeometry")<<"Invalid DetID: no GeomDetUnit associated";
-  GeomDetUnit* geom = 0;
-  return geom;
+  return nullptr;
 }
 
-const GeomDet* 
+const TrackerGeomDet* 
 TrackerGeometry::idToDet(DetId s)const
 {
   mapIdToDet::const_iterator p=theMap.find(s.rawId());
   if (p != theMap.end())
-    return (p)->second;
+    return static_cast<const TrackerGeomDet *>(p->second);
   edm::LogError("TrackerGeometry")<<"Invalid DetID: no GeomDet associated";
-  GeomDet* geom = 0;
-  return geom;
+  return nullptr;
 }
 
 const TrackerGeometry::DetTypeContainer&  

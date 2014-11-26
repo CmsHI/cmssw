@@ -29,9 +29,22 @@ L3TkMuonProducer::L3TkMuonProducer(const ParameterSet& parameterSet){
 
   // StandAlone Collection Label
   theL3CollectionLabel = parameterSet.getParameter<InputTag>("InputObjects");
+  trackToken_ = consumes<reco::TrackCollection>(theL3CollectionLabel); 
   produces<TrackCollection>();
   produces<TrackExtraCollection>();
   produces<TrackingRecHitCollection>();
+
+
+
+  callWhenNewProductsRegistered( [this](const edm::BranchDescription& iBD) {
+				   edm::TypeID id(typeid(L3MuonTrajectorySeedCollection));
+				   if(iBD.unwrappedTypeID() == id) {
+				     this->mayConsume<L3MuonTrajectorySeedCollection>(edm::InputTag{iBD.moduleLabel(), iBD.productInstanceName(),iBD.processName()} );
+				   }
+				 });
+
+
+
 }
   
 /// destructor
@@ -52,7 +65,7 @@ bool L3TkMuonProducer::sharedSeed(const L3MuonTrajectorySeed& s1,const L3MuonTra
   //quit right away if first detId does not match. front exist because of ==0 ->quit test
   if(i1_b->geographicalId() != i2_b->geographicalId()) return false;
   //then check hit by hit if they are the same
-  for (i1=i1_b,i2=i2_b;i1!=i1_e,i2!=i2_e;++i1,++i2){
+  for (i1=i1_b,i2=i2_b;i1!=i1_e && i2!=i2_e;++i1,++i2){
     if (!i1->sharesInput(&(*i2),TrackingRecHit::all)) return false;
   }
   return true;
@@ -99,7 +112,7 @@ void L3TkMuonProducer::produce(Event& event, const EventSetup& eventSetup){
   // Take the L3 container
   LogDebug(metname)<<" Taking the L3/GLB muons: "<<theL3CollectionLabel.label();
   Handle<TrackCollection> tracks; 
-  event.getByLabel(theL3CollectionLabel,tracks);
+  event.getByToken(trackToken_,tracks);
 
   //make the LX->L3s pools
   LXtoL3sMap LXtoL3s;

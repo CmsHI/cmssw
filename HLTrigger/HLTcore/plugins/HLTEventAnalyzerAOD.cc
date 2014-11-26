@@ -2,8 +2,6 @@
  *
  * See header file for documentation
  *
- *  $Date: 2012/03/21 12:08:38 $
- *  $Revision: 1.10 $
  *
  *  \author Martin Grunewald
  *
@@ -151,6 +149,18 @@ void HLTEventAnalyzerAOD::analyzeTrigger(const edm::Event& iEvent, const edm::Ev
   cout << "HLTEventAnalyzerAOD::analyzeTrigger: path "
        << triggerName << " [" << triggerIndex << "] "
        << "prescales L1T,HLT: " << prescales.first << "," << prescales.second
+       << endl;
+  const std::pair<std::vector<std::pair<std::string,int> >,int> prescalesInDetail(hltConfig_.prescaleValuesInDetail(iEvent,iSetup,triggerName));
+  std::ostringstream message;
+  for (unsigned int i=0; i<prescalesInDetail.first.size(); ++i) {
+    message << " " << i << ":" << prescalesInDetail.first[i].first << "/" << prescalesInDetail.first[i].second;
+  }
+  cout << "HLTEventAnalyzerAOD::analyzeTrigger: path "
+       << triggerName << " [" << triggerIndex << "] "
+       << endl
+       << "prescales L1T: " << prescalesInDetail.first.size() <<  message.str()
+       << endl
+       << "prescale  HLT: " << prescalesInDetail.second
        << endl;
 
   // modules on this trigger path

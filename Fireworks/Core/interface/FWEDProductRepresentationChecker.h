@@ -16,7 +16,6 @@
 //
 // Original Author:  Chris Jones
 //         Created:  Tue Nov 11 15:20:05 EST 2008
-// $Id: FWEDProductRepresentationChecker.h,v 1.3 2009/04/27 16:19:16 chrjones Exp $
 //
 
 // system include files
@@ -33,7 +32,8 @@ public:
    FWEDProductRepresentationChecker(const std::string& iTypeidName,
                                     const std::string& iPurpose,
                                     unsigned int iBitPackedViews,
-                                    bool iRepresentsSubPart);
+                                    bool iRepresentsSubPart,
+                                    bool iRequiresFF = false);
 
    // ---------- const member functions ---------------------
    virtual FWRepresentationInfo infoFor(const std::string& iTypeName) const;

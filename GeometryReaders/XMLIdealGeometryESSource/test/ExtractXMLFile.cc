@@ -13,7 +13,6 @@
 //
 // Original Author:  Tommaso Boccali
 //         Created:  Tue Jul 26 08:47:57 CEST 2005
-// $Id: ExtractXMLFile.cc,v 1.2 2009/12/08 19:12:29 case Exp $
 //
 //
 
@@ -101,7 +100,7 @@ ExtractXMLFile::analyze( const edm::Event& iEvent, const edm::EventSetup& iSetup
    std::cout << "Here I am " << std::endl;
    edm::ESHandle<FileBlob> gdd;
    iSetup.get<GeometryFileRcd>().get(label_, gdd);
-   //std::vector<unsigned char>* tb = (*gdd).getUncompressedBlob();
+   //std::unique_ptr<std::vector<unsigned char> > tb = (*gdd).getUncompressedBlob();
    std::ofstream f(fname_.c_str());
    (*gdd).write(f);
    //f.close();

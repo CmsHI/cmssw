@@ -38,13 +38,14 @@
 #include "CondFormats/L1TObjects/interface/L1GtCondition.h"
 #include "CondFormats/L1TObjects/interface/L1GtAlgorithm.h"
 #include "CondFormats/L1TObjects/interface/L1GtTriggerMenu.h"
+#include "CondFormats/L1TObjects/interface/GlobalStableParameters.h"
 
 #include "CondFormats/L1TObjects/interface/L1CaloGeometry.h"
 #include "CondFormats/L1TObjects/interface/L1RPCBxOrConfig.h"
 #include "CondFormats/L1TObjects/interface/L1RPCHsbConfig.h"
 
 
-namespace {
+namespace CondFormats_L1TObjects {
   struct dictionary {
     std::vector<L1MuDTExtLut::LUT> dummy3 ;
     std::vector<L1GtMuonTemplate> dummy4 ;

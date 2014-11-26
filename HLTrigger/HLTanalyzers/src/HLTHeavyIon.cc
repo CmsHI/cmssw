@@ -18,18 +18,28 @@
 #include "DataFormats/HeavyIonEvent/interface/Centrality.h"
 using namespace std;
 
-HLTHeavyIon::HLTHeavyIon() {
-
+HLTHeavyIon::HLTHeavyIon(edm::ConsumesCollector && iC) {
   //set parameter defaults 
-   _Monte = false;
-  _Debug=false;
+  _Monte = false;
+  _Debug = false;
   _OR_BXes=false;
   UnpackBxInEvent=1;
-
+  centralityBin_Label = edm::InputTag("centralityBin");
+  centralityBin_Token = iC.consumes<int>( centralityBin_Label); 
 }
 
-void HLTHeavyIon::beginRun(const edm::Run& run, const edm::EventSetup& c){ 
+void
+HLTHeavyIon::fillDescriptions(edm::ConfigurationDescriptions & descriptions) {
+  edm::ParameterSetDescription desc;
+  edm::ParameterSetDescription hltParameterSet;
+  desc.add<edm::ParameterSetDescription>("RunParameters",hltParameterSet);
+  desc.add<bool>("Debug",false);
+  desc.add<bool>("Monte",false);
+  descriptions.add("hltHeavyIon", desc);
+}
 
+
+void HLTHeavyIon::beginRun(const edm::Run& run, const edm::EventSetup& c){ 
 
   bool changed(true);
   if (hltConfig_.init(run,c,processName_,changed)) {
@@ -152,7 +162,7 @@ void HLTHeavyIon::analyze(const edm::Handle<edm::TriggerResults>                
    }
 
    edm::Handle<int> binHandle;
-   iEvent.getByLabel("centralityBin",binHandle);
+   iEvent.getByToken(centralityBin_Token,binHandle);
    hiBin = *binHandle;
 
   hiNpix = centrality->multiplicityPixel();

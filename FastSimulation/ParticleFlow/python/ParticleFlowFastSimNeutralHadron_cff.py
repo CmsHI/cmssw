@@ -12,8 +12,10 @@ from RecoParticleFlow.PFProducer.pfPhotonTranslator_cff import *
 from RecoParticleFlow.PFTracking.trackerDrivenElectronSeeds_cff import *
 from RecoParticleFlow.PFTracking.mergedElectronSeeds_cfi import *
 from FastSimulation.ParticleFlow.FSparticleFlow_cfi import *
+from RecoParticleFlow.PFClusterProducer.towerMakerPF_cfi import *
 # The following is replaced by the MVA-based 
 #from RecoParticleFlow.PFProducer.pfGsfElectronCiCSelector_cff import *
+from RecoEgamma.EgammaIsolationAlgos.particleBasedIsoProducer_cff import *
 from RecoParticleFlow.PFProducer.pfGsfElectronMVASelector_cff import *
 from RecoParticleFlow.PFProducer.pfLinker_cff import *
 from RecoParticleFlow.PFProducer.particleFlowEGamma_cff import *
@@ -22,16 +24,23 @@ particleFlow.PFCandidate = [cms.InputTag("FSparticleFlow")]
 particleFlowSimParticle.sim = 'famosSimHits'
 
 #Deactivate the recovery of dead towers since dead towers are not simulated
-particleFlowRecHitHCAL.ECAL_Compensate = cms.bool(False)
+
 #Similarly, deactivate HF cleaning for spikes
-particleFlowRecHitHCAL.ShortFibre_Cut = cms.double(1E5)
-particleFlowRecHitHCAL.LongFibre_Cut = cms.double(1E5)
-particleFlowRecHitHCAL.LongShortFibre_Cut = cms.double(1E5)
-particleFlowRecHitHCAL.ApplyLongShortDPG = cms.bool(False)
-particleFlowClusterHFEM.thresh_Clean_Barrel = cms.double(1E5)
-particleFlowClusterHFEM.thresh_Clean_Endcap = cms.double(1E5)
-particleFlowClusterHFHAD.thresh_Clean_Barrel = cms.double(1E5)
-particleFlowClusterHFHAD.thresh_Clean_Endcap = cms.double(1E5)
+particleFlowClusterHF.recHitCleaners = cms.VPSet()
+particleFlowRecHitHF.producers[0].qualityTests =cms.VPSet(
+    cms.PSet(
+        name = cms.string("PFRecHitQTestHCALThresholdVsDepth"),
+        cuts = cms.VPSet(
+            cms.PSet(
+                depth = cms.int32(1),
+                threshold = cms.double(1.2)),
+            cms.PSet(
+                depth = cms.int32(2),
+                threshold = cms.double(1.8))
+            )
+        )   
+
+)
 
 #particleFlowBlock.useNuclear = cms.bool(True)
 #particleFlowBlock.useConversions = cms.bool(True)
@@ -44,6 +53,11 @@ particleFlowClusterHFHAD.thresh_Clean_Endcap = cms.double(1E5)
 #particleFlow.usePFConversions = cms.bool(True)
 #particleFlow.usePFDecays = cms.bool(True)
 
+### With the new mixing scheme, the label of the Trajectory collection for the primary event is different:
+from FastSimulation.Configuration.CommonInputs_cff import *
+if(CaloMode==3 and MixingMode=='DigiRecoMixing'):
+    trackerDrivenElectronSeeds.TkColList = cms.VInputTag(cms.InputTag("generalTracksBeforeMixing"))
+
 
 famosParticleFlowSequence = cms.Sequence(
     caloTowersRec+
@@ -52,15 +66,14 @@ famosParticleFlowSequence = cms.Sequence(
 #    pfGsfElectronCiCSelectionSequence+
     pfGsfElectronMVASelectionSequence+
     particleFlowBlock+
-    particleFlowEGamma+
+    particleFlowEGammaFull+
     particleFlowTmp+
     particleFlowTmpPtrs+
-    FSparticleFlow+
-    pfElectronTranslatorSequence+
-    pfPhotonTranslatorSequence
+    particleFlowEGammaFinal+
+    FSparticleFlow
 )
 
-particleFlowLinks = cms.Sequence(particleFlow+particleFlowPtrs)
+particleFlowLinks = cms.Sequence(particleFlow+particleFlowPtrs + particleBasedIsolationSequence)
 
 # PF Reco Jets and MET
 

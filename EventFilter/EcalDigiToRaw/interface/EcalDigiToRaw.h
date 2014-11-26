@@ -15,7 +15,6 @@
 //
 // Original Author:  Emmanuelle Perez
 //         Created:  Sat Nov 25 13:59:51 CET 2006
-// $Id: EcalDigiToRaw.h,v 1.8 2010/01/04 17:36:21 ferriff Exp $
 //
 //
 
@@ -40,6 +39,8 @@
 #include "EventFilter/EcalDigiToRaw/interface/BlockFormatter.h"
 #include "EventFilter/EcalDigiToRaw/interface/SRBlockFormatter.h"
 
+#include "DataFormats/EcalDigi/interface/EcalDigiCollections.h"
+#include "DataFormats/EcalDigi/interface/EcalSrFlag.h"
 
 
 //
@@ -91,9 +92,11 @@ class EcalDigiToRaw : public edm::EDProducer {
 	bool doSR_;
 	bool doTower_;
 
-	edm::InputTag labelTT_ ;
-	edm::InputTag labelEBSR_ ;
-	edm::InputTag labelEESR_ ;
+	edm::EDGetTokenT<EcalTrigPrimDigiCollection> labelTT_ ;
+	edm::EDGetTokenT<EBSrFlagCollection> labelEBSR_ ;
+	edm::EDGetTokenT<EESrFlagCollection> labelEESR_ ;
+	edm::EDGetTokenT<EBDigiCollection> EBDigiToken_ ;
+	edm::EDGetTokenT<EEDigiCollection> EEDigiToken_;
 
 	bool doBarrel_;
 	bool doEndCap_;

@@ -13,7 +13,6 @@
 //
 // Original Author:  pts/91
 //         Created:  Wed Sep 26 17:08:29 CEST 2007
-// $Id: RPCGEO2.cc,v 1.1 2011/11/14 15:53:36 carrillo Exp $
 //
 //
 
@@ -104,8 +103,8 @@ RPCGEO2::analyze(const edm::Event& /*iEvent*/, const edm::EventSetup& iSetup)
    iSetup.get<MuonGeometryRecord>().get(rpcGeo);
 
    for (TrackingGeometry::DetContainer::const_iterator it=rpcGeo->dets().begin();it<rpcGeo->dets().end();it++){
-     if( dynamic_cast< RPCChamber* >( *it ) != 0 ){
-       RPCChamber* ch = dynamic_cast< RPCChamber* >( *it ); 
+     if( dynamic_cast< const RPCChamber* >( *it ) != 0 ){
+       const RPCChamber* ch = dynamic_cast< const RPCChamber* >( *it ); 
        std::vector< const RPCRoll*> roles = (ch->rolls());
        
        //std::cout<<"RPC Chamber"<<ch->id()<<std::endl;

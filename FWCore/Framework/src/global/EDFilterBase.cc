@@ -19,6 +19,7 @@
 #include "FWCore/Framework/interface/Run.h"
 #include "FWCore/Framework/src/edmodule_mightGet_config.h"
 #include "FWCore/Framework/src/PreallocationConfiguration.h"
+#include "FWCore/Framework/src/EventSignalsSentry.h"
 
 #include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
 #include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
@@ -39,8 +40,8 @@ namespace edm {
     EDFilterBase::EDFilterBase():
     ProducerBase(),
     moduleDescription_(),
-    previousParentage_(),
-    previousParentageId_() { }
+    previousParentages_(),
+    previousParentageIds_() { }
     
     EDFilterBase::~EDFilterBase()
     {
@@ -48,17 +49,23 @@ namespace edm {
     
     bool
     EDFilterBase::doEvent(EventPrincipal& ep, EventSetup const& c,
+                          ActivityRegistry* act,
                           ModuleCallingContext const* mcc) {
       Event e(ep, moduleDescription_, mcc);
       e.setConsumer(this);
+      EventSignalsSentry sentry(act,mcc);
       bool returnValue = this->filter(e.streamID(), e, c);
-      commit_(e,&previousParentage_, &previousParentageId_);
+      const auto streamIndex =e.streamID().value();
+      commit_(e,&previousParentages_[streamIndex], &previousParentageIds_[streamIndex]);
       return returnValue;
     }
     
     void
     EDFilterBase::doPreallocate(PreallocationConfiguration const& iPrealloc) {
-      preallocStreams(iPrealloc.numberOfStreams());
+      const auto nStreams =iPrealloc.numberOfStreams();
+      previousParentages_.reset(new std::vector<BranchID>[nStreams]);
+      previousParentageIds_.reset(new ParentageID[nStreams]);
+      preallocStreams(nStreams);
     }
 
     void
@@ -182,12 +189,12 @@ namespace edm {
     
     void
     EDFilterBase::doPreForkReleaseResources() {
-      //preForkReleaseResources();
+      preForkReleaseResources();
     }
     
     void
     EDFilterBase::doPostForkReacquireResources(unsigned int iChildIndex, unsigned int iNumberOfChildren) {
-      //postForkReacquireResources(iChildIndex, iNumberOfChildren);
+      postForkReacquireResources(iChildIndex, iNumberOfChildren);
     }
     
     void EDFilterBase::preallocStreams(unsigned int) {}

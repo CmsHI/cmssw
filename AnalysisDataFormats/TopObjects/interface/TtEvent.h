@@ -31,10 +31,10 @@ class TtEvent {
   enum HypoClassKey {kGeom, kWMassMaxSumPt, kMaxSumPtWMass, kGenMatch, kMVADisc, kKinFit, kKinSolution, kWMassDeltaTopMass, kHitFit};
   /// pair of hypothesis and lepton jet combinatorics for a given hypothesis
   typedef std::pair<reco::CompositeCandidate, std::vector<int> > HypoCombPair;
-
- protected:
    /// a lightweight map for selection type string label and enum value
    struct HypoClassKeyStringToEnum { const char* label; HypoClassKey value; };
+
+ protected:
    /// return the corresponding enum value from a string 
    HypoClassKey hypoClassKeyFromString(const std::string& label) const;
   
@@ -118,7 +118,7 @@ class TtEvent {
   /// set TtGenEvent
   void setGenEvent(const edm::Handle<TtGenEvent>& evt) { genEvt_=edm::RefProd<TtGenEvent>(evt); };
   /// add new hypotheses
-  void addEventHypo(const HypoClassKey& key, const HypoCombPair hyp) { evtHyp_[key].push_back(hyp); };
+  void addEventHypo(const HypoClassKey& key, const HypoCombPair& hyp) { evtHyp_[key].push_back(hyp); };
   /// set number of jets considered when building a given hypothesis
   void setNumberOfConsideredJets(const HypoClassKey& key, const unsigned int nJets) { nJetsConsidered_[key]=nJets; };
   /// set sum pt of kGenMatch hypothesis

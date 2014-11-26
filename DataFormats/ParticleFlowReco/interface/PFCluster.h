@@ -1,6 +1,7 @@
 #ifndef DataFormats_ParticleFlowReco_PFCluster_h
 #define DataFormats_ParticleFlowReco_PFCluster_h
 
+#include "DataFormats/CaloRecHit/interface/CaloClusterFwd.h"
 #include "DataFormats/CaloRecHit/interface/CaloCluster.h"
 
 #include "Math/GenVector/PositionVector3D.h"
@@ -8,11 +9,15 @@
 #include "Rtypes.h" 
 
 #include "DataFormats/ParticleFlowReco/interface/PFRecHitFraction.h"
+#include "DataFormats/ParticleFlowReco/interface/PFRecHit.h"
 #include "DataFormats/ParticleFlowReco/interface/PFLayer.h"
 
 #include <iostream>
 #include <vector>
-
+#include <algorithm>
+#if !defined(__CINT__) && !defined(__MAKECINT__) && !defined(__REFLEX__)
+#include <atomic>
+#endif
 
 
 class PFClusterAlgo;
@@ -42,35 +47,44 @@ namespace reco {
   class PFCluster : public CaloCluster {
   public:
 
-
+    typedef std::vector<std::pair<CaloClusterPtr::key_type,edm::Ptr<PFCluster> > > EEtoPSAssociation;
     typedef ROOT::Math::PositionVector3D<ROOT::Math::CylindricalEta3D<Double32_t> > REPPoint;
   
-    PFCluster() : CaloCluster(CaloCluster::particleFlow), color_(1) {}
+    PFCluster() : CaloCluster(CaloCluster::particleFlow), time_(-99.0), layer_(PFLayer::NONE), color_(1) {}
 
     /// constructor
     PFCluster(PFLayer::Layer layer, double energy,
 	      double x, double y, double z );
 
-
-
     /// resets clusters parameters
     void reset();
+
+    /// reset only hits and fractions
+    void resetHitsAndFractions();
     
     /// add a given fraction of the rechit
     void addRecHitFraction( const reco::PFRecHitFraction& frac);
     
     /// vector of rechit fractions
     const std::vector< reco::PFRecHitFraction >& recHitFractions() const 
-      { return rechits_; }
+      { return rechits_; }    
     
     /// set layer
     void setLayer( PFLayer::Layer layer);
     
     /// cluster layer, see PFLayer.h in this directory
-    PFLayer::Layer  layer() const;     
+    PFLayer::Layer  layer() const;
     
     /// cluster energy
     double        energy() const {return energy_;}
+
+    /// cluster time
+    double        time() const {return time_;}
+    /// cluster depth
+    double        depth() const {return depth_;}
+
+    void         setTime(double time) {time_ = time;}
+    void         setDepth(double depth) {depth_ = depth;}
     
     /// cluster position: rho, eta, phi
     const REPPoint&       positionREP() const {return posrep_;}
@@ -97,9 +111,7 @@ namespace reco {
     
     friend    std::ostream& operator<<(std::ostream& out, 
 				       const PFCluster& cluster);
-    /// counter
-    static unsigned     instanceCounter_;
-    
+
     /// \todo move to PFClusterTools
     static void setDepthCorParameters(int mode, 
 				      double a, double b, 
@@ -131,13 +143,27 @@ namespace reco {
     
     /// dummy vertex access
     math::XYZPoint const & vertex() const { 
-      static math::XYZPoint dummyVtx(0,0,0);
-      return dummyVtx;      
+      return dummyVtx_;      
     }
     double vx() const { return vertex().x(); }
     double vy() const { return vertex().y(); }
     double vz() const { return vertex().z(); }    
 
+#if !defined(__CINT__) && !defined(__MAKECINT__) && !defined(__REFLEX__)
+    template<typename pruner>
+      void pruneUsing(pruner prune) {
+      hitsAndFractions_.clear();
+      std::vector<reco::PFRecHitFraction>::iterator iter = 
+	std::stable_partition(rechits_.begin(),rechits_.end(),prune);
+      rechits_.erase(iter,rechits_.end());
+      hitsAndFractions_.reserve(rechits_.size());
+      for( const auto& hitfrac : rechits_ ) {
+	hitsAndFractions_.emplace_back(hitfrac.recHitRef()->detId(),
+				       hitfrac.fraction());
+      }
+    }
+#endif
+    
   private:
     
     /// vector of rechit fractions (transient)
@@ -145,8 +171,30 @@ namespace reco {
     
     /// cluster position: rho, eta, phi (transient)
     REPPoint            posrep_;
-    
-    
+
+    ///Michalis :Add timing and depth information
+    double time_;
+    double depth_;
+
+    /// transient layer
+    PFLayer::Layer layer_; 
+
+#if !defined(__CINT__) && !defined(__MAKECINT__) && !defined(__REFLEX__)
+     /// \todo move to PFClusterTools
+    static std::atomic<int>    depthCorMode_;
+
+    /// \todo move to PFClusterTools
+    static std::atomic<double> depthCorA_;
+
+    /// \todo move to PFClusterTools
+    static std::atomic<double> depthCorB_ ;
+
+    /// \todo move to PFClusterTools
+    static std::atomic<double> depthCorAp_;
+
+    /// \todo move to PFClusterTools
+    static std::atomic<double> depthCorBp_;
+#else
     /// \todo move to PFClusterTools
     static int    depthCorMode_;
     
@@ -161,12 +209,12 @@ namespace reco {
     
     /// \todo move to PFClusterTools
     static double depthCorBp_;
+#endif
     
-    
+    static const math::XYZPoint dummyVtx_;
+
     /// color (transient)
     int                 color_;
-    
-    friend class ::PFClusterAlgo;
   };
 }
 

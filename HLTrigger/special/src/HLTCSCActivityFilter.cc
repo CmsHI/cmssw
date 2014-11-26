@@ -13,7 +13,6 @@ Implementation:
 //
 // Original Author:  Carlo Battilana
 //         Created:  Tue Jan 22 13:55:00 CET 2008
-// $Id: HLTCSCActivityFilter.cc,v 1.14 2010/06/15 22:16:10 fwyzard Exp $
 //
 //
 
@@ -57,7 +56,7 @@ HLTCSCActivityFilter::fillDescriptions(edm::ConfigurationDescriptions& descripti
 //
 
 // ------------ method called on each new Event  ------------
-bool HLTCSCActivityFilter::hltFilter(edm::Event& iEvent, const edm::EventSetup& iSetup, trigger::TriggerFilterObjectWithRefs & filterproduct) {
+bool HLTCSCActivityFilter::hltFilter(edm::Event& iEvent, const edm::EventSetup& iSetup, trigger::TriggerFilterObjectWithRefs & filterproduct) const {
   using namespace edm;
   using namespace std;
   using namespace trigger;

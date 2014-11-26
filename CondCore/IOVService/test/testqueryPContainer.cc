@@ -6,12 +6,14 @@
 #include "CondCore/DBCommon/interface/DbTransaction.h"
 #include "CondCore/IOVService/interface/IOVEditor.h"
 #include "testPayloadObj.h"
+#include <iostream>
 int main(){
   edmplugin::PluginManager::Config config;
   try{
     edmplugin::PluginManager::configure(edmplugin::standard::config());
     cond::DbConnection connection;
     connection.configuration().setMessageLevel( coral::Debug );
+    std::cout<<"#0 "<<std::endl;
     connection.configure();
     cond::DbSession pooldb = connection.createSession();
     pooldb.open("sqlite_file:mytest.db"); 
@@ -19,12 +21,13 @@ int main(){
     myobj->data.push_back(1);
     myobj->data.push_back(10);
     pooldb.transaction().start(false);
+    cond::IOVEditor editor( pooldb );
+    editor.createIOVContainerIfNecessary();
+    std::cout << "creating\n";
+    editor.create(cond::timestamp, 2);
     boost::shared_ptr<testPayloadObj> myPtr( myobj );
     std::string token = pooldb.storeObject(myPtr.get(),"mypayloadcontainer");
     std::cout<<"payload token "<<token<<std::endl;
-    cond::IOVEditor editor( pooldb );
-    std::cout << "creating\n";
-    editor.create(cond::timestamp, 2);
     std::cout << "appending";
     editor.append(1,token);
     std::string iovtok=editor.proxy().token();
@@ -37,7 +40,10 @@ int main(){
     }
   }catch(const cond::Exception& er){
     std::cout<<"error "<<er.what()<<std::endl;
+    return -1;
   }catch(const std::exception& er){
     std::cout<<"std error "<<er.what()<<std::endl;
+    return -1;
   }
+  return 0;
 }

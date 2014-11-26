@@ -2,7 +2,7 @@
 #define Validaiton_RPCRecHits_RPCRecHitValid_h
 
 #include "FWCore/Framework/interface/Frameworkfwd.h"
-#include "FWCore/Framework/interface/EDAnalyzer.h"
+#include "DQMServices/Core/interface/DQMEDAnalyzer.h"
 
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
@@ -10,33 +10,38 @@
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
 #include "FWCore/ServiceRegistry/interface/Service.h"
-#include "DQMServices/Core/interface/DQMStore.h"
 #include "DQMServices/Core/interface/MonitorElement.h"
 
+#include "SimDataFormats/TrackingHit/interface/PSimHitContainer.h"
+#include "DataFormats/RPCRecHit/interface/RPCRecHitCollection.h"
+#include "DataFormats/TrackingRecHit/interface/TrackingRecHitFwd.h"
+#include "DataFormats/MuonReco/interface/MuonFwd.h"
+#include "SimGeneral/TrackingAnalysis/interface/SimHitTPAssociationProducer.h"
 #include "Validation/RPCRecHits/interface/RPCValidHistograms.h"
 
 #include <string>
 
-class RPCRecHitValid : public edm::EDAnalyzer
+class RPCRecHitValid : public DQMEDAnalyzer
 {
 public:
   RPCRecHitValid(const edm::ParameterSet& pset);
-  ~RPCRecHitValid();
+  ~RPCRecHitValid() {};
 
   void analyze(const edm::Event& event, const edm::EventSetup& eventSetup);
-  void beginRun(const edm::Run& run, const edm::EventSetup& eventSetup);
-  void endRun(const edm::Run& run, const edm::EventSetup& eventSetup);
-  void beginJob();
-  void endJob();
+  void bookHistograms(DQMStore::IBooker &, edm::Run const &, edm::EventSetup const &) override;
 
 private:
-  std::string subDir_;
-  edm::InputTag simHitLabel_, recHitLabel_;
-  edm::InputTag simParticleLabel_;
-  edm::InputTag simHitAssocLabel_;
-  edm::InputTag muonLabel_;
+  typedef edm::PSimHitContainer SimHits;
+  typedef RPCRecHitCollection RecHits;
+  typedef TrackingParticleCollection SimParticles;
+  typedef SimHitTPAssociationProducer::SimHitTPAssociationList SimHitAssoc;
 
-  DQMStore* dbe_;
+  std::string subDir_;
+  edm::EDGetTokenT<SimHits> simHitToken_;
+  edm::EDGetTokenT<RecHits> recHitToken_;
+  edm::EDGetTokenT<SimParticles> simParticleToken_;
+  edm::EDGetTokenT<SimHitAssoc>  simHitAssocToken_;
+  edm::EDGetTokenT<reco::MuonCollection> muonToken_;
 
   typedef MonitorElement* MEP;
   RPCValidHistograms h_;

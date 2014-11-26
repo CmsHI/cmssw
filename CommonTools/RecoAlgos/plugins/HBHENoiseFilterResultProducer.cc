@@ -2,7 +2,7 @@
 //
 // Package:    HBHENoiseFilterResultProducer
 // Class:      HBHENoiseFilterResultProducer
-// 
+//
 /**\class HBHENoiseFilterResultProducer
 
  Description: Produces the result from the HBENoiseFilter
@@ -43,11 +43,11 @@ class HBHENoiseFilterResultProducer : public edm::EDProducer {
 
    private:
       virtual void produce(edm::Event&, const edm::EventSetup&) override;
-      
+
       // ----------member data ---------------------------
 
       // parameters
-      edm::InputTag noiselabel_;
+      edm::EDGetTokenT<HcalNoiseSummary> noisetoken_;
       double minRatio_, maxRatio_;
       int minHPDHits_, minRBXHits_, minHPDNoOtherHits_;
       int minZeros_;
@@ -57,9 +57,12 @@ class HBHENoiseFilterResultProducer : public edm::EDProducer {
       double minIsolatedNoiseSumE_, minIsolatedNoiseSumEt_;
 
       bool useTS4TS5_;
+      bool useRBXRechitR45Loose_;
+      bool useRBXRechitR45Tight_;
 
       bool IgnoreTS4TS5ifJetInLowBVRegion_;
       edm::InputTag jetlabel_;
+      edm::EDGetTokenT<reco::PFJetCollection> jettoken_;
       int maxjetindex_;
       double maxNHF_;
 };
@@ -72,7 +75,7 @@ class HBHENoiseFilterResultProducer : public edm::EDProducer {
 HBHENoiseFilterResultProducer::HBHENoiseFilterResultProducer(const edm::ParameterSet& iConfig)
 {
   //now do what ever initialization is needed
-  noiselabel_ = iConfig.getParameter<edm::InputTag>("noiselabel");
+  noisetoken_ = consumes<HcalNoiseSummary>(iConfig.getParameter<edm::InputTag>("noiselabel"));
   minRatio_ = iConfig.getParameter<double>("minRatio");
   maxRatio_ = iConfig.getParameter<double>("maxRatio");
   minHPDHits_ = iConfig.getParameter<int>("minHPDHits");
@@ -84,11 +87,14 @@ HBHENoiseFilterResultProducer::HBHENoiseFilterResultProducer(const edm::Paramete
   maxRBXEMF_ = iConfig.getParameter<double>("maxRBXEMF");
   minNumIsolatedNoiseChannels_ = iConfig.getParameter<int>("minNumIsolatedNoiseChannels");
   minIsolatedNoiseSumE_ = iConfig.getParameter<double>("minIsolatedNoiseSumE");
-  minIsolatedNoiseSumEt_ = iConfig.getParameter<double>("minIsolatedNoiseSumEt");  
+  minIsolatedNoiseSumEt_ = iConfig.getParameter<double>("minIsolatedNoiseSumEt");
   useTS4TS5_ = iConfig.getParameter<bool>("useTS4TS5");
+  useRBXRechitR45Loose_ = iConfig.getParameter<bool>("useRBXRechitR45Loose");
+  useRBXRechitR45Tight_ = iConfig.getParameter<bool>("useRBXRechitR45Tight");
 
   IgnoreTS4TS5ifJetInLowBVRegion_ = iConfig.getParameter<bool>("IgnoreTS4TS5ifJetInLowBVRegion");
   jetlabel_ =  iConfig.getParameter<edm::InputTag>("jetlabel");
+  jettoken_ = mayConsume<reco::PFJetCollection>(jetlabel_);
   maxjetindex_ = iConfig.getParameter<int>("maxjetindex");
   maxNHF_ = iConfig.getParameter<double>("maxNHF");
 
@@ -114,7 +120,7 @@ HBHENoiseFilterResultProducer::produce(edm::Event& iEvent, const edm::EventSetup
 
   // get the Noise summary object
   edm::Handle<HcalNoiseSummary> summary_h;
-  iEvent.getByLabel(noiselabel_, summary_h);
+  iEvent.getByToken(noisetoken_, summary_h);
   if(!summary_h.isValid()) {
     throw edm::Exception(edm::errors::ProductNotFound) << " could not find HcalNoiseSummary.\n";
     return;
@@ -128,15 +134,15 @@ HBHENoiseFilterResultProducer::produce(edm::Event& iEvent, const edm::EventSetup
   if ( IgnoreTS4TS5ifJetInLowBVRegion_==true)
     {
       edm::Handle<reco::PFJetCollection> pfjet_h;
-      iEvent.getByLabel(jetlabel_, pfjet_h);
+      iEvent.getByToken(jettoken_, pfjet_h);
       if(pfjet_h.isValid())  // valid jet collection found
 	{
 	  int jetindex=0;
-	  for( reco::PFJetCollection::const_iterator jet = pfjet_h->begin(); jet != pfjet_h->end(); ++jet) 
+	  for( reco::PFJetCollection::const_iterator jet = pfjet_h->begin(); jet != pfjet_h->end(); ++jet)
 	    {
 	      if (jetindex>maxjetindex_) break; // only look at first N jets (N specified by user via maxjetindex_)
 	      // Check whether jet is in low-BV region (0<eta<1.4, -1.8<phi<-1.4)
-	      if (jet->eta()>0 && jet->eta()<1.4 && 
+	      if (jet->eta()>0 && jet->eta()<1.4 &&
 		  jet->phi()>-1.8 && jet->phi()<-1.4)
 		{
 		  // Look for a good jet in low BV region; if found, we will keep event
@@ -168,7 +174,9 @@ HBHENoiseFilterResultProducer::produce(edm::Event& iEvent, const edm::EventSetup
   if(summary.numIsolatedNoiseChannels()>=minNumIsolatedNoiseChannels_) result=false;
   if(summary.isolatedNoiseSumE()>=minIsolatedNoiseSumE_) result=false;
   if(summary.isolatedNoiseSumEt()>=minIsolatedNoiseSumEt_) result=false;
-  if(useTS4TS5_ == true && summary.HasBadRBXTS4TS5() == true && goodJetFoundInLowBVRegion==false) result = false;
+  if(useTS4TS5_ && summary.HasBadRBXTS4TS5() == true && !goodJetFoundInLowBVRegion) result = false;
+  if(useRBXRechitR45Loose_ && summary.HasBadRBXRechitR45Loose() == true && !goodJetFoundInLowBVRegion) result = false;
+  if(useRBXRechitR45Tight_ && summary.HasBadRBXRechitR45Tight() == true && !goodJetFoundInLowBVRegion) result = false;
 
   std::auto_ptr<bool> pOut(new bool);
   *pOut=result;

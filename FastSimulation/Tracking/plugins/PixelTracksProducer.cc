@@ -3,11 +3,11 @@
 
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
+#include "FWCore/Framework/interface/ConsumesCollector.h"
 
 #include "DataFormats/Common/interface/Handle.h"
 #include "DataFormats/Common/interface/OwnVector.h"
 
-#include "DataFormats/TrajectorySeed/interface/TrajectorySeedCollection.h"
 #include "DataFormats/TrackingRecHit/interface/TrackingRecHit.h"
 
 //Pixel Specific stuff
@@ -42,18 +42,21 @@ PixelTracksProducer::PixelTracksProducer(const edm::ParameterSet& conf) :
 
   const edm::ParameterSet& regfactoryPSet = conf.getParameter<edm::ParameterSet>("RegionFactoryPSet");
   std::string regfactoryName = regfactoryPSet.getParameter<std::string>("ComponentName");
-  theRegionProducer = TrackingRegionProducerFactory::get()->create(regfactoryName,regfactoryPSet);
+  theRegionProducer = TrackingRegionProducerFactory::get()->create(regfactoryName,
+	regfactoryPSet, consumesCollector());
   
   const edm::ParameterSet& fitterPSet = conf.getParameter<edm::ParameterSet>("FitterPSet");
   std::string fitterName = fitterPSet.getParameter<std::string>("ComponentName");
   theFitter = PixelFitterFactory::get()->create( fitterName, fitterPSet);
   
+  edm::ConsumesCollector iC = consumesCollector();
   const edm::ParameterSet& filterPSet = conf.getParameter<edm::ParameterSet>("FilterPSet");
   std::string filterName = filterPSet.getParameter<std::string>("ComponentName");
-  theFilter = PixelTrackFilterFactory::get()->create( filterName, filterPSet);
+  theFilter = PixelTrackFilterFactory::get()->create( filterName, filterPSet, iC);
   
   // The name of the seed producer
   seedProducer = conf.getParameter<edm::InputTag>("SeedProducer");
+  seedProducerToken = consumes<TrajectorySeedCollection>(seedProducer);
 
 }
 
@@ -81,7 +84,7 @@ PixelTracksProducer::produce(edm::Event& e, const edm::EventSetup& es) {
   TracksWithRecHits cleanedTracks;
   
   edm::Handle<TrajectorySeedCollection> theSeeds;
-  e.getByLabel(seedProducer,theSeeds);
+  e.getByToken(seedProducerToken,theSeeds);
 
   // No seed -> output an empty track collection
   if(theSeeds->size() == 0) {
@@ -139,7 +142,7 @@ PixelTracksProducer::produce(edm::Event& e, const edm::EventSetup& es) {
     
     for (unsigned int k = 0; k < hits.size(); k++) {
       TrackingRecHit *hit = (hits.at(k))->clone();
-      track->setHitPattern(*hit, k);
+      track->appendHitPattern(*hit);
       recHits->push_back(hit);
     }
 

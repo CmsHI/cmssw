@@ -1,10 +1,8 @@
 // C++ common header
 #include <iostream>
+#include <memory>
 #include <vector>
 #include <fstream>
-
-// Boost headers
-#include "boost/scoped_ptr.hpp"
 
 #include "FWCore/Framework/interface/EDAnalyzer.h"
 #include "FWCore/Framework/interface/Run.h"
@@ -67,14 +65,14 @@ namespace edmtest {
 	edm::ESHandle<FileBlob> rootgeo;
 	iSetup.get<DQMReferenceHistogramRootFileRcd>().get(rootgeo);
 	//std::cout<<"ROOT FILE IN MEMORY"<<std::endl;
-	boost::scoped_ptr<std::vector<unsigned char> > tb( (*rootgeo).getUncompressedBlob() );
+        std::unique_ptr<std::vector<unsigned char> > tb( (*rootgeo).getUncompressedBlob() );
 	// char filename[128];
 	// sprintf(filename, "mem:%p,%ul", &(*tb)[0], (unsigned long) tb->size());
 	// edm::Service<DQMStore>()->open(filename, false, "", "Reference");
 	
 	//here you can implement the stream for putting the TFile on disk...
 	std::string outfile("dqmreference.root") ;
-	ofstream output(outfile.c_str()) ;
+	std::ofstream output(outfile.c_str()) ;
 	output.write((const char *)&(*tb)[0], tb->size());
 	output.close() ;
 	

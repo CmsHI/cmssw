@@ -14,12 +14,13 @@
 #include "FWCore/Utilities/interface/InputTag.h"
 #include "RecoMuon/TrackingTools/interface/RecoMuonEnumerators.h"
 
-#include <RecoMuon/TrackingTools/interface/MuonServiceProxy.h>
+#include "RecoMuon/TrackingTools/interface/MuonServiceProxy.h"
 
 #include "RecoMuon/MuonSeedGenerator/src/SETFilter.h"
 #include "RecoMuon/TransientTrackingRecHit/interface/MuonTransientTrackingRecHit.h" 
 #include "RecoMuon/MuonSeedGenerator/src/SETPatternRecognition.h"
 #include "RecoMuon/MuonSeedGenerator/src/SETSeedFinder.h"
+#include "DataFormats/BeamSpot/interface/BeamSpot.h"
 
 class TrajectorySeed;
 class STAFilter;
@@ -39,7 +40,7 @@ class SETMuonSeedProducer : public edm::EDProducer {
   virtual ~SETMuonSeedProducer();
   
   // Operations
-  virtual void produce(edm::Event&, const edm::EventSetup&);
+  virtual void produce(edm::Event&, const edm::EventSetup&) override;
 
  protected:
 
@@ -61,9 +62,11 @@ class SETMuonSeedProducer : public edm::EDProducer {
   bool useSegmentsInTrajectory;
   MuonServiceProxy *theService;
 
-  SETPatternRecognition thePatternRecognition;
+  SETPatternRecognition *thePatternRecognition;
   SETSeedFinder theSeedFinder;
 
   edm::InputTag theBeamSpotTag;
+  edm::EDGetTokenT<reco::BeamSpot> beamspotToken;
+
 };
 #endif

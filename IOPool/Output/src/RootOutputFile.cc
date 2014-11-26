@@ -3,6 +3,7 @@
 
 #include "FWCore/Utilities/interface/GlobalIdentifier.h"
 
+
 #include "DataFormats/Provenance/interface/EventAuxiliary.h"
 #include "FWCore/Version/interface/GetFileFormatVersion.h"
 #include "DataFormats/Provenance/interface/FileFormatVersion.h"
@@ -13,6 +14,7 @@
 #include "FWCore/Framework/interface/EventPrincipal.h"
 #include "FWCore/Framework/interface/LuminosityBlockPrincipal.h"
 #include "FWCore/Framework/interface/RunPrincipal.h"
+#include "FWCore/MessageLogger/interface/JobReport.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "DataFormats/Common/interface/OutputHandle.h"
 #include "DataFormats/Provenance/interface/BranchChildren.h"
@@ -24,12 +26,13 @@
 #include "DataFormats/Provenance/interface/ParameterSetID.h"
 #include "DataFormats/Provenance/interface/ProcessHistoryID.h"
 #include "DataFormats/Provenance/interface/ProductRegistry.h"
+#include "DataFormats/Provenance/interface/ThinnedAssociationsHelper.h"
 #include "FWCore/Framework/interface/ConstProductRegistry.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/ParameterSet/interface/Registry.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
+#include "IOPool/Common/interface/getWrapperBasePtr.h"
 
-#include "TROOT.h"
 #include "TTree.h"
 #include "TFile.h"
 #include "TClass.h"
@@ -93,7 +96,8 @@ namespace edm {
       dataTypeReported_(false),
       processHistoryRegistry_(),
       parentageIDs_(),
-      branchesWithStoredHistory_() {
+      branchesWithStoredHistory_(),
+      wrapperBaseTClass_(TClass::GetClass("edm::WrapperBase")) {
 #if ROOT_VERSION_CODE >= ROOT_VERSION(5,30,0)
     if (om_->compressionAlgorithm() == std::string("ZLIB")) {
       filePtr_->SetCompressionAlgorithm(ROOT::kZLIB);
@@ -134,7 +138,6 @@ namespace edm {
         BranchDescription const& desc = *item.branchDescription_;
         theTree->addBranch(desc.branchName(),
                            desc.wrappedName(),
-                           desc.getInterface(),
                            item.product_,
                            item.splitLevel_,
                            item.basketSize_,
@@ -436,6 +439,9 @@ namespace edm {
     ++lumiEntryNumber_;
     fillBranches(InLumi, lb, nullptr, mcc);
     lumiTree_.optimizeBaskets(10ULL*1024*1024);
+
+    Service<JobReport> reportSvc;
+    reportSvc->reportLumiSection(reportToken_, lb.id().run(), lb.id().luminosityBlock());
   }
 
   void RootOutputFile::writeRun(RunPrincipal const& r, ModuleCallingContext const* mcc) {
@@ -453,6 +459,9 @@ namespace edm {
     ++runEntryNumber_;
     fillBranches(InRun, r, nullptr, mcc);
     runTree_.optimizeBaskets(10ULL*1024*1024);
+
+    Service<JobReport> reportSvc;
+    reportSvc->reportRunNumber(reportToken_, r.run());
   }
 
   void RootOutputFile::writeParentageRegistry() {
@@ -525,6 +534,13 @@ namespace edm {
   void RootOutputFile::writeBranchIDListRegistry() {
     BranchIDLists const* p = om_->branchIDLists();
     TBranch* b = metaDataTree_->Branch(poolNames::branchIDListBranchName().c_str(), &p, om_->basketSize(), 0);
+    assert(b);
+    b->Fill();
+  }
+
+  void RootOutputFile::writeThinnedAssociationsHelper() {
+    ThinnedAssociationsHelper const* p = om_->thinnedAssociationsHelper();
+    TBranch* b = metaDataTree_->Branch(poolNames::thinnedAssociationsHelperBranchName().c_str(), &p, om_->basketSize(), 0);
     assert(b);
     b->Fill();
   }
@@ -641,7 +657,7 @@ namespace edm {
     assert(om_->dropMetaData() != PoolOutputModule::DropAll);
     assert(produced || om_->dropMetaData() != PoolOutputModule::DropPrior);
     if(om_->dropMetaData() == PoolOutputModule::DropDroppedPrior && !produced) return;
-    BranchMapper const& iMapper = *principal.branchMapperPtr();
+    ProductProvenanceRetriever const& iMapper = *principal.productProvenanceRetrieverPtr();
     std::vector<BranchID> const& parentIDs = iGetParents.parentage().parents();
     for(auto const& parentID : parentIDs) {
       branchesWithStoredHistory_.insert(parentID);
@@ -664,8 +680,7 @@ namespace edm {
                 StoredProductProvenanceVector* productProvenanceVecPtr,
                 ModuleCallingContext const* mcc) {
 
-    typedef std::vector<std::pair<TClass*, void const*> > Dummies;
-    Dummies dummies;
+    std::vector<std::unique_ptr<WrapperBase> > dummies;
 
     bool const fastCloning = (branchType == InEvent) && (whyNotFastClonable_ == FileBlock::CanFastClone);
 
@@ -687,13 +702,13 @@ namespace edm {
       bool getProd = (produced || !fastCloning ||
          treePointers_[branchType]->uncloned(item.branchDescription_->branchName()));
 
-      void const* product = nullptr;
+      WrapperBase const* product = nullptr;
       OutputHandle const oh = principal.getForOutput(id, getProd, mcc);
       if(keepProvenance && oh.productProvenance()) {
         insertProductProvenance(*oh.productProvenance(),provenanceToKeep);
         //provenanceToKeep.insert(*oh.productProvenance());
         EventPrincipal const& eventPrincipal = dynamic_cast<EventPrincipal const&>(principal);
-        assert(eventPrincipal.branchMapperPtr());
+        assert(eventPrincipal.productProvenanceRetrieverPtr());
         insertAncestors(*oh.productProvenance(), eventPrincipal, produced, provenanceToKeep, mcc);
       }
       product = oh.wrapper();
@@ -701,9 +716,12 @@ namespace edm {
         if(product == nullptr) {
           // No product with this ID is in the event.
           // Add a null product.
-          TClass* cp = gROOT->GetClass(item.branchDescription_->wrappedName().c_str());
-          product = cp->New();
-          dummies.emplace_back(cp, product);
+          TClass* cp = TClass::GetClass(item.branchDescription_->wrappedName().c_str());
+          int offset = cp->GetBaseClassOffset(wrapperBaseTClass_);
+          void* p = cp->New();
+          std::unique_ptr<WrapperBase> dummy = getWrapperBasePtr(p, offset);
+          product = dummy.get();
+          dummies.emplace_back(std::move(dummy));
         }
         item.product_ = product;
       }
@@ -712,9 +730,6 @@ namespace edm {
     if(productProvenanceVecPtr != nullptr) productProvenanceVecPtr->assign(provenanceToKeep.begin(), provenanceToKeep.end());
     treePointers_[branchType]->fillTree();
     if(productProvenanceVecPtr != nullptr) productProvenanceVecPtr->clear();
-    for(auto& dummy : dummies) {
-      dummy.first->Destructor(const_cast<void *>(dummy.second));
-    }
   }
   
   bool

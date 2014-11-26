@@ -15,13 +15,12 @@
 #include "CondFormats/EcalObjects/interface/EcalTimeCalibConstants.h"
 #include "CalibCalorimetry/EcalLaserCorrection/interface/EcalLaserDbRecord.h"
 
-#include "RecoLocalCalo/EcalDeadChannelRecoveryAlgos/interface/EcalDeadChannelRecoveryAlgos.h"
-
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
+#include "FWCore/Framework/interface/EDProducer.h"
 
 
-EcalRecHitWorkerRecover::EcalRecHitWorkerRecover(const edm::ParameterSet&ps) :
-        EcalRecHitWorkerBaseClass(ps)
+EcalRecHitWorkerRecover::EcalRecHitWorkerRecover(const edm::ParameterSet&ps, edm::ConsumesCollector&  c) :
+  EcalRecHitWorkerBaseClass(ps,c)
 {
         rechitMaker_ = new EcalRecHitSimpleAlgo();
         // isolated channel recovery
@@ -37,10 +36,12 @@ EcalRecHitWorkerRecover::EcalRecHitWorkerRecover(const edm::ParameterSet&ps) :
 
 	dbStatusToBeExcludedEE_ = ps.getParameter<std::vector<int> >("dbStatusToBeExcludedEE");
 	dbStatusToBeExcludedEB_ = ps.getParameter<std::vector<int> >("dbStatusToBeExcludedEB");
-	
-        tpDigiCollection_        = ps.getParameter<edm::InputTag>("triggerPrimitiveDigiCollection");
+
         logWarningEtThreshold_EB_FE_ = ps.getParameter<double>("logWarningEtThreshold_EB_FE");
         logWarningEtThreshold_EE_FE_ = ps.getParameter<double>("logWarningEtThreshold_EE_FE");
+
+        tpDigiToken_ = 
+          c.consumes<EcalTrigPrimDigiCollection>(ps.getParameter<edm::InputTag>("triggerPrimitiveDigiCollection"));
 }
 
 
@@ -127,19 +128,36 @@ EcalRecHitWorkerRecover::run( const edm::Event & evt,
         }
 
         if ( flags == EcalRecHitWorkerRecover::EB_single ) {
-                // recover as single dead channel
-                const EcalRecHitCollection * hit_collection = &result;
-                EcalDeadChannelRecoveryAlgos deadChannelCorrector(caloTopology_.product());
+                    // recover as single dead channel
+                    ebDeadChannelCorrector.setCaloTopology(caloTopology_.product());
 
-                // channel recovery
-                EcalRecHit hit = deadChannelCorrector.correct( detId, hit_collection, singleRecoveryMethod_, singleRecoveryThreshold_ );
-                if ( hit.energy() != 0 ) {
-		  hit.setFlag( EcalRecHit::kNeighboursRecovered ) ;
-                } else {
-		  // recovery failed
-		  hit.setFlag( EcalRecHit::kDead ) ;
-                }
-                insertRecHit( hit, result );
+                    // channel recovery. Accepted new RecHit has the flag AcceptRecHit=TRUE
+                    bool AcceptRecHit=true;
+                    EcalRecHit hit = ebDeadChannelCorrector.correct( detId, result, singleRecoveryMethod_, singleRecoveryThreshold_, &AcceptRecHit);
+
+                    if ( hit.energy() != 0 and AcceptRecHit == true ) {
+                        hit.setFlag( EcalRecHit::kNeighboursRecovered ) ;
+                    } else {
+                        // recovery failed
+                        hit.setFlag( EcalRecHit::kDead ) ;
+                    }
+                    insertRecHit( hit, result );
+                
+        } else if ( flags == EcalRecHitWorkerRecover::EE_single ) {
+                    // recover as single dead channel
+		    eeDeadChannelCorrector.setCaloTopology(caloTopology_.product());
+
+                    // channel recovery. Accepted new RecHit has the flag AcceptRecHit=TRUE
+                    bool AcceptRecHit=true;
+                    EcalRecHit hit = eeDeadChannelCorrector.correct( detId, result, singleRecoveryMethod_, singleRecoveryThreshold_, &AcceptRecHit);
+                    if ( hit.energy() != 0 and AcceptRecHit == true ) {
+                        hit.setFlag( EcalRecHit::kNeighboursRecovered ) ;
+                    } else {
+                       // recovery failed
+                       hit.setFlag( EcalRecHit::kDead ) ;
+                    }
+                    insertRecHit( hit, result );
+                
         } else if ( flags == EcalRecHitWorkerRecover::EB_VFE ) {
                 // recover as dead VFE
                 EcalRecHit hit( detId, 0., 0.);
@@ -151,15 +169,10 @@ EcalRecHitWorkerRecover::run( const edm::Event & evt,
 
                 EcalTrigTowerDetId ttDetId( ((EBDetId)detId).tower() );
                 edm::Handle<EcalTrigPrimDigiCollection> pTPDigis;
-                evt.getByLabel(tpDigiCollection_, pTPDigis);
-                const EcalTrigPrimDigiCollection * tpDigis = 0;
-                if ( pTPDigis.isValid() ) {
-                        tpDigis = pTPDigis.product();
-                } else {
-                        edm::LogError("EcalRecHitWorkerRecover") << "Can't get the product " << tpDigiCollection_.instance() 
-                                << " with label " << tpDigiCollection_.label();
-                        return false;
-                }
+                evt.getByToken(tpDigiToken_, pTPDigis);
+                const EcalTrigPrimDigiCollection * tpDigis = 0;               
+		tpDigis = pTPDigis.product();
+           
                 EcalTrigPrimDigiCollection::const_iterator tp = tpDigis->find( ttDetId );
                 // recover the whole trigger tower
                 if ( tp != tpDigis->end() ) {
@@ -223,15 +236,10 @@ EcalRecHitWorkerRecover::run( const edm::Event & evt,
                         }
                         
                         edm::Handle<EcalTrigPrimDigiCollection> pTPDigis;
-                        evt.getByLabel(tpDigiCollection_, pTPDigis);
+                        evt.getByToken(tpDigiToken_, pTPDigis);
                         const EcalTrigPrimDigiCollection * tpDigis = 0;
-                        if ( pTPDigis.isValid() ) {
-                                tpDigis = pTPDigis.product();
-                        } else {
-                                edm::LogError("EcalRecHitWorkerRecover") << "Can't get the product " << tpDigiCollection_.instance() 
-                                        << " with label " << tpDigiCollection_.label();
-                                return false;
-                        }
+			tpDigis = pTPDigis.product();
+
                         // associated trigger towers
                         std::set<EcalTrigTowerDetId> aTT;
                         for ( std::set<DetId>::const_iterator it = eeC.begin(); it!=eeC.end(); ++it ) {
@@ -422,6 +430,7 @@ float EcalRecHitWorkerRecover::recCheckCalib(float eTT, int ieta){
 
 // return false is the channel has status  in the list of statusestoexclude
 // true otherwise (channel ok)
+// Careful: this function works on raw (encoded) channel statuses
 bool EcalRecHitWorkerRecover::checkChannelStatus(const DetId& id, 
 						 const std::vector<int>& statusestoexclude){
   
@@ -433,7 +442,7 @@ bool EcalRecHitWorkerRecover::checkChannelStatus(const DetId& id,
   EcalChannelStatus::const_iterator chIt = chStatus_->find( id );
   uint16_t dbStatus = 0;
   if ( chIt != chStatus_->end() ) {
-    dbStatus = chIt->getStatusCode();
+    dbStatus = chIt->getEncodedStatusCode();
   } else {
     edm::LogError("ObjectNotFound") << "No channel status found for xtal " 
 				    << id.rawId() 

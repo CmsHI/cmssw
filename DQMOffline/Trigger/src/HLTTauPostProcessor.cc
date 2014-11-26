@@ -1,83 +1,85 @@
 #include "DQMOffline/Trigger/interface/HLTTauPostProcessor.h"
+#include "DQMServices/Core/interface/MonitorElement.h"
+#include "FWCore/MessageLogger/interface/MessageLogger.h"
 
-using namespace std;
-using namespace edm;
+#include "TEfficiency.h"
+#include "TProfile.h"
 
-HLTTauPostProcessor::HLTTauPostProcessor( const edm::ParameterSet& ps ) 
-{
-    sourceModule_   = ps.getUntrackedParameter<std::string>("SourceModule");
-    dqmBaseFolder_  = ps.getUntrackedParameter<std::string>("DQMBaseFolder");
-    hltProcessName_ = ps.getUntrackedParameter<std::string>("HLTProcessName","HLT");
-    L1MatchDr_      = ps.getUntrackedParameter<double>("L1MatchDeltaR",0.5);
-    HLTMatchDr_     = ps.getUntrackedParameter<double>("HLTMatchDeltaR",0.2);
-    runAtEndJob_    = ps.getUntrackedParameter<bool>("runAtEndJob",false);
-    runAtEndRun_    = ps.getUntrackedParameter<bool>("runAtEndRun",true);
-    hltMenuChanged_ = true;
-    automation_     = HLTTauDQMAutomation(hltProcessName_, L1MatchDr_, HLTMatchDr_); 
-    ps_             = ps;
+#include<tuple>
+
+namespace {
+  std::tuple<float, float> calcEfficiency(float num, float denom) {
+    if(denom == 0.0f)
+      return std::make_tuple(0.0f, 0.0f);
+
+    //float eff = num/denom;
+    constexpr double cl = 0.683f; // "1-sigma"
+    const float eff = num/denom;
+    const float errDown = TEfficiency::ClopperPearson(denom, num, cl, false);
+    const float errUp = TEfficiency::ClopperPearson(denom, num, cl, true);
+
+    // Because of limitation of TProfile, just take max
+    return std::make_tuple(eff, std::max(eff-errDown, errUp-eff));
+  }
 }
+
+HLTTauPostProcessor::HLTTauPostProcessor(const edm::ParameterSet& ps):
+  dqmBaseFolder_(ps.getUntrackedParameter<std::string>("DQMBaseFolder"))
+{}
 
 HLTTauPostProcessor::~HLTTauPostProcessor()
-{
-}
+{}
 
-void HLTTauPostProcessor::beginJob()
+void HLTTauPostProcessor::dqmEndJob(DQMStore::IBooker& iBooker, DQMStore::IGetter& iGetter)
 {
-}
-
-void HLTTauPostProcessor::beginRun( const edm::Run& iRun, const edm::EventSetup& iSetup )
-{
-    //Evaluate configuration for every new trigger menu
-    if ( HLTCP_.init(iRun, iSetup, hltProcessName_, hltMenuChanged_) ) {
-        if ( hltMenuChanged_ ) {
-            processPSet(ps_);
-        }
-    } else {
-        edm::LogWarning("HLTTauPostProcessor") << "HLT config extraction failure with process name '" << hltProcessName_ << "'";
+  if(!iGetter.dirExists(dqmBaseFolder_)) {
+    LogDebug("HLTTauDQMOffline") << "Folder " << dqmBaseFolder_ << " does not exist";
+    return;
+  }
+  iGetter.setCurrentFolder(dqmBaseFolder_);
+  for(const std::string& subfolder: iGetter.getSubdirs()) {
+    std::size_t pos = subfolder.rfind("/");
+    if(pos == std::string::npos)
+      continue;
+    ++pos; // position of first letter after /
+    if(subfolder.compare(pos, 4, "HLT_") == 0) { // start with HLT_
+      LogDebug("HLTTauDQMOffline") << "Processing path " << subfolder.substr(pos);
+      plotFilterEfficiencies(iBooker, iGetter, subfolder);
     }
+  }
 }
 
-void HLTTauPostProcessor::beginLuminosityBlock( const LuminosityBlock& lumiSeg, const EventSetup& context )
-{
-}
+void HLTTauPostProcessor::plotFilterEfficiencies(DQMStore::IBooker& iBooker, DQMStore::IGetter& iGetter, const std::string& folder) const {
+  // Get the source
+  const MonitorElement *eventsPerFilter = iGetter.get(folder+"/EventsPerFilter");
+  if(!eventsPerFilter) {
+    LogDebug("HLTTauDQMOffline") << "ME " << folder << "/EventsPerFilter not found";
+    return;
+  }
 
-void HLTTauPostProcessor::analyze( const Event& iEvent, const EventSetup& iSetup )
-{
-}
+  // Book efficiency TProfile
+  iBooker.setCurrentFolder(folder);
+  MonitorElement *efficiency = iBooker.bookProfile("EfficiencyRefPrevious", "Efficiency to previous filter", eventsPerFilter->getNbinsX()-1,0,eventsPerFilter->getNbinsX()-1, 100,0,1);
+  efficiency->setAxisTitle("Efficiency", 2);
+  const TAxis *xaxis = eventsPerFilter->getTH1F()->GetXaxis();
+  for(int bin=1; bin < eventsPerFilter->getNbinsX(); ++bin) {
+    efficiency->setBinLabel(bin, xaxis->GetBinLabel(bin+1));
+  }
 
-void HLTTauPostProcessor::endLuminosityBlock( const LuminosityBlock& lumiSeg, const EventSetup& context )
-{
-}
-
-void HLTTauPostProcessor::endRun( const Run& r, const EventSetup& context )
-{
-    if (runAtEndRun_) harvest();
-}
-
-void HLTTauPostProcessor::endJob()
-{
-    if (runAtEndJob_) harvest();
-}
-
-void HLTTauPostProcessor::harvest()
-{    
-    //Clear the plotter collection first
-    while (!summaryPlotters_.empty()) delete summaryPlotters_.back(), summaryPlotters_.pop_back();
-    
-    //Read the configuration
-    for ( unsigned int i = 0; i < setup_.size(); ++i ) {
-        summaryPlotters_.push_back(new HLTTauDQMSummaryPlotter(setup_[i],dqmBaseFolder_));
+  // Fill efficiency TProfile
+  TProfile *prev = efficiency->getTProfile();
+  for(int i=2; i <= eventsPerFilter->getNbinsX(); ++i) {
+    if(eventsPerFilter->getBinContent(i-1) < eventsPerFilter->getBinContent(i)) {
+      LogDebug("HLTTauDQMOffline") << "HLTTauPostProcessor: Encountered denominator < numerator with efficiency plot EfficiencyRefPrevious in folder " << folder << ", bin " << i << " numerator " << eventsPerFilter->getBinContent(i) << " denominator " << eventsPerFilter->getBinContent(i-1);
+      continue;
     }
-    
-    for ( unsigned int i = 0; i < summaryPlotters_.size(); ++i ) {
-        if (summaryPlotters_[i]->isValid()) summaryPlotters_[i]->plot();
-    }
+    const std::tuple<float, float> effErr = calcEfficiency(eventsPerFilter->getBinContent(i), eventsPerFilter->getBinContent(i-1));
+    const float efficiency = std::get<0>(effErr);
+    const float err = std::get<1>(effErr);
+
+    prev->SetBinContent(i-1, efficiency);
+    prev->SetBinEntries(i-1, 1);
+    prev->SetBinError(i-1, std::sqrt(efficiency*efficiency + err*err));
+  }
 }
 
-void HLTTauPostProcessor::processPSet( const edm::ParameterSet& pset ) {
-    //Get parameters
-    setup_ = pset.getParameter<std::vector<edm::ParameterSet> >("Setup");
-    
-    //Automatic Configuration
-    automation_.AutoCompleteConfig( setup_, HLTCP_ );
-}

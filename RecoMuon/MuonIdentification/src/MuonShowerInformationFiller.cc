@@ -65,13 +65,19 @@ using namespace edm;
 //
 // Constructor
 //
-MuonShowerInformationFiller::MuonShowerInformationFiller(const edm::ParameterSet& par) :
+MuonShowerInformationFiller::MuonShowerInformationFiller(const edm::ParameterSet& par,edm::ConsumesCollector& iC) :
   theService(0),
   theDTRecHitLabel(par.getParameter<InputTag>("DTRecSegmentLabel")),
   theCSCRecHitLabel(par.getParameter<InputTag>("CSCRecSegmentLabel")),
   theCSCSegmentsLabel(par.getParameter<InputTag>("CSCSegmentLabel")),
   theDT4DRecSegmentLabel(par.getParameter<InputTag>("DT4DRecSegmentLabel"))
 {
+
+  theDTRecHitToken =iC.consumes<DTRecHitCollection>(theDTRecHitLabel) ;
+  theCSCRecHitToken =iC.consumes<CSCRecHit2DCollection>(theCSCRecHitLabel);
+  theCSCSegmentsToken=iC.consumes<CSCSegmentCollection>(theCSCSegmentsLabel);
+  theDT4DRecSegmentToken=iC.consumes<DTRecSegment4DCollection>(theDT4DRecSegmentLabel);
+
 
   edm::ParameterSet serviceParameters = par.getParameter<edm::ParameterSet>("ServiceParameters");
   theService = new MuonServiceProxy(serviceParameters);
@@ -133,10 +139,10 @@ reco::MuonShower MuonShowerInformationFiller::fillShowerInformation( const reco:
 void MuonShowerInformationFiller::setEvent(const edm::Event& event) {
 
   // get all the necesary products
-  event.getByLabel(theDTRecHitLabel, theDTRecHits);
-  event.getByLabel(theCSCRecHitLabel, theCSCRecHits);
-  event.getByLabel(theCSCSegmentsLabel, theCSCSegments);
-  event.getByLabel(theDT4DRecSegmentLabel, theDT4DRecSegments);
+  event.getByToken(theDTRecHitToken, theDTRecHits);
+  event.getByToken(theCSCRecHitToken, theCSCRecHits);
+  event.getByToken(theCSCSegmentsToken, theCSCSegments);
+  event.getByToken(theDT4DRecSegmentToken, theDT4DRecSegments);
 
   for (int istat = 0; istat < 4; istat++) {
       theStationShowerDeltaR.at(istat) = 0.;
@@ -229,7 +235,7 @@ MuonShowerInformationFiller::hitsFromSegments(const GeomDet* geomDet,
 
   if (segments.empty()) return allhitscorrelated;  
 
-  TransientTrackingRecHit::ConstRecHitPointer muonRecHit(segments.front().get());
+  TransientTrackingRecHit::ConstRecHitPointer muonRecHit(segments.front());
   allhitscorrelated = MuonTransientTrackingRecHitBreaker::breakInSubRecHits(muonRecHit,2);
 
   if (segments.size() == 1) return allhitscorrelated;
@@ -237,7 +243,7 @@ MuonShowerInformationFiller::hitsFromSegments(const GeomDet* geomDet,
   for (MuonTransientTrackingRecHit::MuonRecHitContainer::const_iterator iseg = segments.begin() + 1;
        iseg != segments.end(); ++iseg) {
 
-    TransientTrackingRecHit::ConstRecHitPointer muonRecHit((*iseg).get());
+    TransientTrackingRecHit::ConstRecHitPointer muonRecHit((*iseg));
     TransientTrackingRecHit::ConstRecHitContainer hits1 = MuonTransientTrackingRecHitBreaker::breakInSubRecHits(muonRecHit,2);
 
     for (TransientTrackingRecHit::ConstRecHitContainer::const_iterator ihit1 = hits1.begin();
@@ -373,9 +379,9 @@ vector<const GeomDet*> MuonShowerInformationFiller::getCompatibleDets(const reco
 
   vector<GlobalPoint> allCrossingPoints;
 
-  const vector<DetLayer*>& dtlayers = theService->detLayerGeometry()->allDTLayers();
+  const vector<const DetLayer*>& dtlayers = theService->detLayerGeometry()->allDTLayers();
 
-  for (vector<DetLayer*>::const_iterator iLayer = dtlayers.begin(); iLayer != dtlayers.end(); ++iLayer) {
+  for (auto iLayer = dtlayers.begin(); iLayer != dtlayers.end(); ++iLayer) {
 
     // crossing points of track with cylinder
     GlobalPoint xPoint = crossingPoint(innerPos, outerPos, dynamic_cast<const BarrelDetLayer*>(*iLayer));
@@ -402,8 +408,8 @@ vector<const GeomDet*> MuonShowerInformationFiller::getCompatibleDets(const reco
   }
   allCrossingPoints.clear();
 
-  const vector<DetLayer*>& csclayers = theService->detLayerGeometry()->allCSCLayers();
-  for (vector<DetLayer*>::const_iterator iLayer = csclayers.begin(); iLayer != csclayers.end(); ++iLayer) {
+  const vector<const DetLayer*>& csclayers = theService->detLayerGeometry()->allCSCLayers();
+  for (auto iLayer = csclayers.begin(); iLayer != csclayers.end(); ++iLayer) {
 
     GlobalPoint xPoint = crossingPoint(innerPos, outerPos, dynamic_cast<const ForwardDetLayer*>(*iLayer));
 

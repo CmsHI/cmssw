@@ -35,6 +35,8 @@
 #include "G4Step.hh"
 #include "G4ParticleTable.hh"
 
+#include "G4SystemOfUnits.hh"
+
 #include <string>
 #include <vector>
 #include <iostream>
@@ -53,7 +55,7 @@ using std::string;
 //#define debug
 //-------------------------------------------------------------------
 FP420SD::FP420SD(std::string name, const DDCompactView & cpv,
-		 SensitiveDetectorCatalog & clg, 
+		 const SensitiveDetectorCatalog & clg,
 		 edm::ParameterSet const & p, const SimTrackManager* manager) :
   SensitiveTkDetector(name, cpv, clg, p), numberingScheme(0), name(name),
   hcID(-1), theHC(0), theManager(manager), currentHit(0), theTrack(0), 
@@ -94,11 +96,11 @@ FP420SD::FP420SD(G4String name, const DDCompactView & cpv,
     //
     // attach detectors (LogicalVolumes)
     //
-    std::vector<std::string> lvNames = clg.logicalNames(name);
+    const std::vector<std::string>& lvNames = clg.logicalNames(name);
 
     this->Register();
 
-    for (std::vector<std::string>::iterator it=lvNames.begin();  
+    for (std::vector<std::string>::const_iterator it=lvNames.begin();
 	 it !=lvNames.end(); it++) {
       this->AssignSD(*it);
       edm::LogInfo("FP420Sim") << "FP420SD : Assigns SD to LV " << (*it);
@@ -384,7 +386,7 @@ void FP420SD::UpdateHit() {
 }
 
 
-G4ThreeVector FP420SD::SetToLocal(G4ThreeVector global){
+G4ThreeVector FP420SD::SetToLocal(const G4ThreeVector& global){
 
   const G4VTouchable* touch= preStepPoint->GetTouchable();
   theEntryPoint = touch->GetHistory()->GetTopTransform().TransformPoint(global);
@@ -392,7 +394,7 @@ G4ThreeVector FP420SD::SetToLocal(G4ThreeVector global){
 }
      
 
-G4ThreeVector FP420SD::SetToLocalExit(G4ThreeVector globalPoint){
+G4ThreeVector FP420SD::SetToLocalExit(const G4ThreeVector& globalPoint){
 
   const G4VTouchable* touch= postStepPoint->GetTouchable();
   theExitPoint = touch->GetHistory()->GetTopTransform().TransformPoint(globalPoint);

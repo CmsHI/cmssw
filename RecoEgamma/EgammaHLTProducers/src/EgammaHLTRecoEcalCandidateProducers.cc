@@ -10,29 +10,20 @@
 #include <vector>
 #include <memory>
 
-// Framework
-#include "FWCore/Framework/interface/Event.h"
-#include "FWCore/Framework/interface/EventSetup.h"
-#include "DataFormats/Common/interface/Handle.h"
-#include "FWCore/Framework/interface/ESHandle.h"
-#include "FWCore/MessageLogger/interface/MessageLogger.h"
-#include "FWCore/Utilities/interface/Exception.h"
-//
-#include "DataFormats/EgammaReco/interface/BasicCluster.h"
-#include "DataFormats/EgammaReco/interface/SuperCluster.h"
 #include "DataFormats/RecoCandidate/interface/RecoEcalCandidate.h"
 #include "DataFormats/RecoCandidate/interface/RecoEcalCandidateFwd.h"
+#include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
+#include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
 
 #include "RecoEgamma/EgammaHLTProducers/interface/EgammaHLTRecoEcalCandidateProducers.h"
 
 
 EgammaHLTRecoEcalCandidateProducers::EgammaHLTRecoEcalCandidateProducers(const edm::ParameterSet& config) : 
-  conf_(config) 
-
-{
+  conf_(config) {
   // use onfiguration file to setup input/output collection names
-  scHybridBarrelProducer_       = conf_.getParameter<edm::InputTag>("scHybridBarrelProducer");
-  scIslandEndcapProducer_       = conf_.getParameter<edm::InputTag>("scIslandEndcapProducer");
+  scHybridBarrelProducer_       = consumes<reco::SuperClusterCollection>(conf_.getParameter<edm::InputTag>("scHybridBarrelProducer"));
+  scIslandEndcapProducer_       = consumes<reco::SuperClusterCollection>(conf_.getParameter<edm::InputTag>("scIslandEndcapProducer"));
+  
   recoEcalCandidateCollection_  = conf_.getParameter<std::string>("recoEcalCandidateCollection");
 
   // Register the product
@@ -40,6 +31,14 @@ EgammaHLTRecoEcalCandidateProducers::EgammaHLTRecoEcalCandidateProducers(const e
 }
 
 EgammaHLTRecoEcalCandidateProducers::~EgammaHLTRecoEcalCandidateProducers() {}
+
+void EgammaHLTRecoEcalCandidateProducers::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+  edm::ParameterSetDescription desc;
+  desc.add<edm::InputTag>(("scHybridBarrelProducer"), edm::InputTag("correctedHybridSuperClusters"));
+  desc.add<edm::InputTag>(("scIslandEndcapProducer"), edm::InputTag("correctedEndcapSuperClustersWithPreshower"));
+  desc.add<std::string>(("recoEcalCandidateCollection"), "");
+  descriptions.add(("hltEgammaHLTRecoEcalCandidateProducers"), desc);  
+}
 
 void EgammaHLTRecoEcalCandidateProducers::beginJob() {}
 
@@ -56,10 +55,10 @@ void EgammaHLTRecoEcalCandidateProducers::produce(edm::Event& theEvent, const ed
 
   // Get the  Barrel Super Cluster collection
   Handle<reco::SuperClusterCollection> scBarrelHandle;
-  theEvent.getByLabel(scHybridBarrelProducer_,scBarrelHandle);
+  theEvent.getByToken(scHybridBarrelProducer_,scBarrelHandle);
   // Get the  Endcap Super Cluster collection
   Handle<reco::SuperClusterCollection> scEndcapHandle;
-  theEvent.getByLabel(scIslandEndcapProducer_,scEndcapHandle);
+  theEvent.getByToken(scIslandEndcapProducer_,scEndcapHandle);
 
   //  Loop over barrel SC and fill the  recoecal collection
   int iSC=0; // index in recoecal collection

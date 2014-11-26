@@ -6,11 +6,12 @@
  */
 
 
-#include "FWCore/Framework/interface/EDFilter.h"
+#include "FWCore/Framework/interface/stream/EDFilter.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/Framework/interface/ESHandle.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
+#include "FWCore/Framework/interface/ConsumesCollector.h"
 
 #include "DataFormats/VertexReco/interface/VertexFwd.h"
 #include "DataFormats/VertexReco/interface/Vertex.h"
@@ -37,7 +38,7 @@ class VertexTrackPtSumFilter : public std::unary_function<reco::Vertex, bool> {
 
 }
 
-class RecoTauPileUpVertexSelector : public edm::EDFilter {
+class RecoTauPileUpVertexSelector : public edm::stream::EDFilter<> {
   public:
     explicit RecoTauPileUpVertexSelector(const edm::ParameterSet &pset);
     ~RecoTauPileUpVertexSelector() {}
@@ -46,12 +47,14 @@ class RecoTauPileUpVertexSelector : public edm::EDFilter {
     edm::InputTag src_;
     VertexTrackPtSumFilter vtxFilter_;
     bool filter_;
+    edm::EDGetTokenT<reco::VertexCollection> token;
 };
 
 RecoTauPileUpVertexSelector::RecoTauPileUpVertexSelector(
     const edm::ParameterSet& pset):vtxFilter_(
       pset.getParameter<double>("minTrackSumPt")) {
   src_ = pset.getParameter<edm::InputTag>("src");
+  token = consumes<reco::VertexCollection>(src_);
   filter_ = pset.exists("filter") ? pset.getParameter<bool>("filter") : false;
   produces<reco::VertexCollection>();
 }
@@ -60,7 +63,7 @@ RecoTauPileUpVertexSelector::RecoTauPileUpVertexSelector(
 bool RecoTauPileUpVertexSelector::filter(
     edm::Event& evt, const edm::EventSetup& es) {
   edm::Handle<reco::VertexCollection> vertices_;
-  evt.getByLabel(src_, vertices_);
+  evt.getByToken(token, vertices_);
   std::auto_ptr<reco::VertexCollection> output(new reco::VertexCollection);
   // If there is only one vertex, there are no PU vertices!
   if (vertices_->size() > 1) {

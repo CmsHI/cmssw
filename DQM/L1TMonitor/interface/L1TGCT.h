@@ -112,7 +112,7 @@
 // DQM
 #include "DQMServices/Core/interface/DQMStore.h"
 #include "DQMServices/Core/interface/MonitorElement.h"
-
+#include "DataFormats/L1GlobalCaloTrigger/interface/L1GctCollections.h"
 
 
 
@@ -213,7 +213,7 @@ private:
   std::string outputFile_; //file name for ROOT ouput
   bool verbose_;
   bool monitorDaemon_;
-  ofstream logFile_;
+  std::ofstream logFile_;
 
   edm::InputTag gctCenJetsSource_;
   edm::InputTag gctForJetsSource_;
@@ -224,6 +224,20 @@ private:
 
   /// filter TriggerType
   int filterTriggerType_;
+
+  //define Token(-s)
+  edm::EDGetTokenT<L1GctEmCandCollection> gctIsoEmSourceToken_;
+  edm::EDGetTokenT<L1GctEmCandCollection> gctNonIsoEmSourceToken_;
+  edm::EDGetTokenT<L1GctJetCandCollection> gctCenJetsSourceToken_;
+  edm::EDGetTokenT<L1GctJetCandCollection> gctForJetsSourceToken_;
+  edm::EDGetTokenT<L1GctJetCandCollection> gctTauJetsSourceToken_;
+  edm::EDGetTokenT<L1GctHFRingEtSumsCollection> gctEnergySumsSourceToken_;
+  edm::EDGetTokenT<L1GctHFBitCountsCollection> l1HFCountsToken_;
+  edm::EDGetTokenT<L1GctEtMissCollection> l1EtMissToken_;
+  edm::EDGetTokenT<L1GctHtMissCollection> l1HtMissToken_;
+  edm::EDGetTokenT<L1GctEtHadCollection> l1EtHadToken_;
+  edm::EDGetTokenT<L1GctEtTotalCollection> l1EtTotalToken_;
+
 };
 
 #endif

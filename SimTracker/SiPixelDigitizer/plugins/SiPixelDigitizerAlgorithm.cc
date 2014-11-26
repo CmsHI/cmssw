@@ -87,8 +87,7 @@
 #include "CondFormats/SiPixelObjects/interface/PixelFEDCabling.h"
 #include "CondFormats/SiPixelObjects/interface/PixelFEDLink.h"
 #include "DataFormats/FEDRawData/interface/FEDNumbering.h"
-#include "DataFormats/SiPixelDetId/interface/PixelBarrelName.h"
-#include "DataFormats/SiPixelDetId/interface/PixelEndcapName.h"
+#include "SimDataFormats/PileupSummaryInfo/interface/PileupMixingContent.h"
 
 // Geometry
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
@@ -122,7 +121,7 @@ void SiPixelDigitizerAlgorithm::init(const edm::EventSetup& es) {
 
 //=========================================================================
 
-SiPixelDigitizerAlgorithm::SiPixelDigitizerAlgorithm(const edm::ParameterSet& conf, CLHEP::HepRandomEngine& eng) :
+SiPixelDigitizerAlgorithm::SiPixelDigitizerAlgorithm(const edm::ParameterSet& conf) :
 
   _signal(),
   makeDigiSimLinks_(conf.getUntrackedParameter<bool>("makeDigiSimLinks", true)),
@@ -146,6 +145,9 @@ SiPixelDigitizerAlgorithm::SiPixelDigitizerAlgorithm(const edm::ParameterSet& co
   // of layers or disks.
   NumberOfBarrelLayers(conf.exists("NumPixelBarrel")?conf.getParameter<int>("NumPixelBarrel"):3),
   NumberOfEndcapDisks(conf.exists("NumPixelEndcap")?conf.getParameter<int>("NumPixelEndcap"):2),
+
+  theInstLumiScaleFactor(conf.getParameter<double>("theInstLumiScaleFactor")), //For dynamic inefficiency PU scaling
+  bunchScaleAt25(conf.getParameter<double>("bunchScaleAt25")), //For dynamic inefficiency bunchspace scaling
 
   // ADC calibration 1adc count(135e.
   // Corresponds to 2adc/kev, 270[e/kev]/135[e/adc](2[adc/kev]
@@ -228,27 +230,20 @@ SiPixelDigitizerAlgorithm::SiPixelDigitizerAlgorithm(const edm::ParameterSet& co
   theGainSmearing(conf.getParameter<double>("GainSmearing")), // sigma of the gain smearing
   theOffsetSmearing(conf.getParameter<double>("OffsetSmearing")), //sigma of the offset smearing
 
-  // Add some pseudo-red damage
-  pseudoRadDamage(conf.exists("PseudoRadDamage")?conf.getParameter<double>("PseudoRadDamage"):double(0.0)),
-  pseudoRadDamageRadius(conf.exists("PseudoRadDamageRadius")?conf.getParameter<double>("PseudoRadDamageRadius"):double(0.0)),
-
+  // Add pixel radiation damage for upgrade studies
+  AddPixelAging(conf.getParameter<bool>("DoPixelAging")),
+  
   // delta cutoff in MeV, has to be same as in OSCAR(0.030/cmsim=1.0 MeV
   //tMax(0.030), // In MeV.
   //tMax(conf.getUntrackedParameter<double>("DeltaProductionCut",0.030)),
   tMax(conf.getParameter<double>("DeltaProductionCut")),
 
-  fluctuate(fluctuateCharge ? new SiG4UniversalFluctuation(eng) : 0),
-  theNoiser(addNoise ? new GaussianTailNoiseGenerator(eng) : 0),
+  fluctuate(fluctuateCharge ? new SiG4UniversalFluctuation() : 0),
+  theNoiser(addNoise ? new GaussianTailNoiseGenerator() : 0),
   calmap(doMissCalibrate ? initCal() : std::map<int,CalParameters,std::less<int> >()),
   theSiPixelGainCalibrationService_(use_ineff_from_db_ ? new SiPixelGainCalibrationOfflineSimService(conf) : 0),
   pixelEfficiencies_(conf, AddPixelInefficiency,NumberOfBarrelLayers,NumberOfEndcapDisks),
-  flatDistribution_((addNoise || AddPixelInefficiency || fluctuateCharge || addThresholdSmearing) ? new CLHEP::RandFlat(eng, 0., 1.) : 0),
-  gaussDistribution_((addNoise || AddPixelInefficiency || fluctuateCharge || addThresholdSmearing) ? new CLHEP::RandGaussQ(eng, 0., theReadoutNoise) : 0),
-  gaussDistributionVCALNoise_((addNoise || AddPixelInefficiency || fluctuateCharge || addThresholdSmearing) ? new CLHEP::RandGaussQ(eng, 0., 1.) : 0),
-  // Threshold smearing with gaussian distribution:
-  smearedThreshold_FPix_(addThresholdSmearing ? new CLHEP::RandGaussQ(eng, theThresholdInE_FPix , theThresholdSmearing_FPix) : 0),
-  smearedThreshold_BPix_(addThresholdSmearing ? new CLHEP::RandGaussQ(eng, theThresholdInE_BPix , theThresholdSmearing_BPix) : 0),
-  smearedThreshold_BPix_L1_(addThresholdSmearing ? new CLHEP::RandGaussQ(eng, theThresholdInE_BPix_L1 , theThresholdSmearing_BPix_L1) : 0)
+  pixelAging_(conf,AddPixelAging,NumberOfBarrelLayers,NumberOfEndcapDisks)
 {
   LogInfo ("PixelDigitizer ") <<"SiPixelDigitizerAlgorithm constructed"
 			      <<"Configuration parameters:"
@@ -368,78 +363,152 @@ SiPixelDigitizerAlgorithm::PixelEfficiencies::PixelEfficiencies(const edm::Param
   int NumberOfTotLayers = NumberOfBarrelLayers + NumberOfEndcapDisks;
   FPixIndex=NumberOfBarrelLayers;
   if (AddPixelInefficiency){
-		     int i=0;
- 	  	     thePixelColEfficiency[i++] = conf.getParameter<double>("thePixelColEfficiency_BPix1");
- 	  	     thePixelColEfficiency[i++] = conf.getParameter<double>("thePixelColEfficiency_BPix2");
- 	  	     thePixelColEfficiency[i++] = conf.getParameter<double>("thePixelColEfficiency_BPix3");
-		     if (NumberOfBarrelLayers>=4){thePixelColEfficiency[i++] = conf.getParameter<double>("thePixelColEfficiency_BPix4");}
-		     //
-		     i=0;
-		     thePixelEfficiency[i++] = conf.getParameter<double>("thePixelEfficiency_BPix1");
-                     thePixelEfficiency[i++] = conf.getParameter<double>("thePixelEfficiency_BPix2");
-                     thePixelEfficiency[i++] = conf.getParameter<double>("thePixelEfficiency_BPix3");
-                     if (NumberOfBarrelLayers>=4){thePixelEfficiency[i++] = conf.getParameter<double>("thePixelEfficiency_BPix4");}
-		     //
-                     i=0;
-		     thePixelChipEfficiency[i++] = conf.getParameter<double>("thePixelChipEfficiency_BPix1");
-                     thePixelChipEfficiency[i++] = conf.getParameter<double>("thePixelChipEfficiency_BPix2");
-                     thePixelChipEfficiency[i++] = conf.getParameter<double>("thePixelChipEfficiency_BPix3");
-                     if (NumberOfBarrelLayers>=4){thePixelChipEfficiency[i++] = conf.getParameter<double>("thePixelChipEfficiency_BPix4");}
-		     // The next is needed for Phase2 Tracker studies
-		     if (NumberOfBarrelLayers>=5){
-			if (NumberOfTotLayers>20){throw cms::Exception("Configuration") <<"SiPixelDigitizer was given more layers than it can handle";}
-			// For Phase2 tracker layers just set the outermost BPix inefficiency to 99.9%
-			for (int j=5 ; j<=NumberOfBarrelLayers ; j++){
-			    thePixelColEfficiency[j-1]=0.999;
-			    thePixelEfficiency[j-1]=0.999;
-			    thePixelChipEfficiency[j-1]=0.999;
-			}
-		     }
-		     //
-                     i=FPixIndex;
-                     thePixelColEfficiency[i++]   = conf.getParameter<double>("thePixelColEfficiency_FPix1");
-                     thePixelColEfficiency[i++]   = conf.getParameter<double>("thePixelColEfficiency_FPix2");
-                     if (NumberOfEndcapDisks>=3){thePixelColEfficiency[i++]   = conf.getParameter<double>("thePixelColEfficiency_FPix3");}
-                     i=FPixIndex;
-                     thePixelEfficiency[i++]      = conf.getParameter<double>("thePixelEfficiency_FPix1");
-                     thePixelEfficiency[i++]      = conf.getParameter<double>("thePixelEfficiency_FPix2");
-                     if (NumberOfEndcapDisks>=3){thePixelEfficiency[i++]      = conf.getParameter<double>("thePixelEfficiency_FPix3");}
-                     i=FPixIndex;
-                     thePixelChipEfficiency[i++]  = conf.getParameter<double>("thePixelChipEfficiency_FPix1");
-                     thePixelChipEfficiency[i++]  = conf.getParameter<double>("thePixelChipEfficiency_FPix2");
-                     if (NumberOfEndcapDisks>=3){thePixelChipEfficiency[i++]  = conf.getParameter<double>("thePixelChipEfficiency_FPix3");}
-                     // The next is needed for Phase2 Tracker studies
-                     if (NumberOfEndcapDisks>=4){
-                        if (NumberOfTotLayers>20){throw cms::Exception("Configuration") <<"SiPixelDigitizer was given more layers than it can handle";}
-                        // For Phase2 tracker layers just set the extra FPix disk inefficiency to 99.9%
-                        for (int j=4+FPixIndex ; j<=NumberOfEndcapDisks+NumberOfBarrelLayers ; j++){
-                            thePixelColEfficiency[j-1]=0.999;
-                            thePixelEfficiency[j-1]=0.999;
-                            thePixelChipEfficiency[j-1]=0.999;
-                        }
-                     }
+    int i=0;
+    thePixelColEfficiency[i++] = conf.getParameter<double>("thePixelColEfficiency_BPix1");
+    thePixelColEfficiency[i++] = conf.getParameter<double>("thePixelColEfficiency_BPix2");
+    thePixelColEfficiency[i++] = conf.getParameter<double>("thePixelColEfficiency_BPix3");
+    if (NumberOfBarrelLayers>=4){thePixelColEfficiency[i++] = conf.getParameter<double>("thePixelColEfficiency_BPix4");}
+    //
+    i=0;
+    thePixelEfficiency[i++] = conf.getParameter<double>("thePixelEfficiency_BPix1");
+    thePixelEfficiency[i++] = conf.getParameter<double>("thePixelEfficiency_BPix2");
+    thePixelEfficiency[i++] = conf.getParameter<double>("thePixelEfficiency_BPix3");
+    if (NumberOfBarrelLayers>=4){thePixelEfficiency[i++] = conf.getParameter<double>("thePixelEfficiency_BPix4");}
+    //
+    i=0;
+    thePixelChipEfficiency[i++] = conf.getParameter<double>("thePixelChipEfficiency_BPix1");
+    thePixelChipEfficiency[i++] = conf.getParameter<double>("thePixelChipEfficiency_BPix2");
+    thePixelChipEfficiency[i++] = conf.getParameter<double>("thePixelChipEfficiency_BPix3");
+    if (NumberOfBarrelLayers>=4){thePixelChipEfficiency[i++] = conf.getParameter<double>("thePixelChipEfficiency_BPix4");}
+    //
+    i=0;
+    theLadderEfficiency_BPix[i++] = conf.getParameter<std::vector<double> >("theLadderEfficiency_BPix1");
+    theLadderEfficiency_BPix[i++] = conf.getParameter<std::vector<double> >("theLadderEfficiency_BPix2");
+    theLadderEfficiency_BPix[i++] = conf.getParameter<std::vector<double> >("theLadderEfficiency_BPix3");
+    if ( ((theLadderEfficiency_BPix[0].size()!=20) || (theLadderEfficiency_BPix[1].size()!=32) ||
+	  (theLadderEfficiency_BPix[2].size()!=44)) && (NumberOfBarrelLayers==3) )  
+      throw cms::Exception("Configuration") << "Wrong ladder number in efficiency config!";
+    //		     
+    i=0;
+    theModuleEfficiency_BPix[i++] = conf.getParameter<std::vector<double> >("theModuleEfficiency_BPix1");
+    theModuleEfficiency_BPix[i++] = conf.getParameter<std::vector<double> >("theModuleEfficiency_BPix2");
+    theModuleEfficiency_BPix[i++] = conf.getParameter<std::vector<double> >("theModuleEfficiency_BPix3");
+    if ( ((theModuleEfficiency_BPix[0].size()!=4) || (theModuleEfficiency_BPix[1].size()!=4) ||
+	  (theModuleEfficiency_BPix[2].size()!=4)) && (NumberOfBarrelLayers==3) )  
+      throw cms::Exception("Configuration") << "Wrong module number in efficiency config!";
+    //
+    i=0;		     
+    thePUEfficiency[i++] = conf.getParameter<std::vector<double> >("thePUEfficiency_BPix1");
+    thePUEfficiency[i++] = conf.getParameter<std::vector<double> >("thePUEfficiency_BPix2");
+    thePUEfficiency[i++] = conf.getParameter<std::vector<double> >("thePUEfficiency_BPix3");		    		    
+    if ( ((thePUEfficiency[0].size()==0) || (thePUEfficiency[1].size()==0) || 
+	  (thePUEfficiency[2].size()==0)) && (NumberOfBarrelLayers==3) )
+      throw cms::Exception("Configuration") << "At least one PU efficiency (BPix) number is needed in efficiency config!";
+    // The next is needed for Phase2 Tracker studies
+    if (NumberOfBarrelLayers>=5){
+      if (NumberOfTotLayers>20){throw cms::Exception("Configuration") <<"SiPixelDigitizer was given more layers than it can handle";}
+      // For Phase2 tracker layers just set the outermost BPix inefficiency to 99.9%
+      for (int j=5 ; j<=NumberOfBarrelLayers ; j++){
+	thePixelColEfficiency[j-1]=0.999;
+	thePixelEfficiency[j-1]=0.999;
+	thePixelChipEfficiency[j-1]=0.999;
+      }
+    }
+    //
+    i=FPixIndex;
+    thePixelColEfficiency[i++]   = conf.getParameter<double>("thePixelColEfficiency_FPix1");
+    thePixelColEfficiency[i++]   = conf.getParameter<double>("thePixelColEfficiency_FPix2");
+    if (NumberOfEndcapDisks>=3){thePixelColEfficiency[i++]   = conf.getParameter<double>("thePixelColEfficiency_FPix3");}
+    i=FPixIndex;
+    thePixelEfficiency[i++]      = conf.getParameter<double>("thePixelEfficiency_FPix1");
+    thePixelEfficiency[i++]      = conf.getParameter<double>("thePixelEfficiency_FPix2");
+    if (NumberOfEndcapDisks>=3){thePixelEfficiency[i++]      = conf.getParameter<double>("thePixelEfficiency_FPix3");}
+    i=FPixIndex;
+    thePixelChipEfficiency[i++]  = conf.getParameter<double>("thePixelChipEfficiency_FPix1");
+    thePixelChipEfficiency[i++]  = conf.getParameter<double>("thePixelChipEfficiency_FPix2");
+    if (NumberOfEndcapDisks>=3){thePixelChipEfficiency[i++]  = conf.getParameter<double>("thePixelChipEfficiency_FPix3");}
+    // The next is needed for Phase2 Tracker studies
+    if (NumberOfEndcapDisks>=4){
+      if (NumberOfTotLayers>20){throw cms::Exception("Configuration") <<"SiPixelDigitizer was given more layers than it can handle";}
+      // For Phase2 tracker layers just set the extra FPix disk inefficiency to 99.9%
+      for (int j=4+FPixIndex ; j<=NumberOfEndcapDisks+NumberOfBarrelLayers ; j++){
+	thePixelColEfficiency[j-1]=0.999;
+	thePixelEfficiency[j-1]=0.999;
+	thePixelChipEfficiency[j-1]=0.999;
+      }
+    }
+    //FPix Dynamic Inefficiency
+    i=FPixIndex;
+    theInnerEfficiency_FPix[i++] = conf.getParameter<double>("theInnerEfficiency_FPix1");
+    theInnerEfficiency_FPix[i++] = conf.getParameter<double>("theInnerEfficiency_FPix2");
+    i=FPixIndex;
+    theOuterEfficiency_FPix[i++] = conf.getParameter<double>("theOuterEfficiency_FPix1");
+    theOuterEfficiency_FPix[i++] = conf.getParameter<double>("theOuterEfficiency_FPix2");
+    i=FPixIndex;
+    thePUEfficiency[i++] = conf.getParameter<std::vector<double> >("thePUEfficiency_FPix_Inner");
+    thePUEfficiency[i++] = conf.getParameter<std::vector<double> >("thePUEfficiency_FPix_Outer");
+    if ( ((thePUEfficiency[3].size()==0) || (thePUEfficiency[4].size()==0)) && (NumberOfEndcapDisks==2) )
+    throw cms::Exception("Configuration") << "At least one (FPix) PU efficiency number is needed in efficiency config!";
   }
   // the first "NumberOfBarrelLayers" settings [0],[1], ... , [NumberOfBarrelLayers-1] are for the barrel pixels
   // the next  "NumberOfEndcapDisks"  settings [NumberOfBarrelLayers],[NumberOfBarrelLayers+1], ... [NumberOfEndcapDisks+NumberOfBarrelLayers-1]
-  if(!AddPixelInefficiency) {  // No inefficiency, all 100% efficient
-    for (int i=0; i<NumberOfTotLayers;i++) {
-      thePixelEfficiency[i]     = 1.;  // pixels = 100%
-      thePixelColEfficiency[i]  = 1.;  // columns = 100%
-      thePixelChipEfficiency[i] = 1.;  // chips = 100%
+}
+
+SiPixelDigitizerAlgorithm::PixelAging::PixelAging(const edm::ParameterSet& conf, bool AddAging, int NumberOfBarrelLayers, int NumberOfEndcapDisks) {
+  // pixel aging
+  // Don't use Hard coded values, read aging in from python or don't use any
+  if(AddAging) {
+    int NumberOfTotLayers = NumberOfBarrelLayers + NumberOfEndcapDisks;
+    FPixIndex=NumberOfBarrelLayers;
+
+    int i=0;
+    thePixelPseudoRadDamage[i++] = conf.getParameter<double>("thePixelPseudoRadDamage_BPix1");
+    thePixelPseudoRadDamage[i++] = conf.getParameter<double>("thePixelPseudoRadDamage_BPix2");
+    thePixelPseudoRadDamage[i++] = conf.getParameter<double>("thePixelPseudoRadDamage_BPix3");
+    thePixelPseudoRadDamage[i++] = conf.getParameter<double>("thePixelPseudoRadDamage_BPix4");
+    
+    // to be removed when Gaelle will have the phase2 digitizer
+    if (NumberOfBarrelLayers>=5){
+      if (NumberOfTotLayers>20){throw cms::Exception("Configuration") <<"SiPixelDigitizer was given more layers than it can handle";}
+      // For Phase2 tracker layers just set the outermost BPix aging 0.
+      for (int j=5 ; j<=NumberOfBarrelLayers ; j++){
+	thePixelPseudoRadDamage[j-1]=0.;
+      }
+    }
+    //
+    i=FPixIndex;
+    thePixelPseudoRadDamage[i++]   = conf.getParameter<double>("thePixelPseudoRadDamage_FPix1");
+    thePixelPseudoRadDamage[i++]   = conf.getParameter<double>("thePixelPseudoRadDamage_FPix2");
+    thePixelPseudoRadDamage[i++]   = conf.getParameter<double>("thePixelPseudoRadDamage_FPix3");
+    
+    //To be removed when Phase2 digitizer will be available
+    if (NumberOfEndcapDisks>=4){
+      if (NumberOfTotLayers>20){throw cms::Exception("Configuration") <<"SiPixelDigitizer was given more layers than it can handle";}
+      // For Phase2 tracker layers just set the extra FPix disk aging to 0.
+      for (int j=4+FPixIndex ; j<=NumberOfEndcapDisks+NumberOfBarrelLayers ; j++){
+	thePixelPseudoRadDamage[j-1]=0.;
+      }
     }
   }
+  // the first "NumberOfBarrelLayers" settings [0],[1], ... , [NumberOfBarrelLayers-1] are for the barrel pixels
+  // the next  "NumberOfEndcapDisks"  settings [NumberOfBarrelLayers],[NumberOfBarrelLayers+1], ... [NumberOfEndcapDisks+NumberOfBarrelLayers-1]
 }
 
 //=========================================================================
 void SiPixelDigitizerAlgorithm::accumulateSimHits(std::vector<PSimHit>::const_iterator inputBegin,
                                                   std::vector<PSimHit>::const_iterator inputEnd,
+						  const size_t inputBeginGlobalIndex,
+						  const unsigned int tofBin,
                                                   const PixelGeomDetUnit* pixdet,
-                                                  const GlobalVector& bfield) {
+                                                  const GlobalVector& bfield,
+						  const TrackerTopology *tTopo,
+                                                  CLHEP::HepRandomEngine* engine) {
     // produce SignalPoint's for all SimHit's in detector
     // Loop over hits
 
     uint32_t detId = pixdet->geographicalId().rawId();
-    for (std::vector<PSimHit>::const_iterator ssbegin = inputBegin; ssbegin != inputEnd; ++ssbegin) {
+    size_t simHitGlobalIndex=inputBeginGlobalIndex; // This needs to stored to create the digi-sim link later
+    for (std::vector<PSimHit>::const_iterator ssbegin = inputBegin; ssbegin != inputEnd; ++ssbegin, ++simHitGlobalIndex) {
       // skip hits not in this detector.
       if((*ssbegin).detUnitId() != detId) {
         continue;
@@ -462,47 +531,93 @@ void SiPixelDigitizerAlgorithm::accumulateSimHits(std::vector<PSimHit>::const_it
       // Check the TOF cut
       if (  ((*ssbegin).tof() - pixdet->surface().toGlobal((*ssbegin).localPosition()).mag()/30.)>= theTofLowerCut &&
 	    ((*ssbegin).tof()- pixdet->surface().toGlobal((*ssbegin).localPosition()).mag()/30.) <= theTofUpperCut ) {
-	primary_ionization(*ssbegin, ionization_points); // fills _ionization_points
-	drift(*ssbegin, pixdet, bfield, ionization_points, collection_points);  // transforms _ionization_points to collection_points
+	primary_ionization(*ssbegin, ionization_points, engine); // fills _ionization_points
+	drift(*ssbegin, pixdet, bfield, tTopo, ionization_points, collection_points);  // transforms _ionization_points to collection_points
 	// compute induced signal on readout elements and add to _signal
-	induce_signal(*ssbegin, pixdet, collection_points); // *ihit needed only for SimHit<-->Digi link
+	induce_signal(*ssbegin, simHitGlobalIndex, tofBin, pixdet, collection_points); // 1st 3 args needed only for SimHit<-->Digi link
       } //  end if
     } // end for
 
 }
 
 //============================================================================
+void SiPixelDigitizerAlgorithm::calculateInstlumiFactor(PileupMixingContent* puInfo){
+  //Instlumi scalefactor calculating for dynamic inefficiency
+  
+  if (puInfo) {
+    
+    const std::vector<int> bunchCrossing = puInfo->getMix_bunchCrossing();
+    const std::vector<float> TrueInteractionList = puInfo->getMix_TrueInteractions();      
+    const int bunchSpacing = puInfo->getMix_bunchSpacing();
+    double bunchScale=1.0;
+
+    if (bunchSpacing==25) bunchScale=bunchScaleAt25;
+
+    int pui = 0, p = 0;
+    std::vector<int>::const_iterator pu;
+    std::vector<int>::const_iterator pu0 = bunchCrossing.end();
+    
+    for (pu=bunchCrossing.begin(); pu!=bunchCrossing.end(); ++pu) {
+      if (*pu==0) {
+	pu0 = pu;
+	p = pui;
+      }
+      pui++;
+    }
+    
+    if (pu0!=bunchCrossing.end()) {        
+      for (size_t i=0; i<5; i++) {
+	double instlumi = TrueInteractionList.at(p)*theInstLumiScaleFactor*bunchScale;
+	double instlumi_pow=1.;
+	_pu_scale[i] = 0;
+	for  (size_t j=0; j<pixelEfficiencies_.thePUEfficiency[i].size(); j++){
+	  _pu_scale[i]+=instlumi_pow*pixelEfficiencies_.thePUEfficiency[i][j];
+	  instlumi_pow*=instlumi;
+	}
+      }
+    }
+  } 
+  else {
+    for (int i=0; i<5;i++) {
+      _pu_scale[i] = 1.;
+    }
+  }
+}
+
+//============================================================================
 void SiPixelDigitizerAlgorithm::digitize(const PixelGeomDetUnit* pixdet,
                                          std::vector<PixelDigi>& digis,
-                                         std::vector<PixelDigiSimLink>& simlinks, const TrackerTopology *tTopo) {
-
-   // Pixel Efficiency moved from the constructor to this method because
-   // the information of the det are not available in the constructor
-   // Effciency parameters. 0 - no inefficiency, 1-low lumi, 10-high lumi
-
-   uint32_t detID = pixdet->geographicalId().rawId();
-   const signal_map_type& theSignal = _signal[detID];
-
-   const PixelTopology* topol=&pixdet->specificTopology();
-   int numColumns = topol->ncolumns();  // det module number of cols&rows
-   int numRows = topol->nrows();
-
-    // Noise already defined in electrons
-    //thePixelThresholdInE = thePixelThreshold * theNoiseInElectrons ;
-    // Find the threshold in noise units, needed for the noiser.
-
+                                         std::vector<PixelDigiSimLink>& simlinks,
+					 const TrackerTopology *tTopo,
+                                         CLHEP::HepRandomEngine* engine) {
+  
+  // Pixel Efficiency moved from the constructor to this method because
+  // the information of the det are not available in the constructor
+  // Efficiency parameters. 0 - no inefficiency, 1-low lumi, 10-high lumi
+  
+  uint32_t detID = pixdet->geographicalId().rawId();
+  const signal_map_type& theSignal = _signal[detID];
+  
+  const PixelTopology* topol=&pixdet->specificTopology();
+  int numColumns = topol->ncolumns();  // det module number of cols&rows
+  int numRows = topol->nrows();
+  
+  // Noise already defined in electrons
+  // thePixelThresholdInE = thePixelThreshold * theNoiseInElectrons ;
+  // Find the threshold in noise units, needed for the noiser.
+  
   unsigned int Sub_detid=DetId(detID).subdetId();
 
   float thePixelThresholdInE = 0.;
-
+  
   if(theNoiseInElectrons>0.){
     if(Sub_detid == PixelSubdetector::PixelBarrel){ // Barrel modules
       int lay = tTopo->pxbLayer(detID);
       if(addThresholdSmearing) {
 	if(lay==1) {
-	  thePixelThresholdInE = smearedThreshold_BPix_L1_->fire(); // gaussian smearing
+	  thePixelThresholdInE = CLHEP::RandGaussQ::shoot(engine, theThresholdInE_BPix_L1, theThresholdSmearing_BPix_L1); // gaussian smearing
 	} else {
-	  thePixelThresholdInE = smearedThreshold_BPix_->fire(); // gaussian smearing
+	  thePixelThresholdInE = CLHEP::RandGaussQ::shoot(engine, theThresholdInE_BPix , theThresholdSmearing_BPix); // gaussian smearing
 	}
       } else {
 	if(lay==1) {
@@ -513,42 +628,42 @@ void SiPixelDigitizerAlgorithm::digitize(const PixelGeomDetUnit* pixdet,
       }
     } else { // Forward disks modules
       if(addThresholdSmearing) {
-	thePixelThresholdInE = smearedThreshold_FPix_->fire(); // gaussian smearing
+	thePixelThresholdInE = CLHEP::RandGaussQ::shoot(engine, theThresholdInE_FPix, theThresholdSmearing_FPix); // gaussian smearing
       } else {
 	thePixelThresholdInE = theThresholdInE_FPix; // no smearing
       }
     }
   }
-
+  
 
 #ifdef TP_DEBUG
-    // full detector thickness
-   float moduleThickness = pixdet->specificSurface().bounds().thickness();
-    LogDebug ("PixelDigitizer")
-      << " PixelDigitizer "
-      << numColumns << " " << numRows << " " << moduleThickness;
+  // full detector thickness
+  float moduleThickness = pixdet->specificSurface().bounds().thickness();
+  LogDebug ("PixelDigitizer")
+    << " PixelDigitizer "
+    << numColumns << " " << numRows << " " << moduleThickness;
 #endif
-
-    if(addNoise) add_noise(pixdet, thePixelThresholdInE/theNoiseInElectrons);  // generate noise
-
-    // Do only if needed
-
-    if((AddPixelInefficiency) && (theSignal.size()>0))
-      pixel_inefficiency(pixelEfficiencies_, pixdet, tTopo); // Kill some pixels
-
-    if(use_ineff_from_db_ && (theSignal.size()>0))
-      pixel_inefficiency_db(detID);
-
-    if(use_module_killing_) {
-      if (use_deadmodule_DB_) {  // remove dead modules using DB
-        module_killing_DB(detID);
-      } else { // remove dead modules using the list in cfg file
-        module_killing_conf(detID);
-      }
+  
+  if(addNoise) add_noise(pixdet, thePixelThresholdInE/theNoiseInElectrons, engine);  // generate noise
+  
+  // Do only if needed
+  
+  if((AddPixelInefficiency) && (theSignal.size()>0))
+    pixel_inefficiency(pixelEfficiencies_, pixdet, tTopo, engine); // Kill some pixels
+  
+  if(use_ineff_from_db_ && (theSignal.size()>0))
+    pixel_inefficiency_db(detID);
+  
+  if(use_module_killing_) {
+    if (use_deadmodule_DB_) {  // remove dead modules using DB
+      module_killing_DB(detID);
+    } else { // remove dead modules using the list in cfg file
+      module_killing_conf(detID);
     }
-
-    make_digis(thePixelThresholdInE, detID, digis, simlinks, tTopo);
-
+  }
+  
+  make_digis(thePixelThresholdInE, detID, digis, simlinks, tTopo);
+  
 #ifdef TP_DEBUG
   LogDebug ("PixelDigitizer") << "[SiPixelDigitizerAlgorithm] converted " << digis.size() << " PixelDigis in DetUnit" << detID;
 #endif
@@ -557,22 +672,22 @@ void SiPixelDigitizerAlgorithm::digitize(const PixelGeomDetUnit* pixdet,
 //***********************************************************************/
 // Generate primary ionization along the track segment.
 // Divide the track into small sub-segments
-void SiPixelDigitizerAlgorithm::primary_ionization(const PSimHit& hit, std::vector<EnergyDepositUnit>& ionization_points) const {
-
-// Straight line approximation for trajectory inside active media
-
+void SiPixelDigitizerAlgorithm::primary_ionization(const PSimHit& hit, std::vector<EnergyDepositUnit>& ionization_points, CLHEP::HepRandomEngine* engine) const {
+  
+  // Straight line approximation for trajectory inside active media
+  
   const float SegmentLength = 0.0010; //10microns in cm
   float energy;
-
+  
   // Get the 3D segment direction vector
   LocalVector direction = hit.exitPoint() - hit.entryPoint();
-
+  
   float eLoss = hit.energyLoss();  // Eloss in GeV
   float length = direction.mag();  // Track length in Silicon
-
+  
   int NumberOfSegments = int ( length / SegmentLength); // Number of segments
   if(NumberOfSegments < 1) NumberOfSegments = 1;
-
+  
 #ifdef TP_DEBUG
   LogDebug ("Pixel Digitizer")
     << " enter primary_ionzation " << NumberOfSegments
@@ -582,36 +697,36 @@ void SiPixelDigitizerAlgorithm::primary_ionization(const PSimHit& hit, std::vect
     << (hit.exitPoint().z()-hit.entryPoint().z()) << " "
     << hit.particleType() <<" "<< hit.pabs() ;
 #endif
-
+  
   float* elossVector = new float[NumberOfSegments];  // Eloss vector
-
+  
   if( fluctuateCharge ) {
     //MP DA RIMUOVERE ASSOLUTAMENTE
     int pid = hit.particleType();
     //int pid=211;  // assume it is a pion
-
+    
     float momentum = hit.pabs();
     // Generate fluctuated charge points
     fluctuateEloss(pid, momentum, eLoss, length, NumberOfSegments,
-		   elossVector);
+		   elossVector, engine);
   }
-
+  
   ionization_points.resize( NumberOfSegments); // set size
-
+  
   // loop over segments
   for ( int i = 0; i != NumberOfSegments; i++) {
     // Divide the segment into equal length subsegments
     Local3DPoint point = hit.entryPoint() +
       float((i+0.5)/NumberOfSegments) * direction;
-
+    
     if( fluctuateCharge )
       energy = elossVector[i]/GeVperElectron; // Convert charge to elec.
     else
       energy = hit.energyLoss()/GeVperElectron/float(NumberOfSegments);
-
+    
     EnergyDepositUnit edu( energy, point); //define position,energy point
     ionization_points[i] = edu; // save
-
+    
 #ifdef TP_DEBUG
     LogDebug ("Pixel Digitizer")
       << i << " " << ionization_points[i].x() << " "
@@ -619,25 +734,26 @@ void SiPixelDigitizerAlgorithm::primary_ionization(const PSimHit& hit, std::vect
       << ionization_points[i].z() << " "
       << ionization_points[i].energy();
 #endif
-
+    
   }  // end for loop
-
+  
   delete[] elossVector;
-
+  
 }
 //******************************************************************************
 
 // Fluctuate the charge comming from a small (10um) track segment.
 // Use the G4 routine. For mip pions for the moment.
 void SiPixelDigitizerAlgorithm::fluctuateEloss(int pid, float particleMomentum,
-				      float eloss, float length,
-				      int NumberOfSegs,float elossVector[]) const {
-
+                                               float eloss, float length,
+                                               int NumberOfSegs,float elossVector[],
+                                               CLHEP::HepRandomEngine* engine) const {
+  
   // Get dedx for this track
   //float dedx;
   //if( length > 0.) dedx = eloss/length;
   //else dedx = eloss;
-
+  
   double particleMass = 139.6; // Mass in MeV, Assume pion
   pid = std::abs(pid);
   if(pid!=211) {       // Mass in MeV
@@ -648,7 +764,7 @@ void SiPixelDigitizerAlgorithm::fluctuateEloss(int pid, float particleMomentum,
   }
   // What is the track segment length.
   float segmentLength = length/NumberOfSegs;
-
+  
   // Generate charge fluctuations.
   float de=0.;
   float sum=0.;
@@ -661,18 +777,17 @@ void SiPixelDigitizerAlgorithm::fluctuateEloss(int pid, float particleMomentum,
     // Returns fluctuated eloss in MeV
     double deltaCutoff = tMax; // the cutoff is sometimes redefined inside, so fix it.
     de = fluctuate->SampleFluctuations(double(particleMomentum*1000.),
-				      particleMass, deltaCutoff,
-				      double(segmentLength*10.),
-				      segmentEloss )/1000.; //convert to GeV
-
+				       particleMass, deltaCutoff,
+				       double(segmentLength*10.),
+                                       segmentEloss, engine )/1000.; //convert to GeV 
     elossVector[i]=de;
     sum +=de;
   }
-
+  
   if(sum>0.) {  // If fluctuations give eloss>0.
     // Rescale to the same total eloss
     float ratio = eloss/sum;
-
+    
     for (int ii=0;ii<NumberOfSegs;ii++) elossVector[ii]= ratio*elossVector[ii];
   } else {  // If fluctuations gives 0 eloss
     float averageEloss = eloss/NumberOfSegs;
@@ -687,15 +802,16 @@ void SiPixelDigitizerAlgorithm::fluctuateEloss(int pid, float particleMomentum,
 void SiPixelDigitizerAlgorithm::drift(const PSimHit& hit,
 			              const PixelGeomDetUnit* pixdet,
                                       const GlobalVector& bfield,
+				      const TrackerTopology *tTopo,
                                       const std::vector<EnergyDepositUnit>& ionization_points,
                                       std::vector<SignalPoint>& collection_points) const {
-
+  
 #ifdef TP_DEBUG
   LogDebug ("Pixel Digitizer") << " enter drift " ;
 #endif
-
+  
   collection_points.resize(ionization_points.size()); // set size
-
+  
   LocalVector driftDir=DriftDirection(pixdet, bfield, hit.detUnitId());  // get the charge drift direction
   if(driftDir.z() ==0.) {
     LogWarning("Magnetic field") << " pxlx: drift in z is zero ";
@@ -709,22 +825,20 @@ void SiPixelDigitizerAlgorithm::drift(const PSimHit& hit,
   float TanLorenzAngleX, TanLorenzAngleY,dir_z, CosLorenzAngleX,
     CosLorenzAngleY;
   if( alpha2Order) {
-
     TanLorenzAngleX = driftDir.x(); // tangen of Lorentz angle
     TanLorenzAngleY = driftDir.y();
     dir_z = driftDir.z(); // The z drift direction
     CosLorenzAngleX = 1./sqrt(1.+TanLorenzAngleX*TanLorenzAngleX); //cosine
     CosLorenzAngleY = 1./sqrt(1.+TanLorenzAngleY*TanLorenzAngleY); //cosine;
-
-  } else{
-
+    
+  } else{ 
     TanLorenzAngleX = driftDir.x();
     TanLorenzAngleY = 0.; // force to 0, driftDir.y()/driftDir.z();
     dir_z = driftDir.z(); // The z drift direction
     CosLorenzAngleX = 1./sqrt(1.+TanLorenzAngleX*TanLorenzAngleX); //cosine to estimate the path length
     CosLorenzAngleY = 1.;
   }
-
+  
   float moduleThickness = pixdet->specificSurface().bounds().thickness();
 #ifdef TP_DEBUG
   LogDebug ("Pixel Digitizer")
@@ -732,26 +846,25 @@ void SiPixelDigitizerAlgorithm::drift(const PSimHit& hit,
     << CosLorenzAngleX << " " << CosLorenzAngleY << " "
     << moduleThickness*TanLorenzAngleX << " " << driftDir;
 #endif
-
+  
   float Sigma_x = 1.;  // Charge spread
   float Sigma_y = 1.;
   float DriftDistance; // Distance between charge generation and collection
   float DriftLength;   // Actual Drift Lentgh
   float Sigma;
-
-
+  
   for (unsigned int i = 0; i != ionization_points.size(); i++) {
-
+    
     float SegX, SegY, SegZ; // position
     SegX = ionization_points[i].x();
     SegY = ionization_points[i].y();
     SegZ = ionization_points[i].z();
-
+    
     // Distance from the collection plane
     //DriftDistance = (moduleThickness/2. + SegZ); // Drift to -z
     // Include explixitely the E drift direction (for CMS dir_z=-1)
     DriftDistance = moduleThickness/2. - (dir_z * SegZ); // Drift to -z
-
+    
     //if( DriftDistance <= 0.)
     //cout<<" <=0 "<<DriftDistance<<" "<<i<<" "<<SegZ<<" "<<dir_z<<" "
     //  <<SegX<<" "<<SegY<<" "<<(moduleThickness/2)<<" "
@@ -759,62 +872,61 @@ void SiPixelDigitizerAlgorithm::drift(const PSimHit& hit,
     //  <<hit.particleType()<<" "<<hit.pabs()<<" "<<hit.energyLoss()<<" "
     //  <<hit.entryPoint()<<" "<<hit.exitPoint()
     //  <<std::endl;
-
+    
     if( DriftDistance < 0.) {
       DriftDistance = 0.;
     } else if( DriftDistance > moduleThickness )
       DriftDistance = moduleThickness;
-
+    
     // Assume full depletion now, partial depletion will come later.
     float XDriftDueToMagField = DriftDistance * TanLorenzAngleX;
     float YDriftDueToMagField = DriftDistance * TanLorenzAngleY;
-
+    
     // Shift cloud center
     float CloudCenterX = SegX + XDriftDueToMagField;
     float CloudCenterY = SegY + YDriftDueToMagField;
-
+    
     // Calculate how long is the charge drift path
     DriftLength = sqrt( DriftDistance*DriftDistance +
                         XDriftDueToMagField*XDriftDueToMagField +
                         YDriftDueToMagField*YDriftDueToMagField );
-
+    
     // What is the charge diffusion after this path
     Sigma = sqrt(DriftLength/Dist300) * Sigma0;
-
+    
     // Project the diffusion sigma on the collection plane
     Sigma_x = Sigma / CosLorenzAngleX ;
     Sigma_y = Sigma / CosLorenzAngleY ;
-
+    
     // Insert a charge loss due to Rad Damage here
     float energyOnCollector = ionization_points[i].energy(); // The energy that reaches the collector
-    // pseudoRadDamage
-    if (pseudoRadDamage>=0.001){
-        float moduleRadius = pixdet->surface().position().perp();
-        if (moduleRadius<=pseudoRadDamageRadius){
-          float kValue = pseudoRadDamage /(moduleRadius*moduleRadius);
-          //std::cout <<"\nmoduleRadius= "<<moduleRadius<<" WITH K="<<kValue <<" wich scales the energy by "<<
-          //            exp( -1*kValue*DriftDistance/moduleThickness )<<"\n" ;
-          energyOnCollector = energyOnCollector * exp( -1*kValue*DriftDistance/moduleThickness );
-          }
-        }
+    
+    // add pixel aging 
+    if (AddPixelAging) {
+      float kValue = pixel_aging(pixelAging_,pixdet,tTopo);
+      energyOnCollector *= exp( -1*kValue*DriftDistance/moduleThickness );
+    }
+    
 #ifdef TP_DEBUG
-  LogDebug ("Pixel Digitizer")
-                <<" Dift DistanceZ= "<<DriftDistance<<" module thickness= "<<moduleThickness
-                <<" Start Energy= "<<ionization_points[i].energy()<<" Energy after loss= "<<energyOnCollector;
+    LogDebug ("Pixel Digitizer")
+      <<" Dift DistanceZ= "<<DriftDistance<<" module thickness= "<<moduleThickness
+      <<" Start Energy= "<<ionization_points[i].energy()<<" Energy after loss= "<<energyOnCollector;
 #endif
     SignalPoint sp( CloudCenterX, CloudCenterY,
-     Sigma_x, Sigma_y, hit.tof(), energyOnCollector );
-
+		    Sigma_x, Sigma_y, hit.tof(), energyOnCollector );
+    
     // Load the Charge distribution parameters
     collection_points[i] = (sp);
-
+    
   } // loop over ionization points, i.
-
+  
 } // end drift
 
 //*************************************************************************
 // Induce the signal on the collection plane of the active sensor area.
 void SiPixelDigitizerAlgorithm::induce_signal(const PSimHit& hit,
+					      const size_t hitIndex,
+					      const unsigned int tofBin,
 			                      const PixelGeomDetUnit* pixdet,
                                               const std::vector<SignalPoint>& collection_points) {
 
@@ -878,7 +990,7 @@ void SiPixelDigitizerAlgorithm::induce_signal(const PSimHit& hit,
      // so the returned pixel index might be wrong (outside range).
      // We rely on the limits check below to fix this.
      // But remember whatever we do here THE CHARGE OUTSIDE THE ACTIVE
-     // PIXEL ARE IS LOST, it should not be collected.
+     // PIXEL AREA IS LOST, it should not be collected.
 
      // Convert the 2D points to pixel indices
      MeasurementPoint mp = topol->measurementPosition(PointRightUp ); //OK
@@ -915,7 +1027,7 @@ void SiPixelDigitizerAlgorithm::induce_signal(const PSimHit& hit,
      x.clear(); // clear temporary integration array
      y.clear();
 
-     // First integrate cahrge strips in x
+     // First integrate charge strips in x
      int ix; // TT for compatibility
      for (ix=IPixLeftDownX; ix<=IPixRightUpX; ix++) {  // loop over x index
        float xUB, xLB, UpperBound, LowerBound;
@@ -946,7 +1058,7 @@ void SiPixelDigitizerAlgorithm::induce_signal(const PSimHit& hit,
 
      }
 
-    // Now integarte strips in y
+    // Now integrate strips in y
     int iy; // TT for compatibility
     for (iy=IPixLeftDownY; iy<=IPixRightUpY; iy++) { //loope over y ind
       float yUB, yLB, UpperBound, LowerBound;
@@ -1029,7 +1141,7 @@ void SiPixelDigitizerAlgorithm::induce_signal(const PSimHit& hit,
   for ( hit_map_type::const_iterator im = hit_signal.begin();
 	im != hit_signal.end(); ++im) {
     int chan =  (*im).first;
-    theSignal[chan] += (makeDigiSimLinks_ ? Amplitude( (*im).second, &hit, (*im).second) : Amplitude( (*im).second, (*im).second) )  ;
+    theSignal[chan] += (makeDigiSimLinks_ ? Amplitude( (*im).second, &hit, hitIndex, tofBin, (*im).second) : Amplitude( (*im).second, (*im).second) )  ;
 
 #ifdef TP_DEBUG
     std::pair<int,int> ip = PixelDigi::channelToPixel(chan);
@@ -1135,7 +1247,7 @@ void SiPixelDigitizerAlgorithm::make_digis(float thePixelThresholdInE,
 	    }
 	    float fraction=sum_samechannel/(*i).second;
 	    if(fraction>1.) fraction=1.;
-	    simlinks.emplace_back((*i).first, (*simiiter).first, (*i).second.eventId(), fraction);
+	    simlinks.emplace_back((*i).first, (*simiiter).first, (*i).second.hitIndex(), (*i).second.tofBin(), (*i).second.eventId(), fraction);
 	  }
         }
       }
@@ -1147,7 +1259,8 @@ void SiPixelDigitizerAlgorithm::make_digis(float thePixelThresholdInE,
 
 //  Add electronic noise to pixel charge
 void SiPixelDigitizerAlgorithm::add_noise(const PixelGeomDetUnit* pixdet,
-                                          float thePixelThreshold) {
+                                          float thePixelThreshold,
+                                          CLHEP::HepRandomEngine* engine) {
 
 #ifdef TP_DEBUG
   LogDebug ("Pixel Digitizer") << " enter add_noise " << theNoiseInElectrons;
@@ -1174,9 +1287,9 @@ void SiPixelDigitizerAlgorithm::add_noise(const PixelGeomDetUnit* pixdet,
 	}
 
 	// Noise from Vcal smearing:
-	float noise_ChargeVCALSmearing = theSmearedChargeRMS * gaussDistributionVCALNoise_->fire() ;
+        float noise_ChargeVCALSmearing = theSmearedChargeRMS * CLHEP::RandGaussQ::shoot(engine, 0., 1.);
 	// Noise from full readout:
-	float noise  = gaussDistribution_->fire() ;
+        float noise  = CLHEP::RandGaussQ::shoot(engine, 0., theReadoutNoise);
 
 		if(((*i).second + Amplitude(noise+noise_ChargeVCALSmearing, -1.)) < 0. ) {
 		  (*i).second.set(0);}
@@ -1189,7 +1302,7 @@ void SiPixelDigitizerAlgorithm::add_noise(const PixelGeomDetUnit* pixdet,
      {
 	// Noise: ONLY full READOUT Noise.
 	// Use here the FULL readout noise, including TBM,ALT,AOH,OPT-REC.
-	float noise  = gaussDistribution_->fire() ;
+	float noise = CLHEP::RandGaussQ::shoot(engine, 0., theReadoutNoise);
 
 		if(((*i).second + Amplitude(noise, -1.)) < 0. ) {
 		  (*i).second.set(0);}
@@ -1216,7 +1329,8 @@ void SiPixelDigitizerAlgorithm::add_noise(const PixelGeomDetUnit* pixdet,
   theNoiser->generate(numberOfPixels,
                       thePixelThreshold, //thr. in un. of nois
 		      theNoiseInElectrons, // noise in elec.
-                      otherPixels );
+                      otherPixels,
+                      engine );
 
 #ifdef TP_DEBUG
   LogDebug ("Pixel Digitizer")
@@ -1259,21 +1373,20 @@ void SiPixelDigitizerAlgorithm::add_noise(const PixelGeomDetUnit* pixdet,
 // Delete a selected number of single pixels, dcols and rocs.
 void SiPixelDigitizerAlgorithm::pixel_inefficiency(const PixelEfficiencies& eff,
 			                           const PixelGeomDetUnit* pixdet,
-						   const TrackerTopology *tTopo) {
-
+						   const TrackerTopology *tTopo,
+                                                   CLHEP::HepRandomEngine* engine) {
+  
   uint32_t detID= pixdet->geographicalId().rawId();
-
   signal_map_type& theSignal = _signal[detID];
-
   const PixelTopology* topol=&pixdet->specificTopology();
   int numColumns = topol->ncolumns();  // det module number of cols&rows
   int numRows = topol->nrows();
-
+  
   // Predefined efficiencies
-  float pixelEfficiency  = 1.0;
-  float columnEfficiency = 1.0;
-  float chipEfficiency   = 1.0;
-
+  double pixelEfficiency  = 1.0;
+  double columnEfficiency = 1.0;
+  double chipEfficiency   = 1.0;
+  
   // setup the chip indices conversion
   unsigned int Subid=DetId(detID).subdetId();
   if    (Subid==  PixelSubdetector::PixelBarrel){// barrel layers
@@ -1284,11 +1397,20 @@ void SiPixelDigitizerAlgorithm::pixel_inefficiency(const PixelEfficiencies& eff,
     //std::cout <<"Using BPix columnEfficiency = "<<columnEfficiency<< " for layer = "<<layerIndex <<"\n";
     // This should never happen, but only check if it is not an upgrade geometry
     if (NumberOfBarrelLayers==3){
-       if(numColumns>416)  LogWarning ("Pixel Geometry") <<" wrong columns in barrel "<<numColumns;
-       if(numRows>160)  LogWarning ("Pixel Geometry") <<" wrong rows in barrel "<<numRows;
+      if(numColumns>416)  LogWarning ("Pixel Geometry") <<" wrong columns in barrel "<<numColumns;
+      if(numRows>160)  LogWarning ("Pixel Geometry") <<" wrong rows in barrel "<<numRows;
+      
+      int ladder=tTopo->pxbLadder(detID);
+      int module=tTopo->pxbModule(detID);
+      if (module<=4) module=5-module;
+      else module-=4;
+      
+      columnEfficiency *= eff.theLadderEfficiency_BPix[layerIndex-1][ladder-1]*eff.theModuleEfficiency_BPix[layerIndex-1][module-1]*_pu_scale[layerIndex-1];
     }
   } else {                // forward disks
     unsigned int diskIndex=tTopo->pxfDisk(detID)+eff.FPixIndex; // Use diskIndex-1 later to stay consistent with BPix
+    unsigned int panelIndex=tTopo->pxfPanel(detID);
+    unsigned int moduleIndex=tTopo->pxfModule(detID);
     //if (eff.FPixIndex>diskIndex-1){throw cms::Exception("Configuration") <<"SiPixelDigitizer is using the wrong efficiency value. index = "
     //                                                                       <<diskIndex-1<<" , MinIndex = "<<eff.FPixIndex<<" ... "<<tTopo->pxfDisk(detID);}
     pixelEfficiency  = eff.thePixelEfficiency[diskIndex-1];
@@ -1298,19 +1420,24 @@ void SiPixelDigitizerAlgorithm::pixel_inefficiency(const PixelEfficiencies& eff,
     // Sometimes the forward pixels have wrong size,
     // this crashes the index conversion, so exit, but only check if it is not an upgrade geometry
     if (NumberOfBarrelLayers==3){
-       if(numColumns>260 || numRows>160) {
-         if(numColumns>260)  LogWarning ("Pixel Geometry") <<" wrong columns in endcaps "<<numColumns;
-	 if(numRows>160)  LogWarning ("Pixel Geometry") <<" wrong rows in endcaps "<<numRows;
-         return;
-       }
-    }
+      if(numColumns>260 || numRows>160) {
+	if(numColumns>260)  LogWarning ("Pixel Geometry") <<" wrong columns in endcaps "<<numColumns;
+	if(numRows>160)  LogWarning ("Pixel Geometry") <<" wrong rows in endcaps "<<numRows;
+	return;
+      }
+      if ((panelIndex==1 && (moduleIndex==1 || moduleIndex==2)) || (panelIndex==2 && moduleIndex==1)) { //inner modules
+	columnEfficiency*=eff.theInnerEfficiency_FPix[diskIndex-1]*_pu_scale[3];
+      } else { //outer modules
+	columnEfficiency*=eff.theOuterEfficiency_FPix[diskIndex-1]*_pu_scale[4];
+      }
+    } // current detector, forward
   } // if barrel/forward
-
+  
 #ifdef TP_DEBUG
   LogDebug ("Pixel Digitizer") << " enter pixel_inefficiency " << pixelEfficiency << " "
 			       << columnEfficiency << " " << chipEfficiency;
 #endif
-
+  
   // Initilize the index converter
   //PixelIndices indexConverter(numColumns,numRows);
   std::auto_ptr<PixelIndices> pIndexConverter(new PixelIndices(numColumns,numRows));
@@ -1320,11 +1447,11 @@ void SiPixelDigitizerAlgorithm::pixel_inefficiency(const PixelEfficiencies& eff,
   int colROC = 0;
   std::map<int, int, std::less<int> >chips, columns;
   std::map<int, int, std::less<int> >::iterator iter;
-
+  
   // Find out the number of columns and rocs hits
   // Loop over hit pixels, amplitude in electrons, channel = coded row,col
   for (signal_map_const_iterator i = theSignal.begin(); i != theSignal.end(); ++i) {
-
+    
     int chan = i->first;
     std::pair<int,int> ip = PixelDigi::channelToPixel(chan);
     int row = ip.first;  // X in row
@@ -1334,29 +1461,29 @@ void SiPixelDigitizerAlgorithm::pixel_inefficiency(const PixelEfficiencies& eff,
     int dColInChip = pIndexConverter->DColumn(colROC); // get ROC dcol from ROC col
     //dcol in mod
     int dColInDet = pIndexConverter->DColumnInModule(dColInChip,chipIndex);
-
+    
     chips[chipIndex]++;
     columns[dColInDet]++;
   }
-
+  
   // Delete some ROC hits.
   for ( iter = chips.begin(); iter != chips.end() ; iter++ ) {
     //float rand  = RandFlat::shoot();
-    float rand  = flatDistribution_->fire();
+    float rand  = CLHEP::RandFlat::shoot(engine);
     if( rand > chipEfficiency ) chips[iter->first]=0;
   }
-
+  
   // Delete some Dcol hits.
   for ( iter = columns.begin(); iter != columns.end() ; iter++ ) {
     //float rand  = RandFlat::shoot();
-    float rand  = flatDistribution_->fire();
+    float rand  = CLHEP::RandFlat::shoot(engine);
     if( rand > columnEfficiency ) columns[iter->first]=0;
   }
-
+  
   // Now loop again over pixels to kill some of them.
   // Loop over hit pixels, amplitude in electrons, channel = coded row,col
   for(signal_map_iterator i = theSignal.begin();i != theSignal.end(); ++i) {
-
+    
     //    int chan = i->first;
     std::pair<int,int> ip = PixelDigi::channelToPixel(i->first);//get pixel pos
     int row = ip.first;  // X in row
@@ -1366,18 +1493,61 @@ void SiPixelDigitizerAlgorithm::pixel_inefficiency(const PixelEfficiencies& eff,
     int dColInChip = pIndexConverter->DColumn(colROC); //get ROC dcol from ROC col
     //dcol in mod
     int dColInDet = pIndexConverter->DColumnInModule(dColInChip,chipIndex);
-
-
+    
     //float rand  = RandFlat::shoot();
-    float rand  = flatDistribution_->fire();
+    float rand  = CLHEP::RandFlat::shoot(engine);
     if( chips[chipIndex]==0 || columns[dColInDet]==0
 	|| rand>pixelEfficiency ) {
       // make pixel amplitude =0, pixel will be lost at clusterization
       i->second.set(0.); // reset amplitude,
     } // end if
-
+    
   } // end pixel loop
 } // end pixel_indefficiency
+
+//***************************************************************************************
+// Simulate pixel aging with an exponential function
+//**************************************************************************************
+
+float SiPixelDigitizerAlgorithm::pixel_aging(const PixelAging& aging,
+					     const PixelGeomDetUnit *pixdet,
+					     const TrackerTopology *tTopo) const {
+  
+  uint32_t detID= pixdet->geographicalId().rawId();
+  
+  
+  // Predefined damage parameter (no aging)
+  float pseudoRadDamage  = 0.0;
+  
+  // setup the chip indices conversion
+  unsigned int Subid=DetId(detID).subdetId();
+  if    (Subid==  PixelSubdetector::PixelBarrel){// barrel layers
+    int layerIndex=tTopo->pxbLayer(detID);
+    
+     pseudoRadDamage  = aging.thePixelPseudoRadDamage[layerIndex-1];
+     
+     //  std::cout << "pixel_aging: " << std::endl;
+     // std::cout << "Subid " << Subid << " layerIndex " << layerIndex << " ladder " << tTopo->pxbLadder(detID)  << " module  " << tTopo->pxbModule(detID) << std::endl;
+     
+  } else {                // forward disks
+    unsigned int diskIndex=tTopo->pxfDisk(detID)+aging.FPixIndex; // Use diskIndex-1 later to stay consistent with BPix
+    
+    pseudoRadDamage  = aging.thePixelPseudoRadDamage[diskIndex-1];
+    
+    //    std::cout << "pixel_aging: " << std::endl;
+    //    std::cout << "Subid " << Subid << " diskIndex " << diskIndex << std::endl;
+    
+  } // if barrel/forward
+  
+  //  std::cout << " pseudoRadDamage " << pseudoRadDamage << std::endl;
+  //  std::cout << " end pixel_aging " << std::endl;
+  
+  return pseudoRadDamage;
+#ifdef TP_DEBUG
+  LogDebug ("Pixel Digitizer") << " enter pixel_aging " << pseudoRadDamage;
+#endif
+  
+}
 
 //***********************************************************************
 
@@ -1511,16 +1681,15 @@ LocalVector SiPixelDigitizerAlgorithm::DriftDirection(const PixelGeomDetUnit* pi
       dir_x = -( tanLorentzAnglePerTesla_BPix * Bfield.y() + alpha2_BPix* Bfield.z()* Bfield.x() );
       dir_y = +( tanLorentzAnglePerTesla_BPix * Bfield.x() - alpha2_BPix* Bfield.z()* Bfield.y() );
       dir_z = -(1 + alpha2_BPix* Bfield.z()*Bfield.z() );
-      scale = (1 + alpha2_BPix* Bfield.z()*Bfield.z() );
-
+      scale = -dir_z;
     } else {// forward disks
       dir_x = -( tanLorentzAnglePerTesla_FPix * Bfield.y() + alpha2_FPix* Bfield.z()* Bfield.x() );
       dir_y = +( tanLorentzAnglePerTesla_FPix * Bfield.x() - alpha2_FPix* Bfield.z()* Bfield.y() );
       dir_z = -(1 + alpha2_FPix* Bfield.z()*Bfield.z() );
-      scale = (1 + alpha2_FPix* Bfield.z()*Bfield.z() );
+      scale = -dir_z;
     }
   } // end: Read LA from cfg file.
-
+  
   //Read Lorentz angle from DB:********************************************************************
   if(use_LorentzAngle_DB_){
     float lorentzAngle = SiPixelLorentzAngle_->getLorentzAngle(detId);
@@ -1529,7 +1698,7 @@ LocalVector SiPixelDigitizerAlgorithm::DriftDirection(const PixelGeomDetUnit* pi
     dir_x = -( lorentzAngle * Bfield.y() + alpha2 * Bfield.z()* Bfield.x() );
     dir_y = +( lorentzAngle * Bfield.x() - alpha2 * Bfield.z()* Bfield.y() );
     dir_z = -(1 + alpha2 * Bfield.z()*Bfield.z() );
-    scale = (1 + alpha2 * Bfield.z()*Bfield.z() );
+    scale = -dir_z;
   }// end: Read LA from DataBase.
   
   LocalVector theDriftDirection = LocalVector(dir_x/scale, dir_y/scale, dir_z/scale );
@@ -1545,9 +1714,7 @@ LocalVector SiPixelDigitizerAlgorithm::DriftDirection(const PixelGeomDetUnit* pi
 //****************************************************************************************************
 
 void SiPixelDigitizerAlgorithm::pixel_inefficiency_db(uint32_t detID) {
-  if(!use_ineff_from_db_)
-    return;
-  
+ 
   signal_map_type& theSignal = _signal[detID];
 
   // Loop over hit pixels, amplitude in electrons, channel = coded row,col
@@ -1570,8 +1737,6 @@ void SiPixelDigitizerAlgorithm::pixel_inefficiency_db(uint32_t detID) {
 //****************************************************************************************************
 
 void SiPixelDigitizerAlgorithm::module_killing_conf(uint32_t detID) {
-  if(!use_module_killing_)
-    return;
   
   bool isbad=false;
   
@@ -1614,8 +1779,6 @@ void SiPixelDigitizerAlgorithm::module_killing_conf(uint32_t detID) {
 //****************************************************************************************************
 void SiPixelDigitizerAlgorithm::module_killing_DB(uint32_t detID) {
 // Not SLHC safe for now
-  if(!use_module_killing_)
-    return;
   
   bool isbad=false;
   

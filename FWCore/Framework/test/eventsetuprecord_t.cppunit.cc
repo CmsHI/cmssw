@@ -36,7 +36,7 @@ class DummyRecord : public edm::eventsetup::EventSetupRecordImplementation<Dummy
 HCTYPETAG_HELPER_METHODS(eventsetuprecord_t::DummyRecord)
 
 //create an instance of the factory
-static eventsetup::EventSetupRecordProviderFactoryTemplate<eventsetuprecord_t::DummyRecord> s_factory;
+static eventsetup::EventSetupRecordProviderFactoryTemplate<eventsetuprecord_t::DummyRecord> const s_factory;
 
 namespace eventsetuprecord_t {
 class Dummy {};
@@ -197,8 +197,9 @@ void testEventsetupRecord::getTest()
                               "");
 
    ESHandle<Dummy> dummyPtr;
-   //dummyRecord.get(dummyPtr);
-   CPPUNIT_ASSERT_THROW(dummyRecord.get(dummyPtr), NoDataExceptionType) ;
+   dummyRecord.get(dummyPtr);
+   CPPUNIT_ASSERT(dummyPtr.failedToGet());
+   CPPUNIT_ASSERT_THROW(*dummyPtr, NoDataExceptionType) ;
    //CDJ do this replace
    //CPPUNIT_ASSERT_THROW(dummyRecord.get(dummyPtr),NoDataExceptionType);
 
@@ -222,7 +223,8 @@ void testEventsetupRecord::getTest()
                     &workingProxy);
 
    dummyRecord.get("working",dummyPtr);
-   
+   CPPUNIT_ASSERT(!dummyPtr.failedToGet());
+
    CPPUNIT_ASSERT(&(*dummyPtr) == &myDummy);
 
    const std::string workingString("working");
@@ -258,9 +260,9 @@ void testEventsetupRecord::getNodataExpTest()
    FailingDummyProxy dummyProxy;
 
    const DataKey dummyDataKey(DataKey::makeTypeTag<FailingDummyProxy::value_type>(),"");
-
    ESHandle<Dummy> dummyPtr;
    dummyRecord.get(dummyPtr);
+   *dummyPtr;
    //CPPUNIT_ASSERT_THROW(dummyRecord.get(dummyPtr), NoDataExceptionType) ;
 
 }

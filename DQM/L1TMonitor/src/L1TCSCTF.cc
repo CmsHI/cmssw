@@ -56,6 +56,7 @@ L1TCSCTF::L1TCSCTF(const ParameterSet& ps)
     outputFile_="";
   }
 
+  gangedME11a_ = ps.getUntrackedParameter<bool>("gangedME11a", false);
 
   if ( dbe !=NULL ) 
     {
@@ -80,6 +81,19 @@ L1TCSCTF::L1TCSCTF(const ParameterSet& ps)
 	srLUTs_[fpga++] = new CSCSectorReceiverLUT(endcap, sector, 0, station, srLUTset, TMB07);
     }
 
+  //set Token(-s)
+  edm::InputTag statusTag_(statusProducer.label(),statusProducer.instance());
+  edm::InputTag corrlctsTag_(lctProducer.label(),lctProducer.instance());
+  edm::InputTag tracksTag_(trackProducer.label(),trackProducer.instance());
+  edm::InputTag dtStubsTag_(mbProducer.label(),  mbProducer.instance());
+  edm::InputTag mbtracksTag_(trackProducer.label(),trackProducer.instance());
+
+  gmtProducerToken_ = consumes<L1MuGMTReadoutCollection>(ps.getParameter< InputTag >("gmtProducer"));
+  statusToken_ = consumes<L1CSCStatusDigiCollection>(statusTag_);
+  corrlctsToken_ = consumes<CSCCorrelatedLCTDigiCollection>(corrlctsTag_);
+  tracksToken_ = consumes<L1CSCTrackCollection>(tracksTag_);
+  dtStubsToken_ = consumes<CSCTriggerContainer<csctf::TrackStub> >(dtStubsTag_);
+  mbtracksToken_ = consumes<L1CSCTrackCollection>(mbtracksTag_);
 }
 
 L1TCSCTF::~L1TCSCTF()
@@ -396,6 +410,73 @@ void L1TCSCTF::beginJob(void)
 
   } 
 
+
+  // NEW: CSC EVENT LCT PLOTS, Renjie Wang
+  csctflcts = dbe->book2D("CSCTF_LCT", "CSCTF LCTs", 12,1,13, 18,0,18);
+  csctflcts->setAxisTitle("CSCTF LCT BX",1);
+  csctflcts->setBinLabel(1,"1",1);
+  csctflcts->setBinLabel(2,"2",1);
+  csctflcts->setBinLabel(3,"3",1);
+  csctflcts->setBinLabel(4,"4",1);
+  csctflcts->setBinLabel(5,"5",1);
+  csctflcts->setBinLabel(6,"6",1);
+  csctflcts->setBinLabel(7,"7",1);
+  csctflcts->setBinLabel(8,"8",1);
+  csctflcts->setBinLabel(9,"9",1);
+  csctflcts->setBinLabel(10,"10",1);
+  csctflcts->setBinLabel(11,"11",1);
+  csctflcts->setBinLabel(12,"12",1); 
+
+  int ihist = 0;
+  for (int iEndcap = 0; iEndcap < 2; iEndcap++) {
+    for (int iStation = 1; iStation < 5; iStation++) {
+      for (int iRing = 1; iRing < 4; iRing++) {
+        if (iStation != 1 && iRing > 2) continue;
+        TString signEndcap="+";
+        if(iEndcap==0) signEndcap="-";
+
+        char lcttitle[200];
+        snprintf(lcttitle,200,"ME%s%d/%d", signEndcap.Data(), iStation, iRing);
+        if(ihist<=8){
+                csctflcts -> setBinLabel(9-ihist,lcttitle,2);
+        }
+        else    csctflcts -> setBinLabel(ihist+1,lcttitle,2);
+
+        ihist++;
+      }
+    }
+  }
+
+  
+  // plots for ME1/1 chambers 
+  me11_lctStrip = dbe->book1D("CSC_ME11_LCT_Strip", "CSC_ME11_LCT_Strip", 223, 0, 223);
+  me11_lctStrip->setAxisTitle("Cathode HalfStrip, ME1/1", 1);
+ 
+  me11_lctWire  = dbe->book1D("CSC_ME11_LCT_Wire", "CSC_ME11_LCT_Wire", 112, 0, 112);
+  me11_lctWire->setAxisTitle("Anode Wiregroup, ME1/1", 1);
+
+  me11_lctLocalPhi = dbe->book1D("CSC_ME11_LCT_LocalPhi", "CSC_ME11_LCT_LocalPhi", 200,0,1024); 
+  me11_lctLocalPhi ->setAxisTitle("LCT Local #it{#phi}, ME1/1", 1);
+
+  me11_lctPackedPhi = dbe->book1D("CSC_ME11_LCT_PackedPhi", "CSC_ME11_LCT_PackedPhi", 200,0,4096);
+  me11_lctPackedPhi ->setAxisTitle("LCT Packed #it{#phi}, ME1/1",1);
+  
+  me11_lctGblPhi = dbe->book1D("CSC_ME11_LCT_GblPhi", "CSC_ME11_LCT_GblPhi", 200, 0, 2*M_PI);
+  me11_lctGblPhi ->setAxisTitle("LCT Global #it{#phi}, ME1/1", 1);
+ 
+  me11_lctGblEta = dbe->book1D("CSC_ME11_LCT_GblEta", "CSC_ME11_LCT_GblEta", 50, 0.9, 2.5);
+  me11_lctGblEta ->setAxisTitle("LCT Global #eta, ME1/1", 1);
+
+
+  // plots for ME4/2 chambers 
+  me42_lctGblPhi = dbe->book1D("CSC_ME42_LCT_GblPhi", "CSC_ME42_LCT_GblPhi", 200, 0, 2*M_PI);
+  me42_lctGblPhi ->setAxisTitle("LCT Global #it{#phi}, ME4/2", 1);
+ 
+  me42_lctGblEta = dbe->book1D("CSC_ME42_LCT_GblEta", "CSC_ME42_LCT_GblEta", 50, 0.9, 2.5);
+  me42_lctGblEta ->setAxisTitle("LCT Global #eta, ME4/2", 1);
+
+
+
 }
 
 
@@ -435,7 +516,7 @@ void L1TCSCTF::analyze(const Event& e, const EventSetup& c)
   edm::Handle<L1MuGMTReadoutCollection> pCollection;
   if( gmtProducer.label() != "null" )
     { // GMT block
-      e.getByLabel(gmtProducer,pCollection);
+      e.getByToken(gmtProducerToken_, pCollection);
       if (!pCollection.isValid()) 
         {
           edm::LogInfo("DataNotFound") << "can't find L1MuGMTReadoutCollection with label ";  // << csctfSource_.label() ;
@@ -493,7 +574,7 @@ void L1TCSCTF::analyze(const Event& e, const EventSetup& c)
   if( statusProducer.label() != "null" )
     {
       edm::Handle<L1CSCStatusDigiCollection> status;
-      e.getByLabel(statusProducer.label(),statusProducer.instance(),status);
+      e.getByToken(statusToken_, status);
       bool integrity=status->first, se=false, sm=false, bx=false, af=false, fmm=false;
       int nStat = 0;
  
@@ -528,7 +609,7 @@ void L1TCSCTF::analyze(const Event& e, const EventSetup& c)
       CSCTriggerGeometry::setGeometry(pDD);
 
       edm::Handle<CSCCorrelatedLCTDigiCollection> corrlcts;
-      e.getByLabel(lctProducer.label(),lctProducer.instance(),corrlcts);
+      e.getByToken(corrlctsToken_, corrlcts);
 
       for(CSCCorrelatedLCTDigiCollection::DigiRangeIterator csc=corrlcts.product()->begin(); csc!=corrlcts.product()->end(); csc++)
         {
@@ -539,8 +620,12 @@ void L1TCSCTF::analyze(const Event& e, const EventSetup& c)
               int station = (*csc).first.station()-1;
               int sector  = (*csc).first.triggerSector()-1;
               int subSector = CSCTriggerNumbering::triggerSubSectorFromLabels((*csc).first);
+	      int ring      = (*csc).first.ring();
               int cscId   = (*csc).first.triggerCscId()-1;
               int fpga    = ( subSector ? subSector-1 : station+1 );
+	      int strip     = lct -> getStrip();
+	      int keyWire   = lct -> getKeyWG();
+	      int bx        = lct -> getBX();
 
               int endcapAssignment = 1;
               int shift = 1;
@@ -589,24 +674,76 @@ void L1TCSCTF::analyze(const Event& e, const EventSetup& c)
                 }
               lclphidat lclPhi;  		
               try {
-                lclPhi = srLUTs_[fpga]->localPhi(lct->getStrip(), lct->getPattern(), lct->getQuality(), lct->getBend());
+                lclPhi = srLUTs_[fpga]->localPhi(lct->getStrip(), lct->getPattern(), lct->getQuality(), lct->getBend(), gangedME11a_);
               } catch(cms::Exception &) { 
                 bzero(&lclPhi,sizeof(lclPhi)); 
               }
 				
               gblphidat gblPhi;
               try {
-                gblPhi = srLUTs_[fpga]->globalPhiME(lclPhi.phi_local, lct->getKeyWG(), cscId+1);
+                gblPhi = srLUTs_[fpga]->globalPhiME(lclPhi.phi_local, lct->getKeyWG(), cscId+1, gangedME11a_);
               } catch(cms::Exception &) { 
                 bzero(&gblPhi,sizeof(gblPhi)); 
               }
 				
               gbletadat gblEta;
               try {
-                gblEta = srLUTs_[fpga]->globalEtaME(lclPhi.phi_bend_local, lclPhi.phi_local, lct->getKeyWG(), cscId+1);
+                gblEta = srLUTs_[fpga]->globalEtaME(lclPhi.phi_bend_local, lclPhi.phi_local, lct->getKeyWG(), cscId+1, gangedME11a_);
               } catch(cms::Exception &) { 
                 bzero(&gblEta,sizeof(gblEta)); 
               }
+
+
+              //TrackStub                                                                                                                                 
+              csctf::TrackStub theStub((*lct), (*csc).first);                                                                                             
+              theStub.setPhiPacked(gblPhi.global_phi);
+              theStub.setEtaPacked(gblEta.global_eta);                                                                                                    
+
+	      float etaG = theStub.etaValue();
+              float phiG = fmod( theStub.phiValue()+15.0*M_PI/180+(sector)*60.0*M_PI/180, 2.*M_PI );          
+
+	      // BX plots
+	      // minus side
+	      if (endcap == 0 && station == 0 && ring == 1) { csctflcts -> Fill(bx, 8.5); }
+	      if (endcap == 0 && station == 0 && ring == 2) { csctflcts -> Fill(bx, 7.5); }
+	      if (endcap == 0 && station == 0 && ring == 3) { csctflcts -> Fill(bx, 6.5); }
+	      if (endcap == 0 && station == 1 && ring == 1) { csctflcts -> Fill(bx, 5.5); }
+	      if (endcap == 0 && station == 1 && ring == 2) { csctflcts -> Fill(bx, 4.5); }
+	      if (endcap == 0 && station == 2 && ring == 1) { csctflcts -> Fill(bx, 3.5); }
+	      if (endcap == 0 && station == 2 && ring == 2) { csctflcts -> Fill(bx, 2.5); }
+	      if (endcap == 0 && station == 3 && ring == 1) { csctflcts -> Fill(bx, 1.5); }
+	      if (endcap == 0 && station == 3 && ring == 2) { csctflcts -> Fill(bx, 0.5); }
+	      
+	      // plus side
+	      if (endcap == 1 && station == 0 && ring == 1) { csctflcts -> Fill(bx, 9.5); }
+	      if (endcap == 1 && station == 0 && ring == 2) { csctflcts -> Fill(bx, 10.5); }
+	      if (endcap == 1 && station == 0 && ring == 3) { csctflcts -> Fill(bx, 11.5); }
+	      if (endcap == 1 && station == 1 && ring == 1) { csctflcts -> Fill(bx, 12.5); }
+	      if (endcap == 1 && station == 1 && ring == 2) { csctflcts -> Fill(bx, 13.5); }
+	      if (endcap == 1 && station == 2 && ring == 1) { csctflcts -> Fill(bx, 14.5); }
+	      if (endcap == 1 && station == 2 && ring == 2) { csctflcts -> Fill(bx, 15.5); }
+	      if (endcap == 1 && station == 3 && ring == 1) { csctflcts -> Fill(bx, 16.5); }
+	      if (endcap == 1 && station == 3 && ring == 2) { csctflcts -> Fill(bx, 17.5); }
+	
+	      // only for ME1/1
+	      if(station == 0 && ring == 1){
+	      	me11_lctStrip    -> Fill(strip);
+	     	me11_lctWire     -> Fill(keyWire);
+		me11_lctLocalPhi -> Fill(lclPhi.phi_local);
+	      	me11_lctPackedPhi-> Fill(theStub.phiPacked());
+	      	me11_lctGblPhi   -> Fill(phiG);
+	      	me11_lctGblEta   -> Fill(etaG);
+	      }
+
+	      // only for ME4/2
+	      if(station == 3 && ring == 2){
+	      	me42_lctGblPhi   -> Fill(phiG);
+	      	me42_lctGblEta   -> Fill(etaG);
+	      }
+
+
+
+
            
               // SR LUT gives packed eta and phi values -> normilize them to 1 by scale them to 'max' and shift by 'min'
               //float etaP = gblEta.global_eta/127*1.5 + 0.9;
@@ -622,7 +759,7 @@ void L1TCSCTF::analyze(const Event& e, const EventSetup& c)
   if( trackProducer.label() != "null" )
     {
       edm::Handle<L1CSCTrackCollection> tracks;
-      e.getByLabel(trackProducer.label(),trackProducer.instance(),tracks);
+      e.getByToken(tracksToken_, tracks);
       for(L1CSCTrackCollection::const_iterator trk=tracks->begin(); trk<tracks->end(); trk++)
         {
 
@@ -725,7 +862,6 @@ void L1TCSCTF::analyze(const Event& e, const EventSetup& c)
              }
 				
              edm::Handle<CSCCorrelatedLCTDigiCollection> corrlcts;
-             e.getByLabel(lctProducer.label(),lctProducer.instance(),corrlcts);
              for(CSCCorrelatedLCTDigiCollection::DigiRangeIterator csc=corrlcts.product()->begin(); csc!=corrlcts.product()->end(); csc++)
              {
              CSCCorrelatedLCTDigiCollection::Range range1 = corrlcts.product()->get((*csc).first);
@@ -836,9 +972,9 @@ void L1TCSCTF::analyze(const Event& e, const EventSetup& c)
     {
       // handle to needed collections
       edm::Handle<CSCTriggerContainer<csctf::TrackStub> > dtStubs;
-      e.getByLabel(mbProducer.label(),  mbProducer.instance(),  dtStubs);
+      e.getByToken(dtStubsToken_, dtStubs);
       edm::Handle<L1CSCTrackCollection> tracks;
-      e.getByLabel(trackProducer.label(),trackProducer.instance(),tracks);
+      e.getByToken(mbtracksToken_, tracks);
 		  
       // loop on the DT stubs
       std::vector<csctf::TrackStub> vstubs = dtStubs->get();

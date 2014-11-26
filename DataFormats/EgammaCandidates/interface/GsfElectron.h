@@ -1,4 +1,4 @@
- #ifndef GsfElectron_h
+#ifndef GsfElectron_h
 #define GsfElectron_h
 
 #include "DataFormats/EgammaCandidates/interface/GsfElectronFwd.h"
@@ -87,6 +87,19 @@ class GsfElectron : public RecoCandidate
       const ShowerShape &,
       const ConversionRejection &
      ) ;
+     GsfElectron
+     (
+      int charge,
+      const ChargeInfo &,
+      const GsfElectronCoreRef &,
+      const TrackClusterMatching &,
+      const TrackExtrapolations &,
+      const ClosestCtfTrack &,
+      const FiducialFlags &,
+      const ShowerShape &,
+      const ShowerShape &,
+      const ConversionRejection &
+     ) ;
     GsfElectron * clone() const ;
     GsfElectron * clone
      (
@@ -163,6 +176,7 @@ class GsfElectron : public RecoCandidate
 
     // accessors
     virtual GsfElectronCoreRef core() const ;
+    void setCore(const reco::GsfElectronCoreRef &core) { core_ = core; }
 
     // forward core methods
     virtual SuperClusterRef superCluster() const { return core()->superCluster() ; }
@@ -171,7 +185,7 @@ class GsfElectron : public RecoCandidate
     float ctfGsfOverlap() const { return core()->ctfGsfOverlap() ; }
     bool ecalDrivenSeed() const { return core()->ecalDrivenSeed() ; }
     bool trackerDrivenSeed() const { return core()->trackerDrivenSeed() ; }
-    SuperClusterRef pflowSuperCluster() const { return core()->pflowSuperCluster() ; }
+    SuperClusterRef parentSuperCluster() const { return core()->parentSuperCluster() ; }
 
     // backward compatibility
     struct ClosestCtfTrack
@@ -215,12 +229,12 @@ class GsfElectron : public RecoCandidate
          eSeedClusterOverP(0.),
          eSeedClusterOverPout(0.),
          eEleClusterOverPout(0.),
-         deltaEtaSuperClusterAtVtx(std::numeric_limits<float>::infinity()),
-         deltaEtaSeedClusterAtCalo(std::numeric_limits<float>::infinity()),
-         deltaEtaEleClusterAtCalo(std::numeric_limits<float>::infinity()),
-         deltaPhiEleClusterAtCalo(std::numeric_limits<float>::infinity()),
-         deltaPhiSuperClusterAtVtx(std::numeric_limits<float>::infinity()),
-         deltaPhiSeedClusterAtCalo(std::numeric_limits<float>::infinity())
+         deltaEtaSuperClusterAtVtx(std::numeric_limits<float>::max()),
+         deltaEtaSeedClusterAtCalo(std::numeric_limits<float>::max()),
+         deltaEtaEleClusterAtCalo(std::numeric_limits<float>::max()),
+         deltaPhiEleClusterAtCalo(std::numeric_limits<float>::max()),
+         deltaPhiSuperClusterAtVtx(std::numeric_limits<float>::max()),
+         deltaPhiSeedClusterAtCalo(std::numeric_limits<float>::max())
         {}
      } ;
 
@@ -236,6 +250,9 @@ class GsfElectron : public RecoCandidate
     float deltaPhiSuperClusterTrackAtVtx() const { return trackClusterMatching_.deltaPhiSuperClusterAtVtx ; }
     float deltaPhiSeedClusterTrackAtCalo() const { return trackClusterMatching_.deltaPhiSeedClusterAtCalo ; }
     float deltaPhiEleClusterTrackAtCalo() const { return trackClusterMatching_.deltaPhiEleClusterAtCalo ; }
+    float deltaEtaSeedClusterTrackAtVtx() const { return superCluster().isNonnull() && superCluster()->seed().isNonnull() ? 
+	trackClusterMatching_.deltaEtaSuperClusterAtVtx - superCluster()->eta() + superCluster()->seed()->eta() : std::numeric_limits<float>::max();
+    }
     const TrackClusterMatching & trackClusterMatching() const { return trackClusterMatching_ ; }
 
     // for backward compatibility, usefull ?
@@ -275,6 +292,9 @@ class GsfElectron : public RecoCandidate
     math::XYZVectorF trackMomentumAtEleClus() const { return trackExtrapolations_.momentumAtEleClus ; }
     math::XYZVectorF trackMomentumAtVtxWithConstraint() const { return trackExtrapolations_.momentumAtVtxWithConstraint ; }
     const TrackExtrapolations & trackExtrapolations() const { return trackExtrapolations_ ; }
+
+    // setter (if you know what you're doing)
+    void setTrackExtrapolations(const TrackExtrapolations &te) { trackExtrapolations_ = te; }
 
     // for backward compatibility
     math::XYZPointF TrackPositionAtVtx() const { return trackPositionAtVtx() ; }
@@ -367,11 +387,11 @@ class GsfElectron : public RecoCandidate
       float hcalDepth1OverEcalBc ; // hcal over ecal seed cluster energy using 1st hcal depth (using hcal towers behind clusters)
       float hcalDepth2OverEcalBc ; // hcal over ecal seed cluster energy using 2nd hcal depth (using hcal towers behind clusters)
       ShowerShape()
-       : sigmaEtaEta(std::numeric_limits<float>::infinity()),
-       sigmaIetaIeta(std::numeric_limits<float>::infinity()),
-       sigmaIphiIphi(std::numeric_limits<float>::infinity()),
+       : sigmaEtaEta(std::numeric_limits<float>::max()),
+       sigmaIetaIeta(std::numeric_limits<float>::max()),
+       sigmaIphiIphi(std::numeric_limits<float>::max()),
 	     e1x5(0.), e2x5Max(0.), e5x5(0.),
-	     r9(-std::numeric_limits<float>::infinity()),
+	     r9(-std::numeric_limits<float>::max()),
        hcalDepth1OverEcal(0.), hcalDepth2OverEcal(0.),
        hcalDepth1OverEcalBc(0.), hcalDepth2OverEcalBc(0.)
        {}
@@ -393,8 +413,28 @@ class GsfElectron : public RecoCandidate
     float hcalDepth2OverEcalBc() const { return showerShape_.hcalDepth2OverEcalBc ; }
     float hcalOverEcalBc() const { return hcalDepth1OverEcalBc() + hcalDepth2OverEcalBc() ; }
     const ShowerShape & showerShape() const { return showerShape_ ; }
+    // non-zero-suppressed and no-fractions shower shapes
+    // ecal energy is always that from the full 5x5 
+    float full5x5_sigmaEtaEta() const { return full5x5_showerShape_.sigmaEtaEta ; }
+    float full5x5_sigmaIetaIeta() const { return full5x5_showerShape_.sigmaIetaIeta ; }
+    float full5x5_sigmaIphiIphi() const { return full5x5_showerShape_.sigmaIphiIphi ; }
+    float full5x5_e1x5() const { return full5x5_showerShape_.e1x5 ; }
+    float full5x5_e2x5Max() const { return full5x5_showerShape_.e2x5Max ; }
+    float full5x5_e5x5() const { return full5x5_showerShape_.e5x5 ; }
+    float full5x5_r9() const { return full5x5_showerShape_.r9 ; }
+    float full5x5_hcalDepth1OverEcal() const { return full5x5_showerShape_.hcalDepth1OverEcal ; }
+    float full5x5_hcalDepth2OverEcal() const { return full5x5_showerShape_.hcalDepth2OverEcal ; }
+    float full5x5_hcalOverEcal() const { return full5x5_hcalDepth1OverEcal() + full5x5_hcalDepth2OverEcal() ; }    
+    float full5x5_hcalDepth1OverEcalBc() const { return full5x5_showerShape_.hcalDepth1OverEcalBc ; }
+    float full5x5_hcalDepth2OverEcalBc() const { return full5x5_showerShape_.hcalDepth2OverEcalBc ; }
+    float full5x5_hcalOverEcalBc() const { return full5x5_hcalDepth1OverEcalBc() + full5x5_hcalDepth2OverEcalBc() ; }
+    const ShowerShape & full5x5_showerShape() const { return full5x5_showerShape_ ; }
 
-    // for backward compatibility
+    // setters (if you know what you're doing)
+    void setShowerShape(const ShowerShape &s) { showerShape_ = s; }
+    void full5x5_setShowerShape(const ShowerShape &s) { full5x5_showerShape_ = s; }
+
+    // for backward compatibility (this will only ever be the ZS shapes!)
     float scSigmaEtaEta() const { return sigmaEtaEta() ; }
     float scSigmaIEtaIEta() const { return sigmaIetaIeta() ; }
     float scE1x5() const { return e1x5() ; }
@@ -409,6 +449,7 @@ class GsfElectron : public RecoCandidate
 
     // attributes
     ShowerShape showerShape_ ;
+    ShowerShape full5x5_showerShape_ ;
 
 
   //=======================================================
@@ -479,16 +520,16 @@ class GsfElectron : public RecoCandidate
 
     struct ConversionRejection
      {
-      int flags ;  // -infinity:not-computed, other: as computed by Puneeth conversion code
+      int flags ;  // -max:not-computed, other: as computed by Puneeth conversion code
       TrackBaseRef partner ; // conversion partner
       float dist ; // distance to the conversion partner
       float dcot ; // difference of cot(angle) with the conversion partner track
       float radius ; // signed conversion radius
       ConversionRejection()
-       : flags(-std::numeric_limits<float>::infinity()),
-         dist(std::numeric_limits<float>::infinity()),
-         dcot(std::numeric_limits<float>::infinity()),
-         radius(std::numeric_limits<float>::infinity())
+       : flags(-1),
+         dist(std::numeric_limits<float>::max()),
+         dcot(std::numeric_limits<float>::max()),
+         radius(std::numeric_limits<float>::max())
        {}
      } ;
 
@@ -514,12 +555,19 @@ class GsfElectron : public RecoCandidate
 
     struct PflowIsolationVariables
       {
-       float chargedHadronIso ;
-       float neutralHadronIso ;
-       float photonIso ;
-       PflowIsolationVariables()
-        : chargedHadronIso(0.), neutralHadronIso(0.), photonIso(0.)
-        {}
+       //first three data members that changed names, according to DataFormats/MuonReco/interface/MuonPFIsolation.h
+       float sumChargedHadronPt; //!< sum-pt of charged Hadron    // old float chargedHadronIso ;
+       float sumNeutralHadronEt;  //!< sum pt of neutral hadrons  // old float neutralHadronIso ;
+       float sumPhotonEt;  //!< sum pt of PF photons              // old float photonIso ;
+       //then four new data members, corresponding to DataFormats/MuonReco/interface/MuonPFIsolation.h
+       float sumChargedParticlePt; //!< sum-pt of charged Particles(inludes e/mu) 
+       float sumNeutralHadronEtHighThreshold;  //!< sum pt of neutral hadrons with a higher threshold
+       float sumPhotonEtHighThreshold;  //!< sum pt of PF photons with a higher threshold
+       float sumPUPt;  //!< sum pt of charged Particles not from PV  (for Pu corrections)
+
+       PflowIsolationVariables() :
+        sumChargedHadronPt(0),sumNeutralHadronEt(0),sumPhotonEt(0),sumChargedParticlePt(0),
+        sumNeutralHadronEtHighThreshold(0),sumPhotonEtHighThreshold(0),sumPUPt(0) {}; 
       } ;
 
     struct MvaInput
@@ -533,21 +581,22 @@ class GsfElectron : public RecoCandidate
       float etOutsideMustache ;
       MvaInput()
        : earlyBrem(-2), lateBrem(-2),
-         sigmaEtaEta(std::numeric_limits<float>::infinity()),
+         sigmaEtaEta(std::numeric_limits<float>::max()),
          hadEnergy(0.),
-         deltaEta(std::numeric_limits<float>::infinity()),
+         deltaEta(std::numeric_limits<float>::max()),
          nClusterOutsideMustache(-2),
-         etOutsideMustache(-std::numeric_limits<float>::infinity())
+         etOutsideMustache(-std::numeric_limits<float>::max())
        {}
      } ;
 
     struct MvaOutput
      {
       int status ; // see PFCandidateElectronExtra::StatusFlag
-      float mva ;
+      float mva_Isolated ;
+      float mva_e_pi ;
       float mvaByPassForIsolated ; // complementary MVA used in preselection
       MvaOutput()
-       : status(-1), mva(-999999999.), mvaByPassForIsolated(-999999999.)
+       : status(-1), mva_Isolated(-999999999.),mva_e_pi(-999999999.), mvaByPassForIsolated(-999999999.)
        {}
      } ;
 
@@ -564,7 +613,8 @@ class GsfElectron : public RecoCandidate
     void setMvaOutput( const MvaOutput & mo ) { mvaOutput_ = mo ; }
 
     // for backward compatibility
-    float mva() const { return mvaOutput_.mva ; }
+    float mva_Isolated() const { return mvaOutput_.mva_Isolated ; }
+    float mva_e_pi() const { return mvaOutput_.mva_e_pi ; }
 
   private:
 
@@ -718,6 +768,9 @@ class GsfElectron : public RecoCandidate
     float p4Error( P4Kind kind ) const ;
     P4Kind candidateP4Kind() const { return corrections_.candidateP4Kind ; }
     const Corrections & corrections() const { return corrections_ ; }
+    
+    // bare setter (if you know what you're doing)
+    void setCorrections(const Corrections &c) { corrections_ = c; }
 
     // for backward compatibility
     void setEcalEnergyError( float energyError ) { setCorrectedEcalEnergyError(energyError) ; }
@@ -739,7 +792,42 @@ class GsfElectron : public RecoCandidate
 
     // attributes
     Corrections corrections_ ;
-
+  
+  public:
+    struct PixelMatchVariables{
+      //! Pixel match variable: deltaPhi for innermost hit
+      float dPhi1 ;
+      //! Pixel match variable: deltaPhi for second hit
+      float dPhi2 ;
+      //! Pixel match variable: deltaRz for innermost hit
+      float dRz1  ;
+      //! Pixel match variable: deltaRz for second hit
+      float dRz2  ;
+      //! Subdetectors for first and second pixel hit
+      unsigned char subdetectors ;
+      PixelMatchVariables():
+        dPhi1(-999),
+        dPhi2(-999),
+        dRz1(-999),
+        dRz2(-999),
+        subdetectors(0)
+      {}
+      ~PixelMatchVariables(){}
+    };
+  void setPixelMatchSubdetectors(int sd1, int sd2){ pixelMatchVariables_.subdetectors = 10*sd1+sd2 ; }
+  void setPixelMatchDPhi1(float dPhi1){ pixelMatchVariables_.dPhi1 = dPhi1 ; }
+  void setPixelMatchDPhi2(float dPhi2){ pixelMatchVariables_.dPhi2 = dPhi2 ; }
+  void setPixelMatchDRz1 (float dRz1 ){ pixelMatchVariables_.dRz1  = dRz1  ; }
+  void setPixelMatchDRz2 (float dRz2 ){ pixelMatchVariables_.dRz2  = dRz2  ; }
+  
+  int pixelMatchSubdetector1() const { return pixelMatchVariables_.subdetectors/10 ; }
+  int pixelMatchSubdetector2() const { return pixelMatchVariables_.subdetectors%10 ; }
+  float pixelMatchDPhi1() const { return pixelMatchVariables_.dPhi1 ; }
+  float pixelMatchDPhi2() const { return pixelMatchVariables_.dPhi2 ; }
+  float pixelMatchDRz1 () const { return pixelMatchVariables_.dRz1  ; }
+  float pixelMatchDRz2 () const { return pixelMatchVariables_.dRz2  ; }
+  private:
+    PixelMatchVariables pixelMatchVariables_ ;
  } ;
 
  } // namespace reco

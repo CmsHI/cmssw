@@ -16,7 +16,6 @@
 //
 // Original Author:  Chris Jones
 //         Created:  Tue Dec  2 11:20:00 EST 2008
-// $Id: FWSimpleProxyBuilderTemplate.h,v 1.6 2010/05/03 15:53:18 amraktad Exp $
 //
 
 // system include files
@@ -45,11 +44,7 @@ public:
 protected:
    const T& modelData(int index) { return *reinterpret_cast<const T*>(m_helper.offsetObject(item()->modelData(index))); }
 
-private:
-   FWSimpleProxyBuilderTemplate(const FWSimpleProxyBuilderTemplate&); // stop default
-
-   const FWSimpleProxyBuilderTemplate& operator=(const FWSimpleProxyBuilderTemplate&); // stop default
-
+   using FWSimpleProxyBuilder::build;
    virtual void build(const void*iData, unsigned int iIndex, TEveElement& oItemHolder, const FWViewContext* context)
    {
       if(0!=iData) {
@@ -57,6 +52,7 @@ private:
       }
    }
 
+   using FWSimpleProxyBuilder::buildViewType;
    virtual void buildViewType(const void*iData, unsigned int iIndex, TEveElement& oItemHolder, FWViewType::EType viewType, const FWViewContext* context)
    {
       if(0!=iData) {
@@ -75,6 +71,12 @@ private:
    { 
       throw std::runtime_error("virtual buildViewType(const T&, unsigned int, TEveElement&, FWViewType::EType, const FWViewContext*) not implemented by inherited class");
    };
+private:
+   FWSimpleProxyBuilderTemplate(const FWSimpleProxyBuilderTemplate&); // stop default
+
+   const FWSimpleProxyBuilderTemplate& operator=(const FWSimpleProxyBuilderTemplate&); // stop default
+
+
 
    // ---------- member data --------------------------------
 

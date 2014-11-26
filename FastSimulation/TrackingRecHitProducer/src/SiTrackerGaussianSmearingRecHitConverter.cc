@@ -37,21 +37,17 @@
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
-#include "FWCore/ServiceRegistry/interface/Service.h"
-#include "FWCore/Utilities/interface/RandomNumberGenerator.h"
 #include "FWCore/Utilities/interface/Exception.h"
 
 // Numbering scheme
 #include "DataFormats/TrackerCommon/interface/TrackerTopology.h"
 #include "Geometry/Records/interface/IdealGeometryRecord.h"
-#include "DataFormats/GeometryCommonDetAlgo/interface/ErrorFrameTransformer.h"
-#include "DataFormats/TrackingRecHit/interface/AlignmentPositionError.h"
 
 //For Pileup events
 #include "SimDataFormats/EncodedEventId/interface/EncodedEventId.h"
 
 // Random engine
-#include "FastSimulation/Utilities/interface/RandomEngine.h"
+#include "FastSimulation/Utilities/interface/RandomEngineAndDistribution.h"
 
 // topology
 
@@ -80,24 +76,10 @@ SiTrackerGaussianSmearingRecHitConverter::SiTrackerGaussianSmearingRecHitConvert
   theSiStripErrorParametrization = 0;
   numberOfDisabledModules = 0;
 
-  random = 0;
-
-
 #ifdef FAMOS_DEBUG
   std::cout << "SiTrackerGaussianSmearingRecHitConverter instantiated" << std::endl;
 #endif
 
-  // Initialize the random number generator service
-  edm::Service<edm::RandomNumberGenerator> rng;
-  if ( ! rng.isAvailable() ) {
-    throw cms::Exception("Configuration")
-      << "SiTrackerGaussianSmearingRecHitConverter requires the RandomGeneratorService\n"
-         "which is not present in the configuration file.\n"
-         "You must add the service in the configuration file\n"
-         "or remove the module that requires it";
-  }
-
-  random = new RandomEngine(&(*rng));
   //PAT
   produces<FastTrackerClusterCollection>("TrackerClusters");
 
@@ -107,7 +89,8 @@ SiTrackerGaussianSmearingRecHitConverter::SiTrackerGaussianSmearingRecHitConvert
   //--- PSimHit Containers
   //  trackerContainers.clear();
   //  trackerContainers = conf.getParameter<std::vector<edm::InputTag> >("ROUList");
-  inputSimHits = conf.getParameter<edm::InputTag>("InputSimHits"); 
+  simHitLabel = conf.getParameter<edm::InputTag>("InputSimHits"); 
+  simHitToken = consumes<edm::PSimHitContainer>(simHitLabel);
   //--- delta rays p cut [GeV/c] to filter PSimHits with p>
   deltaRaysPCut = conf.getParameter<double>("DeltaRaysMomentumCut");
 
@@ -336,7 +319,7 @@ SiTrackerGaussianSmearingRecHitConverter::SiTrackerGaussianSmearingRecHitConvert
 
   // Initialize the si strip error parametrization
   theSiStripErrorParametrization = 
-    new SiStripGaussianSmearingRecHitConverterAlgorithm(random);
+    new SiStripGaussianSmearingRecHitConverterAlgorithm;
 
   // Initialization of pixel parameterization posponed to beginRun(), since it depends on the magnetic field
 
@@ -489,9 +472,6 @@ SiTrackerGaussianSmearingRecHitConverter::~SiTrackerGaussianSmearingRecHitConver
   if(theSiStripErrorParametrization) delete theSiStripErrorParametrization;
 
   if (numberOfDisabledModules>0) delete disabledModules;
-
-  if(random) delete random;
-
 }  
 
 void 
@@ -601,19 +581,18 @@ SiTrackerGaussianSmearingRecHitConverter::beginRun(edm::Run const&, const edm::E
   thePixelBarrelParametrization = 
     new SiPixelGaussianSmearingRecHitConverterAlgorithm(
         pset_,
-	GeomDetEnumerators::PixelBarrel,
-	random);
+	GeomDetEnumerators::PixelBarrel);
   // Initialize and open relevant files for the pixel forward error parametrization 
   thePixelEndcapParametrization = 
     new SiPixelGaussianSmearingRecHitConverterAlgorithm(
         pset_,
-	GeomDetEnumerators::PixelEndcap,
-	random);
+	GeomDetEnumerators::PixelEndcap);
 }
 
 void SiTrackerGaussianSmearingRecHitConverter::produce(edm::Event& e, const edm::EventSetup& es) 
 {
-  
+  RandomEngineAndDistribution random(e.streamID());
+
   //Retrieve tracker topology from geometry
   edm::ESHandle<TrackerTopology> tTopoHand;
   es.get<IdealGeometryRecord>().get(tTopoHand);
@@ -635,7 +614,7 @@ void SiTrackerGaussianSmearingRecHitConverter::produce(edm::Event& e, const edm:
   */
 
   edm::Handle<edm::PSimHitContainer> allTrackerHits_handle;
-  e.getByLabel(inputSimHits,allTrackerHits_handle);
+  e.getByToken(simHitToken,allTrackerHits_handle);
   const edm::PSimHitContainer& allTrackerHits=*allTrackerHits_handle;
 
   // Step B: create temporary RecHit collection and fill it with Gaussian smeared RecHit's
@@ -643,7 +622,7 @@ void SiTrackerGaussianSmearingRecHitConverter::produce(edm::Event& e, const edm:
   std::map<unsigned, edm::OwnVector<SiTrackerGSRecHit2D> > temporaryRecHits;
   std::map<unsigned, edm::OwnVector<FastTrackerCluster> > theClusters ;
  
-  smearHits( allTrackerHits, temporaryRecHits, theClusters, tTopo);
+  smearHits( allTrackerHits, temporaryRecHits, theClusters, tTopo, &random);
   
  // Step C: match rechits on stereo layers
   std::map<unsigned, edm::OwnVector<SiTrackerGSMatchedRecHit2D> > temporaryMatchedRecHits ;
@@ -684,7 +663,8 @@ void SiTrackerGaussianSmearingRecHitConverter::produce(edm::Event& e, const edm:
 void SiTrackerGaussianSmearingRecHitConverter::smearHits(const edm::PSimHitContainer& input,
 							 std::map<unsigned, edm::OwnVector<SiTrackerGSRecHit2D> >& temporaryRecHits,
 							 std::map<unsigned, edm::OwnVector<FastTrackerCluster> >& theClusters,
-							 const TrackerTopology *tTopo)
+							 const TrackerTopology *tTopo,
+                                                         RandomEngineAndDistribution const* random)
 {
   
   int numberOfPSimHits = 0;
@@ -712,6 +692,7 @@ void SiTrackerGaussianSmearingRecHitConverter::smearHits(const edm::PSimHitConta
     ++simHitCounter;
     
     DetId det((*isim).detUnitId());
+    const GeomDetUnit & theDetUnit = *geometry->idToDetUnit(det);
     unsigned trackID = (*isim).trackId();
     uint32_t eeID = (*isim).eventId().rawId(); //get the rawId of the eeid for pileup treatment
 
@@ -744,7 +725,7 @@ void SiTrackerGaussianSmearingRecHitConverter::smearHits(const edm::PSimHitConta
     // gaussian smearing
     unsigned int alphaMult = 0;
     unsigned int betaMult  = 0;
-    bool isCreated = gaussianSmearing(*isim, position, error, alphaMult, betaMult, tTopo);
+    bool isCreated = gaussianSmearing(*isim, position, error, alphaMult, betaMult, tTopo, random);
     // std::cout << "Error as simulated     " << error.xx() << " " << error.xy() << " " << error.yy() << std::endl;
     //
     unsigned int subdet = det.subdetId();
@@ -796,17 +777,16 @@ void SiTrackerGaussianSmearingRecHitConverter::smearHits(const edm::PSimHitConta
       }
       else{  if(subdet>2) position = Local3DPoint(position.x(),0.,0.);    }  // no matching, set y=0 on strips
 
-      // Inflate errors in case of geometry misalignment
-      const GeomDet* theMADet = misAlignedGeometry->idToDet(det);
-      if ( theMADet->alignmentPositionError() != 0 ) { 
-	LocalError lape = 
-	  ErrorFrameTransformer().transform ( theMADet->alignmentPositionError()->globalError(),
-					      theMADet->surface() );
+      
+      // Inflate errors in case of geometry misaligniment  
+      // (still needed! what done in constructor of BaseTrackerRecHit is not effective ad geometry is not missaligned)
+      auto theMADet = misAlignedGeometry->idToDet(det);
+      auto const & lape  =  theMADet->localAlignmentError();
+      if ( lape.valid() )
 	error = LocalError ( error.xx()+lape.xx(),
 			     error.xy()+lape.xy(),
 			     error.yy()+lape.yy() );
-      }
-      
+
       float chargeADC = (*isim).energyLoss()/(GevPerElectron * ElectronsPerADC);
 
       //create cluster
@@ -831,7 +811,7 @@ void SiTrackerGaussianSmearingRecHitConverter::smearHits(const edm::PSimHitConta
       
       // create rechit
       temporaryRecHits[trackID].push_back(
-					  new SiTrackerGSRecHit2D(position, error, det, 
+					  new SiTrackerGSRecHit2D(position, error, theDetUnit, 
 								  simHitCounter, trackID, 
 								  eeID, 
 								  ClusterRef(FastTrackerClusterRefProd, simHitCounter),
@@ -855,7 +835,8 @@ bool SiTrackerGaussianSmearingRecHitConverter::gaussianSmearing(const PSimHit& s
 								LocalError& error,
 								unsigned& alphaMult, 
 								unsigned& betaMult,
-								const TrackerTopology *tTopo) 
+								const TrackerTopology *tTopo,
+                                                                RandomEngineAndDistribution const* random)
 {
 
   // A few caracteritics of the detid the SimHit belongs to.
@@ -906,7 +887,7 @@ bool SiTrackerGaussianSmearingRecHitConverter::gaussianSmearing(const PSimHit& s
       if( hitFindingProbability > theHitFindingProbability_PXB ) return false;
       // Hit smearing
       const PixelGeomDetUnit* pixelDetUnit = dynamic_cast<const PixelGeomDetUnit*>(theDetUnit);
-      thePixelBarrelParametrization->smearHit(simHit, pixelDetUnit, boundX, boundY);
+      thePixelBarrelParametrization->smearHit(simHit, pixelDetUnit, boundX, boundY, random);
       position  = thePixelBarrelParametrization->getPosition();
       error     = thePixelBarrelParametrization->getError();
       alphaMult = thePixelBarrelParametrization->getPixelMultiplicityAlpha();
@@ -925,7 +906,7 @@ bool SiTrackerGaussianSmearingRecHitConverter::gaussianSmearing(const PSimHit& s
       if( hitFindingProbability > theHitFindingProbability_PXF ) return false;
       // Hit smearing
       const PixelGeomDetUnit* pixelDetUnit = dynamic_cast<const PixelGeomDetUnit*>(theDetUnit);
-      thePixelEndcapParametrization->smearHit(simHit, pixelDetUnit, boundX, boundY);
+      thePixelEndcapParametrization->smearHit(simHit, pixelDetUnit, boundX, boundY, random);
       position = thePixelEndcapParametrization->getPosition();
       error    = thePixelEndcapParametrization->getError();
       alphaMult = thePixelEndcapParametrization->getPixelMultiplicityAlpha();
@@ -984,7 +965,7 @@ bool SiTrackerGaussianSmearingRecHitConverter::gaussianSmearing(const PSimHit& s
       }
 
       // Gaussian smearing
-      theSiStripErrorParametrization->smearHit(simHit, resolutionX, resolutionY, resolutionZ, boundX, boundY);
+      theSiStripErrorParametrization->smearHit(simHit, resolutionX, resolutionY, resolutionZ, boundX, boundY, random);
       position = theSiStripErrorParametrization->getPosition();
       error    = theSiStripErrorParametrization->getError();
       alphaMult = 0;
@@ -1040,7 +1021,7 @@ bool SiTrackerGaussianSmearingRecHitConverter::gaussianSmearing(const PSimHit& s
 
       boundX *=  resolutionFactorY;
 
-      theSiStripErrorParametrization->smearHit(simHit, resolutionX, resolutionY, resolutionZ, boundX, boundY);
+      theSiStripErrorParametrization->smearHit(simHit, resolutionX, resolutionY, resolutionZ, boundX, boundY, random);
       position = theSiStripErrorParametrization->getPosition();
       error    = theSiStripErrorParametrization->getError();
       alphaMult = 0;
@@ -1111,7 +1092,7 @@ bool SiTrackerGaussianSmearingRecHitConverter::gaussianSmearing(const PSimHit& s
 	  break;
 	}
       }
-      theSiStripErrorParametrization->smearHit(simHit, resolutionX, resolutionY, resolutionZ, boundX, boundY);
+      theSiStripErrorParametrization->smearHit(simHit, resolutionX, resolutionY, resolutionZ, boundX, boundY, random);
       position = theSiStripErrorParametrization->getPosition();
       error    = theSiStripErrorParametrization->getError();
       alphaMult = 0;
@@ -1194,7 +1175,7 @@ bool SiTrackerGaussianSmearingRecHitConverter::gaussianSmearing(const PSimHit& s
       }
 
       boundX *= resolutionFactorY;
-      theSiStripErrorParametrization->smearHit(simHit, resolutionX, resolutionY, resolutionZ, boundX, boundY);
+      theSiStripErrorParametrization->smearHit(simHit, resolutionX, resolutionY, resolutionZ, boundX, boundY, random);
       position = theSiStripErrorParametrization->getPosition();
       error    = theSiStripErrorParametrization->getError();
       alphaMult = 0;
@@ -1404,7 +1385,7 @@ SiTrackerGaussianSmearingRecHitConverter::matchHits(
 	else{ //need to copy the original in a "matched" type rechit
 
 	  SiTrackerGSMatchedRecHit2D* rit_copy = new SiTrackerGSMatchedRecHit2D(rit->localPosition(), rit->localPositionError(),
-										rit->geographicalId(), 
+										*rit->det(), 
 										rit->simhitId(), rit->simtrackId(), rit->eeId(),
                                                                                 rit->cluster(),
                                                                                 rit->simMultX(), rit->simMultY()); 
@@ -1419,7 +1400,7 @@ SiTrackerGaussianSmearingRecHitConverter::matchHits(
       else { //need to copy the original in a "matched" type rechit
 
 	SiTrackerGSMatchedRecHit2D* rit_copy = new SiTrackerGSMatchedRecHit2D(rit->localPosition(), rit->localPositionError(),
-									      rit->geographicalId(), 
+									      *rit->det(), 
 									      rit->simhitId(), rit->simtrackId(), rit->eeId(), 
                                                                               rit->cluster(),
 									      rit->simMultX(), rit->simMultY());	

@@ -14,20 +14,20 @@ from RecoParticleFlow.PFProducer.pfPhotonTranslator_cff import *
 #from RecoParticleFlow.PFProducer.pfGsfElectronCiCSelector_cff import *
 from RecoParticleFlow.PFProducer.pfGsfElectronMVASelector_cff import *
 
-
 from RecoParticleFlow.PFProducer.pfLinker_cff import * 
 
 from CommonTools.ParticleFlow.pfParticleSelection_cff import *
+
+from RecoEgamma.EgammaIsolationAlgos.particleBasedIsoProducer_cff import *
 
 particleFlowReco = cms.Sequence( particleFlowTrackWithDisplacedVertex*
 #                                 pfGsfElectronCiCSelectionSequence*
                                  pfGsfElectronMVASelectionSequence*
                                  particleFlowBlock*
-                                 particleFlowEGamma*
+                                 particleFlowEGammaFull*
                                  particleFlowTmp*
-                                 particleFlowTmpPtrs*
-                                 pfElectronTranslatorSequence*
-                                 pfPhotonTranslatorSequence*
+                                 particleFlowTmpPtrs*          
+                                 particleFlowEGammaFinal*
                                  pfParticleSelectionSequence )
 
-particleFlowLinks = cms.Sequence( particleFlow*particleFlowPtrs )
+particleFlowLinks = cms.Sequence( particleFlow*particleFlowPtrs*particleBasedIsolationSequence)

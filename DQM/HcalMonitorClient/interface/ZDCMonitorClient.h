@@ -10,6 +10,10 @@
 
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
+#include "FWCore/Utilities/interface/CPUTimer.h"
+
+#include "DataFormats/Provenance/interface/RunLumiEventNumber.h"
+
 class DQMStore;
 class TH2F;
 class TH1F;
@@ -114,7 +118,9 @@ public:
   DQMStore* dbe_;  
   
   // environment variables
-  int irun_,ievent_,itime_;
+  edm::RunNumber_t irun_;
+  edm::EventNumber_t ievent_;
+  int itime_;
   int ilumisec_;
   int maxlumisec_, minlumisec_;
 

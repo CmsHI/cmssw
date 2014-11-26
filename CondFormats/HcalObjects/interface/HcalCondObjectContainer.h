@@ -1,6 +1,8 @@
 #ifndef HcalCondObjectContainer_h
 #define HcalCondObjectContainer_h
 
+#include "CondFormats/Serialization/interface/Serializable.h"
+
 #include <vector>
 #include "DataFormats/HcalDetId/interface/HcalDetId.h"
 #include "DataFormats/HcalDetId/interface/HcalOtherDetId.h"
@@ -16,17 +18,25 @@ class HcalCondObjectContainerBase {
 public:
   const HcalTopology* topo() const { return topo_; }
   int getCreatorPackedIndexVersion() const { return packedIndexVersion_; }
-  void setTopo(const HcalTopology* topo) const;
-  void setTopo(const HcalTopology* topo);
+  void setTopo(const HcalTopology* topo) ;
 protected:
+  HcalCondObjectContainerBase(HcalCondObjectContainerBase const & o) : packedIndexVersion_(o.packedIndexVersion_), topo_(o.topo()) {}
+  HcalCondObjectContainerBase & operator = (HcalCondObjectContainerBase const & o) {  topo_=o.topo();	packedIndexVersion_=o.packedIndexVersion_; return *this;}
+#ifndef __GCCXML__
+  HcalCondObjectContainerBase(HcalCondObjectContainerBase &&) = default;
+  HcalCondObjectContainerBase & operator = (HcalCondObjectContainerBase &&) = default;
+#endif
+
   HcalCondObjectContainerBase(const HcalTopology*);
   unsigned int indexFor(DetId) const;
   unsigned int sizeFor(DetId) const;
-  int packedIndexVersion_;
+  int packedIndexVersion_ COND_TRANSIENT;
   inline HcalOtherSubdetector extractOther(const DetId& id) const { return HcalOtherSubdetector((id.rawId()>>20)&0x1F); }
   std::string textForId(const DetId& id) const;
 private:
-  mutable const HcalTopology* topo_;
+  const HcalTopology* topo_ COND_TRANSIENT;
+
+  COND_SERIALIZABLE;
 };
 
 template<class Item>
@@ -81,9 +91,8 @@ public:
   std::vector<Item> CALIBcontainer;
   std::vector<Item> CASTORcontainer;
   
-  //volatile const HcalTopology* topo_; // This needs to not be in the DB
 
-
+ COND_SERIALIZABLE;
 };
 
 

@@ -30,12 +30,14 @@
  * Authors :  Evan Friis (UC Davis), Simone Gennai (SNS)
  */
 
-#include "FWCore/Framework/interface/EDProducer.h"
+// #include "FWCore/Framework/interface/EDProducer.h"
+#include "FWCore/Framework/interface/stream/EDProducer.h"
 #include "FWCore/Framework/interface/ESHandle.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
+#include "FWCore/Framework/interface/ConsumesCollector.h"
 
 #include "DataFormats/TauReco/interface/PFTau.h"
 #include "DataFormats/TauReco/interface/PFTauDiscriminator.h"
@@ -44,7 +46,7 @@
 #include "DataFormats/TauReco/interface/CaloTauDiscriminator.h"
 
 template<class TauType, class TauDiscriminator>
-class TauDiscriminationProducerBase : public edm::EDProducer {
+class TauDiscriminationProducerBase : public edm::stream::EDProducer<> {
   public:
     // setup framework types for this tautype
     typedef std::vector<TauType>        TauCollection;
@@ -67,7 +69,7 @@ class TauDiscriminationProducerBase : public edm::EDProducer {
                             const edm::EventSetup& evtSetup) {}
 
     // abstract functions implemented in derived classes.
-    virtual double discriminate(const TauRef& tau) = 0;
+    virtual double discriminate(const TauRef& tau) const = 0;
 
     // called at the end of event processing - override if necessary.
     virtual void endEvent(edm::Event& evt) {}
@@ -75,8 +77,13 @@ class TauDiscriminationProducerBase : public edm::EDProducer {
     struct TauDiscInfo {
       edm::InputTag label;
       edm::Handle<TauDiscriminator> handle;
+      edm::EDGetTokenT<TauDiscriminator> disc_token;
+      // = consumes<TauDiscriminator>(label); 
       double cut;
-      void fill(const edm::Event& evt) { evt.getByLabel(label, handle); };
+      void fill(const edm::Event& evt) { 
+	//	disc_token = consumes<TauDiscriminator>(label);
+	evt.getByToken(disc_token, handle); 
+      };
     };
 
   protected:
@@ -86,6 +93,10 @@ class TauDiscriminationProducerBase : public edm::EDProducer {
     edm::InputTag TauProducer_;
 
     std::string moduleLabel_;
+    edm::EDGetTokenT<TauCollection> Tau_token;
+
+    // current tau
+    size_t tauIndex_;
 
   private:
     std::vector<TauDiscInfo> prediscriminants_;

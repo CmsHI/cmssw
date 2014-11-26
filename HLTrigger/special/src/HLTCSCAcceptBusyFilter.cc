@@ -2,7 +2,7 @@
 //
 // Package:    HLTCSCAcceptBusyFilter
 // Class:      HLTCSCAcceptBusyFilter
-// 
+//
 /**\class HLTCSCAcceptBusyFilter HLTCSCAcceptBusyFilter.cc Analyzers/HLTCSCAcceptBusyFilter/src/HLTCSCAcceptBusyFilter.cc
 
  Description: [one line class summary]
@@ -13,7 +13,6 @@
 //
 // Original Author:  Ingo Bloch
 //         Created:  Mon Mar 15 11:39:08 CDT 2010
-// $Id: HLTCSCAcceptBusyFilter.cc,v 1.2 2010/03/18 19:53:28 gruen Exp $
 //
 //
 
@@ -50,12 +49,12 @@ class HLTCSCAcceptBusyFilter : public HLTFilter {
 public:
   explicit HLTCSCAcceptBusyFilter(const edm::ParameterSet&);
   virtual ~HLTCSCAcceptBusyFilter();
-  virtual bool hltFilter(edm::Event&, const edm::EventSetup&, trigger::TriggerFilterObjectWithRefs & filterproduct) override;
-  static void fillDescriptions(edm::ConfigurationDescriptions & descriptions);   
+  virtual bool hltFilter(edm::Event&, const edm::EventSetup&, trigger::TriggerFilterObjectWithRefs & filterproduct) const override;
+  static void fillDescriptions(edm::ConfigurationDescriptions & descriptions);
 
 private:
-  bool AcceptManyHitsInChamber(unsigned int maxRecHitsPerChamber, const edm::Handle<CSCRecHit2DCollection>& recHits);
-  
+  bool AcceptManyHitsInChamber(unsigned int maxRecHitsPerChamber, const edm::Handle<CSCRecHit2DCollection>& recHits) const;
+
   // ----------member data ---------------------------
   edm::EDGetTokenT<CSCRecHit2DCollection> cscrechitsToken;
   edm::InputTag cscrechitsTag;
@@ -75,7 +74,7 @@ private:
 //
 // constructors and destructor
 //
-HLTCSCAcceptBusyFilter::HLTCSCAcceptBusyFilter(const edm::ParameterSet& iConfig) : HLTFilter(iConfig) 
+HLTCSCAcceptBusyFilter::HLTCSCAcceptBusyFilter(const edm::ParameterSet& iConfig) : HLTFilter(iConfig)
 {
    //now do what ever initialization is needed
    cscrechitsTag        = iConfig.getParameter<edm::InputTag>("cscrechitsTag");
@@ -87,7 +86,7 @@ HLTCSCAcceptBusyFilter::HLTCSCAcceptBusyFilter(const edm::ParameterSet& iConfig)
 
 HLTCSCAcceptBusyFilter::~HLTCSCAcceptBusyFilter()
 {
- 
+
    // do anything here that needs to be done at desctruction time
    // (e.g. close files, deallocate resources etc.)
 
@@ -109,14 +108,14 @@ HLTCSCAcceptBusyFilter::fillDescriptions(edm::ConfigurationDescriptions& descrip
 //
 
 // ------------ method called on each new Event  ------------
-bool HLTCSCAcceptBusyFilter::hltFilter(edm::Event& iEvent, const edm::EventSetup& iSetup, trigger::TriggerFilterObjectWithRefs & filterproduct) {
+bool HLTCSCAcceptBusyFilter::hltFilter(edm::Event& iEvent, const edm::EventSetup& iSetup, trigger::TriggerFilterObjectWithRefs & filterproduct) const {
 
    using namespace edm;
 
   // Get the RecHits collection :
-  Handle<CSCRecHit2DCollection> recHits; 
-  iEvent.getByToken(cscrechitsToken,recHits);  
-  
+  Handle<CSCRecHit2DCollection> recHits;
+  iEvent.getByToken(cscrechitsToken,recHits);
+
   if(  AcceptManyHitsInChamber(maxRecHitsPerChamber, recHits) ) {
     return (!invert);
   } else {
@@ -127,7 +126,7 @@ bool HLTCSCAcceptBusyFilter::hltFilter(edm::Event& iEvent, const edm::EventSetup
 
 
 // ------------ method to find chamber with nMax hits
-bool HLTCSCAcceptBusyFilter::AcceptManyHitsInChamber(unsigned int maxRecHitsPerChamber, const edm::Handle<CSCRecHit2DCollection>& recHits) {
+bool HLTCSCAcceptBusyFilter::AcceptManyHitsInChamber(unsigned int maxRecHitsPerChamber, const edm::Handle<CSCRecHit2DCollection>& recHits) const {
 
   unsigned int maxNRecHitsPerChamber(0);
 

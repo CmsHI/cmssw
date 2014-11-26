@@ -73,7 +73,7 @@ public:
 
   CaloHitID      getID() const                 {return hitID;}
   void           setID (uint32_t i, double d, int j, uint16_t k=0) { hitID.setID(i,d,j,k);}
-  void           setID (CaloHitID id)          {hitID = id;}
+  void           setID (const CaloHitID& id)          {hitID = id;}
   
   void           addEnergyDeposit(double em, double hd);
   void           addEnergyDeposit(const CaloG4Hit& aHit);
@@ -118,16 +118,16 @@ public:
   }
 };
 
-extern G4Allocator<CaloG4Hit> CaloG4HitAllocator;
+extern G4ThreadLocal G4Allocator<CaloG4Hit> *fpCaloG4HitAllocator;
 
 inline void * CaloG4Hit::operator new(size_t) {
-  void * aHit;
-  aHit = (void *) CaloG4HitAllocator.MallocSingle();
-  return aHit;
+  if (!fpCaloG4HitAllocator) fpCaloG4HitAllocator = 
+    new G4Allocator<CaloG4Hit>;
+  return (void*)fpCaloG4HitAllocator->MallocSingle();
 }
 
 inline void CaloG4Hit::operator delete(void * aHit) {  
-  CaloG4HitAllocator.FreeSingle((CaloG4Hit*) aHit); 
+  fpCaloG4HitAllocator->FreeSingle((CaloG4Hit*) aHit); 
 }
 
 std::ostream& operator<<(std::ostream&, const CaloG4Hit&);

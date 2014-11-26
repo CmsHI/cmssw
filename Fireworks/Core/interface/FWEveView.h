@@ -8,7 +8,6 @@
 //
 // Original Author:  Alja Mrak-Tadel
 //         Created:  Thu Mar 16 14:11:32 CET 2010
-// $Id: FWEveView.h,v 1.30 2011/06/01 22:37:25 amraktad Exp $
 //
 
 
@@ -101,6 +100,9 @@ protected:
    void addToPerspectiveCamera(TGLPerspectiveCamera*, const std::string&, FWConfiguration&) const;
    void setFromPerspectiveCamera(TGLPerspectiveCamera*,  const std::string&, const FWConfiguration&);
 
+protected:
+   const fireworks::Context*  m_context;
+
 private:
    FWEveView(const FWEveView&);    // stop default
    const FWEveView& operator=(const FWEveView&);    // stop default
@@ -118,7 +120,6 @@ private:
    ScaleAnnotation*     m_energyMaxValAnnotation;
    TGLCameraGuide*      m_cameraGuide;
 
-   const fireworks::Context*  m_context;
 
 
 

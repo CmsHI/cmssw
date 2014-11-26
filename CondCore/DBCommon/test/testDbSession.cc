@@ -58,6 +58,7 @@ int main(){
     std::cout << "Session is correctly open."<<std::endl;
   } catch ( const cond::Exception& exc ){
     std::cout << "ERROR: "<<exc.what()<<std::endl;
+    return -1;
   }
     std::cout << "######### test 6"<<std::endl;
   s.close();
@@ -73,6 +74,7 @@ int main(){
     s2.transaction().commit();    
   } catch ( const cond::Exception& exc ){
     std::cout << "ERROR: "<<exc.what()<<std::endl;
+    return -1;
   }
     std::cout << "######### test 8"<<std::endl;
   // closing connection...
@@ -82,30 +84,13 @@ int main(){
   try {
     std::cout << "######### test 9"<<std::endl;
     s2.transaction().start();
-    std::cout << "ERROR: expected exception not thrown (1)"<<std::endl;
-  } catch ( const cond::Exception& exc ){
-    std::cout << "Expected error 1: "<<exc.what()<<std::endl;
-  }
-  try {
-    std::cout << "######### test 10"<<std::endl;
     s2.nominalSchema();
-    std::cout << "ERROR: expected exception not thrown (2)"<<std::endl;
-  } catch ( const cond::Exception& exc ){
-    std::cout << "Expected error 2: "<<exc.what()<<std::endl;
-  }
-  try {
-    std::cout << "######### test 11"<<std::endl;
     s2.storage();
-    std::cout << "ERROR: expected exception not thrown (3)"<<std::endl;
-  } catch ( const cond::Exception& exc ){
-    std::cout << "Expected error 3: "<<exc.what()<<std::endl;
-  }
-  try {
-    std::cout << "######### test 12"<<std::endl;
     s2.getObject(std::string(""));
-    std::cout << "ERROR: expected exception not thrown (4)"<<std::endl;
-  } catch ( const cond::Exception& exc ){
-    std::cout << "Expected error 4: "<<exc.what()<<std::endl;
+    std::cout << "ERROR: expected exception not thrown"<<std::endl;
+  } catch ( const ora::Exception& exc ){
+    std::cout << "Expected error: "<<exc.what()<<std::endl;
   }
+  return 0;
   
 }

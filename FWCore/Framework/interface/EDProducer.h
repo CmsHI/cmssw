@@ -11,18 +11,23 @@ EDProducts into an Event.
 
 #include "FWCore/Framework/interface/ProducerBase.h"
 #include "FWCore/Framework/interface/EDConsumerBase.h"
+#include "FWCore/Framework/interface/SharedResourcesAcquirer.h"
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "DataFormats/Provenance/interface/ModuleDescription.h"
 #include "FWCore/ParameterSet/interface/ParameterSetfwd.h"
 
 #include <string>
 #include <vector>
+#include <mutex>
 
 namespace edm {
 
   class ModuleCallingContext;
   class PreallocationConfiguration;
-  
+  class ActivityRegistry;
+  class ProductRegistry;
+  class ThinnedAssociationsHelper;
+
   namespace maker {
     template<typename T> class ModuleHolderT;
   }
@@ -45,6 +50,7 @@ namespace edm {
 
   private:
     bool doEvent(EventPrincipal& ep, EventSetup const& c,
+                 ActivityRegistry* act,
                  ModuleCallingContext const* mcc);
     void doPreallocate(PreallocationConfiguration const&) {}
     void doBeginJob();
@@ -61,6 +67,8 @@ namespace edm {
     void doRespondToCloseInputFile(FileBlock const& fb);
     void doPreForkReleaseResources();
     void doPostForkReacquireResources(unsigned int iChildIndex, unsigned int iNumberOfChildren);
+    void doRegisterThinnedAssociations(ProductRegistry const&,
+                                       ThinnedAssociationsHelper&) { }
     void registerProductsAndCallbacks(EDProducer* module, ProductRegistry* reg) {
       registerProducts(module, reg, moduleDescription_);
     }
@@ -85,6 +93,8 @@ namespace edm {
     }
     ModuleDescription moduleDescription_;
     std::vector<BranchID> previousParentage_;
+    SharedResourcesAcquirer resourceAcquirer_;
+    std::mutex mutex_;
     ParentageID previousParentageId_;
   };
 }

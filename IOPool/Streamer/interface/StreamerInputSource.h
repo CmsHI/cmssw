@@ -26,6 +26,8 @@ class EventMsgView;
 namespace edm {
   class BranchIDListHelper;
   class ParameterSetDescription;
+  class ThinnedAssociationsHelper;
+
   class StreamerInputSource : public RawInputSource {
   public:  
     explicit StreamerInputSource(ParameterSet const& pset,
@@ -33,7 +35,6 @@ namespace edm {
     virtual ~StreamerInputSource();
     static void fillDescription(ParameterSetDescription& description);
 
-    static
     std::auto_ptr<SendJobHeader> deserializeRegistry(InitMsgView const& initView);
 
     void deserializeAndMergeWithRegistry(InitMsgView const& initView, bool subsequent = false);
@@ -41,7 +42,11 @@ namespace edm {
     void deserializeEvent(EventMsgView const& eventView);
 
     static
-    void mergeIntoRegistry(SendJobHeader const& header, ProductRegistry&, BranchIDListHelper&, bool subsequent);
+    void mergeIntoRegistry(SendJobHeader const& header,
+                           ProductRegistry&,
+                           BranchIDListHelper&,
+                           ThinnedAssociationsHelper&,
+                           bool subsequent);
 
     /**
      * Uncompresses the data in the specified input buffer into the
@@ -62,12 +67,19 @@ namespace edm {
 
   private:
 
-    class ProductGetter : public EDProductGetter {
+    class EventPrincipalHolder : public EDProductGetter {
     public:
-      ProductGetter();
-      virtual ~ProductGetter();
+      EventPrincipalHolder();
+      virtual ~EventPrincipalHolder();
 
-      virtual WrapperHolder getIt(edm::ProductID const& id) const;
+      virtual WrapperBase const* getIt(ProductID const& id) const override;
+      virtual WrapperBase const* getThinnedProduct(ProductID const&, unsigned int&) const override;
+      virtual void getThinnedProducts(ProductID const& pid,
+                                      std::vector<WrapperBase const*>& wrappers,
+                                      std::vector<unsigned int>& keys) const override;
+
+
+      virtual unsigned int transitionIndex_() const override;
 
       void setEventPrincipal(EventPrincipal* ep);
 
@@ -86,12 +98,11 @@ namespace edm {
     std::vector<unsigned char> dest_;
     TBufferFile xbuf_;
     std::unique_ptr<SendEvent> sendEvent_;
-    ProductGetter productGetter_;
+    EventPrincipalHolder eventPrincipalHolder_;
     bool adjustEventToNewProductRegistry_;
 
-    //Do not like these to be static, but no choice as deserializeRegistry() that sets it is a static memeber 
-    static std::string processName_;
-    static unsigned int protocolVersion_;
+    std::string processName_;
+    unsigned int protocolVersion_;
   }; //end-of-class-def
 } // end of namespace-edm
   

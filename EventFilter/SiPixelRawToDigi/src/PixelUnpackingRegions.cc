@@ -1,5 +1,4 @@
 //
-// $Id: PixelUnpackingRegions.cc,v 1.2 2012/03/14 23:16:49 khotilov Exp $
 //
 #include "EventFilter/SiPixelRawToDigi/interface/PixelUnpackingRegions.h"
 
@@ -17,6 +16,7 @@
 #include "DataFormats/FEDRawData/interface/FEDNumbering.h"
 #include "DataFormats/Candidate/interface/LeafCandidate.h"
 #include "DataFormats/Math/interface/normalizedPhi.h"
+#include "FWCore/Framework/interface/ConsumesCollector.h"
 
 #include <algorithm>
 #include <iterator>
@@ -29,7 +29,7 @@ bool isFPIXFED(unsigned int fed) {return fed>=32;}
 bool isBPIXModule(unsigned int id) {return DetId(id).subdetId() == PixelSubdetector::PixelBarrel;}
 bool isFPIXModule(unsigned int id) {return DetId(id).subdetId() == PixelSubdetector::PixelEndcap;}
 
-std::ostream& operator<<(std::ostream& s, const PixelUnpackingRegions::Module& m)
+inline std::ostream& operator<<(std::ostream& s, const PixelUnpackingRegions::Module& m)
 {
   s<< (isBPIXModule(m.id) ? "BPIX " : "FPIX ") <<m.id<<" "<<m.fed<<"   "<<m.phi<<"   "<<m.x<<" "<<m.y<<" "<<m.z<<"  "<<sqrt(std::pow(m.x,2)+std::pow(m.y,2));
   return s;
@@ -38,13 +38,16 @@ std::ostream& operator<<(std::ostream& s, const PixelUnpackingRegions::Module& m
 
 
 
-PixelUnpackingRegions::PixelUnpackingRegions(const edm::ParameterSet& conf)
+PixelUnpackingRegions::PixelUnpackingRegions(const edm::ParameterSet& conf, edm::ConsumesCollector &&iC)
 {
   edm::ParameterSet regPSet = conf.getParameter<edm::ParameterSet>("Regions");
   beamSpotTag_ = regPSet.getParameter<edm::InputTag>("beamSpot");
   inputs_      = regPSet.getParameter<std::vector<edm::InputTag> >("inputs");
   dPhi_ = regPSet.getParameter<std::vector<double> >("deltaPhi");
   maxZ_ = regPSet.getParameter<std::vector<double> >("maxZ");
+
+  tBeamSpot = iC.consumes<reco::BeamSpot>(beamSpotTag_);
+  for (unsigned int t=0; t<inputs_.size(); t++ ) tCandidateView.push_back(iC.consumes< reco::CandidateView >(inputs_[t]));
 
   if (inputs_.size() != dPhi_.size() || dPhi_.size() != maxZ_.size() )
   {
@@ -63,7 +66,7 @@ void PixelUnpackingRegions::run(const edm::Event& e, const edm::EventSetup& es)
   initialize(es);
 
   edm::Handle<reco::BeamSpot> beamSpot;
-  e.getByLabel(beamSpotTag_, beamSpot);
+  e.getByToken(tBeamSpot, beamSpot);
   beamSpot_ = beamSpot->position();
   //beamSpot_ = math::XYZPoint(0.,0.,0.);
 
@@ -71,7 +74,7 @@ void PixelUnpackingRegions::run(const edm::Event& e, const edm::EventSetup& es)
   for(size_t input = 0; input < ninputs; ++input)
   {
     edm::Handle< reco::CandidateView > h;
-    e.getByLabel(inputs_[input], h);
+    e.getByToken(tCandidateView[input], h);
 
     size_t n = h->size();
     for(size_t i = 0; i < n; ++i )
@@ -94,7 +97,7 @@ void PixelUnpackingRegions::initialize(const edm::EventSetup& es)
   {
     edm::ESTransientHandle<SiPixelFedCablingMap> cablingMap;
     es.get<SiPixelFedCablingMapRcd>().get( cablingMap );
-    cabling_.reset((SiPixelFedCabling*)cablingMap->cablingTree());
+    cabling_ = cablingMap->cablingTree();
 
     edm::ESHandle<TrackerGeometry> geom;
     // get the TrackerGeom
@@ -108,7 +111,7 @@ void PixelUnpackingRegions::initialize(const edm::EventSetup& es)
     phiFPIXp_.reserve(512);
     phiFPIXm_.reserve(512);
 
-    std::vector<GeomDet*>::const_iterator it = geom->dets().begin();
+    auto it = geom->dets().begin();
     for ( ; it != geom->dets().end(); ++it)
     {
       int subdet = (*it)->geographicalId().subdetId();
@@ -169,8 +172,10 @@ void PixelUnpackingRegions::addRegion(Region &r)
 }
 
 
-void PixelUnpackingRegions::addRegionLocal(Region &r, std::vector<Module> &container, Module lo, Module hi)
+void PixelUnpackingRegions::addRegionLocal(Region &r, std::vector<Module> &container,const  Module& _lo,const Module& _hi)
 {
+  Module lo = _lo;
+  Module hi = _hi;
   Module pi_m(-M_PI);
   Module pi_p( M_PI);
 

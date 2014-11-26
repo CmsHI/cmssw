@@ -1,10 +1,12 @@
-// Last commit: $Id: SiStripDigiToRawModule.h,v 1.6 2009/09/14 14:01:03 nc302 Exp $
 
 #ifndef EventFilter_SiStripRawToDigi_SiStripDigiToRawModule_H
 #define EventFilter_SiStripRawToDigi_SiStripDigiToRawModule_H
 
 #include "EventFilter/SiStripRawToDigi/interface/SiStripFEDBufferComponents.h"
 #include "FWCore/Framework/interface/EDProducer.h"
+#include "DataFormats/Common/interface/DetSetVector.h"
+#include "DataFormats/SiStripDigi/interface/SiStripDigi.h"
+#include "DataFormats/SiStripDigi/interface/SiStripRawDigi.h"
 #include "boost/cstdint.hpp"
 #include <string>
 
@@ -19,7 +21,7 @@ namespace sistrip {
      @brief A plug-in module that takes StripDigis as input from the
      Event and creates an EDProduct comprising a FEDRawDataCollection.
   */
-  class DigiToRawModule : public edm::EDProducer {
+  class dso_hidden DigiToRawModule final : public edm::EDProducer {
   
   public:
   
@@ -39,6 +41,8 @@ namespace sistrip {
     bool rawdigi_;
     DigiToRaw* digiToRaw_;
     uint32_t eventCounter_;
+    edm::EDGetTokenT< edm::DetSetVector<SiStripRawDigi> > tokenRawDigi;
+    edm::EDGetTokenT< edm::DetSetVector<SiStripDigi> > tokenDigi;
 
   };
 

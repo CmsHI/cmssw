@@ -8,7 +8,6 @@
 //
 // Original Author:
 //         Created:  Sun Jan  6 23:57:00 EST 2008
-// $Id: FWL1EmParticleProxyBuilder.cc,v 1.6 2010/09/03 10:20:04 yana Exp $
 //
 
 #include "Fireworks/Core/interface/FWSimpleProxyBuilderTemplate.h"
@@ -28,6 +27,7 @@ private:
    FWL1EmParticleProxyBuilder( const FWL1EmParticleProxyBuilder& );    // stop default
    const FWL1EmParticleProxyBuilder& operator=( const FWL1EmParticleProxyBuilder& );    // stop default
   
+   using FWSimpleProxyBuilderTemplate<l1extra::L1EmParticle>::build;
    virtual void build( const l1extra::L1EmParticle& iData, unsigned int iIndex, TEveElement& oItemHolder , const FWViewContext* );
 };
 

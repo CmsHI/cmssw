@@ -61,8 +61,8 @@ void AlignableTracker::detsToAlignables( const TrackingGeometry::DetContainer& d
     const unsigned int subdetId = dets[i]->geographicalId().subdetId();//don't check det()==Tracker
     if (subdetId == PixelSubdetector::PixelBarrel || subdetId == PixelSubdetector::PixelEndcap) {
       // Treat all pixel dets in same way with one AlignableDetUnit.
-      const GeomDetUnit *detUnit = dynamic_cast<const GeomDetUnit*>(dets[i]);
-      if (!detUnit) {
+      auto detUnit = dets[i];
+      if (!detUnit->isLeaf()) {
         throw cms::Exception("BadHierarchy") 
           << "[AlignableTracker] Pixel GeomDet (subdetector " << subdetId << ") not GeomDetUnit.\n";
       }
@@ -85,10 +85,10 @@ void AlignableTracker::detsToAlignables( const TrackingGeometry::DetContainer& d
       const SiStripDetId detId(dets[i]->geographicalId());
       if (!detId.glued()) { // 2D- or 'pure' 1D-module
         if (dets[i]->components().size()) { // 2D-module
-	  const GluedGeomDet *gluedDet = dynamic_cast<GluedGeomDet*>(dets[i]);
+	  const GluedGeomDet *gluedDet = dynamic_cast<const GluedGeomDet*>(dets[i]);
 	  if (!gluedDet) {
 	    throw cms::Exception("LogicError") 
-	      << "[AlignableTracker]" << "dynamic_cast<GluedGeomDet*> failed.\n";
+	      << "[AlignableTracker]" << "dynamic_cast<const GluedGeomDet*> failed.\n";
 	  }
           alis.push_back(new AlignableSiStripDet(gluedDet)); // components constructed within
           const align::Alignables detUnits(alis.back()->components());
@@ -99,8 +99,8 @@ void AlignableTracker::detsToAlignables( const TrackingGeometry::DetContainer& d
 	  }
 	  aliUnits->insert(aliUnits->end(), detUnits.begin(), detUnits.end()); // only 2...
 	} else { // no components: pure 1D-module
-          const GeomDetUnit *detUnit = dynamic_cast<const GeomDetUnit*>(dets[i]);
-          if (!detUnit) {
+          auto detUnit = dets[i];
+          if (!detUnit->isLeaf()) {
             throw cms::Exception("BadHierarchy") 
               << "[AlignableTracker] pure 1D GeomDet (subdetector " << subdetId << ") not GeomDetUnit.\n";
           }

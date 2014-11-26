@@ -38,11 +38,15 @@
 #include "G4Track.hh"
 #include "G4VProcess.hh"
 
+#include "G4PhysicalConstants.hh"
+#include "G4SystemOfUnits.hh"
+
+
 //
 // constructors and destructor
 //
 TotemSD::TotemSD(std::string name, const DDCompactView & cpv,
-		 SensitiveDetectorCatalog & clg, 
+		 const SensitiveDetectorCatalog & clg,
 		 edm::ParameterSet const & p, const SimTrackManager* manager) :
   SensitiveTkDetector(name, cpv, clg, p), numberingScheme(0), name(name),
   hcID(-1), theHC(0), theManager(manager), currentHit(0), theTrack(0), 
@@ -69,9 +73,9 @@ TotemSD::TotemSD(std::string name, const DDCompactView & cpv,
   //
   // Now attach the right detectors (LogicalVolumes) to me
   //
-  std::vector<std::string> lvNames = clg.logicalNames(name);
+  const std::vector<std::string>& lvNames = clg.logicalNames(name);
   this->Register();
-  for (std::vector<std::string>::iterator it=lvNames.begin();  
+  for (std::vector<std::string>::const_iterator it=lvNames.begin();
        it !=lvNames.end(); it++) {
     this->AssignSD(*it);
     edm::LogInfo("ForwardSim") << "TotemSD : Assigns SD to LV " << (*it);
@@ -190,7 +194,7 @@ void TotemSD::clearHits(){
   slave->Initialize();
 }
 
-G4ThreeVector TotemSD::SetToLocal(G4ThreeVector global) {
+G4ThreeVector TotemSD::SetToLocal(const G4ThreeVector& global) {
 
   G4ThreeVector       localPoint;
   const G4VTouchable* touch= preStepPoint->GetTouchable();
@@ -373,7 +377,7 @@ void TotemSD::CreateNewHitEvo() {
   // LogDebug("ForwardSim") << "STORED HIT IN: " << unitID;
 }	 
  
-G4ThreeVector TotemSD::PosizioEvo(G4ThreeVector Pos, double vx, double vy,
+G4ThreeVector TotemSD::PosizioEvo(const G4ThreeVector& Pos, double vx, double vy,
 				  double vz, double pabs, int& accettanza) {
   accettanza=0;
   //Pos.xyz() in mm

@@ -6,7 +6,6 @@
 //
 // Original Author:
 //         Created:  Sun Jan  6 23:42:33 EST 2008
-// $Id: FWRPCRecHitProxyBuilder.cc,v 1.15 2010/09/07 15:46:48 yana Exp $
 //
 
 #include "TEveGeoNode.h"
@@ -36,6 +35,7 @@ private:
   FWRPCRecHitProxyBuilder(const FWRPCRecHitProxyBuilder&);
   const FWRPCRecHitProxyBuilder& operator=(const FWRPCRecHitProxyBuilder&); 
  
+  using FWSimpleProxyBuilderTemplate<RPCRecHit>::buildViewType;
   virtual void buildViewType(const RPCRecHit& iData, 
                              unsigned int iIndex, 
                              TEveElement& oItemHolder, 

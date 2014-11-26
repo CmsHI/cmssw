@@ -108,15 +108,16 @@ class MassSearchReplaceParamVisitor(object):
 class MassSearchReplaceAnyInputTagVisitor(object):
     """Visitor that travels within a cms.Sequence, looks for a parameter and replace its value
        It will climb down within PSets, VPSets and VInputTags to find its target"""
-    def __init__(self,paramSearch,paramReplace,verbose=False,moduleLabelOnly=False):
+    def __init__(self,paramSearch,paramReplace,verbose=False,moduleLabelOnly=False,skipLabelTest=False):
         self._paramSearch  = self.standardizeInputTagFmt(paramSearch)
         self._paramReplace = self.standardizeInputTagFmt(paramReplace)
         self._moduleName   = ''
         self._verbose=verbose
         self._moduleLabelOnly=moduleLabelOnly
+        self._skipLabelTest=skipLabelTest
     def doIt(self,pset,base):
         if isinstance(pset, cms._Parameterizable):
-            for name in pset.parameters_().keys():
+            for name in pset.parameterNames_():
                 # if I use pset.parameters_().items() I get copies of the parameter values
                 # so I can't modify the nested pset
                 value = getattr(pset,name)
@@ -163,8 +164,11 @@ class MassSearchReplaceAnyInputTagVisitor(object):
 
     def enter(self,visitee):
         label = ''
-        try:    label = visitee.label_()
-        except AttributeError: label = '<Module not in a Process>'
+        if (not self._skipLabelTest):
+            try:    label = visitee.label_()
+            except AttributeError: label = '<Module not in a Process>'
+        else:
+            label = '<Module label not tested>'
         self.doIt(visitee, label)
     def leave(self,visitee):
         pass
@@ -255,9 +259,9 @@ def listSequences(sequence):
     sequence.visit(visitor)
     return visitor.modules()
 
-def massSearchReplaceAnyInputTag(sequence, oldInputTag, newInputTag,verbose=False,moduleLabelOnly=False) :
+def massSearchReplaceAnyInputTag(sequence, oldInputTag, newInputTag,verbose=False,moduleLabelOnly=False,skipLabelTest=False) :
     """Replace InputTag oldInputTag with newInputTag, at any level of nesting within PSets, VPSets, VInputTags..."""
-    sequence.visit(MassSearchReplaceAnyInputTagVisitor(oldInputTag,newInputTag,verbose=verbose,moduleLabelOnly=moduleLabelOnly))
+    sequence.visit(MassSearchReplaceAnyInputTagVisitor(oldInputTag,newInputTag,verbose=verbose,moduleLabelOnly=moduleLabelOnly,skipLabelTest=skipLabelTest))
 
 def jetCollectionString(prefix='', algo='', type=''):
     """
@@ -358,5 +362,27 @@ if __name__=="__main__":
            massSearchReplaceParam(p.s,"src",cms.InputTag("b"),"a")
            self.assertEqual(cms.InputTag("a"),p.c.src)
            self.assertNotEqual(cms.InputTag("a"),p.c.nested.src)
+       def testMassSearchReplaceAnyInputTag(self):
+           p = cms.Process("test")
+           p.a = cms.EDProducer("a", src=cms.InputTag("gen"))
+           p.b = cms.EDProducer("ab", src=cms.InputTag("a"))
+           p.c = cms.EDProducer("ac", src=cms.InputTag("b"),
+                                nested = cms.PSet(src = cms.InputTag("b"), src2 = cms.InputTag("c")),
+                                nestedv = cms.VPSet(cms.PSet(src = cms.InputTag("b")), cms.PSet(src = cms.InputTag("d"))),
+                                vec = cms.VInputTag(cms.InputTag("a"), cms.InputTag("b"), cms.InputTag("c"), cms.InputTag("d"))
+                               )
+           p.s = cms.Sequence(p.a*p.b*p.c)
+           massSearchReplaceAnyInputTag(p.s, cms.InputTag("b"), cms.InputTag("new"))
+           self.assertNotEqual(cms.InputTag("new"), p.b.src)
+           self.assertEqual(cms.InputTag("new"), p.c.src)
+           self.assertEqual(cms.InputTag("new"), p.c.nested.src)
+           self.assertEqual(cms.InputTag("new"), p.c.nested.src)
+           self.assertNotEqual(cms.InputTag("new"), p.c.nested.src2)
+           self.assertEqual(cms.InputTag("new"), p.c.nestedv[0].src)
+           self.assertNotEqual(cms.InputTag("new"), p.c.nestedv[1].src)
+           self.assertNotEqual(cms.InputTag("new"), p.c.vec[0])
+           self.assertEqual(cms.InputTag("new"), p.c.vec[1])
+           self.assertNotEqual(cms.InputTag("new"), p.c.vec[2])
+           self.assertNotEqual(cms.InputTag("new"), p.c.vec[3])
 
    unittest.main()

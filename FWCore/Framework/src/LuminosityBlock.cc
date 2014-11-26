@@ -17,15 +17,15 @@ namespace edm {
   }
 
   LuminosityBlock::~LuminosityBlock() {
-    // anything left here must be the result of a failure
-    // let's record them as failed attempts in the event principal
-    for_all(putProducts_, principal_get_adapter_detail::deleter());
   }
 
   LuminosityBlockIndex
   LuminosityBlock::index() const {
     return luminosityBlockPrincipal().index();
   }
+
+  LuminosityBlock::CacheIdentifier_t
+  LuminosityBlock::cacheIdentifier() const {return luminosityBlockPrincipal().cacheIdentifier();}
 
   
   LuminosityBlockPrincipal&
@@ -63,9 +63,7 @@ namespace edm {
     ProductPtrVec::iterator pie(putProducts().end());
 
     while(pit != pie) {
-        lbp.put(*pit->second, pit->first);
-        // Ownership has passed, so clear the pointer.
-        pit->first.reset();
+        lbp.put(*pit->second, std::move(pit->first));
         ++pit;
     }
 

@@ -1,6 +1,7 @@
-#ifndef FwCore_Framework_SubProcess_h
+#ifndef FWCore_Framework_SubProcess_h
 #define FWCore_Framework_SubProcess_h
 
+#include "DataFormats/Provenance/interface/BranchID.h"
 #include "FWCore/Framework/interface/EventSetupProvider.h"
 #include "FWCore/Framework/src/PrincipalCache.h"
 #include "FWCore/Framework/interface/ScheduleItems.h"
@@ -19,16 +20,18 @@
 
 #include <map>
 #include <memory>
+#include <set>
 
 namespace edm {
+  class BranchDescription;
   class BranchIDListHelper;
-  class EDLooperBase;
   class HistoryAppender;
   class IOVSyncValue;
   class ParameterSet;
   class ProductRegistry;
   class PreallocationConfiguration;
-  
+  class ThinnedAssociationsHelper;
+
   namespace eventsetup {
     class EventSetupsController;
   }
@@ -36,9 +39,9 @@ namespace edm {
   public:
     SubProcess(ParameterSet& parameterSet,
                ParameterSet const& topLevelParameterSet,
-               boost::shared_ptr<ProductRegistry const> parentProductRegistry,
-               ProcessHistoryRegistry& processHistoryRegistry,
-               boost::shared_ptr<BranchIDListHelper const> parentBranchIDListHelper,
+               std::shared_ptr<ProductRegistry const> parentProductRegistry,
+               std::shared_ptr<BranchIDListHelper const> parentBranchIDListHelper,
+               ThinnedAssociationsHelper const& parentThinnedAssociationsHelper,
                eventsetup::EventSetupsController& esController,
                ActivityRegistry& parentActReg,
                ServiceToken const& token,
@@ -52,7 +55,10 @@ namespace edm {
     SubProcess& operator=(SubProcess const&) = delete; // Disallow copying and moving
     
     //From OutputModule
-    void selectProducts(ProductRegistry const& preg);
+    void selectProducts(ProductRegistry const& preg, 
+                        ThinnedAssociationsHelper const& parentThinnedAssociationsHelper,
+                        std::map<BranchID, bool>& keepAssociation);
+
     SelectedProductsForBranchType const& keptProducts() const {return keptProducts_;}
 
     void doBeginJob();
@@ -110,6 +116,8 @@ namespace edm {
       schedule_->openOutputFiles(fb);
       if(subProcess_.get()) subProcess_->openOutputFiles(fb);
     }
+
+    void updateBranchIDListHelper(BranchIDLists const&);
 
     // Call respondToOpenInputFile() on all Modules
     void respondToOpenInputFile(FileBlock const& fb);
@@ -212,6 +220,9 @@ namespace edm {
 
     void propagateProducts(BranchType type, Principal const& parentPrincipal, Principal& principal) const;
     void fixBranchIDListsForEDAliases(std::map<BranchID::value_type, BranchID::value_type> const& droppedBranchIDToKeptBranchID);
+    void keepThisBranch(BranchDescription const& desc,
+                        std::map<BranchID, BranchDescription const*>& trueBranchIDToKeptBranchDesc,
+                        std::set<BranchID>& keptProductsInEvent);
 
     std::map<BranchID::value_type, BranchID::value_type> const& droppedBranchIDToKeptBranchID() {
       return droppedBranchIDToKeptBranchID_;
@@ -219,18 +230,23 @@ namespace edm {
 
     
     ServiceToken                                  serviceToken_;
-    boost::shared_ptr<ProductRegistry const>      parentPreg_;
-    boost::shared_ptr<ProductRegistry const>	  preg_;
-    ProcessHistoryRegistry&                       processHistoryRegistry_;
-    boost::shared_ptr<BranchIDListHelper>         branchIDListHelper_;
+    std::shared_ptr<ProductRegistry const>        parentPreg_;
+    std::shared_ptr<ProductRegistry const>        preg_;
+    std::shared_ptr<BranchIDListHelper>           branchIDListHelper_;
+    std::shared_ptr<ThinnedAssociationsHelper>    thinnedAssociationsHelper_;
     std::unique_ptr<ExceptionToActionTable const> act_table_;
-    boost::shared_ptr<ProcessConfiguration const> processConfiguration_;
+    std::shared_ptr<ProcessConfiguration const>   processConfiguration_;
     ProcessContext                                processContext_;
+    //We require 1 history for each Run, Lumi and Stream
+    // The vectors first hold Stream info, then Lumi then Run
+    unsigned int                                  historyLumiOffset_;
+    unsigned int                                  historyRunOffset_;
+    std::vector<ProcessHistoryRegistry>           processHistoryRegistries_;
+    std::vector<HistoryAppender>                  historyAppenders_;
     PrincipalCache                                principalCache_;
     boost::shared_ptr<eventsetup::EventSetupProvider> esp_;
     std::auto_ptr<Schedule>                       schedule_;
     std::map<ProcessHistoryID, ProcessHistoryID>  parentToChildPhID_;
-    std::unique_ptr<HistoryAppender>              historyAppender_;
     std::auto_ptr<SubProcess>                     subProcess_;
     std::unique_ptr<ParameterSet>                 processParameterSet_;
 

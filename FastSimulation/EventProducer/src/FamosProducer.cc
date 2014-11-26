@@ -3,7 +3,6 @@
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/Framework/interface/ESHandle.h"
 
-#include "SimDataFormats/GeneratorProducts/interface/HepMCProduct.h"
 #include "SimDataFormats/CaloHit/interface/PCaloHitContainer.h"
 #include "SimDataFormats/TrackingHit/interface/PSimHitContainer.h"
 
@@ -18,15 +17,13 @@
 #include "FastSimulation/EventProducer/interface/FamosManager.h"
 #include "FastSimulation/Event/interface/FSimEvent.h"
 #include "FastSimulation/Event/interface/KineParticleFilter.h"
-#include "FastSimulation/Event/interface/PrimaryVertexGenerator.h"
 #include "FastSimulation/Calorimetry/interface/CalorimetryManager.h"
 #include "FastSimulation/TrajectoryManager/interface/TrajectoryManager.h"
-#include "SimDataFormats/CrossingFrame/interface/CrossingFrame.h"
-#include "DataFormats/HepMCCandidate/interface/GenParticle.h"
+#include "FastSimulation/Utilities/interface/RandomEngineAndDistribution.h"
 #include "Geometry/Records/interface/IdealGeometryRecord.h"
 
-#include "HepMC/GenEvent.h"
 #include "HepMC/GenVertex.h"
+#include "HepMC/GenEvent.h"
 
 #include <iostream>
 #include <memory>
@@ -48,12 +45,25 @@ FamosProducer::FamosProducer(edm::ParameterSet const & p)
     if ( simulateMuons ) produces<edm::SimTrackContainer>("MuonSimTracks");
 
     // The generator input label
-    theSourceLabel = p.getParameter<edm::InputTag>("SourceLabel");
-    theGenParticleLabel = p.getParameter<edm::InputTag>("GenParticleLabel");
-    theBeamSpotLabel = p.getParameter<edm::InputTag>("BeamSpotLabel");
+    sourceLabel = p.getParameter<edm::InputTag>("SourceLabel");
+    genParticleLabel = p.getParameter<edm::InputTag>("GenParticleLabel");
+    beamSpotLabel = p.getParameter<edm::InputTag>("BeamSpotLabel");
 
+    // consume declarations
+    beamSpotToken = consumes<reco::BeamSpot>(beamSpotLabel);
+    genParticleToken = consumes<reco::GenParticleCollection>(genParticleLabel);
+    // FUTURE OBSOLETE CODE
+    sourceToken = consumes<edm::HepMCProduct>(sourceLabel);
+    edm::InputTag _label = edm::InputTag("famosPileUp","PileUpEvents");
+    puToken = consumes<edm::HepMCProduct>(_label);
+    // OBSOLETE CODE
+    _label = edm::InputTag("mixGenPU","generator");
+    mixSourceToken = consumes<CrossingFrame<edm::HepMCProduct> >(_label);
+    _label = edm::InputTag("genParticlesFromMixingModule");
+    mixGenParticleToken = consumes<reco::GenParticleCollection>(_label);
+    
+    // famos manager
     famosManager_ = new FamosManager(p);
-  
 }
 
 FamosProducer::~FamosProducer() 
@@ -70,11 +80,14 @@ void FamosProducer::endJob()
  
 void FamosProducer::produce(edm::Event & iEvent, const edm::EventSetup & es)
 {
+  ParticleTable::Sentry ptable(famosManager_->simEvent()->theTable());
    using namespace edm;
 
-  //  // The beam spot position
+   RandomEngineAndDistribution random(iEvent.streamID());
+
+   //  // The beam spot position
    edm::Handle<reco::BeamSpot> recoBeamSpotHandle;
-   iEvent.getByLabel(theBeamSpotLabel,recoBeamSpotHandle); 
+   iEvent.getByToken(beamSpotToken,recoBeamSpotHandle); 
    math::XYZPoint BSPosition_ = recoBeamSpotHandle->position();
 
    //Retrieve tracker topology from geometry
@@ -95,42 +108,36 @@ void FamosProducer::produce(edm::Event & iEvent, const edm::EventSetup & es)
    
    Handle<HepMCProduct> theHepMCProduct;
    
-   PrimaryVertexGenerator* theVertexGenerator = fevt->thePrimaryVertexGenerator();
-   
-   
-   const reco::GenParticleCollection* myGenParticlesXF = 0;
+   const reco::GenParticleCollection* myGenParticlesXF = 0; //OBSOLETE
    const reco::GenParticleCollection* myGenParticles = 0;
    const HepMC::GenEvent* thePUEvents = 0;
 
+   // BEGIN OBSOLETE CODE
    Handle<CrossingFrame<HepMCProduct> > theHepMCProductCrossingFrame;
-   bool isPileUpXF = iEvent.getByLabel("mixGenPU","generator",theHepMCProductCrossingFrame);
-
+   bool isPileUpXF = iEvent.getByToken(mixSourceToken,theHepMCProductCrossingFrame);
    if (isPileUpXF){// take the GenParticle from crossingframe event collection, if it exists 
      Handle<reco::GenParticleCollection> genEvtXF;
-     bool genPartXF = iEvent.getByLabel("genParticlesFromMixingModule",genEvtXF);
+     bool genPartXF = iEvent.getByToken(mixGenParticleToken,genEvtXF);
      if(genPartXF) myGenParticlesXF = &(*genEvtXF);
    }
    else{// otherwise, use the old famos PU     
+   // END OBSOLETE CODE
      // Get the generated signal event
-     bool source = iEvent.getByLabel(theSourceLabel,theHepMCProduct);
+     // BEGIN FUTURE OBSOLETE CODE
+     bool source = iEvent.getByToken(sourceToken,theHepMCProduct);
      if ( source ) { 
-       myGenEvent = theHepMCProduct->GetEvent();
-       // First rotate in case of beam crossing angle (except if done already)
-       if ( theVertexGenerator ) { 
-	 TMatrixD* boost = theVertexGenerator->boost();
-	 if ( boost ) theHepMCProduct->boostToLab(boost,"momentum");
-       }          
        myGenEvent = theHepMCProduct->GetEvent();
      } 
 
      fevt->setBeamSpot(BSPosition_);
-       
+     // GEN LEVEL INFO NOT IN HEPMC FORMAT
      //     In case there is no HepMCProduct, seek a genParticle Candidate Collection
      bool genPart = false;
      if ( !myGenEvent ) { 
+       //END FUTURE OBSOLETE CODE
        // Look for the particle CandidateCollection
        Handle<reco::GenParticleCollection> genEvt;
-       genPart = iEvent.getByLabel(theGenParticleLabel,genEvt);
+       genPart = iEvent.getByToken(genParticleToken,genEvt);
        if ( genPart ) myGenParticles = &(*genEvt);
      }
        
@@ -139,33 +146,23 @@ void FamosProducer::produce(edm::Event & iEvent, const edm::EventSetup & es)
 		 << "any form (HepMCProduct, genParticles)" << std::endl
 		 << "Please check SourceLabel or GenParticleLabel" << std::endl;
        
+     // BEGIN FUTURE OBSOLETE CODE
      // Get the pile-up events from the pile-up producer
      // There might be no pile-up events, by the way, in that case, just continue
      Handle<HepMCProduct> thePileUpEvents;
-     bool isPileUp = iEvent.getByLabel("famosPileUp","PileUpEvents",thePileUpEvents);
+     bool isPileUp = iEvent.getByToken(puToken,thePileUpEvents);
      thePUEvents = isPileUp ? thePileUpEvents->GetEvent() : 0;
-      
+     // END FUTURE OBSOLETE CODE
    }//end else
+   
 
    // pass the event to the Famos Manager for propagation and simulation
-   if (myGenParticlesXF) {
-     famosManager_->reconstruct(myGenParticlesXF,tTopo);
+   if (myGenParticlesXF) {// OBSOLETE OPTION
+     famosManager_->reconstruct(myGenParticlesXF,tTopo, &random);
    } else {
-     famosManager_->reconstruct(myGenEvent,myGenParticles,thePUEvents,tTopo);
+     famosManager_->reconstruct(myGenEvent,myGenParticles,thePUEvents,tTopo, &random); // FUTURE OBSOLETE ARGUMENTS: myGenEvents, thePUEvents 
    }
 
-   // Set the vertex back to the HepMCProduct (except if it was smeared already)
-   if ( myGenEvent ) { 
-     if ( theVertexGenerator ) { 
-       HepMC::FourVector theVertex(
-				   (theVertexGenerator->X()-theVertexGenerator->beamSpot().X()+BSPosition_.X())*10.,
-				   (theVertexGenerator->Y()-theVertexGenerator->beamSpot().Y()+BSPosition_.Y())*10.,
-				   (theVertexGenerator->Z()-theVertexGenerator->beamSpot().Z()+BSPosition_.Z())*10.,
-				   0.);
-       if ( fabs(theVertexGenerator->Z()) > 1E-10 ) theHepMCProduct->applyVtxGen( &theVertex );
-     }
-   }
-   
    CalorimetryManager * calo = famosManager_->calorimetryManager();
    TrajectoryManager * tracker = famosManager_->trackerManager();
    
@@ -211,4 +208,3 @@ void FamosProducer::produce(edm::Event & iEvent, const edm::EventSetup & es)
 }
 
 DEFINE_FWK_MODULE(FamosProducer);
-

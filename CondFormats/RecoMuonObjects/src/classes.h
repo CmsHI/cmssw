@@ -1,6 +1,7 @@
-#include "CondFormats/RecoMuonObjects/interface/MuScleFitDBobject.h"
+#include "CondFormats/RecoMuonObjects/src/headers.h"
 
-namespace {
+
+namespace CondFormats_RecoMuonObjects {
   struct dictionary {
     // std::vector<PhysicsTools::Calibration::HistogramD2D> a;
     MuScleFitDBobject e;

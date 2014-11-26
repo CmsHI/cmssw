@@ -6,6 +6,7 @@
 
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/Framework/interface/ESHandle.h"
+#include "FWCore/Framework/interface/ConsumesCollector.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 
@@ -20,14 +21,37 @@
 #include "RecoTracker/Record/interface/CkfComponentsRecord.h"
 #include "DataFormats/TrackerCommon/interface/TrackerTopology.h"
 
+#include "FWCore/Framework/interface/Event.h"
+#include "DataFormats/Common/interface/Handle.h"
+#include "DataFormats/SiPixelCluster/interface/SiPixelClusterShapeCache.h"
+
 inline float sqr(float x) { return x*x; }
 
 using namespace std;
 
 /*****************************************************************************/
-ClusterShapeTrackFilter::ClusterShapeTrackFilter
-  (const edm::ParameterSet& ps, const edm::EventSetup& es)
+ClusterShapeTrackFilter::ClusterShapeTrackFilter(const edm::ParameterSet& ps, edm::ConsumesCollector& iC):
+  theClusterShapeCacheToken(iC.consumes<SiPixelClusterShapeCache>(ps.getParameter<edm::InputTag>("clusterShapeCacheSrc"))),
+  theTracker(nullptr),
+  theFilter(nullptr),
+  theClusterShapeCache(nullptr)
 {
+  // Get ptMin if available
+  ptMin = (ps.exists("ptMin") ? ps.getParameter<double>("ptMin") : 0.);
+  ptMax = (ps.exists("ptMax") ? ps.getParameter<double>("ptMax") : 999999.);
+}
+
+/*****************************************************************************/
+ClusterShapeTrackFilter::~ClusterShapeTrackFilter()
+{
+}
+
+/*****************************************************************************/
+void ClusterShapeTrackFilter::update(const edm::Event& ev, const edm::EventSetup& es) {
+  edm::Handle<SiPixelClusterShapeCache> cache;
+  ev.getByToken(theClusterShapeCacheToken, cache);
+  theClusterShapeCache = cache.product();
+
   // Get tracker geometry
   edm::ESHandle<TrackerGeometry> tracker;
   es.get<TrackerDigiGeometryRecord>().get(tracker);
@@ -37,15 +61,6 @@ ClusterShapeTrackFilter::ClusterShapeTrackFilter
   edm::ESHandle<ClusterShapeHitFilter> shape;
   es.get<CkfComponentsRecord>().get("ClusterShapeHitFilter",shape);
   theFilter = shape.product();
-
-  // Get ptMin if available
-  ptMin = (ps.exists("ptMin") ? ps.getParameter<double>("ptMin") : 0.);
-  ptMax = (ps.exists("ptMax") ? ps.getParameter<double>("ptMax") : 999999.);
-}
-
-/*****************************************************************************/
-ClusterShapeTrackFilter::~ClusterShapeTrackFilter()
-{
 }
 
 /*****************************************************************************/
@@ -165,7 +180,7 @@ bool ClusterShapeTrackFilter::operator()
       ok = false; break; 
     }
 
-    if(! theFilter->isCompatible(*pixelRecHit, globalDirs[i]) )
+    if(! theFilter->isCompatible(*pixelRecHit, globalDirs[i], *theClusterShapeCache) )
     {
       LogTrace("ClusterShapeTrackFilter")
          << "  [ClusterShapeTrackFilter] clusShape problem"

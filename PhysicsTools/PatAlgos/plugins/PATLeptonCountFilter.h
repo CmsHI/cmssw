@@ -1,5 +1,4 @@
 //
-// $Id: PATLeptonCountFilter.h,v 1.1 2008/03/06 09:23:10 llista Exp $
 //
 
 #ifndef PhysicsTools_PatAlgos_PATLeptonCountFilter_h
@@ -9,6 +8,12 @@
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
+
+#include "DataFormats/Common/interface/View.h"
+
+#include "DataFormats/PatCandidates/interface/Electron.h"
+#include "DataFormats/PatCandidates/interface/Muon.h"
+#include "DataFormats/PatCandidates/interface/Tau.h"
 
 
 namespace pat {
@@ -27,9 +32,9 @@ namespace pat {
 
     private:
 
-      edm::InputTag electronSource_;
-      edm::InputTag muonSource_;
-      edm::InputTag tauSource_;
+      edm::EDGetTokenT<edm::View<Electron> > electronToken_;
+      edm::EDGetTokenT<edm::View<Muon> > muonToken_;
+      edm::EDGetTokenT<edm::View<Tau> > tauToken_;
       bool          countElectrons_;
       bool          countMuons_;
       bool          countTaus_;

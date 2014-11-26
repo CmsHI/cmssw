@@ -13,11 +13,10 @@
 #include <array>
 #include <memory>
 #include <string>
-#include "boost/shared_ptr.hpp"
 
 #include "IOPool/Common/interface/RootServiceChecker.h"
 #include "FWCore/Framework/interface/Frameworkfwd.h"
-#include "FWCore/Framework/interface/OutputModule.h"
+#include "FWCore/Framework/interface/one/OutputModule.h"
 
 class TTree;
 namespace edm {
@@ -27,7 +26,7 @@ namespace edm {
   class RootOutputFile;
   class ConfigurationDescriptions;
 
-  class PoolOutputModule : public OutputModule {
+  class PoolOutputModule : public one::OutputModule<WatchInputFiles> {
   public:
     enum DropMetaData { DropNone, DropDroppedPrior, DropPrior, DropAll };
     explicit PoolOutputModule(ParameterSet const& ps);
@@ -71,7 +70,7 @@ namespace edm {
         explicit Sorter(TTree* tree);
         bool operator() (OutputItem const& lh, OutputItem const& rh) const;
       private:
-        boost::shared_ptr<std::map<std::string, int> > treeMap_;
+        std::shared_ptr<std::map<std::string, int> > treeMap_;
       };
 
       OutputItem();
@@ -124,6 +123,7 @@ namespace edm {
     void writeProductDescriptionRegistry();
     void writeParentageRegistry();
     void writeBranchIDListRegistry();
+    void writeThinnedAssociationsHelper();
     void writeProductDependencies();
     void finishEndFile();
 

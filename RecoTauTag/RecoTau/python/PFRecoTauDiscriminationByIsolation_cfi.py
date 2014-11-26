@@ -3,8 +3,7 @@ import FWCore.ParameterSet.Config as cms
 from RecoTauTag.RecoTau.PFRecoTauQualityCuts_cfi import PFTauQualityCuts
 from RecoTauTag.RecoTau.TauDiscriminatorTools import requireLeadTrack
 
-pfRecoTauDiscriminationByIsolation = cms.EDProducer(
-    "PFRecoTauDiscriminationByIsolation",
+pfRecoTauDiscriminationByIsolation = cms.EDProducer("PFRecoTauDiscriminationByIsolation",
     PFTauProducer = cms.InputTag('pfRecoTauProducer'), #tau collection to discriminate
 
     # Require leading pion ensures that:
@@ -15,6 +14,7 @@ pfRecoTauDiscriminationByIsolation = cms.EDProducer(
     # Select which collections to use for isolation. You can select one or both
     ApplyDiscriminationByECALIsolation = cms.bool(True), # use PFGammas when isolating
     ApplyDiscriminationByTrackerIsolation = cms.bool(True), # use PFChargedHadr when isolating
+    ApplyDiscriminationByWeightedECALIsolation = cms.bool(False), #do not use pileup weighting of neutral deposits by default
 
     applyOccupancyCut = cms.bool(True), # apply a cut on number of isolation objects
     maximumOccupancy = cms.uint32(0), # no tracks > 1 GeV or gammas > 1.5 GeV allowed
@@ -24,6 +24,7 @@ pfRecoTauDiscriminationByIsolation = cms.EDProducer(
 
     applyRelativeSumPtCut = cms.bool(False), # apply a cut on IsoPt/TotalPt
     relativeSumPtCut = cms.double(0.0),
+    relativeSumPtOffset = cms.double(0.0),
 
     qualityCuts = PFTauQualityCuts,# set the standard quality cuts
 
@@ -48,7 +49,10 @@ pfRecoTauDiscriminationByIsolation = cms.EDProducer(
 
     # Rho corrections
     applyRhoCorrection = cms.bool(False),
-    rhoProducer = cms.InputTag("kt6PFJets", "rho"),
+    rhoProducer = cms.InputTag("fixedGridRhoFastjetAll"),
     rhoConeSize = cms.double(0.5),
     rhoUEOffsetCorrection = cms.double(1.0),
+    UseAllPFCandsForWeights = cms.bool(False),
+    verbosity = cms.int32(0)
+                                                   
 )

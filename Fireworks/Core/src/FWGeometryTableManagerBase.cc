@@ -8,7 +8,6 @@
 //
 // Original Author:  Alja Mrak-Tadel, Matevz Tadel
 //         Created:  Thu Jan 27 14:50:57 CET 2011
-// $Id: FWGeometryTableManagerBase.cc,v 1.7 2012/05/10 23:57:52 amraktad Exp $
 //
 
 //#define PERFTOOL_GEO_TABLE
@@ -324,7 +323,8 @@ void FWGeometryTableManagerBase::setVisibilityChld(NodeInfo& data, bool x)
 {
    data.setBitVal(kVisNodeChld, x);
 }
-//______________________________________________________________________________
+
+//------------------------------------------------------------------------------
 
 void FWGeometryTableManagerBase::setDaughtersSelfVisibility(int selectedIdx, bool v)
 {
@@ -350,11 +350,38 @@ bool FWGeometryTableManagerBase::getVisibility(const NodeInfo& data) const
    return data.testBit(kVisNodeSelf);
 }
 
+//------------------------------------------------------------------------------
+
 bool FWGeometryTableManagerBase::getVisibilityChld(const NodeInfo& data) const
 {
    return data.testBit(kVisNodeChld);
 }
 
+//------------------------------------------------------------------------------
+
+void FWGeometryTableManagerBase::applyColorTranspToDaughters(int selectedIdx, bool recurse)
+{
+   NodeInfo  &nInfo      = m_entries[selectedIdx];
+   TGeoNode  *parentNode = nInfo.m_node;
+   int nD   = parentNode->GetNdaughters();
+   int dOff = 0;
+   for (int n = 0; n != nD; ++n)
+   {
+      int idx = selectedIdx + 1 + n + dOff;
+      NodeInfo& data = m_entries[idx];
+
+      data.copyColorTransparency(nInfo);
+
+      if (recurse)
+      {
+         applyColorTranspToDaughters(idx, recurse);
+      }
+
+      getNNodesTotal(parentNode->GetDaughter(n), dOff);
+   }
+}
+
+//------------------------------------------------------------------------------
 
 bool FWGeometryTableManagerBase::isNodeRendered(int idx, int topNodeIdx) const
 {

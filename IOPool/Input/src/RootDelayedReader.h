@@ -9,15 +9,18 @@ RootDelayedReader.h // used by ROOT input sources
 
 #include "DataFormats/Provenance/interface/BranchKey.h"
 #include "FWCore/Framework/interface/DelayedReader.h"
+#include "FWCore/Utilities/interface/InputType.h"
 #include "RootTree.h"
 
 #include <map>
 #include <memory>
 #include <string>
 
+class TClass;
 namespace edm {
   class InputFile;
   class RootTree;
+  class SharedResourcesAcquirer;
 
   //------------------------------------------------------------
   // Class RootDelayedReader: pretends to support file reading.
@@ -31,7 +34,8 @@ namespace edm {
     typedef roottree::EntryNumber EntryNumber;
     RootDelayedReader(
       RootTree const& tree,
-      boost::shared_ptr<InputFile> filePtr);
+      std::shared_ptr<InputFile> filePtr,
+      InputType inputType);
 
     virtual ~RootDelayedReader();
 
@@ -39,19 +43,23 @@ namespace edm {
     RootDelayedReader& operator=(RootDelayedReader const&) = delete; // Disallow copying and moving
 
   private:
-    virtual WrapperOwningHolder getProduct_(BranchKey const& k, WrapperInterfaceBase const* interface, EDProductGetter const* ep) const;
-    virtual void mergeReaders_(DelayedReader* other) {nextReader_ = other;}
-    virtual void reset_() {nextReader_ = 0;}
+    virtual std::unique_ptr<WrapperBase> getProduct_(BranchKey const& k, EDProductGetter const* ep) const override;
+    virtual void mergeReaders_(DelayedReader* other) override {nextReader_ = other;}
+    virtual void reset_() override {nextReader_ = nullptr;}
+    SharedResourcesAcquirer* sharedResources_() const override;
+
     BranchMap const& branches() const {return tree_.branches();}
-    EntryNumber const& entryNumber() const {return tree_.entryNumber();}
     iterator branchIter(BranchKey const& k) const {return branches().find(k);}
     bool found(iterator const& iter) const {return iter != branches().end();}
     BranchInfo const& getBranchInfo(iterator const& iter) const {return iter->second; }
     // NOTE: filePtr_ appears to be unused, but is needed to prevent
     // the file containing the branch from being reclaimed.
     RootTree const& tree_;
-    boost::shared_ptr<InputFile> filePtr_;
+    std::shared_ptr<InputFile> filePtr_;
     DelayedReader* nextReader_;
+    std::unique_ptr<SharedResourcesAcquirer> resourceAcquirer_;
+    InputType inputType_;
+    TClass* wrapperBaseTClass_;
   }; // class RootDelayedReader
   //------------------------------------------------------------
 }

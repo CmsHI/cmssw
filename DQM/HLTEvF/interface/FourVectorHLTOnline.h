@@ -93,7 +93,7 @@ class FourVectorHLTOnline : public edm::EDAnalyzer {
       // EndRun
       void endRun(const edm::Run& run, const edm::EventSetup& c);
       void fillHltMatrix(const edm::TriggerNames & triggerNames);
-      void setupHltMatrix(std::string label, std::vector<std::string>  paths);
+      void setupHltMatrix(std::string label, std::vector<std::string> paths);
 
       void setupHltLsPlots();
       void setupHltBxPlots();
@@ -210,6 +210,21 @@ class FourVectorHLTOnline : public edm::EDAnalyzer {
       // helper class to store the data path
 
       edm::Handle<edm::TriggerResults> triggerResults_;
+
+      //define Token(-s)
+      edm::EDGetTokenT<edm::TriggerResults> triggerResultsToken_;
+      edm::EDGetTokenT<trigger::TriggerEvent> triggerSummaryToken_;
+      edm::EDGetTokenT<edm::TriggerResults> muonRecoCollectionNameToken_;
+      edm::EDGetTokenT<edm::TriggerResults> gsfElectronsToken_;
+      edm::EDGetTokenT<edm::TriggerResults> caloRecoTauProducerToken_;
+      edm::EDGetTokenT<edm::TriggerResults> iterativeCone5CaloJetsToken_;
+      edm::EDGetTokenT<edm::TriggerResults> jetProbabilityBJetTagsToken_;
+      edm::EDGetTokenT<edm::TriggerResults> softMuonBJetTagsToken_;
+      edm::EDGetTokenT<edm::TriggerResults> metToken_;
+      edm::EDGetTokenT<edm::TriggerResults> photonsToken_;
+      edm::EDGetTokenT<edm::TriggerResults> pixelTracksToken_;
+      edm::EDGetTokenT<edm::TriggerResults> triggerResultsTokenFU_;
+      edm::EDGetTokenT<trigger::TriggerEvent> triggerSummaryLabelFUToken_;
 
       class PathInfo {
 
@@ -595,9 +610,9 @@ public:
      EtMin_= etMin; 
      DRMatch_= drMatch;
     }
-    void setTriggerType(std::vector<int> trigType) { triggerType_ = trigType; }
+    void setTriggerType(const std::vector<int>& trigType) { triggerType_ = trigType; }
     void pushTriggerType(int trigType) { triggerType_.push_back(trigType); }
-    void setL1TriggerType(std::vector<int> trigType) { l1triggerType_ = trigType; }
+    void setL1TriggerType(const std::vector<int>& trigType) { l1triggerType_ = trigType; }
     void pushL1TriggerType(int trigType) { l1triggerType_.push_back(trigType); }
     void setPath(FourVectorHLTOnline::PathInfoCollection::iterator v) { v_ = v; }
     void setReco(edm::Handle<T> offColl) { offColl_ = offColl; }

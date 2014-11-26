@@ -487,7 +487,7 @@ SiStripGainFromData::algoBeginJob(const edm::EventSetup& iSetup)
 
    edm::ESHandle<TrackerGeometry> tkGeom;
    iSetup.get<TrackerDigiGeometryRecord>().get( tkGeom );
-   vector<GeomDet*> Det = tkGeom->dets();
+   auto const & Det = tkGeom->dets();
 
 
    edm::ESHandle<SiStripGain> gainHandle;
@@ -504,7 +504,7 @@ SiStripGainFromData::algoBeginJob(const edm::EventSetup& iSetup)
       if( SubDet == StripSubdetector::TIB ||  SubDet == StripSubdetector::TID ||
           SubDet == StripSubdetector::TOB ||  SubDet == StripSubdetector::TEC  ){
 
-          StripGeomDetUnit* DetUnit     = dynamic_cast<StripGeomDetUnit*> (Det[i]);
+          auto DetUnit     = dynamic_cast<StripGeomDetUnit const*> (Det[i]);
 	  if(!DetUnit)continue;
 
           const StripTopology& Topo     = DetUnit->specificTopology();	
@@ -1097,10 +1097,8 @@ SiStripGainFromData::ComputeChargeOverPath(const SiStripCluster*   Cluster ,Traj
 {
    LocalVector          trackDirection = trajState.localDirection();
    double                  cosine      = trackDirection.z()/trackDirection.mag();
-//   const SiStripCluster*   Cluster     = (sistripsimplehit->cluster()).get();
-//   const vector<uint16_t>& Ampls       = Cluster->amplitudes();
-   const vector<uint8_t>&  Ampls       = Cluster->amplitudes();
-   uint32_t                DetId       = Cluster->geographicalId();
+   auto  const          &  Ampls       = Cluster->amplitudes();
+   uint32_t                DetId       = 0; // is 0 since long time Cluster->geographicalId();
    int                     FirstStrip  = Cluster->firstStrip();
    int                     APVId       = FirstStrip/128;
    stAPVGain*          APV         = APVsColl[(DetId<<3) | APVId];
@@ -1255,15 +1253,14 @@ void SiStripGainFromData::getPeakOfLandau(TH1* InputHisto, double* FitResults, d
    TF1* MyLandau = new TF1("MyLandau","landau",LowRange, HighRange);
    MyLandau->SetParameter("MPV",300);
 
-   InputHisto->Fit("MyLandau","QR WW");
-   TF1 * fitfunction = (TF1*) InputHisto->GetListOfFunctions()->First();
+   InputHisto->Fit(MyLandau,"QR WW");
 
    // MPV is parameter 1 (0=constant, 1=MPV, 2=Sigma)
-    adcs        = fitfunction->GetParameter("MPV");
-    adcs_err    = fitfunction->GetParError(1);
-    width       = fitfunction->GetParameter(2);
-    width_err   = fitfunction->GetParError(2);
-    chi2overndf = fitfunction->GetChisquare() / fitfunction->GetNDF();
+    adcs        = MyLandau->GetParameter("MPV");
+    adcs_err    = MyLandau->GetParError(1);
+    width       = MyLandau->GetParameter(2);
+    width_err   = MyLandau->GetParError(2);
+    chi2overndf = MyLandau->GetChisquare() / MyLandau->GetNDF();
 
     // if still wrong, give up
     if(adcs<2. || chi2overndf>MaxChi2OverNDF){

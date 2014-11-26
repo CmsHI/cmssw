@@ -19,11 +19,13 @@
 //
 
 // system include files
+#include <mutex>
 
 // user include files
 #include "FWCore/Framework/interface/ProducerBase.h"
 #include "FWCore/Framework/interface/EDConsumerBase.h"
 #include "FWCore/Framework/interface/Frameworkfwd.h"
+#include "FWCore/Framework/interface/SharedResourcesAcquirer.h"
 #include "DataFormats/Provenance/interface/ModuleDescription.h"
 #include "FWCore/ParameterSet/interface/ParameterSetfwd.h"
 
@@ -32,6 +34,9 @@ namespace edm {
 
   class ModuleCallingContext;
   class PreallocationConfiguration;
+  class ActivityRegistry;
+  class ProductRegistry;
+  class ThinnedAssociationsHelper;
   
   namespace maker {
     template<typename T> class ModuleHolderT;
@@ -60,6 +65,7 @@ namespace edm {
 
     private:
       bool doEvent(EventPrincipal& ep, EventSetup const& c,
+                   ActivityRegistry*,
                    ModuleCallingContext const*);
       void doPreallocate(PreallocationConfiguration const&) {}
       void doBeginJob();
@@ -74,13 +80,15 @@ namespace edm {
       void doEndLuminosityBlock(LuminosityBlockPrincipal& lbp, EventSetup const& c,
                                 ModuleCallingContext const*);
       
-      //For now, the following are just dummy implemenations with no ability for users to override
-      void doRespondToOpenInputFile(FileBlock const& fb);
-      void doRespondToCloseInputFile(FileBlock const& fb);
       void doPreForkReleaseResources();
       void doPostForkReacquireResources(unsigned int iChildIndex, unsigned int iNumberOfChildren);
 
-      
+      //For now, the following are just dummy implemenations with no ability for users to override
+      void doRespondToOpenInputFile(FileBlock const& fb);
+      void doRespondToCloseInputFile(FileBlock const& fb);
+      void doRegisterThinnedAssociations(ProductRegistry const&,
+                                         ThinnedAssociationsHelper&) { }
+
       void registerProductsAndCallbacks(EDFilterBase* module, ProductRegistry* reg) {
         registerProducts(module, reg, moduleDescription_);
       }
@@ -89,6 +97,9 @@ namespace edm {
       virtual bool filter(Event&, EventSetup const&) = 0;
       virtual void beginJob() {}
       virtual void endJob(){}
+
+      virtual void preForkReleaseResources() {}
+      virtual void postForkReacquireResources(unsigned int /*iChildIndex*/, unsigned int /*iNumberOfChildren*/) {}
 
       virtual void doBeginRun_(Run const& rp, EventSetup const& c);
       virtual void doEndRun_(Run const& rp, EventSetup const& c);
@@ -99,8 +110,9 @@ namespace edm {
       virtual void doEndRunProduce_(Run& rp, EventSetup const& c);
       virtual void doBeginLuminosityBlockProduce_(LuminosityBlock& lbp, EventSetup const& c);
       virtual void doEndLuminosityBlockProduce_(LuminosityBlock& lbp, EventSetup const& c);
-
       
+      virtual SharedResourcesAcquirer createAcquirer();
+
       void setModuleDescription(ModuleDescription const& md) {
         moduleDescription_ = md;
       }
@@ -108,6 +120,8 @@ namespace edm {
       std::vector<BranchID> previousParentage_;
       ParentageID previousParentageId_;
 
+      SharedResourcesAcquirer resourcesAcquirer_;
+      std::mutex mutex_;
     };
     
   }

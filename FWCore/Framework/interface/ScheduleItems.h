@@ -4,8 +4,6 @@
 #include "FWCore/ServiceRegistry/interface/ServiceLegacy.h"
 #include "FWCore/ServiceRegistry/interface/ServiceToken.h"
 
-#include "boost/shared_ptr.hpp"
-
 #include <memory>
 #include <vector>
 
@@ -13,7 +11,8 @@ namespace edm {
   class ExceptionToActionTable;
   class ActivityRegistry;
   class BranchIDListHelper;
-  class CommonParams;
+  class ThinnedAssociationsHelper;
+  struct CommonParams;
   class SubProcess;
   class ParameterSet;
   class ProcessConfiguration;
@@ -27,7 +26,7 @@ namespace edm {
   struct ScheduleItems {
     ScheduleItems();
 
-    ScheduleItems(ProductRegistry const& preg, BranchIDListHelper const& branchIDListHelper, SubProcess const& om);
+    ScheduleItems(ProductRegistry const& preg, SubProcess const& om);
 
     ScheduleItems(ScheduleItems const&) = delete; // Disallow copying and moving
     ScheduleItems& operator=(ScheduleItems const&) = delete; // Disallow copying and moving
@@ -42,7 +41,7 @@ namespace edm {
     ServiceToken
     addCPRandTNS(ParameterSet const& parameterSet, ServiceToken const& token);
 
-    boost::shared_ptr<CommonParams>
+    std::shared_ptr<CommonParams>
     initMisc(ParameterSet& parameterSet);
 
     std::auto_ptr<Schedule>
@@ -54,12 +53,12 @@ namespace edm {
     void
     clear();
 
-    boost::shared_ptr<ActivityRegistry>           actReg_;
-    std::unique_ptr<SignallingProductRegistry>    preg_;
-    boost::shared_ptr<BranchIDListHelper>         branchIDListHelper_;
-    std::unique_ptr<ExceptionToActionTable const>            act_table_;
-    boost::shared_ptr<ProcessConfiguration>       processConfiguration_;
+    std::shared_ptr<ActivityRegistry> actReg_;
+    std::unique_ptr<SignallingProductRegistry> preg_;
+    std::shared_ptr<BranchIDListHelper> branchIDListHelper_;
+    std::shared_ptr<ThinnedAssociationsHelper> thinnedAssociationsHelper_;
+    std::unique_ptr<ExceptionToActionTable const> act_table_;
+    std::shared_ptr<ProcessConfiguration> processConfiguration_;
   };
 }
-
 #endif

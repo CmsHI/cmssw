@@ -18,7 +18,7 @@
 
 // user include files
 #include "FWCore/Framework/interface/Frameworkfwd.h"
-#include "FWCore/Framework/interface/EDAnalyzer.h"
+#include "DQMServices/Core/interface/DQMEDAnalyzer.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 
 #include "FWCore/Framework/interface/Event.h"
@@ -31,27 +31,27 @@
 
 #include "FWCore/ServiceRegistry/interface/Service.h"
 
+#include "DataFormats/METReco/interface/HcalNoiseRBX.h"
 
 //
 // class declaration
 //
 
-class NoiseRates : public edm::EDAnalyzer {
+class NoiseRates : public DQMEDAnalyzer {
  public:
   explicit NoiseRates(const edm::ParameterSet&);
   ~NoiseRates();
-  
+ 
+  virtual void bookHistograms(DQMStore::IBooker &, edm::Run const &, edm::EventSetup const &); 
   
  private:
-  virtual void beginJob();
   virtual void analyze(const edm::Event&, const edm::EventSetup&);
-  virtual void endJob();
 
-  DQMStore* dbe_;
   std::string outputFile_;
 
   // parameters
   edm::InputTag rbxCollName_;          // label for the rbx collection
+  edm::EDGetTokenT<reco::HcalNoiseRBXCollection> tok_rbx_;
   double minRBXEnergy_;                // RBX energy threshold
   double minHitEnergy_;                // RecHit energy threshold
   bool   useAllHistos_;

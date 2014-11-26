@@ -115,22 +115,19 @@ PFSimParticleProducer::~PFSimParticleProducer()
 void 
 PFSimParticleProducer::beginRun(const edm::Run& run,
 				const edm::EventSetup & es)
-{
-  
+{  
   // init Particle data table (from Pythia)
   edm::ESHandle < HepPDT::ParticleDataTable > pdt;
   //  edm::ESHandle < DefaultConfig::ParticleDataTable > pdt;
   es.getData(pdt);
-  if ( !ParticleTable::instance() ) ParticleTable::instance(&(*pdt));
   mySimEvent->initializePdt(&(*pdt));
-
 }
 
 
 void PFSimParticleProducer::produce(Event& iEvent, 
 				    const EventSetup& iSetup) 
-{
-  
+{  
+  ParticleTable::Sentry ptable(mySimEvent->theTable());
   LogDebug("PFSimParticleProducer")<<"START event: "<<iEvent.id().event()
 				   <<" in run "<<iEvent.id().run()<<endl;
  
@@ -558,10 +555,10 @@ void PFSimParticleProducer::getSimIDs( const TrackHandle& trackh,
       for (trackingRecHit_iterator it = rhitbeg;  
 	   it != rhitend; it++){
 
-	if( it->get()->isValid() ){
+	if( (*it)->isValid() ){
 
 	  const SiTrackerGSMatchedRecHit2D * rechit 
-	    = (const SiTrackerGSMatchedRecHit2D*) (it->get());
+	    = (const SiTrackerGSMatchedRecHit2D*) (*it);
 	  
 // 	  cout <<  "rechit" 	       
 // 	       << " corresponding simId " 

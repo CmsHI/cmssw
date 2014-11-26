@@ -3,13 +3,14 @@
 
 #include "DataFormats/Common/interface/RefCoreStreamer.h"
 #include "DataFormats/Provenance/interface/BranchDescription.h"
-#include "DataFormats/Provenance/interface/WrapperInterfaceBase.h"
 #include "FWCore/MessageLogger/interface/JobReport.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
 #include "FWCore/Utilities/interface/Algorithms.h"
 #include "FWCore/Utilities/interface/EDMException.h"
 #include "FWCore/Utilities/interface/RootHandlers.h"
+#include "FWCore/Catalog/interface/SiteLocalConfig.h"
+#include "FWCore/ServiceRegistry/interface/Service.h"
 
 #include "TBranch.h"
 #include "TBranchElement.h"
@@ -19,13 +20,72 @@
 #include "Rtypes.h"
 #include "RVersion.h"
 
-#include "boost/bind.hpp"
 #include <limits>
 
 namespace edm {
 
+    /**
+     * Currently, ROOT doesn't use any latency-hiding optimizations for
+     * fast-cloning.  This causes a significant slowdown when doing fast-cloning
+     * over a high-latency network (30ms latency makes this multiple factors slower).
+     *
+     * Accordingly, we allow sites to provide a separate hint on how to treat fast-
+     * cloning.  The DuplicateTreeSentry allows us to implement it - given a tree
+     * we are about to clone, with the appropriate configs, this will re-open the
+     * file with lazy-download and re-open the tree.  The new tree is appropriate
+     * for cloning.  When the object is destroyed, the new file and tree are cleaned up.
+     *
+     */
+    class DuplicateTreeSentry
+    {
+    public:
+        DuplicateTreeSentry(TTree * tree)
+          : tree_(tree)
+        {
+            dup();
+        }
+
+        TTree *tree() const {return mytree_ ? mytree_.get() : tree_;}
+
+    private:
+        DuplicateTreeSentry(DuplicateTreeSentry const&) = delete; // Disallow copying and moving
+        DuplicateTreeSentry& operator=(DuplicateTreeSentry const&) = delete;
+        struct CloseBeforeDelete { void operator()(TFile* iFile) const { if( iFile) { iFile->Close(); } delete iFile; } };
+
+        void dup()
+        {
+            edm::Service<edm::SiteLocalConfig> pSLC;
+            if (!pSLC.isAvailable()) {return;}
+            if (pSLC->sourceCacheHint() && *(pSLC->sourceCacheHint()) == "lazy-download") {return;}
+            if (!pSLC->sourceCloneCacheHint() || *(pSLC->sourceCloneCacheHint()) != "lazy-download") {return;}
+            edm::LogWarning("DuplicateTreeSentry") << "Re-opening file for fast-cloning";
+
+            TFile *file = tree_->GetCurrentFile();
+            const TUrl *url = file->GetEndpointUrl();
+            if (!url)
+            {
+                return;
+            }
+            file_.reset(TFile::Open(url->GetUrl(), "READWRAP")); // May throw an exception.
+            if (!file_)
+            {
+                return;
+            }
+            mytree_.reset(dynamic_cast<TTree*>(file_->Get(tree_->GetName())));
+            if (!mytree_) {return;}
+        }
+
+        /**
+         * Note this relies on the implicit delete ordering - mytree_ (if non-null)
+         * must be deleted before file_.  Do not reorder the class members!
+         */
+        std::unique_ptr<TFile, CloseBeforeDelete> file_;
+        TTree *tree_ = nullptr;
+        std::unique_ptr<TTree> mytree_ = nullptr;
+    };
+
     RootOutputTree::RootOutputTree(
-                   boost::shared_ptr<TFile> filePtr,
+                   std::shared_ptr<TFile> filePtr,
                    BranchType const& branchType,
                    int splitLevel,
                    int treeMaxVirtualSize) :
@@ -66,17 +126,17 @@ namespace edm {
   bool
   RootOutputTree::checkSplitLevelsAndBasketSizes(TTree* inputTree) const {
 
-    assert (inputTree != 0);
+    assert(inputTree != nullptr);
 
     // Do the split level and basket size match in the input and output?
     for(std::vector<TBranch*>::const_iterator it = readBranches_.begin(), itEnd = readBranches_.end();
       it != itEnd; ++it) {
 
       TBranch* outputBranch = *it;
-      if(outputBranch != 0) {
+      if(outputBranch != nullptr) {
         TBranch* inputBranch = inputTree->GetBranch(outputBranch->GetName());
 
-        if(inputBranch != 0) {
+        if(inputBranch != nullptr) {
           if(inputBranch->GetSplitLevel() != outputBranch->GetSplitLevel() ||
               inputBranch->GetBasketSize() != outputBranch->GetBasketSize()) {
             return false;
@@ -99,8 +159,8 @@ namespace edm {
         return false;
       }
       TIter iter(outputArray);
-      TObject* obj = 0;
-      while((obj = iter.Next()) != 0) {
+      TObject* obj = nullptr;
+      while((obj = iter.Next()) != nullptr) {
         TBranchElement* outBranch = dynamic_cast<TBranchElement*>(obj);
         if(outBranch) {
           TBranchElement* inBranch = dynamic_cast<TBranchElement*>(inputArray->FindObject(outBranch->GetName()));
@@ -118,14 +178,14 @@ namespace edm {
 
   bool RootOutputTree::checkIfFastClonable(TTree* inputTree) const {
 
-    if(inputTree == 0) return false;
+    if(inputTree == nullptr) return false;
 
     // Do the sub-branches match in the input and output. Extra sub-branches in the input are OK for fast cloning, but not in the output.
     for(std::vector<TBranch*>::const_iterator it = readBranches_.begin(), itEnd = readBranches_.end(); it != itEnd; ++it) {
       TBranchElement* outputBranch = dynamic_cast<TBranchElement*>(*it);
-      if(outputBranch != 0) {
+      if(outputBranch != nullptr) {
         TBranchElement* inputBranch = dynamic_cast<TBranchElement*>(inputTree->GetBranch(outputBranch->GetName()));
-        if(inputBranch != 0) {
+        if(inputBranch != nullptr) {
           // We have a matching top level branch. Do the recursive check on subbranches.
           if(!checkMatchingBranches(inputBranch, outputBranch)) {
             LogInfo("FastCloning")
@@ -181,7 +241,8 @@ namespace edm {
         branches->Compress();
       }
 
-      TTreeCloner cloner(in, tree_, option.c_str(), TTreeCloner::kNoWarnings|TTreeCloner::kIgnoreMissingTopLevel);
+      DuplicateTreeSentry dupTree(in);
+      TTreeCloner cloner(dupTree.tree(), tree_, option.c_str(), TTreeCloner::kNoWarnings|TTreeCloner::kIgnoreMissingTopLevel);
 
       if(!cloner.IsValid()) {
         // Let's check why
@@ -195,9 +256,8 @@ namespace edm {
       }
       tree_->SetEntries(tree_->GetEntries() + in->GetEntries());
       Service<RootHandlers> rootHandler;
-      rootHandler->enableErrorHandlerWithoutWarnings();
-      cloner.Exec();
-      rootHandler->enableErrorHandler();
+      rootHandler->ignoreWarningsWhileDoing([&cloner] { cloner.Exec(); });
+
       if(mustRemoveSomeAuxs) {
         for(std::map<Int_t, TBranch *>::const_iterator it = auxIndexes.begin(), itEnd = auxIndexes.end();
              it != itEnd; ++it) {
@@ -228,7 +288,7 @@ namespace edm {
 
   void
   RootOutputTree::fillTTree(std::vector<TBranch*> const& branches) {
-    for_all(branches, boost::bind(&TBranch::Fill, _1));
+    for_all(branches, std::bind(&TBranch::Fill, std::placeholders::_1));
   }
 
   void
@@ -272,7 +332,6 @@ namespace edm {
   void
   RootOutputTree::addBranch(std::string const& branchName,
                             std::string const& className,
-                            WrapperInterfaceBase const* interface,
                             void const*& pProd,
                             int splitLevel,
                             int basketSize,
@@ -284,11 +343,12 @@ namespace edm {
                  &pProd,
                  basketSize,
                  splitLevel);
-      assert(branch != 0);
-      if(pProd != 0) {
+      assert(branch != nullptr);
+      if(pProd != nullptr) {
         // Delete the product that ROOT has allocated.
-        interface->deleteProduct(pProd);
-        pProd = 0;
+        WrapperBase const* edp = static_cast<WrapperBase const *>(pProd);
+        delete edp;
+        pProd = nullptr;
       }
       if(produced) {
         producedBranches_.push_back(branch);
@@ -306,7 +366,7 @@ namespace edm {
     producedBranches_.clear();
     readBranches_.clear();
     unclonedReadBranches_.clear();
-    tree_ = 0;
+    tree_ = nullptr;
     filePtr_.reset();
   }
 }

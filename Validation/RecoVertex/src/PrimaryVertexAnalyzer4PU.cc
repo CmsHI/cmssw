@@ -1,38 +1,47 @@
 #include "Validation/RecoVertex/interface/PrimaryVertexAnalyzer4PU.h"
 
+#include "FWCore/Framework/interface/Event.h"
+#include "FWCore/Framework/interface/EventSetup.h"
+#include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/Version/interface/GetReleaseVersion.h"
 #include "MagneticField/Engine/interface/MagneticField.h"
 
+//generator level + CLHEP
+#include "HepMC/GenEvent.h"
+#include "HepMC/GenVertex.h"
+#include "HepMC/GenParticle.h"
+
 // reco track and vertex 
-#include "DataFormats/TrackReco/interface/Track.h"
 #include "DataFormats/VertexReco/interface/Vertex.h"
-#include "DataFormats/Math/interface/Point3D.h"
 #include "RecoVertex/VertexPrimitives/interface/TransientVertex.h"
 
-// simulated vertices,..., add <use name=SimDataFormats/Vertex> and <../Track>
-#include <SimDataFormats/Vertex/interface/SimVertex.h>
-#include <SimDataFormats/Vertex/interface/SimVertexContainer.h>
+// simulated track
 #include <SimDataFormats/Track/interface/SimTrack.h>
-#include <SimDataFormats/Track/interface/SimTrackContainer.h>
 
+// simulated vertex
+#include "SimDataFormats/Vertex/interface/SimVertex.h"
+
+// crossing frame
 #include "SimDataFormats/CrossingFrame/interface/CrossingFrame.h"
 #include "SimDataFormats/CrossingFrame/interface/CrossingFramePlaybackInfo.h"
 #include "SimDataFormats/CrossingFrame/interface/MixCollection.h"
 #include "SimDataFormats/TrackingHit/interface/PSimHit.h"
 
-//generator level + CLHEP
-#include "HepMC/GenEvent.h"
-#include "HepMC/GenVertex.h"
-
-
 // TrackingParticle
 #include "SimDataFormats/TrackingAnalysis/interface/TrackingParticleFwd.h"
 #include "SimDataFormats/TrackingAnalysis/interface/TrackingVertexContainer.h"
-//associator
-#include "SimTracker/Records/interface/TrackAssociatorRecord.h"
 
+// tracking tools
+#include "TrackingTools/Records/interface/TransientTrackRecord.h"
+
+// clustering
+#include "DataFormats/TrackerRecHit2D/interface/SiPixelRecHitCollection.h"
+#include "Geometry/TrackerGeometryBuilder/interface/PixelGeomDetUnit.h"
+
+// associator
+#include "SimTracker/Records/interface/TrackAssociatorRecord.h"
 
 // fit
 #include "RecoVertex/KalmanVertexFit/interface/KalmanVertexFitter.h"
@@ -40,10 +49,7 @@
 
 #include "CommonTools/Statistics/interface/ChiSquaredProbability.h"
 
-#include "SimDataFormats/PileupSummaryInfo/interface/PileupSummaryInfo.h"
-
-// Root
-#include <TH1.h>
+// ROOT
 #include <TH2.h>
 #include <TFile.h>
 #include <TProfile.h>
@@ -51,13 +57,6 @@
 #include <cmath>
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_eigen.h>
-
-
-// cluster stufff
-//#include "DataFormats/TrackRecoTrack.h"
-#include "DataFormats/TrackerRecHit2D/interface/SiPixelRecHitCollection.h"
-#include "Geometry/TrackerGeometryBuilder/interface/PixelGeomDetUnit.h"
-
 
 using namespace edm;
 using namespace reco;
@@ -73,33 +72,56 @@ typedef reco::Vertex::trackRef_iterator trackit_t;
 //
 // constructors and destructor
 //
-PrimaryVertexAnalyzer4PU::PrimaryVertexAnalyzer4PU(const ParameterSet& iConfig) :
-  theTrackFilter(iConfig.getParameter<edm::ParameterSet>("TkFilterParameters")),
-  beamSpot_(iConfig.getParameter<edm::InputTag>("beamSpot"))
+PrimaryVertexAnalyzer4PU::PrimaryVertexAnalyzer4PU(const ParameterSet& iConfig)
+  : verbose_( iConfig.getUntrackedParameter<bool>( "verbose", false ) )
+  , doMatching_( iConfig.getUntrackedParameter<bool>( "matching", false ) )
+  , printXBS_( iConfig.getUntrackedParameter<bool>( "XBS", false ) )
+  , dumpThisEvent_( false )
+  , dumpPUcandidates_( iConfig.getUntrackedParameter<bool>( "dumpPUcandidates", false ) )
+  , DEBUG_( false )
+  , eventcounter_( 0 )
+  , dumpcounter_( 0 )
+  , ndump_( 10 )
+  , run_( 0 )
+  , luminosityBlock_( 0 )
+  , event_( 0 )
+  , bunchCrossing_( 0 )
+  , orbitNumber_( 0 )
+  , fBfield_( 0. )
+  , simUnit_( 1.0 )  // starting with CMSSW_1_2_x ??
+  , zmatch_( iConfig.getUntrackedParameter<double>( "zmatch", 0.0500 ) )
+  , wxy2_( 0. )
+  , theTrackFilter( iConfig.getParameter<edm::ParameterSet>( "TkFilterParameters" ) )
+  , recoTrackProducer_( iConfig.getUntrackedParameter<std::string>("recoTrackProducer") )
+  , outputFile_( iConfig.getUntrackedParameter<std::string>( "outputFile" ) )
+  , vecPileupSummaryInfoToken_( consumes< std::vector<PileupSummaryInfo> >( edm::InputTag( std::string( "addPileupInfo" ) ) ) )
+  , recoVertexCollectionToken_( consumes<reco::VertexCollection>( edm::InputTag( std::string( "offlinePrimaryVertices" ) ) ) )
+  , recoVertexCollection_BS_Token_( consumes<reco::VertexCollection>( edm::InputTag( std::string( "offlinePrimaryVerticesWithBS" ) ) ) )
+  , recoVertexCollection_DA_Token_( consumes<reco::VertexCollection>( edm::InputTag( std::string( "offlinePrimaryVerticesDA" ) ) ) )
+  , recoTrackCollectionToken_( consumes<reco::TrackCollection>( edm::InputTag( iConfig.getUntrackedParameter<std::string>( "recoTrackProducer" ) ) ) )
+  , recoBeamSpotToken_( consumes<reco::BeamSpot>( iConfig.getParameter<edm::InputTag>( "beamSpot" ) ) )
+  , edmView_recoTrack_Token_( consumes< edm::View<reco::Track> >( edm::InputTag( iConfig.getUntrackedParameter<std::string>( "recoTrackProducer" ) ) ) )
+  , edmSimVertexContainerToken_( consumes<edm::SimVertexContainer>( iConfig.getParameter<edm::InputTag>( "simG4" ) ) )
+  , edmSimTrackContainerToken_( consumes<edm::SimTrackContainer>( iConfig.getParameter<edm::InputTag>( "simG4" ) ) )
+  , trackingParticleCollectionToken_( consumes<TrackingParticleCollection>( edm::InputTag( std::string( "mix" )
+											 , std::string( "MergedTrackTruth" ) 
+											   ) 
+									    ) 
+				      )
+  , trackingVertexCollectionToken_( consumes<TrackingVertexCollection>( edm::InputTag( std::string( "mix" )
+										     , std::string( "MergedTrackTruth" ) 
+										       ) 
+									) 
+				    )
+  , edmHepMCProductToken_( consumes<edm::HepMCProduct>( edm::InputTag( std::string( "generator" ) ) ) ) // starting with 3_1_0 pre something
 {
    //now do what ever initialization is needed
-  simG4_=iConfig.getParameter<edm::InputTag>( "simG4" );
-  recoTrackProducer_= iConfig.getUntrackedParameter<std::string>("recoTrackProducer");
   // open output file to store histograms}
-  outputFile_  = iConfig.getUntrackedParameter<std::string>("outputFile");
-
   rootFile_ = TFile::Open(outputFile_.c_str(),"RECREATE");
-  verbose_= iConfig.getUntrackedParameter<bool>("verbose", false);
-  doMatching_= iConfig.getUntrackedParameter<bool>("matching", false);
-  printXBS_= iConfig.getUntrackedParameter<bool>("XBS", false);
-  simUnit_= 1.0;  // starting with CMSSW_1_2_x ??
   if ( (edm::getReleaseVersion()).find("CMSSW_1_1_",0)!=std::string::npos){
     simUnit_=0.1;  // for use in  CMSSW_1_1_1 tutorial
   }
-  
-  dumpPUcandidates_=iConfig.getUntrackedParameter<bool>("dumpPUcandidates", false);
-
-  zmatch_=iConfig.getUntrackedParameter<double>("zmatch", 0.0500);
   cout << "PrimaryVertexAnalyzer4PU: zmatch=" << zmatch_ << endl;
-  eventcounter_=0;
-  dumpcounter_=0;
-  ndump_=10;
-  DEBUG_=false;
   //DEBUG_=true;
 }
 
@@ -840,39 +862,55 @@ std::vector<PrimaryVertexAnalyzer4PU::SimPart> PrimaryVertexAnalyzer4PU::getSimT
    return tsim;
 }
 
+namespace {
+  struct Array2D {
+    Array2D(size_t iN, size_t iM):
+      m_step(iM),m_array(new double[iN*iM]) {}
 
-int*  PrimaryVertexAnalyzer4PU::supf(std::vector<SimPart>& simtrks, const reco::TrackCollection & trks){
-  int nsim=simtrks.size();
-  int nrec=trks.size();
-  int *rectosim=new int[nrec]; // pointer to associated simtrk
-  double** pij=new double*[nrec];
+    double& operator()(size_t iN, size_t iM) {
+      return m_array[iN*m_step+iM];
+    }
+
+    double operator()(size_t iN, size_t iM) const {
+      return m_array[iN*m_step+iM];
+    }
+
+    size_t m_step;
+    std::unique_ptr<double[]> m_array;
+  };
+}
+
+std::vector<int>  PrimaryVertexAnalyzer4PU::supf(std::vector<SimPart>& simtrks, const reco::TrackCollection & trks){
+  const unsigned int nsim=simtrks.size();
+  const unsigned int nrec=trks.size();
+  std::vector<int> rectosim(nrec); // pointer to associated simtrk
+  Array2D pij(nrec,nsim);
   double mu=100.; // initial chi^2 cut-off  (5 dofs !)
   int nmatch=0;
   int i=0;
   for(reco::TrackCollection::const_iterator t=trks.begin(); t!=trks.end(); ++t){
-    pij[i]=new double[nsim];
     rectosim[i]=-1;
     ParameterVector  par = t->parameters();
     //reco::TrackBase::CovarianceMatrix V = t->covariance();
     reco::TrackBase::CovarianceMatrix S = t->covariance();
     S.Invert();
-    for(int j=0; j<nsim; j++){
+    for(unsigned int j=0; j<nsim; j++){
       simtrks[j].rec=-1;
       SimPart s=simtrks[j];
       double c=0;
-      for(int k=0; k<5; k++){
-        for(int l=0; l<5; l++){
+      for(unsigned int k=0; k<5; k++){
+        for(unsigned int l=0; l<5; l++){
           c+=(par(k)-s.par[k])*(par(l)-s.par[l])*S(k,l);
         }
       }
-      pij[i][j]=exp(-0.5*c);
+      pij(i,j)=exp(-0.5*c);
 
 //       double c0=pow((par[0]-s.par[0])/t->qoverpError(),2)*0.1
 // 	+pow((par[1]-s.par[1])/t->lambdaError(),2)
 // 	+pow((par[2]-s.par[2])/t->phiError(),2)
 // 	+pow((par[3]-s.par[3])/t->dxyError(),2)*0.1;
 //         +pow((par[4]-s.par[4])/t->dszError(),2)*0.1;
-//       pij[i][j]=exp(-0.5*c0);
+//       pij(i,j)=exp(-0.5*c0);
 
 //       if( c0 <100 ){
 //       cout << setw(3) << i << " rec " << setw(6) << par << endl;
@@ -898,18 +936,18 @@ int*  PrimaryVertexAnalyzer4PU::supf(std::vector<SimPart>& simtrks, const reco::
     i++;
   }
 
-  for(int k=0; k<nrec; k++){
+  for(unsigned int k=0; k<nrec; k++){
     int imatch=-1; int jmatch=-1;
     double pmatch=0;
-    for(int j=0; j<nsim; j++){
+    for(unsigned int j=0; j<nsim; j++){
       if ((simtrks[j].rec)<0){
         double psum=exp(-0.5*mu); //cutoff
-        for(int i=0; i<nrec; i++){
-          if (rectosim[i]<0){ psum+=pij[i][j];}
+        for(unsigned int i=0; i<nrec; i++){
+          if (rectosim[i]<0){ psum+=pij(i,j);}
         }
-        for(int i=0; i<nrec; i++){
-          if ((rectosim[i]<0)&&(pij[i][j]/psum>pmatch)){
-            pmatch=pij[i][j]/psum;
+        for(unsigned int i=0; i<nrec; i++){
+          if ((rectosim[i]<0)&&(pij(i,j)/psum>pmatch)){
+            pmatch=pij(i,j)/psum;
             imatch=i; jmatch=j;
           }
         }
@@ -944,7 +982,7 @@ int*  PrimaryVertexAnalyzer4PU::supf(std::vector<SimPart>& simtrks, const reco::
 //   }
 
    std::cout << "unmatched sim " << std::endl;
-   for(int j=0; j<nsim; j++){
+   for(unsigned int j=0; j<nsim; j++){
      if(simtrks[j].rec<0){
        double pt= 1./simtrks[j].par[0]/tan(simtrks[j].par[1]);
        if((fabs(pt))>1.){
@@ -959,10 +997,7 @@ int*  PrimaryVertexAnalyzer4PU::supf(std::vector<SimPart>& simtrks, const reco::
    }
 //   std::cout << "<<<<<<<<<<<<<<<--------------supf----------------------" << std::endl;
 
-  //delete rectosim; // or return it?
-  for(int i=0; i<nrec; i++){delete pij[i];}
-  delete pij;
-  return rectosim;  // caller must delete it
+  return rectosim;
 }
 
 
@@ -1076,13 +1111,13 @@ void PrimaryVertexAnalyzer4PU::fillTrackHistos(std::map<std::string, TH1*> & h, 
     //
     
     // collect some info on hits and clusters
-    Fill(h,"nbarrelLayers_"+ttype,t.hitPattern().pixelBarrelLayersWithMeasurement());
-    Fill(h,"nPxLayers_"+ttype,t.hitPattern().pixelLayersWithMeasurement());
-    Fill(h,"nSiLayers_"+ttype,t.hitPattern().trackerLayersWithMeasurement());
-    Fill(h,"expectedInner_"+ttype,t.trackerExpectedHitsInner().numberOfHits());
-    Fill(h,"expectedOuter_"+ttype,t.trackerExpectedHitsOuter().numberOfHits());
-    Fill(h,"trackAlgo_"+ttype,t.algo());
-    Fill(h,"trackQuality_"+ttype,t.qualityMask());
+    Fill(h, "nbarrelLayers_" + ttype, t.hitPattern().pixelBarrelLayersWithMeasurement());
+    Fill(h, "nPxLayers_" + ttype, t.hitPattern().pixelLayersWithMeasurement());
+    Fill(h, "nSiLayers_" + ttype ,t.hitPattern().trackerLayersWithMeasurement());
+    Fill(h, "expectedInner_" + ttype, t.hitPattern().numberOfHits(HitPattern::MISSING_INNER_HITS));
+    Fill(h, "expectedOuter_" + ttype, t.hitPattern().numberOfHits(HitPattern::MISSING_OUTER_HITS));
+    Fill(h, "trackAlgo_" + ttype, t.algo());
+    Fill(h, "trackQuality_" + ttype, t.qualityMask());
 
     //
     int longesthit=0, nbarrel=0;
@@ -1231,17 +1266,31 @@ void PrimaryVertexAnalyzer4PU::printRecTrks(const Handle<reco::TrackCollection> 
 
 
     cout << Form(" found=%6d  lost=%6d   chi2/ndof=%10.3f ",t->found(), t->lost(),t->normalizedChi2())<<endl;
-    const reco::HitPattern & p= t->hitPattern();
+    const reco::HitPattern &p = t->hitPattern();
+
     cout << "subdet layers valid lost" << endl;
-    cout << Form(" barrel  %2d  %2d  %2d",p.pixelBarrelLayersWithMeasurement(),p.numberOfValidPixelBarrelHits(), p.numberOfLostPixelBarrelHits()) << endl;
-    cout << Form(" fwd     %2d  %2d  %2d",p.pixelEndcapLayersWithMeasurement(),p.numberOfValidPixelEndcapHits(), p.numberOfLostPixelEndcapHits()) << endl;
-    cout << Form(" pixel   %2d  %2d  %2d",p.pixelLayersWithMeasurement(), p.numberOfValidPixelHits(), p.numberOfLostPixelHits()) << endl;
-    cout << Form(" tracker %2d  %2d  %2d",p.trackerLayersWithMeasurement(), p.numberOfValidTrackerHits(), p.numberOfLostTrackerHits()) << endl;
+    cout << Form(" barrel  %2d  %2d  %2d",
+            p.pixelBarrelLayersWithMeasurement(),
+            p.numberOfValidPixelBarrelHits(),
+            p.numberOfLostPixelBarrelHits(HitPattern::TRACK_HITS))
+        << endl;
+
+    cout << Form(" fwd     %2d  %2d  %2d", 
+            p.pixelEndcapLayersWithMeasurement(),
+            p.numberOfValidPixelEndcapHits(),
+            p.numberOfLostPixelEndcapHits(HitPattern::TRACK_HITS))
+        << endl;
+    cout << Form(" pixel   %2d  %2d  %2d",
+            p.pixelLayersWithMeasurement(),
+            p.numberOfValidPixelHits(),
+            p.numberOfLostPixelHits(HitPattern::TRACK_HITS))
+        << endl;
+    cout << Form(" tracker %2d  %2d  %2d",
+            p.trackerLayersWithMeasurement(),
+            p.numberOfValidTrackerHits(),
+            p.numberOfLostTrackerHits(HitPattern::TRACK_HITS))
+        << endl;
     cout << endl;
-    const reco::HitPattern & pinner= t->trackerExpectedHitsInner();
-    const reco::HitPattern & pouter= t->trackerExpectedHitsOuter();
-    int ninner=pinner.numberOfHits();
-    int nouter=pouter.numberOfHits();
 
     //    double d0Error=t.d0Error();
     //    double d0=t.dxy(myBeamSpot);
@@ -1266,12 +1315,22 @@ void PrimaryVertexAnalyzer4PU::printRecTrks(const Handle<reco::TrackCollection> 
        }
       }
     }
+
     cout << "hitpattern" << endl;
-    for(int i=0; i<p.numberOfHits(); i++){      p.printHitPattern(i,std::cout);    }
-    cout << "expected inner " << ninner << endl;
-    for(int i=0; i<pinner.numberOfHits(); i++){      pinner.printHitPattern(i,std::cout);    }
-    cout << "expected outer " << nouter << endl;
-    for(int i=0; i<pouter.numberOfHits(); i++){      pouter.printHitPattern(i,std::cout);    }
+    for(int i = 0; i < p.numberOfHits(HitPattern::TRACK_HITS); i++){
+        p.printHitPattern(HitPattern::TRACK_HITS, i, std::cout);
+    }
+    
+    cout << "expected inner " << p.numberOfHits(HitPattern::MISSING_INNER_HITS) << endl;
+    for(int i = 0; i < p.numberOfHits(HitPattern::MISSING_INNER_HITS); i++){
+        p.printHitPattern(HitPattern::MISSING_INNER_HITS, i, std::cout);
+    }
+
+    cout << "expected outer " << p.numberOfHits(HitPattern::MISSING_OUTER_HITS) << endl;
+    for(int i = 0; i < p.numberOfHits(HitPattern::MISSING_OUTER_HITS); i++){
+        p.printHitPattern(HitPattern::MISSING_OUTER_HITS, i, std::cout);
+    }
+
   }
 }
 
@@ -1307,7 +1366,7 @@ void PrimaryVertexAnalyzer4PU::printPVTrks(const Handle<reco::TrackCollection> &
   reco::TrackCollection selRecTrks;
 
   for(unsigned int i=0; i<selTrks.size(); i++){ selRecTrks.push_back(selTrks[i].track());} 
-  int* rectosim=supf(tsim, selRecTrks);
+  std::vector<int> rectosim=supf(tsim, selRecTrks);
 
 
 
@@ -1365,11 +1424,12 @@ void PrimaryVertexAnalyzer4PU::printPVTrks(const Handle<reco::TrackCollection> &
 
     // track quality and hit information, see DataFormats/TrackReco/interface/HitPattern.h
     if(selTrks[i].track().quality(reco::TrackBase::highPurity)){ cout << " *";}else{cout <<"  ";}
-    if(selTrks[i].track().hitPattern().hasValidHitInFirstPixelBarrel()){cout <<"+";}else{cout << "-";}
+    if(selTrks[i].track().hitPattern().hasValidHitInFirstPixelBarrel()){ cout << "+"; } else { cout << "-"; }
     cout << setw(1) << selTrks[i].track().hitPattern().pixelBarrelLayersWithMeasurement();
     cout << setw(1) << selTrks[i].track().hitPattern().pixelEndcapLayersWithMeasurement(); 
-    cout << setw(1) << hex << selTrks[i].track().hitPattern().trackerLayersWithMeasurement()-selTrks[i].track().hitPattern().pixelLayersWithMeasurement()<<dec;
-    cout << "-" << setw(1)<<hex <<selTrks[i].track().trackerExpectedHitsOuter().numberOfHits() << dec;
+    cout << setw(1) << hex << selTrks[i].track().hitPattern().trackerLayersWithMeasurement()
+        - selTrks[i].track().hitPattern().pixelLayersWithMeasurement() << dec;
+    cout << "-" << setw(1) << hex << selTrks[i].track().hitPattern().numberOfHits(HitPattern::MISSING_OUTER_HITS) << dec;
 
     
     Measurement1D IP=selTrks[i].stateAtBeamLine().transverseImpactParameter();
@@ -1418,7 +1478,6 @@ void PrimaryVertexAnalyzer4PU::printPVTrks(const Handle<reco::TrackCollection> &
     }
     cout << endl;
   }
-  delete rectosim;
 }
 
 
@@ -1994,7 +2053,6 @@ PrimaryVertexAnalyzer4PU::analyze(const Event& iEvent, const EventSetup& iSetup)
   std::vector<simPrimaryVertex> simpv;  //  a list of primary MC vertices
   std::vector<float> pui_z;
   std::vector<SimPart> tsim;
-  std::string mcproduct="generator";  // starting with 3_1_0 pre something
 
   eventcounter_++;
   run_             = iEvent.id().run();
@@ -2003,7 +2061,6 @@ PrimaryVertexAnalyzer4PU::analyze(const Event& iEvent, const EventSetup& iSetup)
   bunchCrossing_   = iEvent.bunchCrossing();
   orbitNumber_     = iEvent.orbitNumber();
 
-  dumpThisEvent_ = false;
 
 
 
@@ -2027,7 +2084,7 @@ PrimaryVertexAnalyzer4PU::analyze(const Event& iEvent, const EventSetup& iSetup)
     
     //get the pileup information  
     Handle< vector<PileupSummaryInfo> > puinfoH;
-    iEvent.getByLabel("addPileupInfo",puinfoH);
+    iEvent.getByToken( vecPileupSummaryInfoToken_, puinfoH );
     PileupSummaryInfo puinfo; 
   
     for (unsigned int puinfo_ite=0;puinfo_ite<(*puinfoH).size();++puinfo_ite){ 
@@ -2046,24 +2103,16 @@ PrimaryVertexAnalyzer4PU::analyze(const Event& iEvent, const EventSetup& iSetup)
   }
 
   Handle<reco::VertexCollection> recVtxs;
-  bool bnoBS=iEvent.getByLabel("offlinePrimaryVertices", recVtxs);
+  bool bnoBS = iEvent.getByToken( recoVertexCollectionToken_, recVtxs );
   
   Handle<reco::VertexCollection> recVtxsBS;
-  bool bBS=iEvent.getByLabel("offlinePrimaryVerticesWithBS", recVtxsBS);
+  bool bBS = iEvent.getByToken( recoVertexCollection_BS_Token_, recVtxsBS );
   
   Handle<reco::VertexCollection> recVtxsDA;
-  bool bDA=iEvent.getByLabel("offlinePrimaryVerticesDA", recVtxsDA);
-
-//   Handle<reco::VertexCollection> recVtxsPIX;
-//   bool bPIX=iEvent.getByLabel("pixelVertices", recVtxsPIX);
-//   bPIX=false;
-
-//   Handle<reco::VertexCollection> recVtxsMVF;
-//   bool bMVF=iEvent.getByLabel("offlinePrimaryVerticesMVF", recVtxsMVF);
+  bool bDA = iEvent.getByToken( recoVertexCollection_DA_Token_, recVtxsDA );
 
   Handle<reco::TrackCollection> recTrks;
-  iEvent.getByLabel(recoTrackProducer_, recTrks);
-
+  iEvent.getByToken( recoTrackCollectionToken_, recTrks );
 
   int nhighpurity=0, ntot=0;
   for(reco::TrackCollection::const_iterator t=recTrks->begin(); t!=recTrks->end(); ++t){  
@@ -2080,7 +2129,7 @@ PrimaryVertexAnalyzer4PU::analyze(const Event& iEvent, const EventSetup& iSetup)
 
   
 
-  if(iEvent.getByLabel(beamSpot_, recoBeamSpotHandle_)){
+  if(iEvent.getByToken(recoBeamSpotToken_, recoBeamSpotHandle_)){
     vertexBeamSpot_= *recoBeamSpotHandle_;
     wxy2_=pow(vertexBeamSpot_.BeamWidthX(),2)+pow(vertexBeamSpot_.BeamWidthY(),2);
     Fill(hsimPV, "xbeam",vertexBeamSpot_.x0()); Fill(hsimPV, "wxbeam",vertexBeamSpot_.BeamWidthX());
@@ -2098,7 +2147,7 @@ PrimaryVertexAnalyzer4PU::analyze(const Event& iEvent, const EventSetup& iSetup)
       Fill(hnoBS,"yrecBeamvsdyXBS",recVtxs->begin()->yError(),recVtxs->begin()->y()-vertexBeamSpot_.y0());
 
       if(printXBS_) {
-	cout << Form("XBS %10d %5d %10d  %4d   %lu %5.2f    %8f %8f       %8f %8f      %8f %8f",
+	cout << Form("XBS %10d %5d %14llu  %4d   %lu %5.2f    %8f %8f       %8f %8f      %8f %8f",
 		      run_,luminosityBlock_,event_,bunchCrossing_,
 		      (unsigned long)(recVtxs->begin()->tracksSize()), recVtxs->begin()->ndof(),
 		      recVtxs->begin()->x(), 		   recVtxs->begin()->xError(), 
@@ -2113,25 +2162,23 @@ PrimaryVertexAnalyzer4PU::analyze(const Event& iEvent, const EventSetup& iSetup)
  
   // for the associator
   Handle<View<Track> > trackCollectionH;
-  iEvent.getByLabel(recoTrackProducer_,trackCollectionH);
+  iEvent.getByToken( edmView_recoTrack_Token_, trackCollectionH );
 
   Handle<HepMCProduct> evtMC;
 
   Handle<SimVertexContainer> simVtxs;
-  iEvent.getByLabel( simG4_, simVtxs);
+  iEvent.getByToken( edmSimVertexContainerToken_, simVtxs );
   
   Handle<SimTrackContainer> simTrks;
-  iEvent.getByLabel( simG4_, simTrks);
-
+  iEvent.getByToken( edmSimTrackContainerToken_, simTrks );
 
 
 
 
   edm::Handle<TrackingParticleCollection>  TPCollectionH ;
   edm::Handle<TrackingVertexCollection>    TVCollectionH ;
-  bool gotTP=iEvent.getByLabel("mix","MergedTrackTruth",TPCollectionH);
-  bool gotTV=iEvent.getByLabel("mix","MergedTrackTruth",TVCollectionH);
-
+  bool gotTP = iEvent.getByToken( trackingParticleCollectionToken_, TPCollectionH );
+  bool gotTV = iEvent.getByToken( trackingVertexCollectionToken_, TVCollectionH );
 
   iSetup.get<TransientTrackRecord>().get("TransientTrackBuilder",theB_);
   fBfield_=((*theB_).field()->inTesla(GlobalPoint(0.,0.,0.))).z();
@@ -2163,7 +2210,7 @@ PrimaryVertexAnalyzer4PU::analyze(const Event& iEvent, const EventSetup& iSetup)
       for(TrackingVertexCollection::const_iterator iv=tpVtxs->begin(); iv!=tpVtxs->end(); iv++){
 	cout << *iv << endl;
       }
-      if(iEvent.getByLabel(mcproduct,evtMC)){
+      if( iEvent.getByToken( edmHepMCProductToken_, evtMC ) ){
 	cout << "dumping simTracks" << endl;
 	for(SimTrackContainer::const_iterator t=simTrks->begin();  t!=simTrks->end(); ++t){
 	  cout << *t << endl;
@@ -2205,7 +2252,7 @@ PrimaryVertexAnalyzer4PU::analyze(const Event& iEvent, const EventSetup& iSetup)
     simpv=getSimPVs(TVCollectionH);
     
 
-  }else if(iEvent.getByLabel(mcproduct,evtMC)){
+  }else if( iEvent.getByToken( edmHepMCProductToken_, evtMC ) ) {
 
     simpv=getSimPVs(evtMC);
 
@@ -3299,7 +3346,7 @@ void PrimaryVertexAnalyzer4PU::analyzeVertexCollection(std::map<std::string, TH1
     Fill(h,"eff0vsntrec",nrectrks,0.);
     Fill(h,"eff0vsntsel",nseltrks,0.);
     if((nseltrks>1)&&(verbose_)){
-      cout << Form("PrimaryVertexAnalyzer4PU: %s may have lost a vertex  %10d  %10d     %4d / %4d ",message.c_str(),run_, event_, nrectrks,nseltrks) << endl;
+      cout << Form("PrimaryVertexAnalyzer4PU: %s may have lost a vertex  %10d  %14llu     %4d / %4d ",message.c_str(),run_, event_, nrectrks,nseltrks) << endl;
       dumpThisEvent_=true;
     }
   }

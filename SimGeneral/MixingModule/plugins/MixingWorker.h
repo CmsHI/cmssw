@@ -27,6 +27,7 @@
 #include "SimDataFormats/TrackingHit/interface/PSimHitContainer.h"
 #include "FWCore/Utilities/interface/InputTag.h" 
 
+#include <memory>
 #include <vector>
 #include <string>
 #include <typeinfo>
@@ -117,8 +118,7 @@ namespace edm
         }
       }
 
-
-      virtual void addPileups(const int bcr, const EventPrincipal &ep, ModuleCallingContext const*, unsigned int eventNr,int vertexoffset);
+      virtual void addPileups(const EventPrincipal &ep, ModuleCallingContext const*, unsigned int eventNr);
 
       virtual void setBcrOffset() {crFrame_->setBcrOffset();}
       virtual void setSourceOffset(const unsigned int s) {crFrame_->setSourceOffset(s);}
@@ -151,27 +151,19 @@ namespace edm
       PCrossingFrame<T> * secSourceCF_;
     };
 
+  template <typename T>
+  void  MixingWorker<T>::addPileups(const EventPrincipal &ep, ModuleCallingContext const* mcc, unsigned int eventNr) {
+    std::shared_ptr<Wrapper<std::vector<T> > const> shPtr = getProductByTag<std::vector<T> >(ep, tag_, mcc);
+    if (shPtr) {
+      LogDebug("MixingModule") << shPtr->product()->size() << "  pileup objects  added, eventNr " << eventNr;
+      crFrame_->setPileupPtr(shPtr);
+      crFrame_->addPileups(*shPtr->product());
+    }
+  }
 //=============== template specializations ====================================================================================
-    
-template <>
-    void MixingWorker<PCaloHit>::addPileups(const int bcr, const EventPrincipal &ep, ModuleCallingContext const*,
-                                            unsigned int eventNr,int vertexoffset);
 
 template <>
-    void MixingWorker<PSimHit>::addPileups(const int bcr, const EventPrincipal &ep, ModuleCallingContext const*,
-                                           unsigned int eventNr,int vertexoffset);
-
-template <>
-    void MixingWorker<SimTrack>::addPileups(const int bcr, const EventPrincipal &ep, ModuleCallingContext const*,
-                                            unsigned int eventNr,int vertexoffset);
-
-template <>
-    void MixingWorker<SimVertex>::addPileups(const int bcr, const EventPrincipal& ep, ModuleCallingContext const*,
-                                             unsigned int eventNr,int vertexoffset);
-
-template <>
-    void MixingWorker<HepMCProduct>::addPileups(const int bcr, const EventPrincipal &ep, ModuleCallingContext const*,
-                                                unsigned int eventNr,int vertexoffset);
+    void MixingWorker<HepMCProduct>::addPileups(const EventPrincipal &ep, ModuleCallingContext const*, unsigned int eventNr);
 
 template <class T>
     void MixingWorker<T>::setTof() {;}

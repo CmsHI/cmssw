@@ -2,7 +2,7 @@
 <library   file="DummyData.cc,DummyRecord.cc,DepRecord.cc,Dummy2Record.cc,DepOn2Record.cc" name="FWCoreFrameworkTestDummyForEventSetup">
   <use   name="FWCore/Framework"/>
 </library>
-<library   file="MockEventProcessor.cc" name="FWCoreFrameworkTest">
+<library   file="MockEventProcessor.cc,stubs/TestBeginEndJobAnalyzer.cc" name="FWCoreFrameworkTest">
   <use   name="FWCore/Framework"/>
 </library>
 <library   file="stubs/TestOutputModule.cc" name="TestOutputModule">
@@ -67,6 +67,21 @@
   <use   name="FWCore/Framework"/>
   <use   name="FWCore/ParameterSet"/>
 </library>
+<library   file="stubs/TestGlobalProducers.cc,stubs/TestGlobalAnalyzers.cc,stubs/TestGlobalFilters.cc" name="TestGlobalModules">
+  <flags   EDM_PLUGIN="1"/>
+  <use   name="FWCore/Framework"/>
+  <use   name="FWCore/ParameterSet"/>
+</library>
+<library   file="stubs/TestOneProducers.cc,stubs/TestOneAnalyzers.cc,stubs/TestOneFilters.cc" name="TestOneModules">
+  <flags   EDM_PLUGIN="1"/>
+  <use   name="FWCore/Framework"/>
+  <use   name="FWCore/ParameterSet"/>
+</library>
+<library   file="stubs/TestStreamProducers.cc,stubs/TestStreamFilters.cc,stubs/TestStreamAnalyzers.cc" name="TestStreamModules">
+  <flags   EDM_PLUGIN="1"/>
+  <use   name="FWCore/Framework"/>
+  <use   name="FWCore/ParameterSet"/>
+</library>
 <library   file="stubs/TestSchedulerModule1.cc" name="TestSchedulerModule1">
   <flags   EDM_PLUGIN="1"/>
   <use   name="FWCore/Framework"/>
@@ -116,8 +131,9 @@
   <use   name="FWCore/Framework"/>
   <use   name="cppunit"/>
 </library>
-<library   file="stubs/TestBeginEndJobAnalyzer.cc,stubs/TestBeginEndJobAnalyzerModule.cc" name="FWCoreFrameworkTestBeginEndJobAnalyzer">
+<library   file="stubs/TestBeginEndJobAnalyzerModule.cc" name="FWCoreFrameworkTestBeginEndJobAnalyzer">
   <flags   EDM_PLUGIN="1"/>
+  <lib   name="FWCoreFrameworkTest"/>
   <use   name="FWCore/Framework"/>
 </library>
 <library   file="stubs/TestFailuresAnalyzer.cc" name="FWCoreFrameworkTestFailuresAnalyzer">
@@ -136,6 +152,7 @@
   <use   name="DataFormats/Common"/>
   <use   name="DataFormats/Provenance"/>
   <use   name="DataFormats/TestObjects"/>
+  <use   name="DataFormats/WrappedStdDictionaries"/>
   <use   name="FWCore/Framework"/>
   <use   name="FWCore/ParameterSet"/>
   <use   name="FWCore/RootAutoLibraryLoader"/>
@@ -153,14 +170,16 @@
   <use   name="cppunit"/>
 </bin>
 <bin   name="TestFWCoreFrameworkeventprocessor" file="testRunner.cpp,eventprocessor2_t.cppunit.cc,eventprocessor_t.cppunit.cc">
+  <lib   name="FWCoreFrameworkTest"/>
   <use   name="DataFormats/Provenance"/>
+  <use   name="DataFormats/WrappedStdDictionaries"/>
   <use   name="FWCore/Framework"/>
   <use   name="FWCore/RootAutoLibraryLoader"/>
   <use   name="FWCore/ServiceRegistry"/>
   <use   name="FWCore/Utilities"/>
   <use   name="cppunit"/>
 </bin>
-<bin   name="TestFWCoreFrameworkeventprincipal" file="testRunner.cpp,eventprincipal_t.cppunit.cc">
+<bin   name="TestFWCoreFrameworkeventprincipal" file="testRunner.cpp,eventprincipal_t.cppunit.cc,sharedresourcesregistry_t.cppunit.cc">
   <use   name="DataFormats/Common"/>
   <use   name="DataFormats/Provenance"/>
   <use   name="DataFormats/TestObjects"/>
@@ -198,6 +217,11 @@
 </bin>
 <bin   name="TestFWCoreFrameworkUnscheduled" file="TestDriver.cpp">
   <flags   TEST_RUNNER_ARGS=" /bin/bash FWCore/Framework/test run_unscheduled.sh"/>
+  <use   name="FWCore/Utilities"/>
+</bin>
+<bin   name="TestFWCoreFrameworkGlobalStreamOne" file="TestDriver.cpp">
+  <flags   TEST_RUNNER_ARGS=" /bin/bash FWCore/Framework/test run_global_stream_one.sh"/>
+  <use   name="DataFormats/WrappedStdDictionaries"/>
   <use   name="FWCore/Utilities"/>
 </bin>
 <bin   name="TestFWCoreFrameworkReplace" file="TestDriver.cpp">
@@ -278,4 +302,8 @@
 <bin   name="TestFWCoreFrameworkDeleteEarly" file="TestDriver.cpp">
   <flags   TEST_RUNNER_ARGS=" /bin/bash FWCore/Framework/test test_deleteEarly.sh"/>
   <use   name="FWCore/Utilities"/>
+</bin>
+<bin   name="TestFWCoreFrameworkEarlyTerminationSignal" file="TestDriver.cpp">
+  <flags TEST_RUNNER_ARGS=" /bin/bash FWCore/Framework/test test_earlyTerminationSignal.sh"/>
+  <use name="FWCore/Utilities"/>
 </bin>

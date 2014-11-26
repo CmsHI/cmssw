@@ -21,17 +21,25 @@ output stream.
 #include "FWCore/Framework/interface/ProductSelector.h"
 #include "FWCore/Framework/interface/EDConsumerBase.h"
 #include "FWCore/Framework/interface/getAllTriggerNames.h"
+#include "FWCore/Framework/interface/SharedResourcesAcquirer.h"
+
 #include "FWCore/ParameterSet/interface/ParameterSetfwd.h"
 
 #include <array>
+#include <memory>
 #include <string>
 #include <vector>
 #include <map>
+#include <atomic>
+#include <mutex>
 
 namespace edm {
 
   class ModuleCallingContext;
   class PreallocationConfiguration;
+  class ActivityRegistry;
+  class ProductRegistry;
+  class ThinnedAssociationsHelper;
 
   namespace maker {
     template<typename T> class ModuleHolderT;
@@ -62,7 +70,7 @@ namespace edm {
 
     bool selected(BranchDescription const& desc) const;
 
-    void selectProducts(ProductRegistry const& preg);
+    void selectProducts(ProductRegistry const& preg, ThinnedAssociationsHelper const&);
     std::string const& processName() const {return process_name_;}
     SelectedProductsForBranchType const& keptProducts() const {return keptProducts_;}
     std::array<bool, NumBranchTypes> const& hasNewlyDroppedBranch() const {return hasNewlyDroppedBranch_;}
@@ -77,6 +85,8 @@ namespace edm {
     bool wantAllEvents() const {return wantAllEvents_;}
 
     BranchIDLists const* branchIDLists() const;
+
+    ThinnedAssociationsHelper const* thinnedAssociationsHelper() const;
 
   protected:
 
@@ -97,6 +107,7 @@ namespace edm {
     void doBeginJob();
     void doEndJob();
     bool doEvent(EventPrincipal const& ep, EventSetup const& c,
+                 ActivityRegistry* act,
                  ModuleCallingContext const* mcc);
     bool doBeginRun(RunPrincipal const& rp, EventSetup const& c,
                     ModuleCallingContext const* mcc);
@@ -116,14 +127,10 @@ namespace edm {
       return droppedBranchIDToKeptBranchID_;
     }
 
-    std::map<BranchID::value_type, BranchID::value_type> const& keptBranchIDToDroppedBranchID() {
-      return keptBranchIDToDroppedBranchID_;
-    }
-
   private:
 
     int maxEvents_;
-    int remainingEvents_;
+    std::atomic<int> remainingEvents_;
 
     // TODO: Give OutputModule
     // an interface (protected?) that supplies client code with the
@@ -157,14 +164,19 @@ namespace edm {
     // needed because of possible EDAliases.
     // filled in only if key and value are different.
     std::map<BranchID::value_type, BranchID::value_type> droppedBranchIDToKeptBranchID_;
-    std::map<BranchID::value_type, BranchID::value_type> keptBranchIDToDroppedBranchID_;
     std::unique_ptr<BranchIDLists> branchIDLists_;
     BranchIDLists const* origBranchIDLists_;
+
+    std::unique_ptr<ThinnedAssociationsHelper> thinnedAssociationsHelper_;
+    std::map<BranchID, bool> keepAssociation_;
 
     typedef std::map<BranchID, std::set<ParentageID> > BranchParents;
     BranchParents branchParents_;
 
     BranchChildren branchChildren_;
+
+    SharedResourcesAcquirer resourceAcquirer_;
+    std::mutex mutex_;
 
     //------------------------------------------------------------------
     // private member functions
@@ -176,6 +188,8 @@ namespace edm {
     void doRespondToCloseInputFile(FileBlock const& fb);
     void doPreForkReleaseResources();
     void doPostForkReacquireResources(unsigned int iChildIndex, unsigned int iNumberOfChildren);
+    void doRegisterThinnedAssociations(ProductRegistry const&,
+                                       ThinnedAssociationsHelper&) { }
 
     std::string workerType() const {return "WorkerT<OutputModule>";}
 
@@ -214,6 +228,10 @@ namespace edm {
     virtual bool isFileOpen() const { return true; }
 
     virtual void reallyOpenFile() {}
+
+    void keepThisBranch(BranchDescription const& desc,
+                        std::map<BranchID, BranchDescription const*>& trueBranchIDToKeptBranchDesc,
+                        std::set<BranchID>& keptProductsInEvent);
 
     void setModuleDescription(ModuleDescription const& md) {
       moduleDescription_ = md;

@@ -15,7 +15,6 @@
 //
 // Original Author:  Jean-Roch Vlimant,40 3-A28,+41227671209,
 //         Created:  Thu Feb 11 19:46:28 CET 2010
-// $Id: ConditionDumperInEdm.h,v 1.3 2010/03/16 23:58:25 ghete Exp $
 //
 //
 
@@ -40,6 +39,7 @@
 #include "FWCore/Utilities/interface/InputTag.h"
 
 #include "DataFormats/Common/interface/ConditionsInEdm.h"
+#include "DataFormats/L1GlobalTrigger/interface/L1GlobalTriggerEvmReadoutRecord.h"
 
 //
 // class declaration
@@ -70,6 +70,9 @@ class ConditionDumperInEdm : public edm::one::EDProducer<edm::EndRunProducer,
   edm::ConditionsInLumiBlock lumiBlock_;
   edm::ConditionsInRunBlock runBlock_;
   edm::ConditionsInEventBlock eventBlock_;
+
+  edm::EDGetTokenT<L1GlobalTriggerEvmReadoutRecord> gtEvmDigisLabelToken_;
+
 
 };
 

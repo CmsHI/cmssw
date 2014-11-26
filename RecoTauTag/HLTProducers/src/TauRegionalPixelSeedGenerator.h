@@ -9,6 +9,7 @@
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/Utilities/interface/InputTag.h"
+#include "FWCore/Framework/interface/ConsumesCollector.h"
 #include "DataFormats/Common/interface/Handle.h"
 #include "DataFormats/VertexReco/interface/Vertex.h"
 #include "DataFormats/VertexReco/interface/VertexFwd.h"
@@ -18,6 +19,7 @@
 #include "RecoTracker/TkTrackingRegions/interface/TrackingRegionProducer.h"
 #include "RecoTracker/TkTrackingRegions/interface/GlobalTrackingRegion.h"
 #include "RecoTracker/TkTrackingRegions/interface/RectangularEtaPhiTrackingRegion.h"
+#include "RecoTracker/MeasurementDet/interface/MeasurementTrackerEvent.h"
 // Math
 #include "Math/GenVector/VectorUtil.h"
 #include "Math/GenVector/PxPyPzE4D.h"
@@ -31,7 +33,8 @@
 class TauRegionalPixelSeedGenerator : public TrackingRegionProducer {
   public:
     
-    explicit TauRegionalPixelSeedGenerator(const edm::ParameterSet& conf_){
+    explicit TauRegionalPixelSeedGenerator(const edm::ParameterSet& conf_,
+	edm::ConsumesCollector && iC){
       edm::LogInfo ("TauRegionalPixelSeedGenerator") << "Enter the TauRegionalPixelSeedGenerator";
 
       edm::ParameterSet regionPSet = conf_.getParameter<edm::ParameterSet>("RegionPSet");
@@ -41,21 +44,27 @@ class TauRegionalPixelSeedGenerator : public TrackingRegionProducer {
       m_halfLength   = regionPSet.getParameter<double>("originHalfLength");
       m_deltaEta     = regionPSet.getParameter<double>("deltaEtaRegion");
       m_deltaPhi     = regionPSet.getParameter<double>("deltaPhiRegion");
-      m_jetSrc       = regionPSet.getParameter<edm::InputTag>("JetSrc");
-      m_vertexSrc    = regionPSet.getParameter<edm::InputTag>("vertexSrc");
+      token_jet      = iC.consumes<reco::CandidateView>(regionPSet.getParameter<edm::InputTag>("JetSrc"));
+      token_vertex   = iC.consumes<reco::VertexCollection>(regionPSet.getParameter<edm::InputTag>("vertexSrc"));
       if (regionPSet.exists("searchOpt")){
 	m_searchOpt    = regionPSet.getParameter<bool>("searchOpt");
       }
       else{
 	m_searchOpt = false;
       }
-      m_measurementTracker ="";
-      m_howToUseMeasurementTracker=0;
+      m_howToUseMeasurementTracker = RectangularEtaPhiTrackingRegion::UseMeasurementTracker::kForSiStrips;
       if (regionPSet.exists("measurementTrackerName")){
-	m_measurementTracker = regionPSet.getParameter<std::string>("measurementTrackerName");
+        // FIXME: when next time altering the configuration of this
+        // class, please change the types of the following parameters:
+        // - howToUseMeasurementTracker to at least int32 or to a string
+        //   corresponding to the UseMeasurementTracker enumeration
+        // - measurementTrackerName to InputTag
 	if (regionPSet.exists("howToUseMeasurementTracker")){
-	  m_howToUseMeasurementTracker = regionPSet.getParameter<double>("howToUseMeasurementTracker");
+	  m_howToUseMeasurementTracker = RectangularEtaPhiTrackingRegion::doubleToUseMeasurementTracker(regionPSet.getParameter<double>("howToUseMeasurementTracker"));
 	}
+        if(m_howToUseMeasurementTracker != RectangularEtaPhiTrackingRegion::UseMeasurementTracker::kNever) {
+          token_measurementTracker = iC.consumes<MeasurementTrackerEvent>(regionPSet.getParameter<std::string>("measurementTrackerName"));
+        }
       }
     }
   
@@ -70,7 +79,7 @@ class TauRegionalPixelSeedGenerator : public TrackingRegionProducer {
         GlobalPoint vertex;
       // get the primary vertex
       edm::Handle<reco::VertexCollection> h_vertices;
-      e.getByLabel(m_vertexSrc, h_vertices);
+      e.getByToken(token_vertex, h_vertices);
       const reco::VertexCollection & vertices = * h_vertices;
       if (not vertices.empty()) {
 //        originZ      = vertices.front().z();
@@ -88,11 +97,17 @@ class TauRegionalPixelSeedGenerator : public TrackingRegionProducer {
       
       // get the jet direction
       edm::Handle<edm::View<reco::Candidate> > h_jets;
-      e.getByLabel(m_jetSrc, h_jets);
+      e.getByToken(token_jet, h_jets);
       
-      for (unsigned int iJet =0; iJet < h_jets->size(); ++iJet)
+      const MeasurementTrackerEvent *measurementTracker = nullptr;
+      if(!token_measurementTracker.isUninitialized()) {
+        edm::Handle<MeasurementTrackerEvent> hmte;
+        e.getByToken(token_measurementTracker, hmte);
+        measurementTracker = hmte.product();
+      }
+
+      for(const reco::Candidate& myJet: *h_jets)
 	{
-	  const reco::Candidate & myJet = (*h_jets)[iJet];
           GlobalVector jetVector(myJet.momentum().x(),myJet.momentum().y(),myJet.momentum().z());
 //          GlobalPoint  vertex(0, 0, originZ);
           RectangularEtaPhiTrackingRegion* etaphiRegion = new RectangularEtaPhiTrackingRegion( jetVector,
@@ -104,7 +119,7 @@ class TauRegionalPixelSeedGenerator : public TrackingRegionProducer {
                                                                                                m_deltaPhi,
 											       m_howToUseMeasurementTracker,
 											       true,
-											       m_measurementTracker,
+											       measurementTracker,
 											       m_searchOpt);
           result.push_back(etaphiRegion);
       }
@@ -120,10 +135,10 @@ class TauRegionalPixelSeedGenerator : public TrackingRegionProducer {
   float m_halfLength;
   float m_deltaEta;
   float m_deltaPhi;
-  edm::InputTag m_jetSrc;
-  edm::InputTag m_vertexSrc;
-  std::string m_measurementTracker;
-  double m_howToUseMeasurementTracker;
+  edm::EDGetTokenT<reco::VertexCollection> token_vertex; 
+  edm::EDGetTokenT<reco::CandidateView> token_jet; 
+  edm::EDGetTokenT<MeasurementTrackerEvent> token_measurementTracker;
+  RectangularEtaPhiTrackingRegion::UseMeasurementTracker m_howToUseMeasurementTracker;
   bool m_searchOpt;
 };
 

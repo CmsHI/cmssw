@@ -1,4 +1,3 @@
-// $Id: HLTSingleVertexPixelTrackFilter.h,v 1.2 2009/11/01 19:35:03 davidlw Exp $
 
 #ifndef HLTSingleVertexPixelTrackFilter_h
 #define HLTSingleVertexPixelTrackFilter_h
@@ -23,7 +22,7 @@ class HLTSingleVertexPixelTrackFilter : public HLTFilter {
    public:
       explicit HLTSingleVertexPixelTrackFilter(const edm::ParameterSet&);
       ~HLTSingleVertexPixelTrackFilter();
-      virtual bool hltFilter(edm::Event&, const edm::EventSetup&, trigger::TriggerFilterObjectWithRefs & filterproduct);
+      virtual bool hltFilter(edm::Event&, const edm::EventSetup&, trigger::TriggerFilterObjectWithRefs & filterproduct) const override;
       static void fillDescriptions(edm::ConfigurationDescriptions & descriptions);
 
    private:

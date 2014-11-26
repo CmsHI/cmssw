@@ -16,6 +16,7 @@
 #include <map>
 #include "TROOT.h"
 #include "TInterpreter.h"
+#include "TVirtualMutex.h"
 #include "G__ci.h"
 
 // user include files
@@ -43,10 +44,12 @@ namespace {
   class RootLoadFileSentry {
   public:
     RootLoadFileSentry() {
+       R__LOCKGUARD2(gCINTMutex);
        G__setfilecontext("{CMS auto library loader}", &oldIFile_);
     }
 
     ~RootLoadFileSentry() {
+      R__LOCKGUARD2(gCINTMutex);
       G__input_file* ifile = G__get_ifile();
       if (ifile) {
         *ifile = oldIFile_;
@@ -87,13 +90,13 @@ namespace edm {
 
       void
       addWrapperOfVectorOfBuiltin(std::map<std::string, std::string>& iMap, char const* iBuiltin) {
-         static std::string sReflexPrefix("edm::Wrapper<std::vector<");
-         static std::string sReflexPostfix("> >");
+         static std::string const sReflexPrefix("edm::Wrapper<std::vector<");
+         static std::string const sReflexPostfix("> >");
 
          //Wrapper<vector<float, allocator<float> > >
-         static std::string sCintPrefix("Wrapper<vector<");
-         static std::string sCintMiddle(",allocator<");
-         static std::string sCintPostfix("> > >");
+         static std::string const sCintPrefix("Wrapper<vector<");
+         static std::string const sCintMiddle(",allocator<");
+         static std::string const sCintPostfix("> > >");
 
          std::string type(iBuiltin);
          iMap.insert(make_pair(sCintPrefix + type + sCintMiddle + type + sCintPostfix,
@@ -354,7 +357,7 @@ namespace edm {
               className.replace(idx + 6, 1, "");
             }
             classNameAttemptingToLoad_ = className.c_str();
-            returnValue = gROOT->GetClass(className.c_str(), kTRUE);
+            returnValue = TClass::GetClass(className.c_str(), kTRUE);
             classNameAttemptingToLoad_ = classname;
             return returnValue;
          }
@@ -380,7 +383,7 @@ namespace edm {
           // It will also attempt to load the dictionary for the class
           // if the second argument is kTRUE. This is the default, so it
           // need not be explicitly specified.
-          returnValue = gROOT->GetClass(classname, kTRUE);
+          returnValue = TClass::GetClass(classname, kTRUE);
           classNameAttemptingToLoad_ = nullptr;
         }
       }

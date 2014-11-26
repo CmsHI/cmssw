@@ -13,9 +13,9 @@
 #include <sstream>
 
 MuonTrackProducer::MuonTrackProducer(const edm::ParameterSet& parset) :
-  muonsTag(parset.getParameter< edm::InputTag >("muonsTag")),
-  inputDTRecSegment4DCollection_(parset.getParameter<edm::InputTag>("inputDTRecSegment4DCollection")),
-  inputCSCSegmentCollection_(parset.getParameter<edm::InputTag>("inputCSCSegmentCollection")),
+  muonsToken(consumes<reco::MuonCollection>(parset.getParameter< edm::InputTag >("muonsTag"))),
+  inputDTRecSegment4DToken_(consumes<DTRecSegment4DCollection>(parset.getParameter<edm::InputTag>("inputDTRecSegment4DCollection"))),
+  inputCSCSegmentToken_(consumes<CSCSegmentCollection>(parset.getParameter<edm::InputTag>("inputCSCSegmentCollection"))),
   selectionTags(parset.getParameter< std::vector<std::string> >("selectionTags")),
   trackType(parset.getParameter< std::string >("trackType")),
   parset_(parset)
@@ -31,9 +31,9 @@ MuonTrackProducer::~MuonTrackProducer() {
 
 void MuonTrackProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
 {
-  iEvent.getByLabel(muonsTag,muonCollectionH);
-  iEvent.getByLabel(inputDTRecSegment4DCollection_, dtSegmentCollectionH_);
-  iEvent.getByLabel(inputCSCSegmentCollection_, cscSegmentCollectionH_);
+  iEvent.getByToken(muonsToken,muonCollectionH);
+  iEvent.getByToken(inputDTRecSegment4DToken_, dtSegmentCollectionH_);
+  iEvent.getByToken(inputCSCSegmentToken_, cscSegmentCollectionH_);
   
   std::auto_ptr<reco::TrackCollection> selectedTracks(new reco::TrackCollection);
   std::auto_ptr<reco::TrackExtraCollection> selectedTrackExtras( new reco::TrackExtraCollection() );
@@ -162,14 +162,12 @@ void MuonTrackProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
                                         trk->innerStateCovariance(), trk->innerDetId() , seedDir ) ;
 
       // new copy of the silicon hits; add hit refs to Extra and hits to hit collection
-      unsigned int index_hit = 0;
       
       //      edm::LogVerbatim("MuonTrackProducer")<<"\n printing initial hit_pattern";
       //      trk->hitPattern().print();
 	
       for (trackingRecHit_iterator iHit = trk->recHitsBegin(); iHit != trk->recHitsEnd(); iHit++) {
         TrackingRecHit* hit = (*iHit)->clone();
-	index_hit++;
         selectedTrackHits->push_back( hit );
         newExtra->add( TrackingRecHitRef( rHits, hidx++ ) );
       }
@@ -252,10 +250,9 @@ void MuonTrackProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
 		  for(std::vector<const TrackingRecHit*>::const_iterator ihit = phiHits.begin();
 		      ihit != phiHits.end(); ++ihit) {
 		    TrackingRecHit* seghit = (*ihit)->clone();
-		    newTrk->setHitPattern( *seghit, index_hit);
+             newTrk->appendHitPattern(*seghit);
 		    //		    edm::LogVerbatim("MuonTrackProducer")<<"hit pattern for position "<<index_hit<<" set to:";
 		    //		    newTrk->hitPattern().printHitPattern(index_hit, std::cout);
-		    index_hit++;
 		    selectedTrackHits->push_back( seghit );
 		    newExtra->add( TrackingRecHitRef( rHits, hidx ++ ) );
 		  }
@@ -267,10 +264,9 @@ void MuonTrackProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
 		  for(std::vector<const TrackingRecHit*>::const_iterator ihit = zedHits.begin();
 		      ihit != zedHits.end(); ++ihit) {
 		    TrackingRecHit* seghit = (*ihit)->clone();
-		    newTrk->setHitPattern( *seghit, index_hit);
+            newTrk->appendHitPattern(*seghit);
 		    //		    edm::LogVerbatim("MuonTrackProducer")<<"hit pattern for position "<<index_hit<<" set to:";
 		    //		    newTrk->hitPattern().printHitPattern(index_hit, std::cout);
-		    index_hit++;
 		    selectedTrackHits->push_back( seghit );
 		    newExtra->add( TrackingRecHitRef( rHits, hidx ++ ) );
 		  }
@@ -295,10 +291,9 @@ void MuonTrackProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
 		for(std::vector<const TrackingRecHit*>::const_iterator ihit = hits.begin();
 		    ihit != hits.end(); ++ihit) {
 		  TrackingRecHit* seghit = (*ihit)->clone();
-		  newTrk->setHitPattern( *seghit, index_hit);
+          newTrk->appendHitPattern(*seghit);
 		  //		    edm::LogVerbatim("MuonTrackProducer")<<"hit pattern for position "<<index_hit<<" set to:";
 		  //		    newTrk->hitPattern().printHitPattern(index_hit, std::cout);
-		  index_hit++;
 		  selectedTrackHits->push_back( seghit );
 		  newExtra->add( TrackingRecHitRef( rHits, hidx ++ ) );		  
 		}

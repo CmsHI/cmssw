@@ -20,6 +20,7 @@
 #include "DataFormats/EgammaCandidates/interface/SiStripElectronFwd.h"
 #include "DataFormats/EgammaReco/interface/SuperCluster.h"
 #include "DataFormats/EgammaReco/interface/BasicCluster.h"
+#include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
 #include "DataFormats/CaloRecHit/interface/CaloCluster.h"
 #include "DataFormats/GsfTrackReco/interface/GsfTrack.h"
 #include "DataFormats/GsfTrackReco/interface/GsfTrackExtra.h"
@@ -35,6 +36,7 @@
 #include "DataFormats/Common/interface/AssociationMap.h"
 #include "DataFormats/Common/interface/Ptr.h"
 #include "DataFormats/Common/interface/PtrVector.h"
+#include "DataFormats/Common/interface/ValueMap.h"
 #include "Rtypes.h"
 #include "Math/Cartesian3D.h"
 #include "Math/Polar3D.h"
@@ -43,7 +45,7 @@
 #include <boost/cstdint.hpp>
 
 
-namespace {
+namespace DataFormats_EgammaCandidates {
 
   struct dictionary {
 
@@ -71,7 +73,12 @@ namespace {
     edm::RefToBaseVector<reco::Photon> rtbvp;
     edm::Wrapper<edm::RefToBaseVector<reco::Photon> > rtbvp_w;
     edm::reftobase::BaseVectorHolder<reco::Photon> *bvhp_p;
-
+    edm::Wrapper<edm::ValueMap<edm::Ref<std::vector<reco::Photon>,reco::Photon,edm::refhelper::FindUsingAdvance<std::vector<reco::Photon>,reco::Photon> > > > valMap_wr;
+    edm::ValueMap<edm::Ref<std::vector<reco::Photon>,reco::Photon,edm::refhelper::FindUsingAdvance<std::vector<reco::Photon>,reco::Photon> > >  valMap;
+    //    std::pair<reco::PFCandidateRef,bool> value_pfiso;
+    // std::vector<std::pair<reco::PFCandidateRef,bool> > values_pfiso;
+    //edm::ValueMap<std::vector<std::pair<edm::Ref<std::vector<reco::PFCandidate>,reco::PFCandidate,edm::refhelper::FindUsingAdvance<std::vector<reco::PFCandidate>,reco::PFCandidate> >,bool> > >  valueMap_iso; 
+    //edm::Wrapper<edm::ValueMap<std::vector<std::pair<edm::Ref<std::vector<reco::PFCandidate>,reco::PFCandidate,edm::refhelper::FindUsingAdvance<std::vector<reco::PFCandidate>,reco::PFCandidate> >,bool> > > > valueMap_iso_wr;
 
     reco::Photon::FiducialFlags pff ;
     reco::Photon::ShowerShape pss ;
@@ -107,6 +114,8 @@ namespace {
     edm::Ref<reco::GsfElectronCoreCollection> gecc_r;
     edm::RefProd<reco::GsfElectronCoreCollection> gecc_rp;
     edm::Wrapper<edm::RefVector<reco::GsfElectronCoreCollection> > gecc_rv;
+    edm::Wrapper<edm::ValueMap<edm::Ref<std::vector<reco::GsfElectron>,reco::GsfElectron,edm::refhelper::FindUsingAdvance<std::vector<reco::GsfElectron>,reco::GsfElectron> > > > gecc_wvm;
+    edm::ValueMap<edm::Ref<std::vector<reco::GsfElectron>,reco::GsfElectron,edm::refhelper::FindUsingAdvance<std::vector<reco::GsfElectron>,reco::GsfElectron> > > gecc_vm;
 
     reco::GsfElectron::TrackClusterMatching getcm ;
     reco::GsfElectron::TrackExtrapolations gete ;
@@ -121,7 +130,7 @@ namespace {
     reco::GsfElectron::MvaInput gemi ;
     reco::GsfElectron::MvaOutput gemo ;
     reco::GsfElectron::ClassificationVariables gecv ;
-
+    reco::GsfElectron::PixelMatchVariables gepmv ;
 
     edm::RefToBase<reco::GsfElectron> rtbg;
     edm::reftobase::IndirectHolder<reco::GsfElectron> ihg;
@@ -134,6 +143,7 @@ namespace {
     edm::Ref<reco::GsfElectronCollection> r4;
     edm::RefProd<reco::GsfElectronCollection> rp4;
     edm::Wrapper<edm::RefVector<reco::GsfElectronCollection> > rv4;
+    
 
     reco::SiStripElectronCollection v5;
     edm::Wrapper<reco::SiStripElectronCollection> w5;

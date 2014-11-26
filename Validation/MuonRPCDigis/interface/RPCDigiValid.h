@@ -1,31 +1,20 @@
 #ifndef RPCDigiValid_h
 #define RPCDigiValid_h
 
-#include "FWCore/Framework/interface/Frameworkfwd.h"
-#include "FWCore/Framework/interface/EDAnalyzer.h"
-
+#include "DQMServices/Core/interface/DQMEDAnalyzer.h"
+#include "DQMServices/Core/interface/MonitorElement.h"
+#include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/Framework/interface/ESHandle.h"
-#include "FWCore/Framework/interface/MakerMacros.h"
 
-#include "FWCore/ParameterSet/interface/ParameterSet.h"
-#include "FWCore/MessageLogger/interface/MessageLogger.h"
-
-#include "DQMServices/Core/interface/DQMStore.h"
-
-#include "FWCore/ServiceRegistry/interface/Service.h"
-#include "FWCore/Utilities/interface/InputTag.h"
-
-#include <iostream>
 #include <string>
-#include "DQMServices/Core/interface/MonitorElement.h"
-#include "DataFormats/MuonDetId/interface/RPCDetId.h"
 
-#include "CommonTools/UtilAlgos/interface/TFileService.h"
-#include "TH1F.h"
+#include "FWCore/Utilities/interface/EDGetToken.h"
+#include "DataFormats/RPCDigi/interface/RPCDigiCollection.h"
+#include "SimDataFormats/TrackingHit/interface/PSimHitContainer.h"
 
-class RPCDigiValid: public edm::EDAnalyzer
+class RPCDigiValid: public DQMEDAnalyzer
 {
 
 public:
@@ -35,8 +24,7 @@ public:
 
 protected:
   void analyze(const edm::Event& e, const edm::EventSetup& c);
-  void beginJob();
-  void endJob(void);
+  void bookHistograms(DQMStore::IBooker&, edm::Run const&, edm::EventSetup const&) override;
 
 private:
 
@@ -50,13 +38,6 @@ private:
   MonitorElement* ResWplu2;
   MonitorElement* BxDist;
   MonitorElement* StripProf;
-
-  MonitorElement* BxDist_whMin2;
-  MonitorElement* BxDist_whMin1;
-  MonitorElement* BxDist_wh0;
-  MonitorElement* BxDist_wh0_st1;
-  MonitorElement* BxDist_whPlu1;
-  MonitorElement* BxDist_whPlu2;
 
   //barrel layers residuals
   MonitorElement* ResLayer1_barrel;
@@ -89,46 +70,43 @@ private:
 
   //new member for cls
   MonitorElement* noiseCLS;
+  MonitorElement* noiseCLSBarrel;
+  MonitorElement* noiseCLSEndcaps;
 
   MonitorElement* clsBarrel;
-  MonitorElement* clsLayer1;
-  MonitorElement* clsLayer2;
-  MonitorElement* clsLayer3;
-  MonitorElement* clsLayer4;
-  MonitorElement* clsLayer5;
-  MonitorElement* clsLayer6;
 
   //CLS Validation
-  //ring2, disc +- 1
+  //ring2, disk +- 1
   MonitorElement* CLS_Endcap_1_Ring2_A;
   MonitorElement* CLS_Endcap_1_Ring2_B;
   MonitorElement* CLS_Endcap_1_Ring2_C;
 
-  //ring2, disc +-2 & +-3
   MonitorElement* CLS_Endcap_23_Ring2_A;
   MonitorElement* CLS_Endcap_23_Ring2_B;
   MonitorElement* CLS_Endcap_23_Ring2_C;
 
-  //ring 3, all discs
+  //ring 3
   MonitorElement* CLS_Endcap_123_Ring3_A;
   MonitorElement* CLS_Endcap_123_Ring3_B;
   MonitorElement* CLS_Endcap_123_Ring3_C;
   //CLS Validation
 
-  //new members for the noise
-  std::map<RPCDetId, double> mapRollCls;
-  std::map<RPCDetId, double> mapRollArea;
-  std::map<RPCDetId, double> mapRollStripArea;
-  std::map<RPCDetId, int> mapRollFakeCount;
-  std::map<RPCDetId, int> mapRollTruCount;
-  std::map<RPCDetId, std::string> mapRollName;
-  std::map<RPCDetId, std::map<int, double>*> mapRollStripRate;
-  std::map<RPCDetId, std::map<int, double>*> mapRollNoisyStripRate;
-  int countEvent;
+  //4 endcap
+  MonitorElement *ResDmin4;
+  MonitorElement *ResDplu4;
+  MonitorElement *BxDisc_4Plus;
+  MonitorElement *BxDisc_4Min;
+  MonitorElement *xyvDplu4;
+  MonitorElement *xyvDmin4;
+  MonitorElement *CLS_Endcap_4;
 
-  DQMStore* dbe_;
   std::string outputFile_;
   std::string digiLabel;
+
+  //Tokens for accessing run data. Used for passing to edm::Event. - stanislav
+  edm::EDGetTokenT<edm::PSimHitContainer> simHitToken;
+  edm::EDGetTokenT<RPCDigiCollection> rpcDigiToken;
 };
 
 #endif
+

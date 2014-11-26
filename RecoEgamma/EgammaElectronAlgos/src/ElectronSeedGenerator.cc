@@ -38,17 +38,21 @@
 #include "TrackingTools/Records/interface/TrackingComponentsRecord.h"
 #include "TrackingTools/MaterialEffects/interface/PropagatorWithMaterial.h"
 
+#include "RecoTracker/MeasurementDet/interface/MeasurementTrackerEvent.h"
+
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
+
 
 #include <vector>
 #include <utility>
 
-ElectronSeedGenerator::ElectronSeedGenerator(const edm::ParameterSet &pset)
+ElectronSeedGenerator::ElectronSeedGenerator(const edm::ParameterSet &pset,
+				      const ElectronSeedGenerator::Tokens& ts)
  : dynamicphiroad_(pset.getParameter<bool>("dynamicPhiRoad")),
    fromTrackerSeeds_(pset.getParameter<bool>("fromTrackerSeeds")),
    useRecoVertex_(false),
-   verticesTag_("offlinePrimaryVerticesWithBS"),
-   beamSpotTag_("offlineBeamSpot"),
+   verticesTag_(ts.token_vtx),
+   beamSpotTag_(ts.token_bs),
    lowPtThreshold_(pset.getParameter<double>("LowPtThreshold")),
    highPtThreshold_(pset.getParameter<double>("HighPtThreshold")),
    nSigmasDeltaZ1_(pset.getParameter<double>("nSigmasDeltaZ1")),
@@ -60,6 +64,7 @@ ElectronSeedGenerator::ElectronSeedGenerator(const edm::ParameterSet &pset)
    myMatchEle(0), myMatchPos(0),
    thePropagator(0),
    theMeasurementTracker(0),
+   theMeasurementTrackerEventTag(ts.token_measTrkEvt),
    theSetup(0), 
    cacheIDMagField_(0),/*cacheIDGeom_(0),*/cacheIDNavSchool_(0),cacheIDCkfComp_(0),cacheIDTrkGeom_(0)
  {
@@ -77,14 +82,18 @@ ElectronSeedGenerator::ElectronSeedGenerator(const edm::ParameterSet &pset)
   // use of reco vertex
   if (pset.exists("useRecoVertex"))
    { useRecoVertex_ = pset.getParameter<bool>("useRecoVertex") ; }
+  /*
   if (pset.exists("vertices"))
    { verticesTag_ = pset.getParameter<edm::InputTag>("vertices") ; }
+  */
   if (pset.exists("deltaZ1WithVertex"))
    { deltaZ1WithVertex_ = pset.getParameter<double>("deltaZ1WithVertex") ; }
 
   // new beamSpot tag
+  /*
   if (pset.exists("beamSpot"))
    { beamSpotTag_ = pset.getParameter<edm::InputTag>("beamSpot") ; }
+  */
 
   // new B/F configurables
   if (pset.exists("DeltaPhi2"))
@@ -254,20 +263,27 @@ void  ElectronSeedGenerator::run
   const TrackerTopology *tTopo=tTopoHand.product();
 
   theSetup= &setup;
-  NavigationSetter theSetter(*theNavigationSchool);
+
+
+  // Step A: set Event for the TrajectoryBuilder
+  edm::Handle<MeasurementTrackerEvent> data;
+  e.getByToken(theMeasurementTrackerEventTag, data);
+  myMatchEle->setEvent(*data);
+  myMatchPos->setEvent(*data);
 
   // get initial TrajectorySeeds if necessary
-  //  if (fromTrackerSeeds_) e.getByLabel(initialSeeds_, theInitialSeedColl);
+  //  if (fromTrackerSeeds_) e.getByToken(initialSeeds_, theInitialSeedColl);
 
   // get the beamspot from the Event:
   //e.getByType(theBeamSpot);
-  e.getByLabel(beamSpotTag_,theBeamSpot);
+  e.getByToken(beamSpotTag_,theBeamSpot);
 
   // if required get the vertices
-  if (useRecoVertex_) e.getByLabel(verticesTag_,theVertices);
+  if (useRecoVertex_) e.getByToken(verticesTag_,theVertices);
 
   if (!fromTrackerSeeds_)
-   { theMeasurementTracker->update(e) ; }
+   { throw cms::Exception("NotSupported") << "Here in ElectronSeedGenerator " << __FILE__ << ":" << __LINE__ << " I would like to do theMeasurementTracker->update(e); but that no longer makes sense.\n"; 
+   }
 
   for  (unsigned int i=0;i<sclRefs.size();++i) {
     // Find the seeds
@@ -347,12 +363,12 @@ void ElectronSeedGenerator::seedsFromThisCluster
       // try electron
       std::vector<std::pair<RecHitWithDist,ConstRecHitPointer> > elePixelHits
        = myMatchEle->compatibleHits(clusterPos,vertexPos,
-				    clusterEnergy,-1., tTopo) ;
+				    clusterEnergy,-1., tTopo, *theNavigationSchool) ;
       GlobalPoint eleVertex(theBeamSpot->position().x(),theBeamSpot->position().y(),myMatchEle->getVertex()) ;
       seedsFromRecHits(elePixelHits,dir,eleVertex,caloCluster,out,false) ;
       // try positron
       std::vector<std::pair<RecHitWithDist,ConstRecHitPointer> > posPixelHits
-	= myMatchPos->compatibleHits(clusterPos,vertexPos,clusterEnergy,1.,tTopo) ;
+	= myMatchPos->compatibleHits(clusterPos,vertexPos,clusterEnergy,1.,tTopo, *theNavigationSchool) ;
       GlobalPoint posVertex(theBeamSpot->position().x(),theBeamSpot->position().y(),myMatchPos->getVertex()) ;
       seedsFromRecHits(posPixelHits,dir,posVertex,caloCluster,out,true) ;
      }
@@ -403,11 +419,11 @@ void ElectronSeedGenerator::seedsFromThisCluster
        {
         // try electron
         std::vector<std::pair<RecHitWithDist,ConstRecHitPointer> > elePixelHits
-	  = myMatchEle->compatibleHits(clusterPos,vertexPos,clusterEnergy,-1.,tTopo) ;
+	  = myMatchEle->compatibleHits(clusterPos,vertexPos,clusterEnergy,-1.,tTopo, *theNavigationSchool) ;
         seedsFromRecHits(elePixelHits,dir,vertexPos,caloCluster,out,false) ;
         // try positron
 	      std::vector<std::pair<RecHitWithDist,ConstRecHitPointer> > posPixelHits
-		= myMatchPos->compatibleHits(clusterPos,vertexPos,clusterEnergy,1.,tTopo) ;
+		= myMatchPos->compatibleHits(clusterPos,vertexPos,clusterEnergy,1.,tTopo, *theNavigationSchool) ;
         seedsFromRecHits(posPixelHits,dir,vertexPos,caloCluster,out,true) ;
        }
       else

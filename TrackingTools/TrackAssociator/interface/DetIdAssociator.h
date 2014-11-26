@@ -25,7 +25,6 @@
 //
 // Original Author:  Dmytro Kovalskyi
 //         Created:  Fri Apr 21 10:59:41 PDT 2006
-// $Id: DetIdAssociator.h,v 1.18 2010/02/18 14:35:48 dmytro Exp $
 //
 //
 
@@ -102,8 +101,6 @@ class DetIdAssociator{
    virtual int iEta (const GlobalPoint&) const;
    /// look-up map phi index
    virtual int iPhi (const GlobalPoint&) const;
-   /// set a specific track propagator to be used
-   virtual void setPropagator(Propagator* ptr){	ivProp_ = ptr; };
    /// number of bins of the look-up map in phi dimension
    int nPhiBins() const { return nPhi_;}
    /// number of bins of the look-up map in eta dimension
@@ -130,8 +127,8 @@ class DetIdAssociator{
    
    virtual GlobalPoint getPosition(const DetId&) const = 0;
    virtual const unsigned int getNumberOfSubdetectors() const { return 1;}
-   virtual const std::vector<DetId>& getValidDetIds(unsigned int subDetectorIndex) const = 0;
-   virtual std::pair<const_iterator, const_iterator> getDetIdPoints(const DetId&) const = 0;
+   virtual void getValidDetIds(unsigned int subDetectorIndex, std::vector<DetId>&) const = 0;
+   virtual std::pair<const_iterator, const_iterator> getDetIdPoints(const DetId&, std::vector<GlobalPoint>&) const = 0;
    
    virtual bool insideElement(const GlobalPoint&, const DetId&) const = 0;
    virtual bool crossedElement(const GlobalPoint&, 
@@ -160,8 +157,6 @@ class DetIdAssociator{
    const double etaBinSize_;
    double maxEta_;
    double minTheta_;
-   
-   Propagator *ivProp_;
    
    // Detector fiducial volume 
    // approximated as a closed cylinder with non-zero width.

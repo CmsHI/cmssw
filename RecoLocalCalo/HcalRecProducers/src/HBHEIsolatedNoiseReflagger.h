@@ -7,6 +7,7 @@ Description: "Reflags" HB/HE hits based on their ECAL, HCAL, and tracking isolat
 Original Author: John Paul Chou (Brown University)
                  Thursday, September 2, 2010
 */
+#include <memory>
 
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/Framework/interface/EDProducer.h"
@@ -22,14 +23,15 @@ class HBHEIsolatedNoiseReflagger : public edm::EDProducer {
   
   
  private:
-  virtual void produce(edm::Event&, const edm::EventSetup&);
+  virtual void produce(edm::Event&, const edm::EventSetup&) override;
 
   void DumpHBHEHitMap(std::vector<HBHEHitMap>& i) const;
 
   // parameters
-  edm::InputTag hbheLabel_;
-  edm::InputTag ebLabel_, eeLabel_;
-  edm::InputTag trackExtrapolationLabel_;
+  edm::EDGetTokenT<HBHERecHitCollection> tok_hbhe_;
+  edm::EDGetTokenT<EcalRecHitCollection> tok_EB_;
+  edm::EDGetTokenT<EcalRecHitCollection> tok_EE_;
+  edm::EDGetTokenT<std::vector<reco::TrackExtrapolation> > tok_trackExt_;
 
   double LooseHcalIsol_;
   double LooseEcalIsol_;

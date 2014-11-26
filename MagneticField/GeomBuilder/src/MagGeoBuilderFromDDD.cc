@@ -1,8 +1,6 @@
 /*
  *  See header file for a description of this class.
  *
- *  $Date: 2013/05/21 13:21:17 $
- *  $Revision: 1.33 $
  *  \author N. Amapane - INFN Torino
  */
 
@@ -198,7 +196,7 @@ void MagGeoBuilderFromDDD::build(const DDCompactView & cpva)
 
     volumeHandle* v = new volumeHandle(fv, expand);
 
-    if (theGridFiles.get()) {
+    if (theGridFiles!=0) {
       int key = (v->volumeno)*100+v->copyno;
       TableFileMap::const_iterator itable = theGridFiles->find(key);
       if (itable == theGridFiles->end()) {
@@ -499,6 +497,7 @@ void MagGeoBuilderFromDDD::buildInterpolator(const volumeHandle * vol, map<strin
 	 << " at " << vol->center()
 	 << " phi: " << vol->center().phi()
 	 << " file: " << vol->magFile
+	 << " master : " << vol->masterSector
 	 << endl;
 
     if ( fabs(vol->center().phi() - masterSectorPhi) > Geom::pi()/9.) {
@@ -610,8 +609,8 @@ void MagGeoBuilderFromDDD::testInside(handles & volumes) {
       if ((*i)==(*vol)) continue;
       //if ((*i)->magVolume == 0) continue;
       if ((*i)->magVolume->inside((*vol)->center())) {
-	cout << "*** ERROR: center of V " << (*vol)->volumeno << " is inside V " 
-	     << (*i)->volumeno <<endl;
+	cout << "*** ERROR: center of V " << (*vol)->volumeno << ":" << (*vol)->copyno << " is inside V " 
+	     << (*i)->volumeno << ":" << (*i)->copyno << endl;
       }
     }
     
@@ -679,8 +678,8 @@ void MagGeoBuilderFromDDD::setScaling(const std::vector<int>& keys,
 }
 
 
-void MagGeoBuilderFromDDD::setGridFiles(auto_ptr<TableFileMap> gridFiles){
-  theGridFiles=gridFiles;
+void MagGeoBuilderFromDDD::setGridFiles(const TableFileMap& gridFiles){
+  theGridFiles=&gridFiles;
 }
 
 

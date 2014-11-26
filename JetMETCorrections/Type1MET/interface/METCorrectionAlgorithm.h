@@ -13,9 +13,7 @@
  *          Christian Veelken, LLR
  *          Tai Sakuma, Texas A&M
  *
- * \version $Revision: 1.2 $
  *
- * $Id: METCorrectionAlgorithm.h,v 1.2 2011/10/14 10:14:35 veelken Exp $
  *
  */
 
@@ -23,6 +21,7 @@
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Utilities/interface/InputTag.h"
+#include "FWCore/Framework/interface/ConsumesCollector.h"
 
 #include "DataFormats/METReco/interface/CorrMETData.h"
 
@@ -34,7 +33,7 @@ class METCorrectionAlgorithm
 {
  public:
 
-  explicit METCorrectionAlgorithm(const edm::ParameterSet&);
+  explicit METCorrectionAlgorithm(const edm::ParameterSet&, edm::ConsumesCollector && iConsumesCollector);
   ~METCorrectionAlgorithm();
 
   CorrMETData compMETCorrection(edm::Event&, const edm::EventSetup&);
@@ -42,8 +41,9 @@ class METCorrectionAlgorithm
  private:
 
   typedef std::vector<edm::InputTag> vInputTag;
-  vInputTag srcCHSSums_;
-  vInputTag srcType1Corrections_;
+
+  std::vector<edm::EDGetTokenT<CorrMETData> > chsSumTokens_;
+  std::vector<edm::EDGetTokenT<CorrMETData> > type1Tokens_;
 
   bool applyType0Corrections_;
   bool applyType1Corrections_;
@@ -55,24 +55,30 @@ class METCorrectionAlgorithm
   typedef std::vector<std::string> vstring;
   struct type2BinningEntryType
   {
-    type2BinningEntryType(const std::string& binCorrformula, const edm::ParameterSet& binCorrParameter, const vInputTag& srcUnclEnergySums)
+    type2BinningEntryType(const std::string& binCorrformula, const edm::ParameterSet& binCorrParameter, const vInputTag& srcUnclEnergySums, edm::ConsumesCollector & iConsumesCollector)
       : binLabel_(""),
-        srcUnclEnergySums_(srcUnclEnergySums),
         binCorrFormula_(0)
     {
+      for (vInputTag::const_iterator inputTag = srcUnclEnergySums.begin(); inputTag != srcUnclEnergySums.end(); ++inputTag)
+	{
+	  corrTokens_.push_back(iConsumesCollector.consumes<CorrMETData>(*inputTag));
+	}
+
       initialize(binCorrformula, binCorrParameter);
     }
-    type2BinningEntryType(const edm::ParameterSet& cfg, const vInputTag& srcUnclEnergySums)
+    type2BinningEntryType(const edm::ParameterSet& cfg, const vInputTag& srcUnclEnergySums, edm::ConsumesCollector & iConsumesCollector)
       : binLabel_(cfg.getParameter<std::string>("binLabel")),
         binCorrFormula_(0)
     {
       for ( vInputTag::const_iterator srcUnclEnergySum = srcUnclEnergySums.begin();
-	    srcUnclEnergySum != srcUnclEnergySums.end(); ++srcUnclEnergySum ) {
-	std::string instanceLabel = srcUnclEnergySum->instance();
-	if ( instanceLabel != "" && binLabel_ != "" ) instanceLabel.append("#");
-	instanceLabel.append(binLabel_);
-	srcUnclEnergySums_.push_back(edm::InputTag(srcUnclEnergySum->label(), instanceLabel));
-      }
+	    srcUnclEnergySum != srcUnclEnergySums.end(); ++srcUnclEnergySum )
+	{
+	  std::string instanceLabel = srcUnclEnergySum->instance();
+	  if ( instanceLabel != "" && binLabel_ != "" ) instanceLabel.append("#");
+	  instanceLabel.append(binLabel_);
+	  edm::InputTag inputTag(srcUnclEnergySum->label(), instanceLabel);
+	  corrTokens_.push_back(iConsumesCollector.consumes<CorrMETData>(inputTag));
+	}
       
       std::string binCorrFormula = cfg.getParameter<std::string>("binCorrFormula").data();
     
@@ -116,7 +122,7 @@ class METCorrectionAlgorithm
       delete binCorrFormula_;
     }
     std::string binLabel_;
-    vInputTag srcUnclEnergySums_;
+    std::vector<edm::EDGetTokenT<CorrMETData> > corrTokens_;
     TFormula* binCorrFormula_;
     std::vector<double> binCorrParameter_;
   };

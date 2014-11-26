@@ -1,7 +1,7 @@
 #include "FWCore/Framework/interface/SubProcess.h"
 
 #include "DataFormats/Common/interface/ProductData.h"
-#include "DataFormats/Provenance/interface/BranchID.h"
+#include "DataFormats/Common/interface/ThinnedAssociation.h"
 #include "DataFormats/Provenance/interface/BranchIDListHelper.h"
 #include "DataFormats/Provenance/interface/EventSelectionID.h"
 #include "DataFormats/Provenance/interface/ProcessHistoryID.h"
@@ -9,6 +9,7 @@
 #include "DataFormats/Provenance/interface/ProductRegistry.h"
 #include "DataFormats/Provenance/interface/LuminosityBlockAuxiliary.h"
 #include "DataFormats/Provenance/interface/RunAuxiliary.h"
+#include "DataFormats/Provenance/interface/ThinnedAssociationsHelper.h"
 #include "FWCore/Framework/interface/EventPrincipal.h"
 #include "FWCore/Framework/interface/FileBlock.h"
 #include "FWCore/Framework/interface/ProductHolder.h"
@@ -34,9 +35,9 @@ namespace edm {
 
   SubProcess::SubProcess(ParameterSet& parameterSet,
                          ParameterSet const& topLevelParameterSet,
-                         boost::shared_ptr<ProductRegistry const> parentProductRegistry,
-                         ProcessHistoryRegistry& processHistoryRegistry,
-                         boost::shared_ptr<BranchIDListHelper const> parentBranchIDListHelper,
+                         std::shared_ptr<ProductRegistry const> parentProductRegistry,
+                         std::shared_ptr<BranchIDListHelper const> parentBranchIDListHelper,
+                         ThinnedAssociationsHelper const& parentThinnedAssociationsHelper,
                          eventsetup::EventSetupsController& esController,
                          ActivityRegistry& parentActReg,
                          ServiceToken const& token,
@@ -46,15 +47,17 @@ namespace edm {
       serviceToken_(),
       parentPreg_(parentProductRegistry),
       preg_(),
-      processHistoryRegistry_(processHistoryRegistry),
       branchIDListHelper_(),
       act_table_(),
       processConfiguration_(),
+      historyLumiOffset_(preallocConfig.numberOfStreams()),
+      historyRunOffset_(historyLumiOffset_+preallocConfig.numberOfLuminosityBlocks()),
+      processHistoryRegistries_(historyRunOffset_+ preallocConfig.numberOfRuns()),
+      historyAppenders_(historyRunOffset_+preallocConfig.numberOfRuns()),
       principalCache_(),
       esp_(),
       schedule_(),
       parentToChildPhID_(),
-      historyAppender_(new HistoryAppender),
       subProcess_(),
       processParameterSet_(),
       productSelectorRules_(parameterSet, "outputCommands", "OutputModule"),
@@ -77,8 +80,9 @@ namespace edm {
                                                               "",
                                                               outputModulePathPositions,
                                                               parentProductRegistry->anyProductProduced());
-        
-    selectProducts(*parentProductRegistry);
+
+    std::map<BranchID, bool> keepAssociation;
+    selectProducts(*parentProductRegistry, parentThinnedAssociationsHelper, keepAssociation);
 
     std::string const maxEvents("maxEvents");
     std::string const maxLumis("maxLuminosityBlocks");
@@ -103,9 +107,9 @@ namespace edm {
 
     // If this process has a subprocess, pop the subprocess parameter set out of the process parameter set
 
-    boost::shared_ptr<ParameterSet> subProcessParameterSet(popSubProcessParameterSet(*processParameterSet_).release());
+    std::shared_ptr<ParameterSet> subProcessParameterSet(popSubProcessParameterSet(*processParameterSet_).release());
   
-    ScheduleItems items(*parentProductRegistry, *parentBranchIDListHelper, *this);
+    ScheduleItems items(*parentProductRegistry, *this);
 
     ParameterSet const& optionsPset(processParameterSet_->getUntrackedParameterSet("options", ParameterSet()));
     IllegalParameters::setThrowAnException(optionsPset.getUntrackedParameter<bool>("throwIfIllegalParameter", true));
@@ -130,33 +134,41 @@ namespace edm {
     // intialize the event setup provider
     esp_ = esController.makeProvider(*processParameterSet_);
 
+    branchIDListHelper_ = items.branchIDListHelper_;
+    updateBranchIDListHelper(parentBranchIDListHelper->branchIDLists());
+
+    thinnedAssociationsHelper_ = items.thinnedAssociationsHelper_;
+    thinnedAssociationsHelper_->updateFromParentProcess(parentThinnedAssociationsHelper, keepAssociation, droppedBranchIDToKeptBranchID_);
+
     // intialize the Schedule
     schedule_ = items.initSchedule(*processParameterSet_,subProcessParameterSet.get(),preallocConfig,&processContext_);
 
     // set the items
     act_table_ = std::move(items.act_table_);
     preg_.reset(items.preg_.release());
-    principalCache_.setProcessHistoryRegistry(processHistoryRegistry_);
-    branchIDListHelper_ = items.branchIDListHelper_;
+    //CMS-THREADING this only works since Run/Lumis are synchronous so when principalCache asks for
+    // the reducedProcessHistoryID from a full ProcessHistoryID that registry will not be in use by
+    // another thread. We really need to change how this is done in the PrincipalCache.
+    principalCache_.setProcessHistoryRegistry(processHistoryRegistries_[historyRunOffset_]);
+
+
     processConfiguration_ = items.processConfiguration_;
     processContext_.setProcessConfiguration(processConfiguration_.get());
     processContext_.setParentProcessContext(parentProcessContext);
 
     principalCache_.setNumberOfConcurrentPrincipals(preallocConfig);
     for(unsigned int index = 0; index < preallocConfig.numberOfStreams(); ++index) {
-      boost::shared_ptr<EventPrincipal> ep(new EventPrincipal(preg_,
-                                                              branchIDListHelper_,
-                                                              *processConfiguration_,
-                                                              historyAppender_.get(),
-                                                              index));
-      principalCache_.insert(ep,index);
+      auto ep = std::make_shared<EventPrincipal>(preg_, branchIDListHelper_, thinnedAssociationsHelper_, *processConfiguration_, &(historyAppenders_[index]), index);
+      ep->preModuleDelayedGetSignal_.connect(std::cref(items.actReg_->preModuleEventDelayedGetSignal_));
+      ep->postModuleDelayedGetSignal_.connect(std::cref(items.actReg_->postModuleEventDelayedGetSignal_));
+      principalCache_.insert(ep);
     }
     if(subProcessParameterSet) {
       subProcess_.reset(new SubProcess(*subProcessParameterSet,
                                        topLevelParameterSet,
                                        preg_,
-                                       processHistoryRegistry_,
                                        branchIDListHelper_,
+                                       *thinnedAssociationsHelper_,
                                        esController,
                                        *items.actReg_,
                                        newToken,
@@ -201,7 +213,9 @@ namespace edm {
   }
 
   void
-  SubProcess::selectProducts(ProductRegistry const& preg) {
+  SubProcess::selectProducts(ProductRegistry const& preg,
+                             ThinnedAssociationsHelper const& parentThinnedAssociationsHelper,
+                             std::map<BranchID, bool>& keepAssociation) {
     if(productSelector_.initialized()) return;
     productSelector_.initialize(productSelectorRules_, preg.allBranchDescriptions());
     
@@ -210,6 +224,8 @@ namespace edm {
     // for more information.
     
     std::map<BranchID, BranchDescription const*> trueBranchIDToKeptBranchDesc;
+    std::vector<BranchDescription const*> associationDescriptions;
+    std::set<BranchID> keptProductsInEvent;
     
     for(auto const& it : preg.productList()) {
       BranchDescription const& desc = it.second;
@@ -218,48 +234,50 @@ namespace edm {
       } else if(!desc.present() && !desc.produced()) {
         // else if the branch containing the product has been previously dropped,
         // output nothing
+      } else if(desc.unwrappedType().typeInfo() == typeid(ThinnedAssociation)) {
+        associationDescriptions.push_back(&desc);
       } else if(productSelector_.selected(desc)) {
-        // else if the branch has been selected, put it in the list of selected branches.
-        if(desc.produced()) {
-          // First we check if an equivalent branch has already been selected due to an EDAlias.
-          // We only need the check for products produced in this process.
-          BranchID const& trueBranchID = desc.originalBranchID();
-          std::map<BranchID, BranchDescription const*>::const_iterator iter = trueBranchIDToKeptBranchDesc.find(trueBranchID);
-          if(iter != trueBranchIDToKeptBranchDesc.end()) {
-            throw edm::Exception(errors::Configuration, "Duplicate Output Selection")
-            << "Two (or more) equivalent branches have been selected for output.\n"
-            << "#1: " << BranchKey(desc) << "\n"
-            << "#2: " << BranchKey(*iter->second) << "\n"
-            << "Please drop at least one of them.\n";
-          }
-          trueBranchIDToKeptBranchDesc.insert(std::make_pair(trueBranchID, &desc));
-        }
-        // Now put it in the list of selected branches.
-        keptProducts_[desc.branchType()].push_back(&desc);
+        keepThisBranch(desc, trueBranchIDToKeptBranchDesc, keptProductsInEvent);
       }
     }
+
+    parentThinnedAssociationsHelper.selectAssociationProducts(associationDescriptions,
+                                                              keptProductsInEvent,
+                                                              keepAssociation);
+
+    for(auto association : associationDescriptions) {
+      if(keepAssociation[association->branchID()]) {
+        keepThisBranch(*association, trueBranchIDToKeptBranchDesc, keptProductsInEvent);
+      }
+    }
+
     // Now fill in a mapping needed in the case that a branch was dropped while its EDAlias was kept.
-    for(auto const& it : preg.productList()) {
-      BranchDescription const& desc = it.second;
-      if(!desc.produced() || desc.isAlias()) continue;
-      BranchID const& branchID = desc.branchID();
-      std::map<BranchID, BranchDescription const*>::const_iterator iter = trueBranchIDToKeptBranchDesc.find(branchID);
-      if(iter != trueBranchIDToKeptBranchDesc.end()) {
-        // This branch, produced in this process, or an alias of it, was persisted.
-        BranchID const& keptBranchID = iter->second->branchID();
-        if(keptBranchID != branchID) {
-          // An EDAlias branch was persisted.
-          droppedBranchIDToKeptBranchID_.insert(std::make_pair(branchID.id(), keptBranchID.id()));
-        }
+    ProductSelector::fillDroppedToKept(preg, trueBranchIDToKeptBranchDesc, droppedBranchIDToKeptBranchID_);
+  }
+
+  void SubProcess::keepThisBranch(BranchDescription const& desc,
+                                  std::map<BranchID, BranchDescription const*>& trueBranchIDToKeptBranchDesc,
+                                  std::set<BranchID>& keptProductsInEvent) {
+
+    ProductSelector::checkForDuplicateKeptBranch(desc,
+                                                 trueBranchIDToKeptBranchDesc);
+
+    if(desc.branchType() == InEvent) {
+      if(desc.produced()) {
+        keptProductsInEvent.insert(desc.originalBranchID());
+      } else {
+        keptProductsInEvent.insert(desc.branchID());
       }
     }
+    // Now put it in the list of selected branches.
+    keptProducts_[desc.branchType()].push_back(&desc);
   }
 
   void
   SubProcess::fixBranchIDListsForEDAliases(std::map<BranchID::value_type, BranchID::value_type> const& droppedBranchIDToKeptBranchID) {
     // Check for branches dropped while an EDAlias was kept.
     // Replace BranchID of each dropped branch with that of the kept alias.
-    for(BranchIDList& branchIDList : branchIDListHelper_->branchIDLists()) {
+    for(BranchIDList& branchIDList : branchIDListHelper_->mutableBranchIDLists()) {
       for(BranchID::value_type& branchID : branchIDList) {
         std::map<BranchID::value_type, BranchID::value_type>::const_iterator iter = droppedBranchIDToKeptBranchID.find(branchID);
         if(iter != droppedBranchIDToKeptBranchID.end()) {
@@ -293,19 +311,21 @@ namespace edm {
     EventAuxiliary aux(principal.aux());
     aux.setProcessHistoryID(principal.processHistoryID());
 
-    boost::shared_ptr<EventSelectionIDVector> esids(new EventSelectionIDVector);
-    *esids = principal.eventSelectionIDs();
+    EventSelectionIDVector esids{principal.eventSelectionIDs()};
     if (principal.productRegistry().anyProductProduced() || !wantAllEvents_) {
-      esids->push_back(selector_config_id_);
+      esids.push_back(selector_config_id_);
     }
 
     EventPrincipal& ep = principalCache_.eventPrincipal(principal.streamID().value());
-    ep.setStreamID(principal.streamID());
+    auto & processHistoryRegistry = processHistoryRegistries_[principal.streamID().value()];
+    processHistoryRegistry.registerProcessHistory(principal.processHistory());
+    BranchListIndexes bli(principal.branchListIndexes());
+    branchIDListHelper_->fixBranchListIndexes(bli);
     ep.fillEventPrincipal(aux,
-                          processHistoryRegistry_,
-                          esids,
-                          boost::shared_ptr<BranchListIndexes>(new BranchListIndexes(principal.branchListIndexes())),
-                          principal.branchMapperPtr(),
+                          processHistoryRegistry,
+                          std::move(esids),
+                          std::move(bli),
+                          *(principal.productProvenanceRetrieverPtr()),//NOTE: this transfers the per product provenance
                           principal.reader());
     ep.setLuminosityBlockPrincipal(principalCache_.lumiPrincipalPtr());
     propagateProducts(InEvent, principal, ep);
@@ -323,14 +343,16 @@ namespace edm {
 
   void
   SubProcess::beginRun(RunPrincipal const& principal, IOVSyncValue const& ts) {
-    boost::shared_ptr<RunAuxiliary> aux(new RunAuxiliary(principal.aux()));
+    auto aux = std::make_shared<RunAuxiliary>(principal.aux());
     aux->setProcessHistoryID(principal.processHistoryID());
-    boost::shared_ptr<RunPrincipal> rpp(new RunPrincipal(aux, preg_, *processConfiguration_, historyAppender_.get(),principal.index()));
-    rpp->fillRunPrincipal(processHistoryRegistry_, principal.reader());
+    auto rpp = std::make_shared<RunPrincipal>(aux, preg_, *processConfiguration_, &(historyAppenders_[historyRunOffset_+principal.index()]),principal.index());
+    auto & processHistoryRegistry = processHistoryRegistries_[historyRunOffset_+principal.index()];
+    processHistoryRegistry.registerProcessHistory(principal.processHistory());
+    rpp->fillRunPrincipal(processHistoryRegistry, principal.reader());
     principalCache_.insert(rpp);
 
-    ProcessHistoryID const& parentInputReducedPHID = processHistoryRegistry_.reducedProcessHistoryID(principal.aux().processHistoryID());
-    ProcessHistoryID const& inputReducedPHID       = processHistoryRegistry_.reducedProcessHistoryID(principal.processHistoryID());
+    ProcessHistoryID const& parentInputReducedPHID = principal.reducedProcessHistoryID();
+    ProcessHistoryID const& inputReducedPHID       = rpp->reducedProcessHistoryID();
 
     parentToChildPhID_.insert(std::make_pair(parentInputReducedPHID,inputReducedPHID));
 
@@ -381,10 +403,12 @@ namespace edm {
 
   void
   SubProcess::beginLuminosityBlock(LuminosityBlockPrincipal const& principal, IOVSyncValue const& ts) {
-    boost::shared_ptr<LuminosityBlockAuxiliary> aux(new LuminosityBlockAuxiliary(principal.aux()));
+    auto aux = std::make_shared<LuminosityBlockAuxiliary>(principal.aux());
     aux->setProcessHistoryID(principal.processHistoryID());
-    boost::shared_ptr<LuminosityBlockPrincipal> lbpp(new LuminosityBlockPrincipal(aux, preg_, *processConfiguration_, historyAppender_.get(),principal.index()));
-    lbpp->fillLuminosityBlockPrincipal(processHistoryRegistry_, principal.reader());
+    auto lbpp = std::make_shared<LuminosityBlockPrincipal>(aux, preg_, *processConfiguration_, &(historyAppenders_[historyLumiOffset_+principal.index()]),principal.index());
+    auto & processHistoryRegistry = processHistoryRegistries_[historyLumiOffset_+principal.index()];
+    processHistoryRegistry.registerProcessHistory(principal.processHistory());
+    lbpp->fillLuminosityBlockPrincipal(processHistoryRegistry, principal.reader());
     lbpp->setRunPrincipal(principalCache_.runPrincipalPtr());
     principalCache_.insert(lbpp);
     LuminosityBlockPrincipal& lbp = *principalCache_.lumiPrincipalPtr();
@@ -489,10 +513,10 @@ namespace edm {
   SubProcess::propagateProducts(BranchType type, Principal const& parentPrincipal, Principal& principal) const {
     SelectedProducts const& keptVector = keptProducts()[type];
     for(auto const& item : keptVector) {
-      ProductHolderBase const* parentProductHolder = parentPrincipal.getProductHolder(item->branchID(), false, false, nullptr);
+      ProductHolderBase const* parentProductHolder = parentPrincipal.getProductHolder(item->branchID());
       if(parentProductHolder != nullptr) {
         ProductData const& parentData = parentProductHolder->productData();
-        ProductHolderBase const* productHolder = principal.getProductHolder(item->branchID(), false, false, nullptr);
+        ProductHolderBase const* productHolder = principal.getProductHolder(item->branchID());
         if(productHolder != nullptr) {
           ProductData& thisData = const_cast<ProductData&>(productHolder->productData());
           //Propagate the per event(run)(lumi) data for this product to the subprocess.
@@ -516,11 +540,17 @@ namespace edm {
     }
   }
 
+  void SubProcess::updateBranchIDListHelper(BranchIDLists const& branchIDLists) {
+    branchIDListHelper_->updateFromParent(branchIDLists);
+    if(subProcess_.get()) {
+      subProcess_->updateBranchIDListHelper(branchIDListHelper_->branchIDLists());
+    }
+  }
+
   // Call respondToOpenInputFile() on all Modules
   void
   SubProcess::respondToOpenInputFile(FileBlock const& fb) {
     ServiceRegistry::Operate operate(serviceToken_);
-    branchIDListHelper_->updateFromInput(fb.branchIDLists());
     schedule_->respondToOpenInputFile(fb);
     if(subProcess_.get()) subProcess_->respondToOpenInputFile(fb);
   }

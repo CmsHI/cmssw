@@ -23,6 +23,18 @@ iterativePixelPairSeeds.originpTMin = [0.6]
 iterativePixelPairSeeds.zVertexConstraint = [-1.0]
 iterativePixelPairSeeds.primaryVertices = ['pixelVertices']
 
+iterativePixelPairSeeds.newSyntax = True
+#iterativePixelPairSeeds.layerList = ['BPix1+BPix2', 'BPix1+BPix3', 'BPix2+BPix3', 
+#                                     'BPix1+FPix1_pos', 'BPix1+FPix1_neg', 
+#                                     'BPix1+FPix2_pos', 'BPix1+FPix2_neg', 
+#                                     'BPix2+FPix1_pos', 'BPix2+FPix1_neg', 
+#                                     'BPix2+FPix2_pos', 'BPix2+FPix2_neg', 
+#                                     'FPix1_pos+FPix2_pos', 'FPix1_neg+FPix2_neg', 
+#                                     'FPix2_pos+TEC1_pos', 'FPix2_pos+TEC2_pos', 
+#                                     'FPix2_neg+TEC1_neg', 'FPix2_neg+TEC2_neg']
+from RecoTracker.IterativeTracking.PixelPairStep_cff import pixelPairStepSeedLayers
+iterativePixelPairSeeds.layerList = pixelPairStepSeedLayers.layerList
+
 # candidate producer
 import FastSimulation.Tracking.TrackCandidateProducer_cfi
 iterativePixelPairCandidates = FastSimulation.Tracking.TrackCandidateProducer_cfi.trackCandidateProducer.clone()
@@ -45,7 +57,7 @@ pixelPairStepTracks = cms.EDProducer("FastTrackMerger",
                                                                     cms.InputTag("iterativePixelPairTracks")),
                                      RemoveTrackProducers =  cms.untracked.VInputTag(cms.InputTag("initialStepTracks"),
                                                                                      cms.InputTag("lowPtTripletStepTracks")),
-                                     trackAlgo = cms.untracked.uint32(6), # iter2
+                                     trackAlgo = cms.untracked.uint32(6), # pixelPairStep
                                      MinNumberOfTrajHits = cms.untracked.uint32(3),
                                      MaxLostTrajHits = cms.untracked.uint32(1)
                                      )

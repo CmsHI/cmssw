@@ -1,4 +1,3 @@
-// $Id: HLTSingleVertexPixelTrackFilter.cc,v 1.4 2012/01/21 15:00:22 fwyzard Exp $
 
 #include "HLTrigger/special/interface/HLTSingleVertexPixelTrackFilter.h"
 
@@ -14,13 +13,13 @@
 #include "DataFormats/HLTReco/interface/TriggerFilterObjectWithRefs.h"
 #include "DataFormats/HLTReco/interface/TriggerTypeDefs.h"
 #include "DataFormats/TrackReco/interface/Track.h"
-#include "DataFormats/TrackReco/interface/TrackFwd.h" 
+#include "DataFormats/TrackReco/interface/TrackFwd.h"
 
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 
 // constructors and destructor
 //
- 
+
 HLTSingleVertexPixelTrackFilter::HLTSingleVertexPixelTrackFilter(const edm::ParameterSet& iConfig) : HLTFilter(iConfig),
     pixelVerticesTag_ (iConfig.getParameter<edm::InputTag>("vertexCollection")),
     pixelTracksTag_ (iConfig.getParameter<edm::InputTag>("trackCollection")),
@@ -59,7 +58,7 @@ HLTSingleVertexPixelTrackFilter::fillDescriptions(edm::ConfigurationDescriptions
 //
 
 // ------------ method called to produce the data  ------------
-bool HLTSingleVertexPixelTrackFilter::hltFilter(edm::Event& iEvent, const edm::EventSetup& iSetup, trigger::TriggerFilterObjectWithRefs & filterproduct)
+bool HLTSingleVertexPixelTrackFilter::hltFilter(edm::Event& iEvent, const edm::EventSetup& iSetup, trigger::TriggerFilterObjectWithRefs & filterproduct) const
 {
    // All HLT filters must create and fill an HLT filter object,
    // recording any reconstructed physics objects satisfying (or not)
@@ -71,7 +70,7 @@ bool HLTSingleVertexPixelTrackFilter::hltFilter(edm::Event& iEvent, const edm::E
    edm::Ref<reco::RecoChargedCandidateCollection> candref;
 
    // Specific filter code
-   bool accept = false; 
+   bool accept = false;
 
    int nTrackCandidate = 0;
 
@@ -92,7 +91,7 @@ bool HLTSingleVertexPixelTrackFilter::hltFilter(edm::Event& iEvent, const edm::E
             int ntracksize = verticesItr->tracksSize();
             double vz = verticesItr->z();
             if(fabs(vz) > max_Vz_) continue;
-            if( ntracksize > nmax) 
+            if( ntracksize > nmax)
             {
               vzmax = vz;
               nmax = ntracksize;
@@ -113,7 +112,7 @@ bool HLTSingleVertexPixelTrackFilter::hltFilter(edm::Event& iEvent, const edm::E
             if(fabs(eta) > max_Eta_) continue;
             double pt  = tracksItr->pt();
             if(pt < min_Pt_ || pt > max_Pt_) continue;
-            double vz = tracksItr->vz();   
+            double vz = tracksItr->vz();
             if(fabs(vz-vzmax) > min_sep_) continue;
 
             candref = edm::Ref<reco::RecoChargedCandidateCollection>(trackCollection, icount);
@@ -123,7 +122,7 @@ bool HLTSingleVertexPixelTrackFilter::hltFilter(edm::Event& iEvent, const edm::E
        }
      }
    }
-       
+
    accept = ( nTrackCandidate >= min_trks_ );
 
    return accept;

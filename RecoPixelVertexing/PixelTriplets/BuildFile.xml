@@ -9,9 +9,10 @@
 <use   name="MagneticField/Records"/>
 <use   name="MagneticField/Engine"/>
 <use   name="RecoTracker/TkSeedingLayers"/>
+<use   name="TrackingTools/TransientTrackingRecHit"/>
 <use   name="RecoTracker/TkSeedGenerator"/>
 <export>
   <lib   name="1"/>
 </export>
 
-<flags   CXXFLAGS="-O3 -ftree-vectorizer-verbose=1 -fno-math-errno"/>
+<flags   CXXFLAGS="-O3 -fno-math-errno"/>

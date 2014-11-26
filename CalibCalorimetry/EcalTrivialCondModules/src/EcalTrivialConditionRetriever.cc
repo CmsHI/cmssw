@@ -100,6 +100,11 @@ EcalTrivialConditionRetriever::EcalTrivialConditionRetriever( const edm::Paramet
   sampleMaskEB_ = ps.getUntrackedParameter<unsigned int>("sampleMaskEB",1023);
   sampleMaskEE_ = ps.getUntrackedParameter<unsigned int>("sampleMaskEB",1023);
 
+  EBtimeCorrAmplitudeBins_ = ps.getUntrackedParameter< std::vector<double> >("EBtimeCorrAmplitudeBins", std::vector<double>() );
+  EBtimeCorrShiftBins_ = ps.getUntrackedParameter< std::vector<double> >("EBtimeCorrShiftBins", std::vector<double>() );
+  EEtimeCorrAmplitudeBins_ = ps.getUntrackedParameter< std::vector<double> >("EEtimeCorrAmplitudeBins", std::vector<double>() );
+  EEtimeCorrShiftBins_ = ps.getUntrackedParameter< std::vector<double> >("EEtimeCorrShiftBins", std::vector<double>() );
+
   nTDCbins_ = 1;
 
   weightsForAsynchronousRunning_ = ps.getUntrackedParameter<bool>("weightsForTB",false);
@@ -420,6 +425,11 @@ EcalTrivialConditionRetriever::EcalTrivialConditionRetriever( const edm::Paramet
   if (producedEcalSampleMask_) {
     setWhatProduced(this, &EcalTrivialConditionRetriever::produceEcalSampleMask );
     findingRecord<EcalSampleMaskRcd>();
+  }
+  producedEcalTimeBiasCorrections_ = ps.getUntrackedParameter<bool>("producedEcalTimeBiasCorrections", false);
+  if (producedEcalTimeBiasCorrections_) {
+    setWhatProduced(this, &EcalTrivialConditionRetriever::produceEcalTimeBiasCorrections );
+    findingRecord<EcalTimeBiasCorrectionsRcd>();
   }
 }
 
@@ -2423,7 +2433,6 @@ EcalTrivialConditionRetriever::getIntercalibConstantsFromConfiguration
 	      double eta= -log(tan(0.5*atan(sqrt((iX-50.0)*(iX-50.0)+(iY-50.0)*(iY-50.0))*2.98/328.)));
 	      eta = fabs(eta);
 	      double constantTerm=ageing.calcresolutitonConstantTerm(eta);
-	      EcalIntercalibConstants::const_iterator idref=mymap.find(eedetidneg);
 	      EcalIntercalibConstant icalconstant=1;
 
 
@@ -3131,4 +3140,16 @@ EcalTrivialConditionRetriever::produceEcalSampleMask( const EcalSampleMaskRcd& )
   return std::auto_ptr<EcalSampleMask>( new EcalSampleMask(sampleMaskEB_, sampleMaskEE_) );
 }
 
-
+std::auto_ptr<EcalTimeBiasCorrections>
+EcalTrivialConditionRetriever::produceEcalTimeBiasCorrections( const EcalTimeBiasCorrectionsRcd &) {
+  std::auto_ptr<EcalTimeBiasCorrections> ipar = std::auto_ptr<EcalTimeBiasCorrections>( new EcalTimeBiasCorrections() );
+  copy(EBtimeCorrAmplitudeBins_.begin(), EBtimeCorrAmplitudeBins_.end(),
+       back_inserter(ipar->EBTimeCorrAmplitudeBins));
+  copy(EBtimeCorrShiftBins_.begin(), EBtimeCorrShiftBins_.end(),
+       back_inserter(ipar->EBTimeCorrShiftBins));
+  copy(EEtimeCorrAmplitudeBins_.begin(), EEtimeCorrAmplitudeBins_.end(),
+       back_inserter(ipar->EETimeCorrAmplitudeBins));
+  copy(EEtimeCorrShiftBins_.begin(), EEtimeCorrShiftBins_.end(),
+       back_inserter(ipar->EETimeCorrShiftBins));
+  return ipar;
+}

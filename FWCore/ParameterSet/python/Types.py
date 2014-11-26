@@ -39,6 +39,8 @@ class int32(_SimpleParameterTypeBase):
         return int32(int(value))
     def insertInto(self, parameterSet, myname):
         parameterSet.addInt32(self.isTracked(), myname, self.value())
+    def __nonzero__(self):
+        return self.value()!=0
 
 
 class uint32(_SimpleParameterTypeBase):
@@ -54,6 +56,8 @@ class uint32(_SimpleParameterTypeBase):
         return uint32(long(value))
     def insertInto(self, parameterSet, myname):
         parameterSet.addUInt32(self.isTracked(), myname, self.value())
+    def __nonzero__(self):
+        return self.value()!=0
 
 
 
@@ -71,6 +75,8 @@ class int64(_SimpleParameterTypeBase):
         return int64(long(value))
     def insertInto(self, parameterSet, myname):
         parameterSet.addInt64(self.isTracked(), myname, self.value())
+    def __nonzero__(self):
+        return self.value()!=0
 
 
 
@@ -87,6 +93,8 @@ class uint64(_SimpleParameterTypeBase):
         return uint64(long(value))
     def insertInto(self, parameterSet, myname):
         parameterSet.addUInt64(self.isTracked(), myname, self.value())
+    def __nonzero__(self):
+        return self.value()!=0
 
 
 
@@ -104,6 +112,8 @@ class double(_SimpleParameterTypeBase):
         return double(float(value))
     def insertInto(self, parameterSet, myname):
         parameterSet.addDouble(self.isTracked(), myname, float(self.value()))
+    def __nonzero__(self):
+        return self.value()!=0.
 
 
 import __builtin__
@@ -125,6 +135,8 @@ class bool(_SimpleParameterTypeBase):
         raise RuntimeError('can not make bool from string '+value)
     def insertInto(self, parameterSet, myname):
         parameterSet.addBool(self.isTracked(), myname, self.value())
+    def __nonzero__(self):
+        return self.value()
 
 
 
@@ -159,6 +171,8 @@ class string(_SimpleParameterTypeBase):
         #if value == '\0':
         #    value = ''
         parameterSet.addString(self.isTracked(), myname, value)
+    def __nonzero__(self):
+        return len(self.value()) !=0
 
 
 class EventID(_ParameterTypeBase):
@@ -190,7 +204,7 @@ class EventID(_ParameterTypeBase):
     @staticmethod
     def _valueFromString(value):
         parts = value.split(":")
-	run = parts[0]
+        run = parts[0]
         try:
             lumi = parts[1]
             event = parts[2]
@@ -383,6 +397,8 @@ class EventRange(_ParameterTypeBase):
             eevent = endParts[1]             
         else:
             raise RuntimeError('EventRange ctor must have 4 or 6 arguments')
+        # note int will return a long if the value is too large to fit in
+        # a smaller type
         return EventRange(int(brun), int(blumi), int(bevent),
                           int(erun), int(elumi), int(eevent))
 
@@ -606,6 +622,10 @@ class PSet(_ParameterTypeBase,_Parameterizable,_ConfigureComponent,_Labelable):
         _Parameterizable.__init__(self,*arg,**args)
     def value(self):
         return self
+    def isRef_(self):
+        """Returns true if this PSet is actually a reference to a different PSet
+            """
+        return hasattr(self,"refToPSet_")
     @staticmethod
     def _isValid(value):
         return True
@@ -651,6 +671,12 @@ class PSet(_ParameterTypeBase,_Parameterizable,_ConfigureComponent,_Labelable):
         newpset = parameterSet.newPSet()
         self.insertContentsInto(newpset)
         parameterSet.addPSet(self.isTracked(), myname, newpset)
+    def insertContentsInto(self, parameterSet):
+        if self.isRef_():
+            ref = parameterSet.getTopPSet_(self.refToPSet_.value())
+            ref.insertContentsInto(parameterSet)
+        else:
+            super(PSet, self).insertContentsInto(parameterSet)
 
 
 class vint32(_ValidatingParameterListBase):
@@ -1186,15 +1212,19 @@ if __name__ == "__main__":
         def testint32(self):
             i = int32(1)
             self.assertEqual(i.value(),1)
+            self.assert_(i)
             self.assertRaises(ValueError,int32,"i")
             i = int32._valueFromString("0xA")
             self.assertEqual(i.value(),10)
+            self.assert_(not int32(0))
 
         def testuint32(self):
             i = uint32(1)
             self.assertEqual(i.value(),1)
+            self.assert_(i)
             i = uint32(0)
             self.assertEqual(i.value(),0)
+            self.assert_(not i)
             self.assertRaises(ValueError,uint32,"i")
             self.assertRaises(ValueError,uint32,-1)
             i = uint32._valueFromString("0xA")
@@ -1203,9 +1233,11 @@ if __name__ == "__main__":
         def testvint32(self):
             v = vint32()
             self.assertEqual(len(v),0)
+            self.assert_(not v)
             v.append(1)
             self.assertEqual(len(v),1)
             self.assertEqual(v[0],1)
+            self.assert_(v)
             v.append(2)
             v.insert(1,3)
             self.assertEqual(v[1],3)
@@ -1219,8 +1251,10 @@ if __name__ == "__main__":
         def testbool(self):
             b = bool(True)
             self.assertEqual(b.value(),True)
+            self.assert_(b)
             b = bool(False)
             self.assertEqual(b.value(),False)
+            self.assert_(not b)
             b = bool._valueFromString("2")
             self.assertEqual(b.value(),True)
             self.assertEqual(repr(b), "cms.bool(True)")
@@ -1228,11 +1262,13 @@ if __name__ == "__main__":
             s=string('this is a test')
             self.assertEqual(s.value(),'this is a test')
             self.assertEqual(repr(s), "cms.string(\'this is a test\')")
+            self.assert_(s)
             s=string('\0')
             self.assertEqual(s.value(),'\0')
             self.assertEqual(s.configValue(),"'\\0'")
             s2=string('')
             self.assertEqual(s2.value(),'')
+            self.assert_(not s2)
         def testvstring(self):
             a = vstring("", "Barack", "John", "Sarah", "Joe")
             self.assertEqual(len(a), 5)

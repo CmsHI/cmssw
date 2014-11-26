@@ -8,7 +8,6 @@
 //
 // Original Author:  
 //         Created:  Fri Jul  2 16:11:42 CEST 2010
-// $Id: TGeoMgrFromDdd.cc,v 1.12 2012/03/21 14:40:24 yana Exp $
 //
 
 #include "Fireworks/Geometry/interface/TGeoMgrFromDdd.h"
@@ -324,7 +323,7 @@ TGeoMgrFromDdd::createShape(const std::string& iName,
 	 case ddpseudotrap:
 	 {
 	    //implementation taken from SimG4Core/Geometry/src/DDG4SolidConverter.cc
-	    static DDRotationMatrix s_rot( ROOT::Math::RotationX( 90.*deg ));
+	    const static DDRotationMatrix s_rot( ROOT::Math::RotationX( 90.*deg ));
 	    DDPseudoTrap pt( iSolid );
 
 	    double r = pt.radius();

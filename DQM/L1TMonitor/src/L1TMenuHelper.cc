@@ -62,8 +62,7 @@ L1TMenuHelper::~L1TMenuHelper(){}
 // Method: fetLUSOTrigger
 //   * Get Lowest Unprescaled Single Object Triggers and Energy Sums
 //-------------------------------------------------------------------------------------
-map<string,string> L1TMenuHelper::getLUSOTrigger(map<string,bool> iCategories, int IndexRefPrescaleFactors){
-
+map<string,string> L1TMenuHelper::getLUSOTrigger(const map<string,bool>& iCategories, int IndexRefPrescaleFactors){
   map<string,string> out;
 
   // Getting information from the menu
@@ -305,24 +304,32 @@ map<string,string> L1TMenuHelper::getLUSOTrigger(map<string,bool> iCategories, i
   if(m_vTrigHTT   .size() > 0){sort(m_vTrigHTT   .begin(),m_vTrigHTT   .end()); selTrigHTT    = m_vTrigHTT   [0].alias;}
   if(m_vTrigHTM   .size() > 0){sort(m_vTrigHTM   .begin(),m_vTrigHTM   .end()); selTrigHTM    = m_vTrigHTM   [0].alias;}
 
-  if(iCategories["Mu"])    {out["Mu"]     = selTrigMu;}
-  if(iCategories["EG"])    {out["EG"]     = selTrigEG;}
-  if(iCategories["IsoEG"]) {out["IsoEG"]  = selTrigIsoEG;}
-  if(iCategories["Jet"])   {out["Jet"]    = selTrigJet;}
-  if(iCategories["CenJet"]){out["CenJet"] = selTrigCenJet;}
-  if(iCategories["ForJet"]){out["ForJet"] = selTrigForJet;}
-  if(iCategories["TauJet"]){out["TauJet"] = selTrigTauJet;}
-  if(iCategories["ETT"])   {out["ETT"]    = selTrigETT;}
-  if(iCategories["ETM"])   {out["ETM"]    = selTrigETM;}
-  if(iCategories["HTT"])   {out["HTT"]    = selTrigHTT;}
-  if(iCategories["HTM"])   {out["HTM"]    = selTrigHTM;}
+  auto check = [](const map<string,bool>& cats, const char* key) -> bool {
+    auto it = cats.find(key);
+    if (it != cats.end())
+      return it->second;
+
+    return false;
+  };
+
+  if (check(iCategories, "Mu"    )) {out["Mu"]     = selTrigMu;}
+  if (check(iCategories, "EG"    )) {out["EG"]     = selTrigEG;}
+  if (check(iCategories, "IsoEG" )) {out["IsoEG"]  = selTrigIsoEG;}
+  if (check(iCategories, "Jet"   )) {out["Jet"]    = selTrigJet;}
+  if (check(iCategories, "CenJet")) {out["CenJet"] = selTrigCenJet;}
+  if (check(iCategories, "ForJet")) {out["ForJet"] = selTrigForJet;}
+  if (check(iCategories, "TauJet")) {out["TauJet"] = selTrigTauJet;}
+  if (check(iCategories, "ETT"   )) {out["ETT"]    = selTrigETT;}
+  if (check(iCategories, "ETM"   )) {out["ETM"]    = selTrigETM;}
+  if (check(iCategories, "HTT"   )) {out["HTT"]    = selTrigHTT;}
+  if (check(iCategories, "HTM"   )) {out["HTM"]    = selTrigHTM;}
 
   return out;
 
 }
 
-map<string,string> L1TMenuHelper::testAlgos(map<string,string> iAlgos){
-
+map<string,string> L1TMenuHelper::testAlgos(const map<string,string>& _iAlgos){
+   map<string,string> iAlgos = _iAlgos;
   // Getting information from the menu
   const AlgorithmMap *theAlgoMap = &m_l1GtMenu->gtAlgorithmAliasMap();
 
@@ -436,7 +443,7 @@ string L1TMenuHelper::enumToStringL1GtConditionCategory(L1GtConditionCategory iC
 }
 
 //__________________________________________________________________
-int L1TMenuHelper::getPrescaleByAlias(TString iCategory,TString iAlias){
+int L1TMenuHelper::getPrescaleByAlias(const TString& iCategory,const TString& iAlias){
 
     int out = -1;
 
@@ -469,7 +476,7 @@ int L1TMenuHelper::getPrescaleByAlias(TString iCategory,TString iAlias){
 }
 
 //__________________________________________________________________
-unsigned int L1TMenuHelper::getEtaRangeByAlias(TString iCategory,TString iAlias){
+unsigned int L1TMenuHelper::getEtaRangeByAlias(const TString& iCategory,const TString& iAlias){
 
     unsigned int out = -1;
 
@@ -502,7 +509,7 @@ unsigned int L1TMenuHelper::getEtaRangeByAlias(TString iCategory,TString iAlias)
 }
 
 //__________________________________________________________________
-unsigned int L1TMenuHelper::getQualityAlias(TString iCategory,TString iAlias){
+unsigned int L1TMenuHelper::getQualityAlias(const TString& iCategory,const TString& iAlias){
 
     unsigned int out = -1;
 

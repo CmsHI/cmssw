@@ -9,7 +9,7 @@
 #include "DQMOffline/RecoB/interface/BaseBTagPlotter.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "DataFormats/BTauReco/interface/JetTag.h"
-
+#include "DQMServices/Core/interface/DQMStore.h"
 
 class JetTagPlotter : public BaseBTagPlotter {
 
@@ -17,24 +17,23 @@ class JetTagPlotter : public BaseBTagPlotter {
  public:
 
   JetTagPlotter (const std::string & tagName, const EtaPtBin & etaPtBin,
-		 const edm::ParameterSet& pSet, const unsigned int& mc , const bool& update, const bool& willFinalize);
+		 const edm::ParameterSet& pSet, const unsigned int& mc , 
+		 const bool& willFinalize, DQMStore::IBooker & ibook);
 
   virtual ~JetTagPlotter () ;
 
   void analyzeTag (); //added to fill the jet multiplicity on data 
   void analyzeTag (const float & w); //added to fill the jet multiplicity on mc 
-  void analyzeTag (const reco::JetTag & jetTag, const int & jetFlavour);
-  void analyzeTag (const reco::JetTag & jetTag, const int & jetFlavour, const float & w);
-  void analyzeTag (const reco::Jet & jet, const float& discriminator, const int& jetFlavour);
-  void analyzeTag (const reco::Jet & jet, const float& discriminator, const int& jetFlavour, const float & w);
+  void analyzeTag (const reco::JetTag & jetTag, const double & jec, const int & jetFlavour);
+  void analyzeTag (const reco::JetTag & jetTag, const double & jec, const int & jetFlavour, const float & w);
+  void analyzeTag (const reco::Jet & jet, const double & jec, const float& discriminator, const int& jetFlavour);
+  void analyzeTag (const reco::Jet & jet, const double & jec, const float& discriminator, const int& jetFlavour, const float & w);
 
   // final computation, plotting, printing .......
-  void createPlotsForFinalize();
-  void finalize () ;
+  void finalize (DQMStore::IBooker & ibook_, DQMStore::IGetter & igetter_) ;
 
   // get "2d" histograms for misid. vs. b-eff
   EffPurFromHistos * getEffPurFromHistos () { return effPurFromHistos ; }
-
 
   void epsPlot(const std::string & name);
 
@@ -55,7 +54,6 @@ class JetTagPlotter : public BaseBTagPlotter {
   double startEffPur_ ; 
   double endEffPur_ ; 
 
-  bool finalized;
   unsigned int mcPlots_;
   bool willFinalize_;
 
@@ -67,9 +65,6 @@ class JetTagPlotter : public BaseBTagPlotter {
   EffPurFromHistos * effPurFromHistos ;
 
   FlavourHistograms<int> * dJetFlav;
-
-  // track multiplicity in jet
-  //FlavourHistograms<int> * dJetTrackMultiplicity;
   
   // Discriminator: again with reasonable binning
   FlavourHistograms<double> * dDiscriminator;
@@ -86,14 +81,6 @@ class JetTagPlotter : public BaseBTagPlotter {
   // reconstructed jet phi
   FlavourHistograms<double> * dJetRecPhi;
 
-  // associated parton momentum
-  //FlavourHistograms<double> * dJetPartonMomentum;
-
-  // associated parton pt
-  //FlavourHistograms<double> * dJetPartonPt;
-
-  // associated parton eta
-  //FlavourHistograms<double> * dJetPartonPseudoRapidity;
 } ;
 
 #endif

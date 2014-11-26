@@ -5,8 +5,6 @@
  *
  *  Producer for the VolumeBasedMagneticField.
  *
- *  $Date: 2008/11/14 10:42:41 $
- *  $Revision: 1.1 $
  */
 
 #include "FWCore/Framework/interface/EventSetupRecordIntervalFinder.h"
@@ -30,8 +28,6 @@ namespace magneticfield {
     // forbid copy ctor and assignment op.
     VolumeBasedMagneticFieldESProducer(const VolumeBasedMagneticFieldESProducer&);
     const VolumeBasedMagneticFieldESProducer& operator=(const VolumeBasedMagneticFieldESProducer&);
-
-    std::vector<unsigned> expandList(const std::string& list);
 
     edm::ParameterSet pset;
   };

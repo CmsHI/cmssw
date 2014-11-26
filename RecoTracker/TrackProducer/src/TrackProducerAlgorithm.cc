@@ -17,7 +17,7 @@
 #include "RecoTracker/TransientTrackingRecHit/interface/TkTransientTrackingRecHitBuilder.h"
 #include "TrackingTools/PatternTools/interface/TransverseImpactPointExtrapolator.h"
 #include "TrackingTools/TransientTrack/interface/TransientTrack.h"
-#include "RecoTracker/TrackProducer/interface/TrackingRecHitLessFromGlobalPosition.h"
+#include "DataFormats/TrackerRecHit2D/interface/TrackingRecHitLessFromGlobalPosition.h"
 
 #include "TrackingTools/PatternTools/interface/TSCBLBuilderNoMaterial.h"
 #include "FWCore/Utilities/interface/Exception.h"
@@ -55,6 +55,7 @@ namespace {
     StatCount() {}
     ~StatCount() { print();}
   };
+  StatCount statCount;
 
 #else
   struct StatCount {
@@ -63,9 +64,9 @@ namespace {
     void gsf(){}
     void algo(int){}
   };
+  [[cms::thread_safe]] StatCount statCount;
 #endif
 
-  StatCount statCount;
 
 }
 
@@ -85,17 +86,20 @@ TrackProducerAlgorithm<reco::Track>::buildTrack (const TrajectoryFitter * theFit
 						 int qualityMask,signed char nLoops)						 
 {
   //variable declarations
-  reco::Track * theTrack;
-  Trajectory * theTraj; 
+
   PropagationDirection seedDir = seed.direction();
       
   //perform the fit: the result's size is 1 if it succeded, 0 if fails
   Trajectory && trajTmp = theFitter->fitOne(seed, hits, theTSOS,(nLoops>0) ? TrajectoryFitter::looper : TrajectoryFitter::standard);
-  if unlikely(!trajTmp.isValid()) return false;
+  if unlikely(!trajTmp.isValid()) {
+#ifdef VI_DEBUG
+    std::cout << "fit failed " << algo_ << ": " <<  hits.size() <<'|' << int(nLoops) << ' ' << std::endl; 
+#endif     
+     return false;
+  }
   
   
-  
-  theTraj = new Trajectory(std::move(trajTmp));
+  auto theTraj = new Trajectory(std::move(trajTmp));
   theTraj->setSeedRef(seedRef);
   
   statCount.hits(theTraj->foundHits(),theTraj->lostHits());
@@ -117,6 +121,36 @@ TrackProducerAlgorithm<reco::Track>::buildTrack (const TrajectoryFitter * theFit
   ndof -= 5.f;
   if unlikely(std::abs(theTSOS.magneticField()->nominalValue())<DBL_MIN) ++ndof;  // same as -4
  
+
+#ifdef VI_DEBUG
+int chit[7]={};
+int kk=0;
+for (auto const & tm : theTraj->measurements()) {
+  ++kk;
+  auto const & hit = tm.recHitR();
+  if (!hit.isValid()) ++chit[0];
+  if (hit.det()==nullptr) ++chit[1];
+  if ( trackerHitRTTI::isUndef(hit) ) continue;
+  if(0) std::cout << "h " << kk << ": "<< hit.localPosition() << ' ' << hit.localPositionError() << ' ' << tm.estimate() << std::endl;
+  if ( hit.dimension()!=2 ) {
+    ++chit[2];
+  } else {
+    auto const & thit = static_cast<BaseTrackerRecHit const&>(hit);
+    auto const & clus = thit.firstClusterRef();
+    if (clus.isPixel()) ++chit[3];
+    else if (thit.isMatched()) {
+      ++chit[4];
+    } else  if (thit.isProjected()) {
+      ++chit[5];
+    } else {
+      ++chit[6];
+        }
+  }
+ }
+
+std::cout << algo_ << ": " <<  hits.size() <<'|' <<theTraj->measurements().size()<<'|' << int(nLoops) << ' ';   for (auto c:chit) std::cout << c <<'/'; std::cout<< std::endl;
+
+#endif
  
   //if geometricInnerState_ is false the state for projection to beam line is the state attached to the first hit: to be used for loopers
   //if geometricInnerState_ is true the state for projection to beam line is the one from the (geometrically) closest measurement to the beam line: to be sued for non-collision tracks
@@ -156,7 +190,7 @@ TrackProducerAlgorithm<reco::Track>::buildTrack (const TrajectoryFitter * theFit
   
   LogDebug("TrackProducer") << "pos=" << v << " mom=" << p << " pt=" << p.perp() << " mag=" << p.mag();
   
-  theTrack = new reco::Track(theTraj->chiSquared(),
+  auto theTrack = new reco::Track(theTraj->chiSquared(),
 			     int(ndof),//FIXME fix weight() in TrackingRecHit
 			     pos, mom, tscbl.trackStateAtPCA().charge(), 
 			     tscbl.trackStateAtPCA().curvilinearError(),
@@ -189,16 +223,14 @@ TrackProducerAlgorithm<reco::GsfTrack>::buildTrack (const TrajectoryFitter * the
 						    SeedRef seedRef,
 						    int qualityMask,signed char nLoops)
 {
-  //variable declarations
-  reco::GsfTrack * theTrack;
-  Trajectory * theTraj; 
+
   PropagationDirection seedDir = seed.direction();
   
   Trajectory && trajTmp = theFitter->fitOne(seed, hits, theTSOS,(nLoops>0) ? TrajectoryFitter::looper: TrajectoryFitter::standard);
   if unlikely(!trajTmp.isValid()) return false;
   
   
-  theTraj = new Trajectory( std::move(trajTmp) );
+  auto theTraj = new Trajectory( std::move(trajTmp) );
   theTraj->setSeedRef(seedRef);
   
   //  TrajectoryStateOnSurface innertsos;
@@ -276,7 +308,7 @@ TrackProducerAlgorithm<reco::GsfTrack>::buildTrack (const TrajectoryFitter * the
   
   LogDebug("GsfTrackProducer") << "pos=" << v << " mom=" << p << " pt=" << p.perp() << " mag=" << p.mag();
   
-  theTrack = new reco::GsfTrack(theTraj->chiSquared(),
+  auto theTrack = new reco::GsfTrack(theTraj->chiSquared(),
 				int(ndof),//FIXME fix weight() in TrackingRecHit
 				//			       theTraj->foundHits(),//FIXME to be fixed in Trajectory.h
 				//			       0, //FIXME no corresponding method in trajectory.h

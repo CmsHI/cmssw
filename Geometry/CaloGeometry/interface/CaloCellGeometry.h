@@ -8,6 +8,7 @@
 #include <CLHEP/Geometry/Transform3D.h>
 #include <vector>
 #include <string>
+#include <cassert>
 
 #include "FWCore/Utilities/interface/GCC11Compatibility.h"
 
@@ -44,8 +45,6 @@ a default that the derived class author has to call deliberately if he wants it:
     };
 @endcode
 
-$Date: 2012/11/01 10:36:32 $
-$Revision: 1.21 $
 \author J. Mans, P. Meridiani
 */
 
@@ -72,13 +71,17 @@ public:
   virtual ~CaloCellGeometry() ;
       
   /// Returns the corner points of this cell's volume.
-  virtual const CornersVec& getCorners() const = 0 ;
+  const CornersVec& getCorners() const { assert(not m_corners.uninitialized()); return m_corners; }
 
   /// Returns the position of reference for this cell 
-  const GlobalPoint& getPosition() const {return m_refPoint ; }
+  const GlobalPoint& getPosition() const {return m_refPoint;}
+  const GlobalPoint& getBackPoint() const {return m_backPoint;} 
+
   float etaPos() const { return m_eta;}
   float phiPos() const { return m_phi;}
 
+  float etaSpan() const { return m_dEta;}
+  float	phiSpan() const	{ return m_dPhi;}
 
 
   /// Returns true if the specified point is inside this cell
@@ -107,21 +110,43 @@ public:
 protected:
 
   CaloCellGeometry( CornersVec::const_reference gp ,
-		    const CornersMgr*           mgr,
+		    CornersMgr*                 mgr,
 		    const CCGFloat*             par ) ;
 
   CaloCellGeometry( const CornersVec& cv,
 		    const CCGFloat*   par ) ;
 
-  CornersVec& setCorners() const ;
-
   CaloCellGeometry( void );
 
+  // MUST be called by children constructors
+  void initSpan() {
+     initCorners(m_corners);
+     m_dEta = std::abs(getCorners()[0].eta()-
+                      getCorners()[2].eta());
+     m_dPhi = std::abs(getCorners()[0].phi() -
+                      getCorners()[2].phi());
+     initBack();
+  }
+
+  virtual void initCorners(CornersVec&) = 0;
 private:
+ void initBack() {
+    // from CaloTower code
+    CornersVec const & cv = getCorners();
+    m_backPoint = GlobalPoint(0.25 * (cv[4].x() + cv[5].x() + cv[6].x() + cv[7].x()),
+                              0.25 * (cv[4].y() + cv[5].y() + cv[6].y() + cv[7].y()),
+                              0.25 * (cv[4].z() + cv[5].z() + cv[6].z() + cv[7].z()));   
+  }
+
+
   GlobalPoint         m_refPoint ;
-  mutable CornersVec  m_corners  ;
+  GlobalPoint         m_backPoint ;
+  CornersVec  m_corners  ;
   const CCGFloat*     m_parms    ;
   float m_eta, m_phi;
+  float m_dEta;
+  float m_dPhi;
+
 };
 
 std::ostream& operator<<( std::ostream& s, const CaloCellGeometry& cell ) ;

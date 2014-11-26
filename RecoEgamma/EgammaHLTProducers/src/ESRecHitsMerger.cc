@@ -8,6 +8,8 @@
 #include "RecoEgamma/EgammaHLTProducers/interface/ESRecHitsMerger.h"
 
 #include "FWCore/Utilities/interface/Exception.h"
+#include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
+#include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
 
 
 using namespace edm;
@@ -26,13 +28,28 @@ ESRecHitsMerger::ESRecHitsMerger(const edm::ParameterSet& pset) {
  Pi0SourceES_   = pset.getUntrackedParameter<edm::InputTag>("Pi0Source_ES",edm::InputTag("dummyPi0"));
  EtaSourceES_   = pset.getUntrackedParameter<edm::InputTag>("EtaSource_ES",edm::InputTag("dummyEta"));
   
-
  OutputLabelES_ = pset.getUntrackedParameter<std::string>("OutputLabel_ES");
- 
  InputRecHitES_ = pset.getUntrackedParameter<std::string>("EcalRecHitCollectionES");
  
+ consumesMany<ESRecHitCollection>();
  produces<EcalRecHitCollection>(OutputLabelES_);
  
+}
+
+void ESRecHitsMerger::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+
+  edm::ParameterSetDescription desc;
+  desc.add<bool>("debug", false);
+  desc.add<edm::InputTag>("EgammaSource_ES", edm::InputTag("dummyEgamma"));
+  desc.add<edm::InputTag>("MuonsSource_ES",edm::InputTag("dummyMuons"));
+  desc.add<edm::InputTag>("TausSource_ES",edm::InputTag("dummyTaus"));
+  desc.add<edm::InputTag>("JetsSource_ES",edm::InputTag("dummyJets"));
+  desc.add<edm::InputTag>("RestSource_ES",edm::InputTag("dummyRest"));
+  desc.add<edm::InputTag>("Pi0Source_ES",edm::InputTag("dummyPi0"));
+  desc.add<edm::InputTag>("EtaSource_ES",edm::InputTag("dummyEta"));
+  desc.add<std::string>("OutputLabel_ES", "EcalRecHitsES");
+  desc.add<std::string>("EcalRecHitCollectionES", "EcalRecHitsES");
+  descriptions.add("hltESRecHitsMerger", desc);  
 }
 
 

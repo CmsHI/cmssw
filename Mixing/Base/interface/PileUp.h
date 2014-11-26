@@ -11,11 +11,6 @@
 #include "FWCore/Framework/interface/EventPrincipal.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 
-#include "CLHEP/Random/RandPoissonQ.h"
-#include "CLHEP/Random/RandFlat.h"
-
-#include "boost/shared_ptr.hpp"
-
 #include "TRandom.h"
 #include "TFile.h"
 #include "TH1F.h"
@@ -26,27 +21,34 @@ class TH1F;
 namespace CLHEP {
   class RandPoissonQ;
   class RandPoisson;
+  class HepRandomEngine;
 }
-
-
 
 namespace edm {
   class SecondaryEventProvider;
+  class StreamID;
 
   class PileUp {
   public:
-    explicit PileUp(ParameterSet const& pset, double averageNumber, TH1F* const histo, const bool playback);
+    explicit PileUp(ParameterSet const& pset, std::string sourcename, double averageNumber, TH1F* const histo, const bool playback);
     ~PileUp();
 
     template<typename T>
-      void readPileUp(edm::EventID const & signal, std::vector<edm::EventID> &ids, T eventOperator, const int NumPU );
+      void readPileUp(edm::EventID const & signal, std::vector<edm::EventID> &ids, T eventOperator, const int NumPU, StreamID const&);
 
     template<typename T>
       void playPileUp(const std::vector<edm::EventID> &ids, T eventOperator);
 
     double averageNumber() const {return averageNumber_;}
     bool poisson() const {return poisson_;}
-    bool doPileUp() {return none_ ? false :  averageNumber_>0.;}
+    bool doPileUp( int BX ) {
+      if(Source_type_ != "cosmics") {
+	return none_ ? false :  averageNumber_>0.;
+      }
+      else {
+	return ( BX >= minBunch_cosmics_ && BX <= maxBunch_cosmics_);
+      }
+    }
     void dropUnwantedBranches(std::vector<std::string> const& wantedBranches) {
       input_->dropUnwantedBranches(wantedBranches);
     }
@@ -63,7 +65,7 @@ namespace edm {
 
     void reload(const edm::EventSetup & setup);
 
-    void CalculatePileup(int MinBunch, int MaxBunch, std::vector<int>& PileupSelection, std::vector<float>& TrueNumInteractions);
+    void CalculatePileup(int MinBunch, int MaxBunch, std::vector<int>& PileupSelection, std::vector<float>& TrueNumInteractions, StreamID const&);
 
     //template<typename T>
     // void recordEventForPlayback(EventPrincipal const& eventPrincipal,
@@ -73,8 +75,14 @@ namespace edm {
     void input(unsigned int s){inputType_=s;}
 
   private:
+
+    std::unique_ptr<CLHEP::RandPoissonQ> const& poissonDistribution(StreamID const& streamID);
+    std::unique_ptr<CLHEP::RandPoisson> const& poissonDistr_OOT(StreamID const& streamID);
+    CLHEP::HepRandomEngine* randomEngine(StreamID const& streamID);
+
     unsigned int  inputType_;
     std::string type_;
+    std::string Source_type_;
     double averageNumber_;
     int const intAverage_;
     TH1F* histo_;
@@ -90,19 +98,23 @@ namespace edm {
     bool PU_Study_;
     std::string Study_type_;
 
+
     int  intFixed_OOT_;
     int  intFixed_ITPU_;
 
-    boost::shared_ptr<ProductRegistry> productRegistry_;
-    std::unique_ptr<VectorInputSource> const input_;
-    boost::shared_ptr<ProcessConfiguration> processConfiguration_;
-    std::unique_ptr<EventPrincipal> eventPrincipal_;
-    boost::shared_ptr<LuminosityBlockPrincipal> lumiPrincipal_;
-    boost::shared_ptr<RunPrincipal> runPrincipal_;
-    std::unique_ptr<SecondaryEventProvider> provider_;
-    std::unique_ptr<CLHEP::RandPoissonQ> poissonDistribution_;
-    std::unique_ptr<CLHEP::RandPoisson>  poissonDistr_OOT_;
+    int minBunch_cosmics_;
+    int maxBunch_cosmics_;
 
+    std::shared_ptr<ProductRegistry> productRegistry_;
+    std::unique_ptr<VectorInputSource> const input_;
+    std::shared_ptr<ProcessConfiguration> processConfiguration_;
+    std::unique_ptr<EventPrincipal> eventPrincipal_;
+    std::shared_ptr<LuminosityBlockPrincipal> lumiPrincipal_;
+    std::shared_ptr<RunPrincipal> runPrincipal_;
+    std::unique_ptr<SecondaryEventProvider> provider_;
+    std::vector<std::unique_ptr<CLHEP::RandPoissonQ> > vPoissonDistribution_;
+    std::vector<std::unique_ptr<CLHEP::RandPoisson> > vPoissonDistr_OOT_;
+    std::vector<CLHEP::HepRandomEngine*> randomEngines_;
 
     TH1F *h1f;
     TH1F *hprobFunction;
@@ -140,6 +152,21 @@ namespace edm {
   };
 
 
+  template<typename T>
+  class PassEventID
+  {
+  private:
+    T& eventOperator_;
+    int eventCount ;
+  public:
+    PassEventID(T& eventOperator)
+      : eventOperator_(eventOperator), eventCount( 0 ) {}
+    void operator()(EventPrincipal const& eventPrincipal) {
+      eventOperator_(eventPrincipal, ++eventCount);
+    }
+  };
+
+
   /*! Generates events from a VectorInputSource.
    *  This function decides which method of VectorInputSource 
    *  to call: sequential, random, or pre-specified.
@@ -152,7 +179,8 @@ namespace edm {
    */
   template<typename T>
   void
-    PileUp::readPileUp(edm::EventID const & signal, std::vector<edm::EventID> &ids, T eventOperator, const int pileEventCnt) {
+    PileUp::readPileUp(edm::EventID const & signal, std::vector<edm::EventID> &ids, T eventOperator,
+                       const int pileEventCnt, StreamID const& streamID) {
 
     // One reason PileUp is responsible for recording event IDs is
     // that it is the one that knows how many events will be read.
@@ -164,7 +192,7 @@ namespace edm {
       if (sequential_)
         read = input_->loopSequentialWithID(*eventPrincipal_, lumi, pileEventCnt, recorder);
       else
-        read = input_->loopRandomWithID(*eventPrincipal_, lumi, pileEventCnt, recorder);
+        read = input_->loopRandomWithID(*eventPrincipal_, lumi, pileEventCnt, recorder, randomEngine(streamID));
     } else {
       if (sequential_) {
         // boost::bind creates a functor from recordEventForPlayback
@@ -178,7 +206,7 @@ namespace edm {
         //  );
           
       } else  {
-        read = input_->loopRandom(*eventPrincipal_, pileEventCnt, recorder);
+        read = input_->loopRandom(*eventPrincipal_, pileEventCnt, recorder, randomEngine(streamID));
         //               boost::bind(&PileUp::recordEventForPlayback<T>,
         //                             boost::ref(*this), _1, boost::ref(ids),
         //                             boost::ref(eventOperator))
@@ -195,7 +223,8 @@ namespace edm {
   void
     PileUp::playPileUp(const std::vector<edm::EventID> &ids, T eventOperator) {
     //TrueNumInteractions.push_back( ids.size() ) ;
-    input_->loopSpecified(*eventPrincipal_,ids,eventOperator);
+    PassEventID<T> recorder(eventOperator);
+    input_->loopSpecified(*eventPrincipal_,ids,recorder);
   }
 
 

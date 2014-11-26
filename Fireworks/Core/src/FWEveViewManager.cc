@@ -8,7 +8,6 @@
 //
 // Original Author:  Chris Jones, Alja Mrak-Tadel
 //         Created:  Thu Mar 18 14:11:32 CET 2010
-// $Id: FWEveViewManager.cc,v 1.45 2011/03/14 17:57:29 amraktad Exp $
 //
 
 // system include files
@@ -19,6 +18,7 @@
 #include "TEveScene.h"
 #include "TEveViewer.h"
 #include "TEveCalo.h"
+#include "TGeoManager.h"
 #include "TGLViewer.h"
 
 #include "Fireworks/Core/interface/FWEveViewManager.h"
@@ -132,6 +132,8 @@ FWEveViewManager::FWEveViewManager(FWGUIManager* iGUIMgr) :
 
    gEve->GetHighlight()->Connect("SelectionAdded(TEveElement*)","FWEveViewManager",this,"highlightAdded(TEveElement*)");
    gEve->GetHighlight()->Connect("SelectionRepeated(TEveElement*)","FWEveViewManager",this,"highlightAdded(TEveElement*)");
+
+   TGeoManager::SetVerboseLevel(0);
 }
 
 FWEveViewManager::~FWEveViewManager()
@@ -680,6 +682,7 @@ FWEveViewManager::supportedTypesAndRepresentations() const
    // needed for add collection GUI
    FWTypeToRepresentations returnValue;
    const std::string kSimple("simple#");
+   const static std::string kFullFrameWorkPBExtension = "FullFramework";
    for(TypeToBuilder::const_iterator it = m_typeToBuilder.begin(), itEnd = m_typeToBuilder.end();
        it != itEnd;
        ++it) 
@@ -689,18 +692,20 @@ FWEveViewManager::supportedTypesAndRepresentations() const
       {
          BuilderInfo &info = blist[bii];
          std::string name = info.m_name;
+
          unsigned int bitPackedViews = info.m_viewBit;
          bool representsSubPart = (name.substr(name.find_first_of('@')-1, 1)=="!");
-     
+         size_t extp = name.rfind(kFullFrameWorkPBExtension);
+         bool FFOnly = (extp != std::string::npos);
          if(name.substr(0,kSimple.size()) == kSimple)
          {
             name = name.substr(kSimple.size(), name.find_first_of('@')-kSimple.size()-1);
-            returnValue.add(boost::shared_ptr<FWRepresentationCheckerBase>(new FWSimpleRepresentationChecker(name, it->first,bitPackedViews,representsSubPart)) );
+            returnValue.add(boost::shared_ptr<FWRepresentationCheckerBase>(new FWSimpleRepresentationChecker(name, it->first,bitPackedViews,representsSubPart, FFOnly)) );
          }
          else
          {
             name = name.substr(0, name.find_first_of('@')-1);
-            returnValue.add(boost::shared_ptr<FWRepresentationCheckerBase>(new FWEDProductRepresentationChecker(name, it->first,bitPackedViews,representsSubPart)) );
+            returnValue.add(boost::shared_ptr<FWRepresentationCheckerBase>(new FWEDProductRepresentationChecker(name, it->first,bitPackedViews,representsSubPart, FFOnly)) );
          }
       }
    }

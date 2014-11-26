@@ -7,6 +7,10 @@
 #include <sstream>
 #include <set>
 
+namespace edm {
+  class ServiceToken;
+}
+
 namespace cond {
   class DbConnection;
 
@@ -54,13 +58,20 @@ namespace cond {
     void initializePluginManager();
     cond::DbSession openDbSession( const std::string& connectionParameterName, bool readOnly=false );
     cond::DbSession openDbSession( const std::string& connectionParameterName, const std::string& role, bool readOnly=false );
-    
+
+    protected:
+    cond::DbSession newDbSession(  const std::string& connectionString, bool readOnly=false );
+    cond::DbSession newDbSession(  const std::string& connectionString, const std::string& role, bool readOnly=false );
+    void initializeForDbConnection();
+  
     private:
 
     std::string getValueIfExists(const std::string& fullName);
     void sendException( const std::string& message );
     void sendError( const std::string& message );
-    void initializeForDbConnection();
+
+    protected:
+    edm::ServiceToken* m_currentToken = nullptr;
     
     private:
 
@@ -70,7 +81,6 @@ namespace cond {
     boost::program_options::positional_options_description m_positionalOptions;
     boost::program_options::variables_map m_values;
     cond::DbConnection* m_dbConnection;
-    bool m_pluginMgrInitialized;
     std::set<std::string> m_dbSessions;
   };
   

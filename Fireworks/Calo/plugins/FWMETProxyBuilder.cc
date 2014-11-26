@@ -8,7 +8,6 @@
 //
 // Original Author:
 //         Created:  Sun Jan  6 23:57:00 EST 2008
-// $Id: FWMETProxyBuilder.cc,v 1.30 2011/01/17 14:11:43 amraktad Exp $
 //
 
 // system include files
@@ -55,6 +54,7 @@ private:
    FWMETProxyBuilder( const FWMETProxyBuilder& );    // stop default
    const FWMETProxyBuilder& operator=( const FWMETProxyBuilder& );    // stop default
 
+   using FWSimpleProxyBuilderTemplate<reco::MET>::buildViewType;
    virtual void buildViewType(const reco::MET& iData, unsigned int iIndex, TEveElement& oItemHolder, FWViewType::EType type , const FWViewContext*);
    
    std::vector<fireworks::scaleMarker> m_lines;

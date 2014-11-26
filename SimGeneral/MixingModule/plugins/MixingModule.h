@@ -40,8 +40,11 @@ class DigiAccumulatorMixMod;
 class PileUpEventPrincipal;
 
 namespace edm {
+  class AdjusterBase;
+  class ConsumesCollector;
   class MixingWorkerBase;
   class ModuleCallingContext;
+  class StreamID;
 
   class MixingModule : public BMixingModule {
     public:
@@ -67,7 +70,7 @@ namespace edm {
 
       void accumulateEvent(Event const& event, EventSetup const& setup);
 
-      void accumulateEvent(PileUpEventPrincipal const& event, EventSetup const& setup);
+      void accumulateEvent(PileUpEventPrincipal const& event, EventSetup const& setup, edm::StreamID const&);
 
       void finalizeEvent(Event& event, EventSetup const& setup);
 
@@ -79,16 +82,18 @@ namespace edm {
       virtual void createnewEDProduct();
       virtual void checkSignal(const edm::Event &e);
       virtual void addSignals(const edm::Event &e, const edm::EventSetup& es); 
-      virtual void doPileUp(edm::Event &e, const edm::EventSetup& es);
+      virtual void doPileUp(edm::Event &e, const edm::EventSetup& es) override;
       void pileAllWorkers(EventPrincipal const& ep, ModuleCallingContext const*, int bcr, int id, int& offset,
-			  const edm::EventSetup& setup);
-      void createDigiAccumulators( const edm::ParameterSet& mixingPSet ) ;
+			  const edm::EventSetup& setup, edm::StreamID const&);
+      void createDigiAccumulators(const edm::ParameterSet& mixingPSet, edm::ConsumesCollector& iC);
 
       InputTag inputTagPlayback_;
       bool mixProdStep2_;
       bool mixProdStep1_;
       CrossingFramePlaybackInfoExtended *playbackInfo_;
 
+      std::vector<AdjusterBase *> adjusters_;
+      std::vector<AdjusterBase *> adjustersObjects_;
       std::vector<MixingWorkerBase *> workers_;
       std::vector<MixingWorkerBase *> workersObjects_;
       std::vector<std::string> wantedBranches_;

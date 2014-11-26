@@ -22,13 +22,14 @@
 #include "G4LogicalVolumeStore.hh"
 
 #include "CLHEP/Units/GlobalSystemOfUnits.h"
+#include "CLHEP/Units/GlobalPhysicalConstants.h"
 #include "Randomize.hh"
 #include "G4Poisson.hh"
 
 //#define debugLog
 
 CastorSD::CastorSD(G4String name, const DDCompactView & cpv,
-		   SensitiveDetectorCatalog & clg, 
+		   const SensitiveDetectorCatalog & clg,
 		   edm::ParameterSet const & p, 
 		   const SimTrackManager* manager) : 
   CaloSD(name, cpv, clg, p, manager), numberingScheme(0), lvC3EF(0),
@@ -546,7 +547,7 @@ int CastorSD::setTrackID (G4Step* aStep) {
 
 //=======================================================================================
 
-uint32_t CastorSD::rotateUnitID(uint32_t unitID, G4Track* track, CastorShowerEvent shower) {
+uint32_t CastorSD::rotateUnitID(uint32_t unitID, G4Track* track, const CastorShowerEvent& shower) {
 // ==============================================================
 //
 //   o   Exploit Castor phi symmetry to return newUnitID for  

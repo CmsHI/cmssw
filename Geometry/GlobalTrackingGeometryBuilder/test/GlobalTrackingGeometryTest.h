@@ -6,14 +6,13 @@
  *
  * EDAnalyzer to test the GlobalTrackingGeometry.
  *
- *  $Date: 2006/07/12 11:01:22 $
- *  $Revision: 1.3 $
  *  \author M. Sani
  */
 
 class CSCGeometry;
 class DTGeometry;    
 class RPCGeometry;
+class GEMGeometry;
 class TrackerGeometry;
 class GlobalTrackingGeometry;
     
@@ -28,6 +27,7 @@ public:
     void analyzeCSC(const GlobalTrackingGeometry* geo, const CSCGeometry* cscGeometry);
     void analyzeDT(const GlobalTrackingGeometry* geo, const DTGeometry* dtGeometry);
     void analyzeRPC(const GlobalTrackingGeometry* geo, const RPCGeometry* rpcGeometry);
+    void analyzeGEM(const GlobalTrackingGeometry* geo, const GEMGeometry* gemGeometry);
     void analyzeTracker(const GlobalTrackingGeometry* geo, const TrackerGeometry* tkGeometry);
          
     const std::string& myName() { return my_name; }

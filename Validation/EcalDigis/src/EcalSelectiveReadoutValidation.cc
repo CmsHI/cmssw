@@ -13,6 +13,7 @@
 #include "FWCore/Framework/interface/ESHandle.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
+#include "FWCore/Framework/interface/ConsumesCollector.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
 
 #include "Geometry/EcalMapping/interface/EcalElectronicsMapping.h"
@@ -137,6 +138,22 @@ EcalSelectiveReadoutValidation::EcalSelectiveReadoutValidation(const ParameterSe
   histDir_(ps.getParameter<string>("histDir")),
   withEeSimHit_(false),
   withEbSimHit_(false){
+
+  edm::ConsumesCollector collector(consumesCollector());
+  ebDigis_.setToken(collector);
+  eeDigis_.setToken(collector);
+  ebNoZsDigis_.setToken(collector);
+  eeNoZsDigis_.setToken(collector);
+  ebSrFlags_.setToken(collector);
+  eeSrFlags_.setToken(collector);
+  ebComputedSrFlags_.setToken(collector);
+  eeComputedSrFlags_.setToken(collector);
+  ebSimHits_.setToken(collector);
+  eeSimHits_.setToken(collector);
+  tps_.setToken(collector);
+  ebRecHits_.setToken(collector);
+  eeRecHits_.setToken(collector);
+  fedRaw_.setToken(collector);
 
   PgTiming t("EcalSelectiveReadoutValidation ctor");
 
@@ -2128,7 +2145,7 @@ EcalSelectiveReadoutValidation::getFIRWeights(const std::vector<double>&
 }
 
 void
-EcalSelectiveReadoutValidation::configFirWeights(vector<double> weightsForZsFIR){
+EcalSelectiveReadoutValidation::configFirWeights(const vector<double>& weightsForZsFIR){
   bool notNormalized  = false;
   bool notInt = false;
   for(unsigned i=0; i < weightsForZsFIR.size(); ++i){

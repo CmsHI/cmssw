@@ -20,8 +20,6 @@
 #include "FWCore/Utilities/interface/Exception.h"
 #include "FWCore/Utilities/interface/StreamID.h"
 
-#include "boost/shared_ptr.hpp"
-
 #include <map>
 #include <memory>
 #include <set>
@@ -35,20 +33,28 @@ namespace edm {
     template <typename T>
     class GlobalScheduleSignalSentry {
     public:
-      GlobalScheduleSignalSentry(ActivityRegistry* a, typename T::MyPrincipal* principal, EventSetup const* es, typename T::Context const* context) :
-        a_(a), principal_(principal), es_(es), context_(context) {
-        if (a_) T::preScheduleSignal(a_, principal_, context_);
+      GlobalScheduleSignalSentry(ActivityRegistry* a, typename T::Context const* context) :
+        a_(a), context_(context),
+        allowThrow_(false) {
+        if (a_) T::preScheduleSignal(a_, context_);
       }
-      ~GlobalScheduleSignalSentry() {
-        if (a_) if (principal_) T::postScheduleSignal(a_, principal_, es_, context_);
+      ~GlobalScheduleSignalSentry() noexcept(false) {
+        try {
+          if (a_) T::postScheduleSignal(a_, context_);
+        } catch(...) {
+          if(allowThrow_) {throw;}
+        }
+      }
+
+      void allowThrow() {
+        allowThrow_ = true;
       }
 
     private:
       // We own none of these resources.
       ActivityRegistry* a_;
-      typename T::MyPrincipal* principal_;
-      EventSetup const* es_;
       typename T::Context const* context_;
+      bool allowThrow_;
     };
   }
 
@@ -64,18 +70,18 @@ namespace edm {
   public:
     typedef std::vector<std::string> vstring;
     typedef std::vector<Worker*> AllWorkers;
-    typedef boost::shared_ptr<Worker> WorkerPtr;
+    typedef std::shared_ptr<Worker> WorkerPtr;
     typedef std::vector<Worker*> Workers;
 
-    GlobalSchedule(TriggerResultInserter* inserter,
-                   boost::shared_ptr<ModuleRegistry> modReg,
+    GlobalSchedule(std::shared_ptr<TriggerResultInserter> inserter,
+                   std::shared_ptr<ModuleRegistry> modReg,
                    std::vector<std::string> const& modulesToUse,
                    ParameterSet& proc_pset,
                    ProductRegistry& pregistry,
                    PreallocationConfiguration const& prealloc,
                    ExceptionToActionTable const& actions,
-                   boost::shared_ptr<ActivityRegistry> areg,
-                   boost::shared_ptr<ProcessConfiguration> processConfiguration,
+                   std::shared_ptr<ActivityRegistry> areg,
+                   std::shared_ptr<ProcessConfiguration> processConfiguration,
                    ProcessContext const* processContext);
     GlobalSchedule(GlobalSchedule const&) = delete;
 
@@ -111,6 +117,28 @@ namespace edm {
     }
 
   private:
+    //Sentry class to only send a signal if an
+    // exception occurs. An exception is identified
+    // by the destructor being called without first
+    // calling completedSuccessfully().
+    class SendTerminationSignalIfException {
+    public:
+      SendTerminationSignalIfException(edm::ActivityRegistry* iReg, edm::GlobalContext const* iContext):
+      reg_(iReg),
+      context_(iContext){}
+      ~SendTerminationSignalIfException() {
+        if(reg_) {
+          reg_->preGlobalEarlyTerminationSignal_(*context_,TerminationOrigin::ExceptionFromThisContext);
+        }
+      }
+      void completedSuccessfully() {
+        reg_ = nullptr;
+      }
+    private:
+      edm::ActivityRegistry* reg_;
+      GlobalContext const* context_;
+    };
+
     
     template<typename T>
     void runNow(typename T::MyPrincipal& p, EventSetup const& es,
@@ -124,7 +152,7 @@ namespace edm {
     void addToAllWorkers(Worker* w);
     
     WorkerManager                         workerManager_;
-    boost::shared_ptr<ActivityRegistry>   actReg_;
+    std::shared_ptr<ActivityRegistry>   actReg_;
     WorkerPtr                             results_inserter_;
 
 
@@ -139,21 +167,17 @@ namespace edm {
                                  bool cleaningUpAfterException) {
     GlobalContext globalContext = T::makeGlobalContext(ep, processContext_);
 
-    GlobalScheduleSignalSentry<T> sentry(actReg_.get(), &ep, &es, &globalContext);
+    GlobalScheduleSignalSentry<T> sentry(actReg_.get(), &globalContext);
+    
+    SendTerminationSignalIfException terminationSentry(actReg_.get(), &globalContext);
 
     // This call takes care of the unscheduled processing.
     workerManager_.processOneOccurrence<T>(ep, es, StreamID::invalidStreamID(), &globalContext, &globalContext, cleaningUpAfterException);
 
     try {
-      try {
+      convertException::wrap([&]() {
         runNow<T>(ep,es,&globalContext);
-      }
-      catch (cms::Exception& e) { throw; }
-      catch(std::bad_alloc& bda) { convertException::badAllocToEDM(); }
-      catch (std::exception& e) { convertException::stdToEDM(e); }
-      catch(std::string& s) { convertException::stringToEDM(s); }
-      catch(char const* c) { convertException::charPtrToEDM(c); }
-      catch (...) { convertException::unknownToEDM(); }
+      });
     }
     catch(cms::Exception& ex) {
       if (ex.context().empty()) {
@@ -163,6 +187,10 @@ namespace edm {
       }
       throw;
     }
+    terminationSentry.completedSuccessfully();
+    
+    //If we got here no other exception has happened so we can propogate any Service related exceptions
+    sentry.allowThrow();
   }
   template <typename T>
   void
@@ -172,27 +200,27 @@ namespace edm {
     for(auto & worker: allWorkers()) {
       try {
         ParentContext parentContext(context);
-        worker->doWork<T>(p, es, nullptr,StreamID::invalidStreamID(), parentContext, context);
+        worker->doWork<T>(p, es,StreamID::invalidStreamID(), parentContext, context);
       }
       catch (cms::Exception & ex) {
         std::ostringstream ost;
         if (T::begin_ && T::branchType_ == InRun) {
-          ost << "Calling beginRun";
+          ost << "Calling global beginRun";
         }
         else if (T::begin_ && T::branchType_ == InLumi) {
-          ost << "Calling beginLuminosityBlock";
+          ost << "Calling global beginLuminosityBlock";
         }
         else if (!T::begin_ && T::branchType_ == InLumi) {
-          ost << "Calling endLuminosityBlock";
+          ost << "Calling global endLuminosityBlock";
         }
         else if (!T::begin_ && T::branchType_ == InRun) {
-          ost << "Calling endRun";
+          ost << "Calling global endRun";
         }
         else {
           // It should be impossible to get here ...
           ost << "Calling unknown function";
         }
-        ost << " for unscheduled module " << worker->description().moduleName()
+        ost << " for module " << worker->description().moduleName()
         << "/'" << worker->description().moduleLabel() << "'";
         ex.addContext(ost.str());
         ost.str("");

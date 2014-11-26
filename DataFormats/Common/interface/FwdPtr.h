@@ -34,6 +34,7 @@
 // system include files
 #include "boost/type_traits/is_base_of.hpp"
 #include "boost/utility/enable_if.hpp"
+#include <cassert>
 
 // forward declarations
 namespace edm {
@@ -47,9 +48,9 @@ namespace edm {
     
     // General purpose constructor from two Ptrs.
     template<typename C>
-    FwdPtr(Ptr<C> f, Ptr<C> b):
+    FwdPtr(const Ptr<C>& f, const Ptr<C>& b):
     ptr_(f), backPtr_(b)
-    {}
+    { assert(f.isNull() == b.isNull()); }
     
   FwdPtr() :
     ptr_(), backPtr_()
@@ -72,14 +73,14 @@ namespace edm {
     
     /// Dereference operator
     T const&
-    operator*() const { return ptr_.isNonnull() ? ptr_.operator*() : backPtr_.operator*();}
+    operator*() const { return ptr_.isAvailable() ? ptr_.operator*() : backPtr_.operator*();}
 
     /// Member dereference operator
     T const*
-    operator->() const{ return ptr_.isNonnull() ? ptr_.operator->() : backPtr_.operator->();}
+    operator->() const{ return ptr_.isAvailable() ? ptr_.operator->() : backPtr_.operator->();}
 
     /// Returns C++ pointer to the item
-    T const* get() const { return ptr_.isNonnull() ? ptr_.get() : backPtr_.get();}
+    T const* get() const { return ptr_.isAvailable() ? ptr_.get() : backPtr_.get();}
 
 
     /// Checks for null

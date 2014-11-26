@@ -36,10 +36,6 @@
 #include "TLorentzVector.h"
 #include "TVector3.h"
 
-namespace edm {
-   class ConfigurationDescriptions;
-}
-
 
 //
 // class declaration
@@ -51,13 +47,15 @@ class HLTElectronPFMTFilter : public HLTFilter {
       explicit HLTElectronPFMTFilter(const edm::ParameterSet&);
       ~HLTElectronPFMTFilter();
       static void fillDescriptions(edm::ConfigurationDescriptions & descriptions);
-      virtual bool hltFilter(edm::Event&, const edm::EventSetup&, trigger::TriggerFilterObjectWithRefs & filterproduct);
+      virtual bool hltFilter(edm::Event&, const edm::EventSetup&, trigger::TriggerFilterObjectWithRefs & filterproduct) const override;
 
    private:
       edm::InputTag inputMetTag_; // input tag identifying jets
+      edm::EDGetTokenT<reco::METCollection> inputMetToken_;
       double minMht_;
 
       edm::InputTag inputEleTag_;     // input tag identifying egammas
+      edm::EDGetTokenT<trigger::TriggerFilterObjectWithRefs> inputEleToken_;
       double lowerMTCut_;
       double upperMTCut_;
       bool   relaxed_;

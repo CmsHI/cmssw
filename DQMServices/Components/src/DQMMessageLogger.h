@@ -8,7 +8,8 @@
 #include "FWCore/ServiceRegistry/interface/Service.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "DataFormats/FWLite/interface/Event.h"
-#include<vector>
+#include "FWCore/MessageLogger/interface/ErrorSummaryEntry.h"
+#include <vector>
 #include <string>
 #include <map>
 
@@ -53,6 +54,7 @@ class DQMMessageLogger : public edm::EDAnalyzer {
   // from parameters
   std::vector<std::string> categories_vector;
   std::string directoryName;
+  edm::EDGetTokenT<std::vector<edm::ErrorSummaryEntry> > errorSummary_;
 
   //The histos
   MonitorElement *categories_errors;

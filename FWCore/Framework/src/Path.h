@@ -20,15 +20,13 @@
 #include "FWCore/Utilities/interface/Exception.h"
 #include "FWCore/Utilities/interface/ConvertException.h"
 
-#include "boost/shared_ptr.hpp"
+#include <memory>
 
 #include <string>
 #include <vector>
 #include <map>
 #include <exception>
 #include <sstream>
-
-#include "FWCore/Framework/src/RunStopwatch.h"
 
 namespace edm {
   class EventPrincipal;
@@ -45,13 +43,13 @@ namespace edm {
 
     typedef std::vector<WorkerInPath> WorkersInPath;
     typedef WorkersInPath::size_type        size_type;
-    typedef boost::shared_ptr<HLTGlobalStatus> TrigResPtr;
+    typedef std::shared_ptr<HLTGlobalStatus> TrigResPtr;
 
     Path(int bitpos, std::string const& path_name,
          WorkersInPath const& workers,
          TrigResPtr trptr,
          ExceptionToActionTable const& actions,
-         boost::shared_ptr<ActivityRegistry> reg,
+         std::shared_ptr<ActivityRegistry> reg,
          StreamContext const* streamContext,
          PathContext::PathType pathType);
 
@@ -62,18 +60,7 @@ namespace edm {
                               StreamID const&, typename T::Context const*);
 
     int bitPosition() const { return bitpos_; }
-    std::string const& name() const { return name_; }
-
-    std::pair<double, double> timeCpuReal() const {
-      if(stopwatch_) {
-        return std::pair<double, double>(stopwatch_->cpuTime(), stopwatch_->realTime());
-      }
-      return std::pair<double, double>(0., 0.);
-    }
-
-    std::pair<double, double> timeCpuReal(unsigned int const i) const {
-      return workers_.at(i).timeCpuReal();
-    }
+    std::string const& name() const { return pathContext_.pathName(); }
 
     void clearCounters();
 
@@ -93,14 +80,12 @@ namespace edm {
     
     void setEarlyDeleteHelpers(std::map<const Worker*,EarlyDeleteHelper*> const&);
 
-    void useStopwatch();
   private:
 
     // If you define this be careful about the pointer in the
     // PlaceInPathContext object in the contained WorkerInPath objects.
     Path const& operator=(Path const&) = delete; // stop default
 
-    RunStopwatch::StopwatchPointer stopwatch_;
     int timesRun_;
     int timesPassed_;
     int timesFailed_;
@@ -109,9 +94,8 @@ namespace edm {
     State state_;
 
     int bitpos_;
-    std::string name_;
     TrigResPtr trptr_;
-    boost::shared_ptr<ActivityRegistry> actReg_;
+    std::shared_ptr<ActivityRegistry> actReg_;
     ExceptionToActionTable const* act_table_;
 
     WorkersInPath workers_;
@@ -148,20 +132,18 @@ namespace edm {
     class PathSignalSentry {
     public:
       PathSignalSentry(ActivityRegistry *a,
-                       std::string const& name,
                        int const& nwrwue,
                        hlt::HLTState const& state,
                        PathContext const* pathContext) :
-        a_(a), name_(name), nwrwue_(nwrwue), state_(state), pathContext_(pathContext) {
-        if (a_) T::prePathSignal(a_, name_, pathContext_);
+        a_(a), nwrwue_(nwrwue), state_(state), pathContext_(pathContext) {
+        if (a_) T::prePathSignal(a_, pathContext_);
       }
       ~PathSignalSentry() {
         HLTPathStatus status(state_, nwrwue_);
-        if(a_) T::postPathSignal(a_, name_, status, pathContext_);
+        if(a_) T::postPathSignal(a_, status, pathContext_);
       }
     private:
       ActivityRegistry* a_;
-      std::string const& name_;
       int const& nwrwue_;
       hlt::HLTState const& state_;
       PathContext const* pathContext_;
@@ -172,13 +154,8 @@ namespace edm {
   void Path::processOneOccurrence(typename T::MyPrincipal& ep, EventSetup const& es,
                                   StreamID const& streamID, typename T::Context const* context) {
 
-    //Create the PathSignalSentry before the RunStopwatch so that
-    // we only record the time spent in the path not from the signal
     int nwrwue = -1;
-    PathSignalSentry<T> signaler(actReg_.get(), name_, nwrwue, state_, &pathContext_);
-
-    // A RunStopwatch, but only if we are processing an event.
-    RunStopwatch stopwatch(T::isEvent_ ? stopwatch_ : RunStopwatch::StopwatchPointer());
+    PathSignalSentry<T> signaler(actReg_.get(), nwrwue, state_, &pathContext_);
 
     if (T::isEvent_) {
       ++timesRun_;
@@ -193,19 +170,13 @@ namespace edm {
           ++i) {
       ++nwrwue;
       try {
-        try {
+        convertException::wrap([&]() {
           if(T::isEvent_) {
             should_continue = i->runWorker<T>(ep, es, streamID, context);
           } else {
             should_continue = i->runWorker<T>(ep, es, streamID, context);
           }
-        }
-        catch (cms::Exception& e) { throw; }
-        catch(std::bad_alloc& bda) { convertException::badAllocToEDM(); }
-        catch (std::exception& e) { convertException::stdToEDM(e); }
-        catch(std::string& s) { convertException::stringToEDM(s); }
-        catch(char const* c) { convertException::charPtrToEDM(c); }
-        catch (...) { convertException::unknownToEDM(); }
+        });
       }
       catch(cms::Exception& ex) {
         // handleWorkerFailure may throw a new exception.

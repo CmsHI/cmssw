@@ -1,15 +1,20 @@
 
 import FWCore.ParameterSet.Config as cms
 
-from muonCustoms import customise_csc_PostLS1,customise_csc_hlt
-
+from SLHCUpgradeSimulations.Configuration.muonCustoms import customise_csc_PostLS1,customise_csc_hlt
+from L1Trigger.L1TCommon.customsPostLS1 import customiseSimL1EmulatorForPostLS1
 
 def customisePostLS1(process):
 
     # deal with CSC separately:
     process = customise_csc_PostLS1(process)
 
+    # deal with L1 Emulation separately:
+    customiseSimL1EmulatorForPostLS1(process)
+
     # all the rest:
+    if hasattr(process,'g4SimHits'):
+        process=customise_Sim(process)
     if hasattr(process,'DigiToRaw'):
         process=customise_DigiToRaw(process)
     if hasattr(process,'RawToDigi'):
@@ -35,7 +40,7 @@ def customisePostLS1(process):
 def digiEventContent(process):
     #extend the event content
 
-    alist=['RAWSIM','FEVTDEBUG','FEVTDEBUGHLT','GENRAW','RAWSIMHLT','FEVT']
+    alist=['RAWSIM','RAWDEBUG','FEVTDEBUG','FEVTDEBUGHLT','GENRAW','RAWSIMHLT','FEVT']
     for a in alist:
         b=a+'output'
         if hasattr(process,b):
@@ -47,20 +52,285 @@ def digiEventContent(process):
 
 
 def customise_DQM(process):
-    process.dqmoffline_step.remove(process.jetMETAnalyzer)
+    #process.dqmoffline_step.remove(process.jetMETAnalyzer)
+    # Turn off flag of gangedME11a
+    process.l1tCsctf.gangedME11a = cms.untracked.bool(False)
     return process
 
 
 def customise_Validation(process):
-    process.validation_step.remove(process.PixelTrackingRecHitsValid)
+    #process.validation_step.remove(process.PixelTrackingRecHitsValid)
     # We don't run the HLT
-    process.validation_step.remove(process.HLTSusyExoVal)
-    process.validation_step.remove(process.hltHiggsValidator)
+    #process.validation_step.remove(process.HLTSusyExoVal)
+    #process.validation_step.remove(process.hltHiggsValidator)
+    return process
+
+
+def customise_Sim(process):
+    # enable 2015 HF shower library
+    process.g4SimHits.HFShowerLibrary.FileName  = 'SimG4CMS/Calo/data/HFShowerLibrary_npmt_noatt_eta4_16en.root'
     return process
 
 
 def customise_Digi(process):
     process=digiEventContent(process)
+    if hasattr(process,'mix') and hasattr(process.mix,'digitizers'):
+        if hasattr(process.mix.digitizers,'hcal') and hasattr(process.mix.digitizers.hcal,'ho'):
+            process.mix.digitizers.hcal.ho.photoelectronsToAnalog = cms.vdouble([4.0]*16)
+            process.mix.digitizers.hcal.ho.siPMCode = cms.int32(1)
+            process.mix.digitizers.hcal.ho.pixels = cms.int32(2500)
+            process.mix.digitizers.hcal.ho.doSiPMSmearing = cms.bool(False)
+        if hasattr(process.mix.digitizers,'hcal') and hasattr(process.mix.digitizers.hcal,'hf1'):
+            process.mix.digitizers.hcal.hf1.samplingFactor = cms.double(0.60)
+        if hasattr(process.mix.digitizers,'hcal') and hasattr(process.mix.digitizers.hcal,'hf2'):
+            process.mix.digitizers.hcal.hf2.samplingFactor = cms.double(0.60)
+        if hasattr(process.mix.digitizers,'pixel'):
+            # DynamicInefficency - 13TeV - 50ns case
+            if process.mix.bunchspace == 50:
+                process.mix.digitizers.pixel.theInstLumiScaleFactor = cms.double(246.4)
+                process.mix.digitizers.pixel.theLadderEfficiency_BPix1 = cms.vdouble(
+                    0.979259,
+                    0.976677,
+                    0.979259,
+                    0.976677,
+                    0.979259,
+                    0.976677,
+                    0.979259,
+                    0.976677,
+                    0.979259,
+                    0.976677,
+                    0.979259,
+                    0.976677,
+                    0.979259,
+                    0.976677,
+                    0.979259,
+                    0.976677,
+                    0.979259,
+                    0.976677,
+                    0.979259,
+                    0.976677,
+                    )
+                process.mix.digitizers.pixel.theLadderEfficiency_BPix2 = cms.vdouble(
+                    0.994321,
+                    0.993944,
+                    0.994321,
+                    0.993944,
+                    0.994321,
+                    0.993944,
+                    0.994321,
+                    0.993944,
+                    0.994321,
+                    0.993944,
+                    0.994321,
+                    0.993944,
+                    0.994321,
+                    0.993944,
+                    0.994321,
+                    0.993944,
+                    0.994321,
+                    0.993944,
+                    0.994321,
+                    0.993944,
+                    0.994321,
+                    0.993944,
+                    0.994321,
+                    0.993944,
+                    0.994321,
+                    0.993944,
+                    0.994321,
+                    0.993944,
+                    0.994321,
+                    0.993944,
+                    0.994321,
+                    0.993944,
+                    )
+                process.mix.digitizers.pixel.theLadderEfficiency_BPix3 = cms.vdouble(
+                    0.996787,
+                    0.996945,
+                    0.996787,
+                    0.996945,
+                    0.996787,
+                    0.996945,
+                    0.996787,
+                    0.996945,
+                    0.996787,
+                    0.996945,
+                    0.996787,
+                    0.996945,
+                    0.996787,
+                    0.996945,
+                    0.996787,
+                    0.996945,
+                    0.996787,
+                    0.996945,
+                    0.996787,
+                    0.996945,
+                    0.996787,
+                    0.996945,
+                    0.996787,
+                    0.996945,
+                    0.996787,
+                    0.996945,
+                    0.996787,
+                    0.996945,
+                    0.996787,
+                    0.996945,
+                    0.996787,
+                    0.996945,
+                    0.996787,
+                    0.996945,
+                    0.996787,
+                    0.996945,
+                    0.996787,
+                    0.996945,
+                    0.996787,
+                    0.996945,
+                    0.996787,
+                    0.996945,
+                    0.996787,
+                    0.996945,
+                    )
+            # DynamicInefficency - 13TeV - 25ns case
+            if process.mix.bunchspace == 25:
+                process.mix.digitizers.pixel.theInstLumiScaleFactor = cms.double(364)
+                process.mix.digitizers.pixel.theLadderEfficiency_BPix1 = cms.vdouble(
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    )
+                process.mix.digitizers.pixel.theLadderEfficiency_BPix2 = cms.vdouble(
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    )
+                process.mix.digitizers.pixel.theLadderEfficiency_BPix3 = cms.vdouble(
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    )
+                process.mix.digitizers.pixel.theModuleEfficiency_BPix1 = cms.vdouble(
+                    1,
+                    1,
+                    1,
+                    1,
+                    )
+                process.mix.digitizers.pixel.theModuleEfficiency_BPix2 = cms.vdouble(
+                    1,
+                    1,
+                    1,
+                    1,
+                    )
+                process.mix.digitizers.pixel.theModuleEfficiency_BPix3 = cms.vdouble(
+                    1,
+                    1,
+                    1,
+                    1,
+                    )
+                process.mix.digitizers.pixel.thePUEfficiency_BPix1 = cms.vdouble(
+                    1.00023,
+                    -3.18350e-06,
+                    5.08503e-10,
+                    -6.79785e-14,
+                    )
+                process.mix.digitizers.pixel.thePUEfficiency_BPix2 = cms.vdouble(
+                    9.99974e-01,
+                    -8.91313e-07,
+                    5.29196e-12,
+                    -2.28725e-15,
+                    )
+                process.mix.digitizers.pixel.thePUEfficiency_BPix3 = cms.vdouble(
+                    1.00005,
+                    -6.59249e-07,
+                    2.75277e-11,
+                    -1.62683e-15,
+                    )
     return process
 
 
@@ -82,14 +352,28 @@ def customise_HLT(process):
 
 
 def customise_Reco(process):
+    #lowering HO threshold with SiPM
+    for prod in process.particleFlowRecHitHO.producers:
+        prod.qualityTests = cms.VPSet(
+            cms.PSet(
+                name = cms.string("PFRecHitQTestThreshold"),
+                threshold = cms.double(0.05) # new threshold for SiPM HO
+            ),
+            cms.PSet(
+                name = cms.string("PFRecHitQTestHCALChannel"),
+                maxSeverities      = cms.vint32(11),
+                cleaningThresholds = cms.vdouble(0.0),
+                flags              = cms.vstring('Standard')
+            )
+        )
+
     return process
 
 
 def customise_harvesting(process):
-    process.dqmHarvesting.remove(process.jetMETDQMOfflineClient)
-    process.dqmHarvesting.remove(process.dataCertificationJetMET)
-    process.dqmHarvesting.remove(process.sipixelEDAClient)
-    process.dqmHarvesting.remove(process.sipixelCertification)
+    #process.dqmHarvesting.remove(process.dataCertificationJetMET)
+    #process.dqmHarvesting.remove(process.sipixelEDAClient)
+    #process.dqmHarvesting.remove(process.sipixelCertification)
     return (process)        
 
 def recoOutputCustoms(process):

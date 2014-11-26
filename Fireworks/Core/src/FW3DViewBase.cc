@@ -8,7 +8,6 @@
 //
 // Original Author:  Chris Jones
 //         Created:  Thu Feb 21 11:22:41 EST 2008
-// $Id: FW3DViewBase.cc,v 1.32 2013/04/25 18:45:32 amraktad Exp $
 //
 #include <boost/bind.hpp>
 
@@ -57,7 +56,10 @@ private:
 public:
    Clipsi(TGLRnrCtx* ctx):TGLClip(* new TGLClipsiLogical, TGLMatrix(), fgColor), m_rnrCtx(ctx){}
    virtual ~Clipsi() {}
+   using TGLClip::Setup;
    virtual void Setup(const TGLBoundingBox & bbox) override {}
+
+   using TGLClip::PlaneSet;
    virtual void PlaneSet(TGLPlaneSet_t & planeSet) const override
    {
       TGLCamera& cam = m_rnrCtx->RefCamera();

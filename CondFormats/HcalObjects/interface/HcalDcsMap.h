@@ -11,9 +11,14 @@ $Date: 2007/12/14 13:31:21 $
 $Revision: 1.1 $
 */
 
+#include "CondFormats/Serialization/interface/Serializable.h"
+
 #include <vector>
 #include <algorithm>
 #include <boost/cstdint.hpp>
+#if !defined(__CINT__) && !defined(__MAKECINT__) && !defined(__REFLEX__)
+#include <atomic>
+#endif
 
 #include "DataFormats/DetId/interface/DetId.h"
 #include "DataFormats/HcalDetId/interface/HcalDetId.h"
@@ -25,6 +30,17 @@ class HcalDcsMap {
   HcalDcsMap();
   ~HcalDcsMap();
   
+  // swap function
+  void swap(HcalDcsMap& other);
+  // copy-ctor
+  HcalDcsMap(const HcalDcsMap& src);
+  // copy assignment operator
+  HcalDcsMap& operator=(const HcalDcsMap& rhs);
+  // move constructor
+#if !defined(__CINT__) && !defined(__MAKECINT__) && !defined(__REFLEX__)
+  HcalDcsMap(HcalDcsMap&& other);
+#endif
+
   // lookup the logical detid associated with the given DCS id
   // return Null item if no such mapping.
   //
@@ -68,7 +84,9 @@ class HcalDcsMap {
       : mId (fId), mDcsId (fDcsId) {}
     uint32_t mId;
     uint32_t mDcsId;
-  };
+  
+  COND_SERIALIZABLE;
+};
 
   class const_iterator{
   public:
@@ -101,12 +119,19 @@ class HcalDcsMap {
   std::vector <HcalGenericDetId> allHcalDetId () const;
 
   std::vector<Item> mItems;
-  mutable std::vector<const Item*> mItemsById;
-  mutable bool sortedById;
-  const std::vector<const Item *> * getItemsById(void){return &mItemsById;}  
-  mutable std::vector<const Item*> mItemsByDcsId;
-  mutable bool sortedByDcsId;
-  const std::vector<const Item *> * getItemsByDcsId(void){return &mItemsByDcsId;}  
+#if !defined(__CINT__) && !defined(__MAKECINT__) && !defined(__REFLEX__)
+  mutable std::atomic<std::vector<const Item*>*> mItemsById COND_TRANSIENT;
+  mutable std::atomic<std::vector<const Item*>*> mItemsByDcsId COND_TRANSIENT;
+  const std::vector<const Item*>* getItemsById(void){return mItemsById.load(std::memory_order_acquire);}
+  const std::vector<const Item*>* getItemsByDcsId(void){return mItemsByDcsId.load(std::memory_order_acquire);}
+#else
+  mutable std::vector<const Item*> mItemsById COND_TRANSIENT;
+  mutable std::vector<const Item*> mItemsByDcsId COND_TRANSIENT;
+  const std::vector<const Item*>* getItemsById(void){return &mItemsById;}
+  const std::vector<const Item*>* getItemsByDcsId(void){return &mItemsByDcsId;}
+#endif
+
+ COND_SERIALIZABLE;
 };
 
 #endif

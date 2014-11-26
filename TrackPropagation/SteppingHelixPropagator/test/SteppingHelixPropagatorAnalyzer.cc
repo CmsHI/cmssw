@@ -17,7 +17,6 @@
 //
 // Original Author:  Vyacheslav Krutelyov
 //         Created:  Fri Mar  3 16:01:24 CST 2006
-// $Id: SteppingHelixPropagatorAnalyzer.cc,v 1.23 2012/07/01 19:54:00 eulisse Exp $
 //
 //
 
@@ -417,7 +416,7 @@ SteppingHelixPropagatorAnalyzer::analyze(const edm::Event& iEvent, const edm::Ev
 	if (radX0CorrectionMode_ ){
 	  const SteppingHelixPropagator* shPropCPtr = 
 	    dynamic_cast<const SteppingHelixPropagator*>(&*shProp);
-	  siDest = shPropCPtr->propagate(siStart, *igHit->surf);
+	  shPropCPtr->propagate(siStart, *igHit->surf,siDest);
 	  if (siDest.isValid()){
 	    siStart = siDest;
 	    siStart.getFreeState(ftsStart);

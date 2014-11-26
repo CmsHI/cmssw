@@ -1,5 +1,6 @@
 <use   name="CondCore/PluginSystem"/>
 <use   name="CondFormats/DataRecord"/>
+<use   name="CondFormats/JetMETObjects"/>
 <use   name="CondCore/DBCommon"/>
 <use   name="CondCore/DBOutputService"/>
 <use   name="CommonTools/Utils"/>
@@ -10,6 +11,7 @@
 <use   name="FWCore/ParameterSet"/>
 <use   name="JetMETCorrections/Objects"/>
 <use   name="JetMETCorrections/Algorithms"/>
+<use   name="JetMETCorrections/JetCorrector"/>
 <use   name="boost"/>
 <export>
   <lib   name="1"/>

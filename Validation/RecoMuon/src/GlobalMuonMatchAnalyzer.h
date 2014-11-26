@@ -23,7 +23,13 @@
 
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
+#include "DataFormats/Common/interface/View.h"
+#include "DataFormats/TrackReco/interface/Track.h"
+#include "DataFormats/TrackReco/interface/TrackFwd.h"
+
 #include "TrackingTools/TrajectoryState/interface/TrajectoryStateOnSurface.h"
+#include <DQMServices/Core/interface/DQMEDAnalyzer.h>
+
 
 namespace reco {class Track;}
 
@@ -36,7 +42,7 @@ class  DQMStore;
 // class decleration
 //
 
-class GlobalMuonMatchAnalyzer : public edm::EDAnalyzer {
+class GlobalMuonMatchAnalyzer : public thread_unsafe::DQMEDAnalyzer {
    public:
       explicit GlobalMuonMatchAnalyzer(const edm::ParameterSet&);
       ~GlobalMuonMatchAnalyzer();
@@ -44,16 +50,19 @@ class GlobalMuonMatchAnalyzer : public edm::EDAnalyzer {
 
    private:
       virtual void beginJob() ;
-      virtual void beginRun(const edm::Run&, const edm::EventSetup&) ;
+      //      virtual void beginRun(const edm::Run&, const edm::EventSetup&) ;
       virtual void analyze(const edm::Event&, const edm::EventSetup&);
+      void bookHistograms(DQMStore::IBooker &, edm::Run const &, edm::EventSetup const &) override;
       virtual void endJob() ;
+      virtual void endRun() ;
 
   void computeEfficiencyEta(MonitorElement*, MonitorElement *recoTH2, MonitorElement *simTH2);
   void computeEfficiencyPt(MonitorElement*, MonitorElement *recoTH2, MonitorElement *simTH2);
       // ----------member data ---------------------------
   std::string out;
   DQMStore* dbe_;
-
+  edm::ParameterSet iConfig;
+  std::string subsystemname_;
   MonitorElement *h_shouldMatch, *h_goodMatchSim, *h_tkOnlySim, *h_staOnlySim;
   MonitorElement *h_totReco, *h_goodMatch, *h_fakeMatch;
   MonitorElement *h_effic, *h_efficPt;
@@ -62,6 +71,7 @@ class GlobalMuonMatchAnalyzer : public edm::EDAnalyzer {
   const TrackAssociatorBase *tkAssociator_, *muAssociator_;
   std::string tkAssociatorName_, muAssociatorName_;
   edm::InputTag tkName_, tpName_, glbName_, staName_;
+  edm::EDGetTokenT<edm::View<reco::Track> >  tkToken_, tpToken_, glbToken_, staToken_;
 
 
 };

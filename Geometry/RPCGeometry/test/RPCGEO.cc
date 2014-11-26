@@ -13,7 +13,6 @@
 //
 // Original Author:  pts/91
 //         Created:  Wed Sep 26 17:08:29 CEST 2007
-// $Id: RPCGEO.cc,v 1.7 2011/09/27 09:13:43 yana Exp $
 //
 //
 
@@ -139,8 +138,8 @@ RPCGEO::analyze(const edm::Event& /*iEvent*/, const edm::EventSetup& iSetup)
 
    
    for (TrackingGeometry::DetContainer::const_iterator it=rpcGeo->dets().begin();it<rpcGeo->dets().end();it++){
-     if( dynamic_cast< RPCChamber* >( *it ) != 0 ){
-       RPCChamber* ch = dynamic_cast< RPCChamber* >( *it ); 
+     if( dynamic_cast< const RPCChamber* >( *it ) != 0 ){
+       const RPCChamber* ch = dynamic_cast< const RPCChamber* >( *it ); 
        std::vector< const RPCRoll*> roles = (ch->rolls());
        
        //std::cout<<"RPC Chamber"<<ch->id()<<std::endl;
@@ -227,7 +226,7 @@ RPCGEO::analyze(const edm::Event& /*iEvent*/, const edm::EventSetup& iSetup)
 	   float stripw = top_->pitch();
 	   areabarrel = areabarrel + stripl*stripw*stripsinthisroll;
 	   sumstripwbarrel=sumstripwbarrel+stripw*stripsinthisroll;
-	   std::cout<<" AllInfo"<<rpcsrv.name()<<" stripl="<<stripl<<" stripw="<<stripw<<" stripsinthisroll="<<stripsinthisroll<<" area roll="<<stripl*stripw<<" area total barrel="<<areabarrel<<std::endl;
+	   std::cout<<"AllInfo "<<rpcId.rawId()<<" = "<<rpcsrv.name()<<" stripl="<<stripl<<" stripw="<<stripw<<" stripsinthisroll="<<stripsinthisroll<<" area roll="<<stripl*stripw<<" area total barrel="<<areabarrel<<std::endl;
 	   counterRollsBarrel++; 
 	   if(rpcId.station()==4){
 	     counterRollsMB4++;
@@ -259,7 +258,7 @@ RPCGEO::analyze(const edm::Event& /*iEvent*/, const edm::EventSetup& iSetup)
 	   areaendcap = areaendcap + stripw*stripl*stripsinthisroll;
 	   sumstripwendcap=sumstripwendcap+stripw*stripsinthisroll;
 
-	   std::cout<<" AllInfo"<<rpcsrv.name()<<" stripl="<<stripl<<" stripw="<<stripw<<" stripsinthisroll="<<stripsinthisroll<<" area roll="<<stripl*stripw<<" area total endcap="<<areaendcap<<std::endl;
+	   std::cout<<"AllInfo "<<rpcId.rawId()<<" = "<<rpcsrv.name()<<" stripl="<<stripl<<" stripw="<<stripw<<" stripsinthisroll="<<stripsinthisroll<<" area roll="<<stripl*stripw<<" area total endcap="<<areaendcap<<std::endl;
 	   const BoundPlane & RPCSurface = (*r)->surface();
 	   GlobalPoint FirstStripCenterPointInGlobal = RPCSurface.toGlobal(top_->localPosition(s1));
 	   GlobalPoint LastStripCenterPointInGlobal = RPCSurface.toGlobal(top_->localPosition(sLast));
@@ -289,27 +288,17 @@ RPCGEO::analyze(const edm::Event& /*iEvent*/, const edm::EventSetup& iSetup)
 	   //cscphi = 2*3.1415926536+CenterPointCSCGlobal.barePhi():cscphi=CenterPointCSCGlobal.barePhi();
 
 	   bool ok = false;
-
-	   if ( ( ( rpcId.station()==1 
-		    && ( ( rpcId.ring()==2 && seg%2!=0 )
-			 || rpcId.ring()==3 ) )
-		  || rpcId.station()==3 ) 
-		&& orientation*rpcId.region()==1.){
-	     ok=true;
+	   if(rpcId.station()==1) {
+	     if(rpcId.ring()==2 && seg%2!=0 && orientation*rpcId.region()== 1.0) {ok=true;}
+	     if(rpcId.ring()==2 && seg%2==0 && orientation*rpcId.region()==-1.0) {ok=true;}
+	     if(rpcId.ring()==3             && orientation*rpcId.region()== 1.0) {ok=true;}
 	   }
-	   if ( ( ( rpcId.station()==1 && rpcId.ring()==2 && seg%2==0 ) 
-		  || rpcId.station()==2 )
-		&& orientation*rpcId.region()==-1. ){
-	     ok=true;
+	   if(rpcId.station()==2 || rpcId.station()==4) {
+	     if(orientation*rpcId.region()==-1.0) {ok=true;}
 	   }
-// 	   if((rpcId.station()==1&&(rpcId.ring()==2&&seg%2!=0||rpcId.ring()==3)||rpcId.station()==3)
-// 	      &&orientation*rpcId.region()==1.){
-// 	     ok=true;
-// 	   }
-// 	   if((rpcId.station()==1&&rpcId.ring()==2&&seg%2==0||rpcId.station()==2)
-// 	      &&orientation*rpcId.region()==-1.){
-// 	     ok=true;
-// 	   }
+	   if(rpcId.station()==3) {
+	     if(orientation*rpcId.region()==1.0) {ok=true;}
+	   }
 
 	   if(ok) std::cout<<" OK"<<std::endl;
 	   else std::cout<<" WRONG!!!"<<std::endl;

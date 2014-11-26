@@ -31,6 +31,7 @@ GlobalRecHitsHistogrammer::GlobalRecHitsHistogrammer(const edm::ParameterSet& iP
 
   //get Labels to use to extract information
   GlobalRecHitSrc_ = iPSet.getParameter<edm::InputTag>("GlobalRecHitSrc");
+  GlobalRecHitSrc_Token_ = consumes<PGlobalRecHit>(iPSet.getParameter<edm::InputTag>("GlobalRecHitSrc"));
   // ECalEBSrc_ = iPSet.getParameter<edm::InputTag>("ECalEBSrc");
   //ECalUncalEBSrc_ = iPSet.getParameter<edm::InputTag>("ECalUncalEBSrc");
   //ECalEESrc_ = iPSet.getParameter<edm::InputTag>("ECalEESrc");
@@ -286,8 +287,8 @@ void GlobalRecHitsHistogrammer::analyze(const edm::Event& iEvent,
   ++count;
 
   // get event id information
-  int nrun = iEvent.id().run();
-  int nevt = iEvent.id().event();
+  edm::RunNumber_t nrun = iEvent.id().run();
+  edm::EventNumber_t nevt = iEvent.id().event();
 
   if (verbosity > 0) {
     edm::LogInfo(MsgLoggerCat)
@@ -343,7 +344,7 @@ void GlobalRecHitsHistogrammer::analyze(const edm::Event& iEvent,
   }
 
 edm::Handle<PGlobalRecHit> srcGlobalRecHits;
-  iEvent.getByLabel(GlobalRecHitSrc_,srcGlobalRecHits);
+  iEvent.getByToken(GlobalRecHitSrc_Token_,srcGlobalRecHits);
   if (!srcGlobalRecHits.isValid()) {
     edm::LogWarning(MsgLoggerCat)
       << "Unable to find PGlobalRecHit in event!";

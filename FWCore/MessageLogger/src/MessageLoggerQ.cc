@@ -94,7 +94,6 @@ namespace {
             delete errorobj_p;
             break;
          }
-         case edm::MessageLoggerQ::JOBREPORT:
          case edm::MessageLoggerQ::JOBMODE:
          case edm::MessageLoggerQ::GROUP_STATS:
 	 {
@@ -108,16 +107,15 @@ namespace {
    }   
 
   // Changelog 14
-  boost::shared_ptr<StandAloneScribe> obtainStandAloneScribePtr() {   
-    static boost::shared_ptr<StandAloneScribe> 
-      standAloneScribe_ptr( new StandAloneScribe );
+  std::shared_ptr<StandAloneScribe> obtainStandAloneScribePtr() {   
+    static auto standAloneScribe_ptr = std::make_shared<StandAloneScribe>();
     return standAloneScribe_ptr;
   }
 
 
 } // end of anonymous namespace
 
-boost::shared_ptr<edm::service::AbstractMLscribe>  
+std::shared_ptr<edm::service::AbstractMLscribe>  
   MessageLoggerQ::mlscribe_ptr = obtainStandAloneScribePtr();  
   				// changeLog 8, 11, 14
 
@@ -132,13 +130,13 @@ MessageLoggerQ::~MessageLoggerQ()
 MessageLoggerQ *
   MessageLoggerQ::instance()
 {
-  static MessageLoggerQ queue;
+  [[cms::thread_safe]] static MessageLoggerQ queue;
   return &queue;
 }  // MessageLoggerQ::instance()
 
 void
   MessageLoggerQ::setMLscribe_ptr
-  	(boost::shared_ptr<edm::service::AbstractMLscribe> m) // changeLog 8, 14
+  	(std::shared_ptr<edm::service::AbstractMLscribe> m) // changeLog 8, 14
 {
   if (!m) { 
     mlscribe_ptr = obtainStandAloneScribePtr();
@@ -212,12 +210,6 @@ void
 }  // MessageLoggerQ::SUM()
 
 void
-  MessageLoggerQ::MLqJOB( std::string * j )
-{
-  simpleCommand (JOBREPORT, static_cast<void *>(j)); 
-}  // MessageLoggerQ::JOB()
-
-void
   MessageLoggerQ::MLqMOD( std::string * jm )
 {
   simpleCommand (JOBMODE, static_cast<void *>(jm)); 
@@ -254,10 +246,10 @@ bool
 }  // MessageLoggerQ::handshaked(op)
 
 // change Log 13:
-edm::ELseverityLevel MessageLoggerQ::threshold ("WARNING");
+edm::ELseverityLevel MessageLoggerQ::threshold (edm::ELseverityLevel::ELsev_warning);
 std::set<std::string> MessageLoggerQ::squelchSet;
-void MessageLoggerQ::standAloneThreshold(std::string const & severity) {
-  threshold = edm::ELseverityLevel(severity);  
+void MessageLoggerQ::standAloneThreshold(edm::ELseverityLevel const& severity) {
+  threshold = severity;
 }
 void MessageLoggerQ::squelch(std::string const & category) {
   squelchSet.insert(category);  

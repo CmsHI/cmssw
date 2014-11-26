@@ -23,10 +23,10 @@ IdealObliquePrism::operator=( const IdealObliquePrism& idop )
 }
 
 IdealObliquePrism::IdealObliquePrism( const GlobalPoint& faceCenter, 
-				      const CornersMgr*  mgr       ,
+				      CornersMgr*        mgr       ,
 				      const CCGFloat*    parm       )
   : CaloCellGeometry ( faceCenter, mgr, parm )
-{}
+{initSpan();}
 
 IdealObliquePrism::~IdealObliquePrism() 
 {}
@@ -118,7 +118,7 @@ void IdealObliquePrism::localCorners( Pt3DVec&        lc  ,
       gc[ 0 ] = etaPhiPerp( eta + dEta , +dPhi , r_near ) ; // (+,+,near)
       gc[ 1 ] = etaPhiPerp( eta + dEta , -dPhi , r_near ) ; // (+,-,near)
       gc[ 2 ] = etaPhiPerp( eta - dEta , -dPhi , r_near ) ; // (-,-,near)
-      gc[ 3 ] = etaPhiPerp( eta - dEta , +dPhi , r_near ) ; // (-,+,far)
+      gc[ 3 ] = etaPhiPerp( eta - dEta , +dPhi , r_near ) ; // (-,+,near)
       gc[ 4 ] = etaPhiPerp( eta + dEta , +dPhi , r_far  ) ; // (+,+,far)
       gc[ 5 ] = etaPhiPerp( eta + dEta , -dPhi , r_far  ) ; // (+,-,far)
       gc[ 6 ] = etaPhiPerp( eta - dEta , -dPhi , r_far  ) ; // (-,-,far)
@@ -131,7 +131,7 @@ void IdealObliquePrism::localCorners( Pt3DVec&        lc  ,
       gc[ 0 ] = etaPhiZ( eta + dEta , +dPhi , z_near ) ; // (+,+,near)
       gc[ 1 ] = etaPhiZ( eta + dEta , -dPhi , z_near ) ; // (+,-,near)
       gc[ 2 ] = etaPhiZ( eta - dEta , -dPhi , z_near ) ; // (-,-,near)
-      gc[ 3 ] = etaPhiZ( eta - dEta , +dPhi , z_near ) ; // (-,+,far)
+      gc[ 3 ] = etaPhiZ( eta - dEta , +dPhi , z_near ) ; // (-,+,near)
       gc[ 4 ] = etaPhiZ( eta + dEta , +dPhi , z_far  ) ; // (+,+,far)
       gc[ 5 ] = etaPhiZ( eta + dEta , -dPhi , z_far  ) ; // (+,-,far)
       gc[ 6 ] = etaPhiZ( eta - dEta , -dPhi , z_far  ) ; // (-,-,far)
@@ -145,13 +145,11 @@ void IdealObliquePrism::localCorners( Pt3DVec&        lc  ,
    ref   = 0.25*( lc[0] + lc[1] + lc[2] + lc[3] ) ;
 }
 
-const CaloCellGeometry::CornersVec& 
-IdealObliquePrism::getCorners() const
+void IdealObliquePrism::initCorners(CaloCellGeometry::CornersVec& co)
 {
-   const CornersVec& co ( CaloCellGeometry::getCorners() ) ;
    if( co.uninitialized() )
    {
-      CornersVec& corners ( setCorners() ) ;
+      CornersVec& corners ( co ) ;
       if( dz()>0 ) 
       { 
 	 /* In this case, the faces are parallel to the zaxis.  
@@ -196,7 +194,6 @@ IdealObliquePrism::getCorners() const
 	 
       }
    }
-   return co ;
 }
 
 std::ostream& operator<<( std::ostream& s, const IdealObliquePrism& cell ) 

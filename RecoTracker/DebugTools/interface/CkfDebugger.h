@@ -31,12 +31,12 @@
 class Trajectory;
 class TrajectoryMeasurement;
 class PSimHit;
-class TransientTrackingRecHit;
 class MeasurementTracker;
 class TrajectoryStateOnSurface;
 class MagneticField;
 class Chi2MeasurementEstimator;
 class Propagator;
+class NavigationSchool;
 
 typedef TransientTrackingRecHit::ConstRecHitPointer CTTRHp;
 
@@ -105,6 +105,7 @@ class CkfDebugger {
   const MeasurementTracker*        theMeasurementTracker;
   const TransientTrackingRecHitBuilder* theTTRHBuilder;
   const TrackerTopology *theTopo;
+  NavigationSchool const * theNavSchool;
 
   std::map<unsigned int, std::vector<PSimHit*> > idHitsMap;
 
@@ -147,10 +148,6 @@ class CkfDebugger {
   };
   const GeomDetUnit* det(const PSimHit* sh) const {return theTrackerGeom->idToDetUnit(DetId(sh->detUnitId()));};
 
-  int layer(const GeomDetUnit* det){
-    //return ((int)(((det->geographicalId().rawId() >>16) & 0xF)));
-    return theTopo->layer(det->geographicalId());
-  }
   int layer(const GeomDet* det){
     //return ((int)(((det->geographicalId().rawId() >>16) & 0xF)));
     return theTopo->layer(det->geographicalId());

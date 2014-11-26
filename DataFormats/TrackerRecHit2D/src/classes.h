@@ -1,9 +1,6 @@
 #ifndef TrackerRecHit2D_CLASSES_H
 #define TrackerRecHit2D_CLASSES_H
 
-//obsolete: still needed for backcomp??
-#include "DataFormats/TrackerRecHit2D/interface/BaseSiTrackerRecHit2DLocalPos.h"
-
 #include "DataFormats/TrackerRecHit2D/interface/OmniClusterRef.h"
 #include "DataFormats/TrackerRecHit2D/interface/SiStripRecHit2DCollection.h"
 #include "DataFormats/TrackerRecHit2D/interface/SiStripRecHit1DCollection.h"
@@ -29,7 +26,7 @@
 #include "DataFormats/TrackerRecHit2D/interface/SiTrackerMultiRecHit.h"
 #include <vector>
 
-namespace {
+namespace DataFormats_TrackerRecHit2D {
   struct dictionary {
     ProjectedSiStripRecHit2D projHit;   
     SiStripRecHit2D a1;

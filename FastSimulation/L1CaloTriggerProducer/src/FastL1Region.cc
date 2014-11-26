@@ -87,7 +87,7 @@ FastL1Region::~FastL1Region()
 
 
 void
-FastL1Region::SetParameters(L1Config iconfig) 
+FastL1Region::SetParameters(const L1Config& iconfig) 
 { 
   Config = iconfig;
 }
@@ -112,7 +112,6 @@ FastL1Region::SetTowerBits()
 {
   SetFGBit();
   SetHOEBit();
-  SetHCFGBit();
 }
 
 //
@@ -134,13 +133,12 @@ FastL1Region::FillEMCrystals(const CaloTowerConstituentsMap* theTowerConstituent
   //la[1].second = "EcalRecHitsEE";
 
 
-  double ethres = Config.CrystalEBThreshold;
 
   // EB
   //e.getByLabel(la[0].first,la[0].second,ec);
   //e.getByLabel(Config.EmInputs.at(0),ec);
 
-  ethres = Config.CrystalEBThreshold;
+  double ethres = Config.CrystalEBThreshold;
   for(EcalRecHitCollection::const_iterator ecItr = ec0->begin();
       ecItr != ec0->end(); ++ecItr) {
     //CaloRecHit recHit = (CaloRecHit)(*ecItr);
@@ -167,7 +165,7 @@ FastL1Region::FillEMCrystals(const CaloTowerConstituentsMap* theTowerConstituent
       //int hiphi = m_RMap->convertFromECal_to_HCal_iphi(detId.tower_iphi());
       //int hiphi = m_RMap->convertFromHCal_to_ECal_iphi(detId.tower_iphi());
       int hiphi = detId.tower_iphi();
-      if ( !Towers[i].id().iphi()==hiphi ||  !Towers[i].id().ieta()==hieta ) continue;
+      if (!(Towers[i].id().iphi() == hiphi) || !(Towers[i].id().ieta() == hieta)) continue;
       EMCrystalEnergy[i][crIeta + 5*crIphi] = ecItr->energy();
     }  
   }
@@ -355,26 +353,22 @@ FastL1Region::FillTower_Scaled(const CaloTower& t, int& tid, bool doRCTTrunc,edm
   double hadScale = 1.0;
   //double outerScale = 1.0;
 
-  if (std::abs(t.eta()>1.3050) && std::abs(t.eta())<3.0) {
+  if ((std::abs(t.eta()) > 1.3050) && (std::abs(t.eta()) < 3.0)) {
     hadScale = Config.TowerHEScale;
     emScale = Config.TowerEEScale;
   }
-  if (std::abs(t.eta()<1.3050)) {
+  if (std::abs(t.eta()) < 1.3050) {
     hadScale = Config.TowerHBScale;
     emScale = Config.TowerEBScale;
   }
 
   double emet = emScale * t.emEt();
   double hadet = hadScale * t.hadEt();
-  double eme = emScale * t.emEnergy();
-  double hade = hadScale * t.hadEnergy();
 
   if (doRCTTrunc) {
     double upperThres = 1024.;
     emet = RCTEnergyTrunc(emet,Config.TowerEMLSB,upperThres);
     hadet = RCTEnergyTrunc(hadet,Config.TowerHadLSB,upperThres);
-    eme = RCTEnergyTrunc(eme,Config.TowerEMLSB,upperThres);
-    hade = RCTEnergyTrunc(hade,Config.TowerHadLSB,upperThres);
   }
   if ( emet<EThres) emet = 0.;
   if ( hadet<HThres) hadet = 0.;
@@ -427,22 +421,14 @@ FastL1Region::SetQuietBit()
 }
 
 void 
-FastL1Region::SetHCFGBit()
-{
-  // temporary: check definition 
-  // if (Tower->hadEt>100GeV) hcfgBit = true; ????
-  //for (int i=0; i<16; i++) {
-  //}
-}
-
-void 
 FastL1Region::SetMIPBit()
 {
-  if (quietBit)
-  for (int i=0; i<16; i++) {
-    if (hcfgBit) {
-      mipBit = true;
-      return;
+  if (quietBit) {
+    for (unsigned int i = 0U; i < 16; i++) {
+      if (hcfgBit[i]) {
+        mipBit = true;
+        return;
+      }
     }
   }
 }
@@ -452,11 +438,7 @@ FastL1Region::SetFGBit(int twrid,bool FGBIT)
 {
   fgBit[twrid] = FGBIT;
 }
-void 
-FastL1Region::SetHCFGBit(int twrid,bool FGBIT)
-{
-  ;
-}
+
 void 
 FastL1Region::SetHOEBit(int twrid,bool FGBIT)
 {
@@ -524,6 +506,11 @@ FastL1Region::SetFGBit()
   
 }
 
+// Patterns with two or less contiguous bits set are passed
+  // rest are vetoed; 5=0101;7=0111;9=1001;10=1010;11=1011;13=1101;14=1110;15=1111
+  //  --- Alternate patterns
+  //  --- 9=1001;15=1111
+static const std::vector<unsigned> vetoPatterns = { 5, 7, 9, 10,11,13,14,15};
 
 void 
 FastL1Region::SetTauBit(edm::Event const& iEvent)
@@ -558,24 +545,7 @@ FastL1Region::SetTauBit(edm::Event const& iEvent)
 
   }
 
-  // Patterns with two or less contiguous bits set are passed
-  // rest are vetoed; 5=0101;7=0111;9=1001;10=1010;11=1011;13=1101;14=1110;15=1111
-  //  --- Alternate patterns
-  //  --- 9=1001;15=1111
-  static std::vector<unsigned> vetoPatterns;
-  if(vetoPatterns.size() == 0) {
-    vetoPatterns.push_back(5);
-    vetoPatterns.push_back(7);
-    vetoPatterns.push_back(9);
-    vetoPatterns.push_back(10);
-    vetoPatterns.push_back(11);
-    vetoPatterns.push_back(13);
-    vetoPatterns.push_back(14);
-    vetoPatterns.push_back(15);
-  }
-
-
-  for(std::vector<unsigned>::iterator i = vetoPatterns.begin();
+  for(std::vector<unsigned>::const_iterator i = vetoPatterns.begin();
       i != vetoPatterns.end();  i++) {
     unsigned etaPattern = emEtaPat | hadEtaPat;
     unsigned phiPattern = emPhiPat | hadPhiPat;

@@ -4,7 +4,7 @@
 //
 // Package:    HLTCSCActivityFilter
 // Class:      HLTCSCActivityFilter
-// 
+//
 /**\class HLTCSCActivityFilter HLTCSCActivityFilter.cc filter/HLTCSCActivityFilter/src/HLTCSCActivityFilter.cc
 
 Description: Filter to select HCAL abort gap events
@@ -15,7 +15,6 @@ Implementation:
 //
 // Original Author:  Carlo Battilana
 //         Created:  Tue Jan 22 13:55:00 CET 2008
-// $Id: HLTCSCActivityFilter.h,v 1.3 2010/06/15 16:23:59 fwyzard Exp $
 //
 //
 
@@ -46,10 +45,10 @@ class HLTCSCActivityFilter : public HLTFilter {
 public:
   explicit HLTCSCActivityFilter(const edm::ParameterSet&);
   virtual ~HLTCSCActivityFilter();
-  static void fillDescriptions(edm::ConfigurationDescriptions & descriptions);   
-  
+  static void fillDescriptions(edm::ConfigurationDescriptions & descriptions);
+
 private:
-  virtual bool hltFilter(edm::Event&, const edm::EventSetup&, trigger::TriggerFilterObjectWithRefs & filterproduct);
+  virtual bool hltFilter(edm::Event&, const edm::EventSetup&, trigger::TriggerFilterObjectWithRefs & filterproduct) const override;
 
   edm::EDGetTokenT<CSCStripDigiCollection> m_cscStripDigiToken;
   edm::InputTag m_cscStripDigiTag;

@@ -11,8 +11,7 @@
 #include "boost/foreach.hpp"
 
 ShallowClustersProducer::ShallowClustersProducer(const edm::ParameterSet& iConfig) 
-  : theClustersLabel(iConfig.getParameter<edm::InputTag>("Clusters")),
-    Prefix(iConfig.getParameter<std::string>("Prefix") )
+  : Prefix(iConfig.getParameter<std::string>("Prefix") )
 {
   produces <std::vector<unsigned> >    ( Prefix + "number"       );
   produces <std::vector<unsigned> >    ( Prefix + "width"        );
@@ -51,6 +50,8 @@ ShallowClustersProducer::ShallowClustersProducer(const edm::ParameterSet& iConfi
   produces <std::vector<int> >         ( Prefix + "petal"         );
   produces <std::vector<int> >         ( Prefix + "stereo"        );
 
+  theClustersToken_ = consumes<edm::DetSetVector<SiStripCluster> >          (iConfig.getParameter<edm::InputTag>("Clusters"));
+  theDigisToken_    = consumes<edm::DetSetVector<SiStripProcessedRawDigi> > (edm::InputTag("siStripProcessedRawDigis", ""));
 }
 
 void ShallowClustersProducer::
@@ -98,10 +99,12 @@ produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   std::auto_ptr<std::vector<int> >            stereo         ( new std::vector<int>());
 
   edm::Handle<edmNew::DetSetVector<SiStripCluster> > clusters;
-  iEvent.getByLabel(theClustersLabel, clusters);
+  //  iEvent.getByLabel(theClustersLabel, clusters);
+  iEvent.getByToken(theClustersToken_, clusters);
   
   edm::Handle<edm::DetSetVector<SiStripProcessedRawDigi> > rawProcessedDigis;
-  iEvent.getByLabel("siStripProcessedRawDigis", "", rawProcessedDigis);
+  //  iEvent.getByLabel("siStripProcessedRawDigis", "", rawProcessedDigis);
+  iEvent.getByToken(theDigisToken_,rawProcessedDigis);
  
   edmNew::DetSetVector<SiStripCluster>::const_iterator itClusters=clusters->begin();
   for(;itClusters!=clusters->end();++itClusters){
@@ -193,12 +196,12 @@ produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
 ShallowClustersProducer::NearDigis::
 NearDigis(const SiStripClusterInfo& info) {
   max =  info.maxCharge();
-  left =           info.maxIndex()    > uint16_t(0)                ? info.stripCharges().at(info.maxIndex()-1)      : 0 ;
-  Lleft =          info.maxIndex()    > uint16_t(1)                ? info.stripCharges().at(info.maxIndex()-2)      : 0 ;
-  right=  unsigned(info.maxIndex()+1) < info.stripCharges().size() ? info.stripCharges().at(info.maxIndex()+1)      : 0 ;
-  Rright= unsigned(info.maxIndex()+2) < info.stripCharges().size() ? info.stripCharges().at(info.maxIndex()+2)      : 0 ;
-  first = info.stripCharges().at(0);
-  last =  info.stripCharges().at(info.width()-1);
+  left =           info.maxIndex()    > uint16_t(0)                ? info.stripCharges()[info.maxIndex()-1]      : 0 ;
+  Lleft =          info.maxIndex()    > uint16_t(1)                ? info.stripCharges()[info.maxIndex()-2]      : 0 ;
+  right=  unsigned(info.maxIndex()+1) < info.stripCharges().size() ? info.stripCharges()[info.maxIndex()+1]      : 0 ;
+  Rright= unsigned(info.maxIndex()+2) < info.stripCharges().size() ? info.stripCharges()[info.maxIndex()+2]      : 0 ;
+  first = info.stripCharges()[0];
+  last =  info.stripCharges()[info.width()-1];
 }
 
 ShallowClustersProducer::NearDigis::

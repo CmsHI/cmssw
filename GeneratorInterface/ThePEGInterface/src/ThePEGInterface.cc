@@ -1,5 +1,4 @@
 /** \class ThePEGInterface
- *  $Id: ThePEGInterface.cc,v 1.15 2009/05/19 12:42:00 stober Exp $
  *  
  *  Oliver Oberst <oberst@ekp.uni-karlsruhe.de>
  *  Fred-Markus Stober <stober@ekp.uni-karlsruhe.de>
@@ -68,6 +67,14 @@ ThePEGInterface::~ThePEGInterface()
 	if (eg_)
 		eg_->finalize();
 	edm::LogInfo("ThePEGInterface") << "Event generator finalized";
+}
+
+void ThePEGInterface::setPEGRandomEngine(CLHEP::HepRandomEngine* v) {
+        randomEngineGlueProxy_->setRandomEngine(v);
+        ThePEG::RandomEngineGlue *rnd = randomEngineGlueProxy_->getInstance();
+        if(rnd) {
+          rnd->setRandomEngine(v);
+        }
 }
 
 string ThePEGInterface::dataFile(const string &fileName) const

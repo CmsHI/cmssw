@@ -21,17 +21,18 @@ Implementation:
 
 // user include files
 #include "FWCore/Framework/interface/Frameworkfwd.h"
-#include "FWCore/Framework/interface/EDProducer.h"
+#include "FWCore/Framework/interface/stream/EDProducer.h"
 
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/Utilities/interface/InputTag.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
-
+#include "DataFormats/EcalRecHit/interface/EcalRecHitCollections.h"
+#include "DataFormats/DetId/interface/DetIdCollection.h"
 
 class CaloTopology;
 
-class ReducedRecHitCollectionProducer : public edm::EDProducer {
+class ReducedRecHitCollectionProducer : public edm::stream::EDProducer<> {
    public:
       //! ctor
       explicit ReducedRecHitCollectionProducer(const edm::ParameterSet&);
@@ -41,8 +42,8 @@ class ReducedRecHitCollectionProducer : public edm::EDProducer {
 
    private:
       // ----------member data ---------------------------
-      edm::InputTag recHitsLabel_;
-      std::vector<edm::InputTag> interestingDetIdCollections_;
+      edm::EDGetTokenT<EcalRecHitCollection>     recHitsToken_;
+      std::vector<edm::EDGetTokenT<DetIdCollection> > interestingDetIdCollections_;
       std::string reducedHitsCollection_;
   
 };

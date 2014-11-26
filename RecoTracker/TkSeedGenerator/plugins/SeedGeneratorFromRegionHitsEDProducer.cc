@@ -2,6 +2,7 @@
 
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
+#include "FWCore/Framework/interface/ConsumesCollector.h"
 
 #include "DataFormats/TrajectorySeed/interface/TrajectorySeedCollection.h"
 
@@ -24,62 +25,54 @@
 
 SeedGeneratorFromRegionHitsEDProducer::SeedGeneratorFromRegionHitsEDProducer(
     const edm::ParameterSet& cfg) 
-  : theConfig(cfg), theGenerator(0), theRegionProducer(0),
-    theClusterCheck(cfg.getParameter<edm::ParameterSet>("ClusterCheckPSet")),
-    theMerger_(0)
+  : theRegionProducer(nullptr),
+    theClusterCheck(cfg.getParameter<edm::ParameterSet>("ClusterCheckPSet"),consumesCollector()),
+    theMerger_(nullptr)
 {
   theSilentOnClusterCheck = cfg.getParameter<edm::ParameterSet>("ClusterCheckPSet").getUntrackedParameter<bool>("silentClusterCheck",false);
 
   moduleName = cfg.getParameter<std::string>("@module_label");
 
+  edm::ParameterSet creatorPSet =
+      cfg.getParameter<edm::ParameterSet>("SeedCreatorPSet");
+
   // seed merger & its settings
+  edm::ConsumesCollector iC = consumesCollector();
   if ( cfg.exists("SeedMergerPSet")) {
-    edm::ParameterSet mergerPSet = theConfig.getParameter<edm::ParameterSet>( "SeedMergerPSet" );
-    theMerger_=new QuadrupletSeedMerger();
+    edm::ParameterSet mergerPSet = cfg.getParameter<edm::ParameterSet>( "SeedMergerPSet" );
+    theMerger_.reset(new QuadrupletSeedMerger(mergerPSet.getParameter<edm::ParameterSet>( "layerList" ), creatorPSet, iC));
     theMerger_->setTTRHBuilderLabel( mergerPSet.getParameter<std::string>( "ttrhBuilderLabel" ) );
     theMerger_->setMergeTriplets( mergerPSet.getParameter<bool>( "mergeTriplets" ) );
     theMerger_->setAddRemainingTriplets( mergerPSet.getParameter<bool>( "addRemainingTriplets" ) );
-    theMerger_->setLayerListName( mergerPSet.getParameter<std::string>( "layerListName" ) );
   }
+
+  edm::ParameterSet regfactoryPSet = 
+      cfg.getParameter<edm::ParameterSet>("RegionFactoryPSet");
+  std::string regfactoryName = regfactoryPSet.getParameter<std::string>("ComponentName");
+  theRegionProducer.reset(TrackingRegionProducerFactory::get()->create(regfactoryName,regfactoryPSet, consumesCollector()));
+
+  edm::ParameterSet hitsfactoryPSet =
+      cfg.getParameter<edm::ParameterSet>("OrderedHitsFactoryPSet");
+  std::string hitsfactoryName = hitsfactoryPSet.getParameter<std::string>("ComponentName");
+  OrderedHitsGenerator*  hitsGenerator =
+    OrderedHitsGeneratorFactory::get()->create( hitsfactoryName, hitsfactoryPSet, iC);
+
+  edm::ParameterSet comparitorPSet =
+      cfg.getParameter<edm::ParameterSet>("SeedComparitorPSet");
+  std::string comparitorName = comparitorPSet.getParameter<std::string>("ComponentName");
+  SeedComparitor * aComparitor = (comparitorName == "none") ?
+      0 :  SeedComparitorFactory::get()->create( comparitorName, comparitorPSet, iC);
+
+  std::string creatorName = creatorPSet.getParameter<std::string>("ComponentName");
+  SeedCreator * aCreator = SeedCreatorFactory::get()->create( creatorName, creatorPSet);
+
+  theGenerator.reset(new SeedGeneratorFromRegionHits(hitsGenerator, aComparitor, aCreator));
 
   produces<TrajectorySeedCollection>();
 }
 
 SeedGeneratorFromRegionHitsEDProducer::~SeedGeneratorFromRegionHitsEDProducer()
 {
-}
-
-void SeedGeneratorFromRegionHitsEDProducer::endRun(edm::Run const&run, const edm::EventSetup& es) {
-  delete theRegionProducer;
-  delete theGenerator;
-}
-
-void SeedGeneratorFromRegionHitsEDProducer::beginRun(edm::Run const&run, const edm::EventSetup& es)
-{
-  edm::ParameterSet regfactoryPSet = 
-      theConfig.getParameter<edm::ParameterSet>("RegionFactoryPSet");
-  std::string regfactoryName = regfactoryPSet.getParameter<std::string>("ComponentName");
-  theRegionProducer = TrackingRegionProducerFactory::get()->create(regfactoryName,regfactoryPSet);
-
-  edm::ParameterSet hitsfactoryPSet = 
-      theConfig.getParameter<edm::ParameterSet>("OrderedHitsFactoryPSet");
-  std::string hitsfactoryName = hitsfactoryPSet.getParameter<std::string>("ComponentName");
-  OrderedHitsGenerator*  hitsGenerator = 
-      OrderedHitsGeneratorFactory::get()->create( hitsfactoryName, hitsfactoryPSet);
-
-  edm::ParameterSet comparitorPSet =
-      theConfig.getParameter<edm::ParameterSet>("SeedComparitorPSet");
-  std::string comparitorName = comparitorPSet.getParameter<std::string>("ComponentName");
-  SeedComparitor * aComparitor = (comparitorName == "none") ? 
-      0 :  SeedComparitorFactory::get()->create( comparitorName, comparitorPSet);   
-
-  edm::ParameterSet creatorPSet =
-      theConfig.getParameter<edm::ParameterSet>("SeedCreatorPSet");
-  std::string creatorName = creatorPSet.getParameter<std::string>("ComponentName");
-  SeedCreator * aCreator = SeedCreatorFactory::get()->create( creatorName, creatorPSet);
-
-  theGenerator = new SeedGeneratorFromRegionHits(hitsGenerator, aComparitor, aCreator); 
- 
 }
 
 void SeedGeneratorFromRegionHitsEDProducer::produce(edm::Event& ev, const edm::EventSetup& es)
@@ -99,7 +92,7 @@ void SeedGeneratorFromRegionHitsEDProducer::produce(edm::Event& ev, const edm::E
   typedef std::vector<TrackingRegion* > Regions;
   typedef Regions::const_iterator IR;
   Regions regions = theRegionProducer->regions(ev,es);
-  if (theMerger_!=0)
+  if (theMerger_)
     theMerger_->update(es);
 
   for (IR ir=regions.begin(), irEnd=regions.end(); ir < irEnd; ++ir) {
@@ -112,19 +105,21 @@ void SeedGeneratorFromRegionHitsEDProducer::produce(edm::Event& ev, const edm::E
 
     // make quadruplets
     // (TODO: can partly be propagated to the merger)
-    if ( theMerger_ !=0 ) {
-      TrajectorySeedCollection const& tempQuads = theMerger_->mergeTriplets( *triplets, region, es, theConfig ); //@@
+    if ( theMerger_ ) {
+      TrajectorySeedCollection const& tempQuads = theMerger_->mergeTriplets( *triplets, region, es); //@@
       for( TrajectorySeedCollection::const_iterator qIt = tempQuads.begin(); qIt < tempQuads.end(); ++qIt ) {
 	quadruplets->push_back( *qIt );
       }
     }
   }
- 
+  triplets->shrink_to_fit();
+  quadruplets->shrink_to_fit();
+
   // clear memory
   for (IR ir=regions.begin(), irEnd=regions.end(); ir < irEnd; ++ir) delete (*ir);
 
   // put to event
-  if ( theMerger_!=0)
+  if ( theMerger_)
     ev.put(quadruplets);
   else
     ev.put(triplets);

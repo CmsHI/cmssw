@@ -12,17 +12,20 @@
 
 // ESRecHitProducer author : Chia-Ming, Kuo
 
+class ESDigiCollection;
+
 class ESRecHitProducer : public edm::EDProducer {
 
  public:
 
   explicit ESRecHitProducer(const edm::ParameterSet& ps);
   virtual ~ESRecHitProducer();
-  virtual void produce(edm::Event& e, const edm::EventSetup& es);
+  virtual void produce(edm::Event& e, const edm::EventSetup& es) override;
 
  private:
 
-  edm::InputTag digiCollection_; // secondary name given to collection of digis
+
+  edm::EDGetTokenT<ESDigiCollection> digiToken_;
   std::string rechitCollection_; // secondary name to be given to collection of hits
 
   ESRecHitWorkerBaseClass * worker_;

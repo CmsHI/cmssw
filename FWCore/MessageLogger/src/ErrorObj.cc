@@ -33,14 +33,13 @@
 // ~ErrorObj()
 // set( const ELseverityLevel & sev, const ELstring & id )
 // clear()
-// setProcess   ( const ELstring & proc )
 // setModule    ( const ELstring & module )
 // setSubroutine( const ELstring & subroutine )
 // emitToken( const ELstring & txt )
-// operator<<( void (* f)(ErrorLog &) )
 //
 // ----------------------------------------------------------------------
 
+#include <atomic>
 
 #include "FWCore/MessageLogger/interface/ErrorObj.h"
 
@@ -68,7 +67,9 @@ namespace edm
 // Class static and class-wide parameter:
 // ----------------------------------------------------------------------
 
-int  ErrorObj::ourSerial(  0 );
+  // ---  class-wide serial number stamper:
+  //
+[[cms::thread_safe]] static std::atomic<int>  ourSerial(  0 );
 const unsigned int  maxIDlength( 200 );		// changed 4/28/06 from 20
 
 
@@ -171,8 +172,8 @@ ELstring ErrorObj::fullText() const  {
 // ----------------------------------------------------------------------
 
 void ErrorObj::setSeverity( const ELseverityLevel & sev )  {
-  myXid.severity = (sev <= ELzeroSeverity   ) ? (ELseverityLevel)ELincidental
-                 : (sev >= ELhighestSeverity) ? (ELseverityLevel)ELfatal
+  myXid.severity = (sev <= ELzeroSeverity   ) ? (ELseverityLevel)ELdebug
+                 : (sev >= ELhighestSeverity) ? (ELseverityLevel)ELsevere
                  :                              sev
                  ;
 }
@@ -199,13 +200,6 @@ void ErrorObj::setSubroutine( const ELstring & subroutine )  {
                    : subroutine;
 }
 
-
-void ErrorObj::setProcess( const ELstring & proc )  {
-  myXid.process = proc;
-  #if 0
-    std::cerr << "ErrorObj process set to \"" << proc << "\"\n";
-  #endif
-}
 
 void ErrorObj::setReactedTo( bool r )  {
   myReactedTo = r;

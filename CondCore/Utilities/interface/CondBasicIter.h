@@ -12,7 +12,7 @@ class CondBasicIter{
 public:
   
   CondBasicIter();    
-  ~CondBasicIter();    
+  virtual ~CondBasicIter();
   
   
   /**
@@ -87,7 +87,7 @@ public:
   /**
      Get the token correpsonding to the Interval of Validity.
   */
-  std::string const & getToken() const;
+  std::string getToken() const;
 
 
   bool init();

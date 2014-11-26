@@ -143,6 +143,7 @@ bool ReferenceTrajectory::construct(const TrajectoryStateOnSurface &refTsos,
   
   unsigned int iRow = 0;
 
+  theNomField = magField->nominalValue(); // nominal magnetic field in kGauss
   // local storage vector of all rechits (including rechit for beam spot in case it is used)
   TransientTrackingRecHit::ConstRecHitContainer allRecHits;
 
@@ -176,10 +177,9 @@ bool ReferenceTrajectory::construct(const TrajectoryStateOnSurface &refTsos,
     // There is also a constructor taking the magentic field. Use this one instead?
     theRefTsos = TrajectoryStateOnSurface(pcaFts, bsGeom->surface());
     
-    TransientTrackingRecHit::ConstRecHitPointer bsRecHit = 
-      new BeamSpotTransientTrackingRecHit(beamSpot,
+    TransientTrackingRecHit::ConstRecHitPointer bsRecHit(new BeamSpotTransientTrackingRecHit(beamSpot,
 					  bsGeom,
-					  theRefTsos.freeState()->momentum().phi());
+					  theRefTsos.freeState()->momentum().phi()));
     allRecHits.push_back(bsRecHit);
 
   }
@@ -306,6 +306,14 @@ bool ReferenceTrajectory::construct(const TrajectoryStateOnSurface &refTsos,
   case brokenLinesFine:
     msOK = this->addMaterialEffectsBrl(allCurvlinJacobians, allProjections, allCurvatureChanges,
                                        allDeltaParameterCovs, allLocalToCurv, refTsos.globalParameters());
+    break;
+  case localGBL:
+    msOK = this->addMaterialEffectsLocalGbl(allJacobians, allProjections, allCurvatureChanges,
+                                       allDeltaParameterCovs);
+    break;
+  case curvlinGBL:
+    msOK = this->addMaterialEffectsCurvlinGbl(allCurvlinJacobians, allProjections, allCurvatureChanges,
+                                       allDeltaParameterCovs, allLocalToCurv);
   }
   if (!msOK) return false;
  
@@ -344,6 +352,8 @@ ReferenceTrajectory::createUpdator(MaterialEffects materialEffects, double mass)
     return new CombinedMaterialEffectsUpdator(mass);
   case brokenLinesCoarse:
   case brokenLinesFine:
+  case localGBL:
+  case curvlinGBL:
     return new CombinedMaterialEffectsUpdator(mass);
 }
 
@@ -411,8 +421,11 @@ void ReferenceTrajectory::fillMeasurementAndError(const TransientTrackingRecHit:
   //             That is an analytical extrapolation and not the best guess of the real 
   //             track state on the module, but the latter should be better to get the best
   //             hit uncertainty estimate!
-  TransientTrackingRecHit::ConstRecHitPointer newHitPtr(hitPtr->canImproveWithTrack() ?
-							hitPtr->clone(updatedTsos) : hitPtr);
+
+   // FIXME FIXME  CLONE
+  auto newHitPtr =  hitPtr;
+//  TransientTrackingRecHit::ConstRecHitPointer newHitPtr(hitPtr->canImproveWithTrack() ?
+//							hitPtr->clone(updatedTsos) : hitPtr);
 
   const LocalPoint localMeasurement    = newHitPtr->localPosition();
   const LocalError localMeasurementCov = newHitPtr->localPositionError();
@@ -918,6 +931,198 @@ bool ReferenceTrajectory::addMaterialEffectsBrl(const std::vector<AlgebraicMatri
 
 //__________________________________________________________________________________
 
+bool ReferenceTrajectory::addMaterialEffectsLocalGbl(const std::vector<AlgebraicMatrix> &allJacobians,
+                                                const std::vector<AlgebraicMatrix> &allProjections,
+                                                const std::vector<AlgebraicSymMatrix> &allCurvatureChanges,
+                                                const std::vector<AlgebraicSymMatrix> &allDeltaParameterCovs)
+{
+//CHK: add material effects using general broken lines, no initial kinks
+// local track parameters are defined in the TSO system
+
+  const double minPrec = 1.0; // minimum precision to use measurement (reject measurements in strip direction)
+
+  AlgebraicMatrix OffsetToLocal(5,2); // dLocal/dU
+  OffsetToLocal[3][0] = 1.;
+  OffsetToLocal[4][1] = 1.;
+  AlgebraicMatrix SlopeToLocal(5,2); // dLocal/dU'
+  SlopeToLocal[1][0] = 1.;
+  SlopeToLocal[2][1] = 1.;
+
+  // GBL uses ROOT matrices as interface
+  TMatrixDSym covariance(2), measPrecision(2), scatPrecision(2);
+  TMatrixD jacPointToPoint(5,5), identity(5,5), proLocalToMeas(2,2);
+  identity.UnitMatrix();
+  TVectorD measurement(2), scatterer(2), measPrecDiag(2);
+  scatterer.Zero();
+  //bool initialKinks = (allCurvlinKinks.size()>0);
+
+// measurements and scatterers from hits
+  unsigned int numHits = allJacobians.size();
+  std::vector<GblPoint> GblPointList;
+  GblPointList.reserve(numHits);
+  for (unsigned int k = 0; k < numHits; ++k) {
+
+    // GBL point to point jacobian
+    clhep2root(allJacobians[k] * allCurvatureChanges[k], jacPointToPoint);
+
+    // GBL point
+    GblPoint aGblPoint( jacPointToPoint );
+
+    // GBL projection from local to measurement system
+    clhep2root(allProjections[k] * OffsetToLocal, proLocalToMeas);
+
+    // GBL measurement (residuum to initial trajectory)
+    clhep2root(theMeasurements.sub(2*k+1,2*k+2) - theTrajectoryPositions.sub(2*k+1,2*k+2), measurement);
+
+    // GBL measurement covariance matrix
+    clhep2root(theMeasurementsCov.sub(2*k+1,2*k+2), covariance);
+
+    // GBL add measurement to point
+    if (covariance(0,1) == 0.) {
+      // covariance matrix is diagonal, independent measurements
+      for (unsigned int row = 0; row < 2; ++row) {
+        measPrecDiag(row) = ( 0. < covariance(row,row) ? 1.0/covariance(row,row) : 0. );
+      }
+      aGblPoint.addMeasurement(proLocalToMeas, measurement, measPrecDiag, minPrec);
+    } else
+    {
+    // covariance matrix needs diagonalization
+      measPrecision = covariance; measPrecision.InvertFast();
+      aGblPoint.addMeasurement(proLocalToMeas, measurement, measPrecision, minPrec);
+    }
+
+    // GBL multiple scattering (full matrix in local system)
+    clhep2root(allDeltaParameterCovs[k].similarityT(SlopeToLocal), scatPrecision);
+    scatPrecision.InvertFast();
+
+    // GBL add scatterer to point
+    aGblPoint.addScatterer(scatterer, scatPrecision);
+
+    // add point to list
+    GblPointList.push_back( aGblPoint );
+  }
+  // add list of points and transformation local to fit (=local) system at first hit
+  theGblInput.push_back(std::make_pair(GblPointList, identity));
+
+  return true;
+}
+
+//__________________________________________________________________________________
+
+bool ReferenceTrajectory::addMaterialEffectsCurvlinGbl(const std::vector<AlgebraicMatrix> &allCurvlinJacobians,
+                                                const std::vector<AlgebraicMatrix> &allProjections,
+                                                const std::vector<AlgebraicSymMatrix> &allCurvatureChanges,
+                                                const std::vector<AlgebraicSymMatrix> &allDeltaParameterCovs,
+                                                const std::vector<AlgebraicMatrix> &allLocalToCurv)
+{
+//CHK: add material effects using general broken lines
+// local track parameters are defined in the curvilinear system
+
+  const double minPrec = 1.0; // minimum precision to use measurement (reject measurements in strip direction)
+  int ierr = 0;
+
+  AlgebraicMatrix OffsetToCurv(5,2); // dCurv/dU
+  OffsetToCurv[3][0] = 1.;           // dxt/du1
+  OffsetToCurv[4][1] = 1.;           // dyt/du2
+
+  AlgebraicMatrix JacOffsetToMeas, tempMSCov;
+
+  // GBL uses ROOT matrices as interface
+  TMatrixDSym covariance(2), measPrecision(2);
+  TMatrixD jacPointToPoint(5,5), firstLocalToCurv(5,5), proLocalToMeas(2,2);
+  TVectorD measurement(2), scatterer(2), measPrecDiag(2), scatPrecDiag(2);
+  scatterer.Zero();
+
+// measurements and scatterers from hits
+  unsigned int numHits = allCurvlinJacobians.size();
+  std::vector<GblPoint> GblPointList;
+  GblPointList.reserve(numHits);
+  for (unsigned int k = 0; k < numHits; ++k) {
+//  (dMeas/dU) = (dMeas/dLoc) * (dLoc/dCurv) * (dCurv/dU)
+    JacOffsetToMeas = (allProjections[k] * allLocalToCurv[k].inverse(ierr) ) * OffsetToCurv;
+    if (ierr) {
+       edm::LogError("Alignment") << "@SUB=ReferenceTrajectory::addMaterialEffectsGbl"
+                                   << "Inversion 1 for general broken lines failed: " << ierr;
+       return false;
+    }
+
+    // GBL point to point jacobian
+    clhep2root(allCurvlinJacobians[k] * allCurvatureChanges[k], jacPointToPoint);
+
+    // GBL point
+    GblPoint aGblPoint( jacPointToPoint );
+
+    // GBL projection from local to measurement system
+    clhep2root(JacOffsetToMeas, proLocalToMeas);
+
+    // GBL measurement (residuum to initial trajectory)
+    clhep2root(theMeasurements.sub(2*k+1,2*k+2) - theTrajectoryPositions.sub(2*k+1,2*k+2), measurement);
+
+    // GBL measurement covariance matrix
+    clhep2root(theMeasurementsCov.sub(2*k+1,2*k+2), covariance);
+
+    // GBL add measurement to point
+    if (covariance(0,1) == 0.) {
+      // covariance matrix is diagonal, independent measurements
+      for (unsigned int row = 0; row < 2; ++row) {
+        measPrecDiag(row) = ( 0. < covariance(row,row) ? 1.0/covariance(row,row) : 0. );
+      }
+      aGblPoint.addMeasurement(proLocalToMeas, measurement, measPrecDiag, minPrec);
+    } else
+    {
+    // covariance matrix needs diagonalization
+      measPrecision = covariance; measPrecision.InvertFast();
+      aGblPoint.addMeasurement(proLocalToMeas, measurement, measPrecision, minPrec);
+    }
+
+    // GBL multiple scattering (diagonal matrix in curvilinear system)
+    tempMSCov = allDeltaParameterCovs[k].similarity(allLocalToCurv[k]);
+    for (unsigned int row = 0; row < 2; ++row) {
+      scatPrecDiag(row) = 1.0/tempMSCov[row+1][row+1];
+    }
+
+    // GBL add scatterer to point
+    aGblPoint.addScatterer(scatterer, scatPrecDiag);
+
+    // add point to list
+    GblPointList.push_back( aGblPoint );
+  }
+  // add list of points and transformation local to fit (=curvilinear) system at first hit
+  clhep2root(allLocalToCurv[0], firstLocalToCurv);
+  theGblInput.push_back(std::make_pair(GblPointList, firstLocalToCurv));
+
+  return true;
+}
+
+//__________________________________________________________________________________
+
+  void ReferenceTrajectory::clhep2root(const AlgebraicVector& in, TVectorD& out) {
+  // convert from CLHEP to ROOT matrix
+  for (int row = 0; row < in.num_row(); ++row) {
+    out[row] = in[row];
+  }
+}
+
+  void ReferenceTrajectory::clhep2root(const AlgebraicMatrix& in, TMatrixD& out) {
+  // convert from CLHEP to ROOT matrix
+  for (int row = 0; row < in.num_row(); ++row) {
+    for (int col = 0; col < in.num_col(); ++col) {
+      out[row][col] = in[row][col];
+    }
+  }
+}
+
+  void ReferenceTrajectory::clhep2root(const AlgebraicSymMatrix& in, TMatrixDSym& out) {
+  // convert from CLHEP to ROOT matrix
+  for (int row = 0; row < in.num_row(); ++row) {
+    for (int col = 0; col < in.num_col(); ++col) {
+      out[row][col] = in[row][col];
+    }
+  }
+}
+   
+//__________________________________________________________________________________
+
 AlgebraicMatrix
 ReferenceTrajectory::getHitProjectionMatrix
 (const TransientTrackingRecHit::ConstRecHitPointer &hitPtr) const
@@ -953,8 +1158,8 @@ ReferenceTrajectory::getHitProjectionMatrixT
 {
   // define variables that will be used to setup the KfComponentsHolder
   // (their allocated memory is needed by 'hitPtr->getKfComponents(..)'
-  // ProjectMatrix<double,5,N>  pf; // not needed
-  typename AlgebraicROOTObject<N,5>::Matrix H; 
+
+  ProjectMatrix<double,5,N>  pf; 
   typename AlgebraicROOTObject<N>::Vector r, rMeas; 
   typename AlgebraicROOTObject<N,N>::SymMatrix V, VMeas;
   // input for the holder - but dummy is OK here to just get the projection matrix:
@@ -963,7 +1168,7 @@ ReferenceTrajectory::getHitProjectionMatrixT
 
   // setup the holder with the correct dimensions and get the values
   KfComponentsHolder holder;
-  holder.setup<N>(&r, &V, &H, /*&pf,*/ &rMeas, &VMeas, dummyPars, dummyErr);
+  holder.setup<N>(&r, &V, &pf, &rMeas, &VMeas, dummyPars, dummyErr);
   hitPtr->getKfComponents(holder);
 
   return asHepMatrix<N,5>(holder.projection<N>());

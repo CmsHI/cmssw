@@ -1,0 +1,44 @@
+{
+   "data" : [
+      {
+         "name" : "Processed",
+         "operation" : "sum",
+         "type" : "integer"
+      },
+      {
+         "name" : "Accepted",
+         "operation" : "sum",
+         "type" : "integer"
+      },
+      {
+         "name" : "ErrorEvents",
+         "operation" : "sum",
+         "type" : "integer"
+      },
+      {
+         "name" : "ReturnCodeMask",
+         "operation" : "binaryOr",
+         "type" : "integer"
+      },
+      {
+         "name" : "Filelist",
+         "operation" : "merge",
+         "type" : "string"
+      },
+      {
+         "name" : "Filesize",
+         "operation" : "sum",
+         "type" : "integer"
+      },
+      {
+         "name" : "InputFiles",
+         "operation" : "cat",
+         "type" : "string"
+      },
+      {
+         "name" : "FileAdler32",
+         "operation" : "sum",
+         "type" : "integer"
+      }
+   ]
+}

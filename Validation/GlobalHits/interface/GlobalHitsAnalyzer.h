@@ -69,8 +69,9 @@
 
 #include "TString.h"
 #include "DQMServices/Core/interface/MonitorElement.h"
+#include "DQMServices/Core/interface/DQMEDAnalyzer.h"
 
-class GlobalHitsAnalyzer : public edm::EDAnalyzer
+class GlobalHitsAnalyzer : public DQMEDAnalyzer
 {
   
  public:
@@ -79,9 +80,10 @@ class GlobalHitsAnalyzer : public edm::EDAnalyzer
 
   explicit GlobalHitsAnalyzer(const edm::ParameterSet&);
   virtual ~GlobalHitsAnalyzer();
-  virtual void beginJob( void );
-  virtual void endJob();  
   virtual void analyze(const edm::Event&, const edm::EventSetup&);
+
+ protected:
+  void bookHistograms(DQMStore::IBooker &, edm::Run const &, edm::EventSetup const &) override;
   
  private:
 
@@ -127,8 +129,6 @@ class GlobalHitsAnalyzer : public edm::EDAnalyzer
   bool validPresh;
   bool validHcal;
 
-  DQMStore *dbe;
-
   // G4MC info
   MonitorElement *meMCRGP[2];
   MonitorElement *meMCG4Vtx[2];
@@ -146,6 +146,8 @@ class GlobalHitsAnalyzer : public edm::EDAnalyzer
 
   edm::InputTag G4VtxSrc_;
   edm::InputTag G4TrkSrc_;
+  edm::EDGetTokenT<edm::SimVertexContainer> G4VtxSrc_Token_;
+  edm::EDGetTokenT<edm::SimTrackContainer> G4TrkSrc_Token_;
 
   // Electromagnetic info
   // ECal info
@@ -156,6 +158,8 @@ class GlobalHitsAnalyzer : public edm::EDAnalyzer
   MonitorElement *meCaloEcalEta;  
   edm::InputTag ECalEBSrc_;
   edm::InputTag ECalEESrc_;
+  edm::EDGetTokenT<edm::PCaloHitContainer> ECalEBSrc_Token_;
+  edm::EDGetTokenT<edm::PCaloHitContainer> ECalEESrc_Token_;
 
   // Preshower info
   MonitorElement *meCaloPreSh[2];
@@ -164,6 +168,7 @@ class GlobalHitsAnalyzer : public edm::EDAnalyzer
   MonitorElement *meCaloPreShPhi;
   MonitorElement *meCaloPreShEta;
   edm::InputTag ECalESSrc_;
+  edm::EDGetTokenT<edm::PCaloHitContainer> ECalESSrc_Token_;
 
   // Hadronic info
   // HCal info
@@ -173,6 +178,7 @@ class GlobalHitsAnalyzer : public edm::EDAnalyzer
   MonitorElement *meCaloHcalPhi;
   MonitorElement *meCaloHcalEta;  
   edm::InputTag HCalSrc_;
+  edm::EDGetTokenT<edm::PCaloHitContainer>  HCalSrc_Token_;
 
   // Tracker info
   // Pixel info
@@ -188,6 +194,10 @@ class GlobalHitsAnalyzer : public edm::EDAnalyzer
   edm::InputTag PxlBrlHighSrc_;
   edm::InputTag PxlFwdLowSrc_;
   edm::InputTag PxlFwdHighSrc_;
+  edm::EDGetTokenT<edm::PSimHitContainer> PxlBrlLowSrc_Token_;
+  edm::EDGetTokenT<edm::PSimHitContainer> PxlBrlHighSrc_Token_;
+  edm::EDGetTokenT<edm::PSimHitContainer> PxlFwdLowSrc_Token_;
+  edm::EDGetTokenT<edm::PSimHitContainer> PxlFwdHighSrc_Token_;
 
   // Strip info
   int nSiHits;
@@ -206,6 +216,14 @@ class GlobalHitsAnalyzer : public edm::EDAnalyzer
   edm::InputTag SiTIDHighSrc_;
   edm::InputTag SiTECLowSrc_;
   edm::InputTag SiTECHighSrc_;
+  edm::EDGetTokenT<edm::PSimHitContainer> SiTIBLowSrc_Token_;
+  edm::EDGetTokenT<edm::PSimHitContainer> SiTIBHighSrc_Token_;
+  edm::EDGetTokenT<edm::PSimHitContainer> SiTOBLowSrc_Token_;
+  edm::EDGetTokenT<edm::PSimHitContainer> SiTOBHighSrc_Token_;
+  edm::EDGetTokenT<edm::PSimHitContainer> SiTIDLowSrc_Token_;
+  edm::EDGetTokenT<edm::PSimHitContainer> SiTIDHighSrc_Token_;
+  edm::EDGetTokenT<edm::PSimHitContainer> SiTECLowSrc_Token_;
+  edm::EDGetTokenT<edm::PSimHitContainer> SiTECHighSrc_Token_;
 
   // Muon info
   MonitorElement *meMuon[2];
@@ -217,16 +235,19 @@ class GlobalHitsAnalyzer : public edm::EDAnalyzer
   MonitorElement *meMuonDtToF[2];
   MonitorElement *meMuonDtR;
   edm::InputTag MuonDtSrc_;
+  edm::EDGetTokenT<edm::PSimHitContainer> MuonDtSrc_Token_;
   // CSC info
   MonitorElement *meMuonCscToF[2];
   MonitorElement *meMuonCscZ;
   edm::InputTag MuonCscSrc_;
+  edm::EDGetTokenT<edm::PSimHitContainer> MuonCscSrc_Token_;
   // RPC info
   MonitorElement *meMuonRpcFToF[2];
   MonitorElement *meMuonRpcFZ;
   MonitorElement *meMuonRpcBToF[2];
   MonitorElement *meMuonRpcBR;
   edm::InputTag MuonRpcSrc_;
+  edm::EDGetTokenT<edm::PSimHitContainer> MuonRpcSrc_Token_;
 
   // private statistics information
   unsigned int count;

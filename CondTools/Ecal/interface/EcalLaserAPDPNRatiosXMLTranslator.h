@@ -17,15 +17,10 @@
 #include <xercesc/dom/DOMNode.hpp>
 #include <xercesc/dom/DOM.hpp>
 #include <xercesc/parsers/XercesDOMParser.hpp>
-#include <xercesc/util/PlatformUtils.hpp>
+#include "FWCore/Concurrency/interface/Xerces.h"
 #include <xercesc/util/XMLString.hpp>
 #include <xercesc/sax/SAXException.hpp>
 #include <xercesc/framework/LocalFileFormatTarget.hpp>
-
-static const char CVSId__EcalLaserAPDPNRatiosXMLTranslator[] = 
-"$Id: EcalLaserAPDPNRatiosXMLTranslator.h,v 1.1 2009/10/20 13:48:05 argiro Exp $";
-
-
 
 
 class EcalLaserAPDPNRatiosXMLTranslator {

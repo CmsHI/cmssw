@@ -8,8 +8,10 @@
 #include "FastSimulation/ParticlePropagator/interface/ParticlePropagator.h"
 #include "FastSimulation/ParticleDecay/interface/PythiaDecays.h"
 #include "FastSimulation/ParticleDecay/interface/Pythia6jets.h"
-#include "FastSimulation/ParticleDecay/interface/RandomP8.h"
 
+#include "GeneratorInterface/Pythia8Interface/interface/P8RndmEngine.h"
+
+#include "FWCore/ServiceRegistry/interface/RandomEngineSentry.h"
 
 // Needed for Pythia6 
 #define PYTHIA6PYDECY pythia6pydecy_
@@ -27,13 +29,26 @@ PythiaDecays::PythiaDecays(std::string program)
     pyservice = new gen::Pythia6Service();
     // The PYTHIA decay tables will be initialized later 
   } else if (program_ == "pythia8") {
-    //// Pythia8:
-    pythia.reset(new Pythia8::Pythia);
-    decayer.reset(new Pythia8::Pythia);
 
-    RandomP8* RP8 = new RandomP8();
-    pythia->setRndmEnginePtr(RP8);
-    decayer->setRndmEnginePtr(RP8);
+    //// Pythia8:
+
+    // inspired by method Pythia8Hadronizer::residualDecay() in GeneratorInterface/Pythia8Interface/src/Py8GunBase.cc
+    decayer.reset(new Pythia8::Pythia);
+    p8RndmEngine.reset(new gen::P8RndmEngine);
+    decayer->setRndmEnginePtr(p8RndmEngine.get());
+    decayer->settings.flag("ProcessLevel:all",false);
+    decayer->settings.flag("PartonLevel:FSRinResonances",false);
+    decayer->settings.flag("ProcessLevel:resonanceDecays",false);
+    decayer->init();
+
+    // forbid all decays    
+    Pythia8::ParticleData & pdt = decayer->particleData;
+    int pid = 1;
+    while(pdt.nextId(pid) > pid){
+      pid = pdt.nextId(pid);
+      pdt.mayDecay(pid,false);
+    }
+
   } else {
     std::cout << "WARNING: you are requesting an option which is not available in PythiaDecays::PythiaDecays " << std::endl;
   }
@@ -48,28 +63,16 @@ PythiaDecays::~PythiaDecays() {
 }
 
 const DaughterParticleList&
-PythiaDecays::particleDaughtersPy8(ParticlePropagator& particle)
+PythiaDecays::particleDaughtersPy8(ParticlePropagator& particle, CLHEP::HepRandomEngine* engine)
 {
+  edm::RandomEngineSentry<gen::P8RndmEngine> sentry(p8RndmEngine.get(), engine);
 
   theList.clear();
 
-  /*
-  std::cout << "###" << std::endl;
-  std::cout << "particle.PDGname() == " << particle.PDGname() << std::endl; 
-  std::cout << "particle.status() == " << particle.status() << std::endl;
-  std::cout << "particle.pid() == " << particle.pid() << std::endl;
-  std::cout << "particle.momentum().x() == " << particle.momentum().x() << std::endl;
-  std::cout << "particle.Px() == " << particle.Px() << std::endl;
-  std::cout << "particle.X() == " << particle.X() << std::endl;
-  std::cout << "particle.mass() == " << particle.mass() << std::endl;
-  std::cout << "particle.PDGmass() == " << particle.PDGmass() << std::endl;
-  std::cout << "particle.PDGcTau() == " << particle.PDGcTau() << std::endl;
-  std::cout << "(decayer->particleData).tau0( particle.pid() ) == " << (decayer->particleData).tau0( particle.pid() ) << std::endl;
-  */
-
-  // inspired by method Pythia8Hadronizer::residualDecay() in GeneratorInterface/Pythia8Interface/src/Pythia8Hadronizer.cc
+  // inspired by method Pythia8Hadronizer::residualDecay() in GeneratorInterface/Pythia8Interface/src/Py8GunBase.cc
+  int pid = particle.pid();
   decayer->event.reset();
-  Pythia8::Particle py8part(  particle.pid(), 93, 0, 0, 0, 0, 0, 0,
+  Pythia8::Particle py8part( pid , 93, 0, 0, 0, 0, 0, 0,
 		     particle.momentum().x(), // note: momentum().x() and Px() are the same
 		     particle.momentum().y(),
 		     particle.momentum().z(),
@@ -77,36 +80,38 @@ PythiaDecays::particleDaughtersPy8(ParticlePropagator& particle)
 		     particle.mass() );
   py8part.vProd( particle.X(), particle.Y(), 
 		 particle.Z(), particle.T() );
-  py8part.tau( (decayer->particleData).tau0( particle.pid() ) );
   decayer->event.append( py8part );
 
-  int nentries = decayer->event.size();
-  if ( !decayer->event[nentries-1].mayDecay() ) return theList;
-  decayer->next();
-  int nentries1 = decayer->event.size();
-  if ( nentries1 <= nentries ) return theList; //same number of particles, no decays...
-  Pythia8::Particle& py8daughter = decayer->event[nentries]; // the 1st daughter // DO I NEED THIS LINE?
+  int nentries_before = decayer->event.size();
+  decayer->particleData.mayDecay(pid,true);   // switch on the decay of this and only this particle (avoid double decays)
+  decayer->next();                           // do the decay
+  decayer->particleData.mayDecay(pid,false);  // switch it off again
+  int nentries_after = decayer->event.size();
+  if ( nentries_after <= nentries_before ) return theList;
 
-  theList.resize(nentries,RawParticle());
+  theList.resize(nentries_after - nentries_before,RawParticle());
 
-  for ( int ipart=nentries+1; ipart<nentries1; ipart++ )
+
+  for ( int ipart=nentries_before; ipart<nentries_after; ipart++ )
     {
-      py8daughter = decayer->event[ipart];
-      theList[ipart-nentries-1].SetXYZT( py8daughter.px(), py8daughter.py(), py8daughter.pz(), py8daughter.e() );
-      theList[ipart-nentries-1].setVertex( py8daughter.xProd(),
+      Pythia8::Particle& py8daughter = decayer->event[ipart];
+      theList[ipart-nentries_before].SetXYZT( py8daughter.px(), py8daughter.py(), py8daughter.pz(), py8daughter.e() );
+      theList[ipart-nentries_before].setVertex( py8daughter.xProd(),
 					   py8daughter.yProd(),
 					   py8daughter.zProd(),
 					   py8daughter.tProd() );
-      theList[ipart-nentries-1].setID( py8daughter.id() );
-      theList[ipart-nentries-1].setMass( py8daughter.m() );
+      theList[ipart-nentries_before].setID( py8daughter.id() );
+      theList[ipart-nentries_before].setMass( py8daughter.m() );
     }
 
   return theList;
 }
 
 const DaughterParticleList&
-PythiaDecays::particleDaughtersPy6(ParticlePropagator& particle)
+PythiaDecays::particleDaughtersPy6(ParticlePropagator& particle, CLHEP::HepRandomEngine* engine)
 {
+  edm::RandomEngineSentry<gen::Pythia6Service> sentry(pyservice, engine);
+
   gen::Pythia6Service::InstanceWrapper guard(pyservice); // grab Py6 context
 
   //  Pythia6jets pyjets;

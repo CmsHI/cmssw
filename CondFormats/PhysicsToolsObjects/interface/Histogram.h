@@ -1,6 +1,12 @@
 #ifndef CondFormats_PhysicsToolsObjects_Histogram_h
 #define CondFormats_PhysicsToolsObjects_Histogram_h
 
+#include "CondFormats/Serialization/interface/Serializable.h"
+
+#if !defined(__CINT__) && !defined(__MAKECINT__) && !defined(__REFLEX__)
+#include <atomic>
+#endif
+
 #include <vector>
 #include <cmath>
 
@@ -22,6 +28,8 @@ struct Range {
 	inline Axis_t width() const { return max - min; }
 
 	Axis_t	min, max;
+
+  COND_SERIALIZABLE;
 };
 
 template<typename Value_t, typename Axis_t = Value_t>
@@ -99,8 +107,14 @@ class Histogram {
 	Range			limits;
 
 	// transient cache variables
-	mutable Value_t		total;
-	mutable bool		totalValid;
+	mutable Value_t total COND_TRANSIENT; //CMS-THREADING protected by totalValid
+#if !defined(__CINT__) && !defined(__MAKECINT__) && !defined(__REFLEX__)
+	mutable std::atomic<bool> totalValid COND_TRANSIENT;
+#else
+	mutable bool totalValid COND_TRANSIENT;
+#endif
+
+	COND_SERIALIZABLE;
 };
 
 typedef Histogram<float>  HistogramF;
@@ -109,6 +123,8 @@ typedef Histogram<double> HistogramD;
 } // namespace Calibration
 } // namespace PhysicsTools
 
+#if !defined(__CINT__) && !defined(__MAKECINT__) && !defined(__REFLEX__)
 #include "CondFormats/PhysicsToolsObjects/interface/Histogram.icc"
+#endif
 
 #endif // CondFormats_PhysicsToolsObjects_Histogram_h

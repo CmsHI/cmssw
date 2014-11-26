@@ -10,7 +10,8 @@ import FWCore.ParameterSet.Config as cms
 #TPG condition needed by ecalRecHit producer if TT recovery is ON
 from RecoLocalCalo.EcalRecProducers.ecalRecHitTPGConditions_cff import *
 #ECAL reconstruction
-from RecoLocalCalo.EcalRecProducers.ecalGlobalUncalibRecHit_cfi import *
+#from RecoLocalCalo.EcalRecProducers.ecalGlobalUncalibRecHit_cfi import *
+from RecoLocalCalo.EcalRecProducers.ecalMultiFitUncalibRecHit_cfi import *
 from RecoLocalCalo.EcalRecProducers.ecalRecHit_cfi import *
 from RecoLocalCalo.EcalRecProducers.ecalPreshowerRecHit_cfi import *
 from RecoLocalCalo.EcalRecProducers.ecalDetIdToBeRecovered_cfi import *
@@ -18,8 +19,11 @@ from RecoLocalCalo.EcalRecProducers.ecalCompactTrigPrim_cfi import *
 from RecoLocalCalo.EcalRecProducers.ecalTPSkim_cfi import *
 
 
-ecalUncalibRecHitSequence = cms.Sequence(ecalGlobalUncalibRecHit*
-                                         ecalDetIdToBeRecovered)
+#ecalUncalibRecHitSequence = cms.Sequence(ecalGlobalUncalibRecHit*
+#                                         ecalDetIdToBeRecovered)
+
+ecalUncalibRecHitSequence = cms.Sequence(ecalMultiFitUncalibRecHit*
+                                        ecalDetIdToBeRecovered)
 
 ecalRecHitSequence        = cms.Sequence(ecalRecHit*
                                          ecalCompactTrigPrim*
@@ -29,4 +33,3 @@ ecalRecHitSequence        = cms.Sequence(ecalRecHit*
 ecalLocalRecoSequence     = cms.Sequence(ecalUncalibRecHitSequence*
                                          ecalRecHitSequence)
 
-ecalRecHit.ChannelStatusToBeExcluded = [ 3, 4, 8, 9, 10, 11, 12, 13, 14 ]

@@ -13,7 +13,6 @@
 //
 // Original Author:  Dmytro Kovalskyi
 //         Created:  Fri Apr 21 10:59:41 PDT 2006
-// $Id: TestTrackAssociator.cc,v 1.22.2.1 2009/07/01 10:04:17 dmytro Exp $
 //
 //
 
@@ -78,7 +77,6 @@
 
 #include "TrackingTools/TrackAssociator/interface/TrackDetectorAssociator.h"
 #include "TrackingTools/TrackAssociator/interface/TrackAssociatorParameters.h"
-#include "Utilities/Timing/interface/TimerStack.h"
 
 #include "DataFormats/MuonReco/interface/Muon.h"
 #include "DataFormats/MuonReco/interface/MuonFwd.h"
@@ -87,7 +85,6 @@ class TestTrackAssociator : public edm::EDAnalyzer {
  public:
    explicit TestTrackAssociator(const edm::ParameterSet&);
    virtual ~TestTrackAssociator(){
-      TimingReport::current()->dump(std::cout);
    }
    
    virtual void analyze (const edm::Event&, const edm::EventSetup&);
@@ -101,7 +98,8 @@ TestTrackAssociator::TestTrackAssociator(const edm::ParameterSet& iConfig)
 {
    // TrackAssociator parameters
    edm::ParameterSet parameters = iConfig.getParameter<edm::ParameterSet>("TrackAssociatorParameters");
-   parameters_.loadParameters( parameters );
+   edm::ConsumesCollector iC = consumesCollector();
+   parameters_.loadParameters( parameters, iC );
    
    trackAssociator_.useDefaultPropagator();
 }

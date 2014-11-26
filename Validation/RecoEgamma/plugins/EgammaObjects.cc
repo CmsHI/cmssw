@@ -14,6 +14,8 @@
 
 #include "SimDataFormats/GeneratorProducts/interface/HepMCProduct.h"
 
+#include "TF1.h"
+
 EgammaObjects::EgammaObjects( const edm::ParameterSet& ps )
 {
   particleID = ps.getParameter<int>("particleID");
@@ -87,8 +89,10 @@ EgammaObjects::EgammaObjects( const edm::ParameterSet& ps )
 
 void EgammaObjects::loadCMSSWObjects(const edm::ParameterSet& ps)
 {
-  MCTruthCollection_ = ps.getParameter<edm::InputTag>("MCTruthCollection");
-  RecoCollection_  = ps.getParameter<edm::InputTag>("RecoCollection");
+  MCTruthCollectionT_ = consumes<edm::HepMCProduct>(
+      ps.getParameter<edm::InputTag>("MCTruthCollection"));
+  RecoCollectionT_    = consumes<reco::GsfElectronCollection>(
+      ps.getParameter<edm::InputTag>("RecoCollection"));
 }
 
 void EgammaObjects::loadHistoParameters(const edm::ParameterSet& ps)
@@ -301,9 +305,13 @@ void EgammaObjects::analyze( const edm::Event& evt, const edm::EventSetup& es )
 void EgammaObjects::analyzePhotons( const edm::Event& evt, const edm::EventSetup& es )
 {
   edm::Handle<reco::PhotonCollection> pPhotons;
-  evt.getByLabel(RecoCollection_, pPhotons);
+  evt.getByToken(RecoCollectionT_, pPhotons);
   if (!pPhotons.isValid()) {
-    edm::LogError("EgammaObjects") << "Error! can't get collection with label " << RecoCollection_.label();
+    Labels l;
+    labelsForToken(RecoCollectionT_, l);
+    edm::LogError("EgammaObjects")
+        << "Error! can't get collection with label "
+        << l.module;
   }
 
   const reco::PhotonCollection* photons = pPhotons.product();
@@ -341,9 +349,13 @@ void EgammaObjects::analyzePhotons( const edm::Event& evt, const edm::EventSetup
     }
 
   edm::Handle<edm::HepMCProduct> pMCTruth ;
-  evt.getByLabel(MCTruthCollection_, pMCTruth);
+  evt.getByToken(MCTruthCollectionT_, pMCTruth);
   if (!pMCTruth.isValid()) {
-    edm::LogError("EgammaObjects") << "Error! can't get collection with label " << MCTruthCollection_.label();
+    Labels l;
+    labelsForToken(MCTruthCollectionT_, l);
+    edm::LogError("EgammaObjects")
+        << "Error! can't get collection with label "
+        << l.module;
   }
 
   const HepMC::GenEvent* genEvent = pMCTruth->GetEvent();
@@ -463,9 +475,13 @@ void EgammaObjects::analyzePhotons( const edm::Event& evt, const edm::EventSetup
 void EgammaObjects::analyzeElectrons( const edm::Event& evt, const edm::EventSetup& es )
 {
   edm::Handle<reco::GsfElectronCollection> pElectrons;
-  evt.getByLabel(RecoCollection_, pElectrons);
+  evt.getByToken(RecoCollectionT_, pElectrons);
   if (!pElectrons.isValid()) {
-    edm::LogError("DOEPlotsProducerElectrons") << "Error! can't get collection with label " << RecoCollection_.label();
+    Labels l;
+    labelsForToken(RecoCollectionT_, l);
+    edm::LogError("DOEPlotsProducerElectrons")
+        << "Error! can't get collection with label "
+        << l.module;
   }
 
   const reco::GsfElectronCollection* electrons = pElectrons.product();
@@ -503,9 +519,13 @@ void EgammaObjects::analyzeElectrons( const edm::Event& evt, const edm::EventSet
     }
 
   edm::Handle<edm::HepMCProduct> pMCTruth ;
-  evt.getByLabel(MCTruthCollection_, pMCTruth);
+  evt.getByToken(MCTruthCollectionT_, pMCTruth);
   if (!pMCTruth.isValid()) {
-    edm::LogError("DOEPlotsProducerElectrons") << "Error! can't get collection with label " << MCTruthCollection_.label();
+    Labels l;
+    labelsForToken(MCTruthCollectionT_, l);
+    edm::LogError("DOEPlotsProducerElectrons")
+        << "Error! can't get collection with label "
+        << l.module;
   }
 
   const HepMC::GenEvent* genEvent = pMCTruth->GetEvent();
@@ -619,7 +639,7 @@ void EgammaObjects::analyzeElectrons( const edm::Event& evt, const edm::EventSet
   }
 }
 
-double EgammaObjects::findRecoMass(reco::Photon pOne, reco::Photon pTwo)
+double EgammaObjects::findRecoMass(const reco::Photon& pOne,const reco::Photon& pTwo)
 {
   double cosTheta
     = (cos(pOne.superCluster()->phi() - pTwo.superCluster()->phi()) + sinh(pOne.superCluster()->eta()) * sinh(pTwo.superCluster()->eta())) /
@@ -630,7 +650,7 @@ double EgammaObjects::findRecoMass(reco::Photon pOne, reco::Photon pTwo)
   return recoMass;
 }
 
-double EgammaObjects::findRecoMass(reco::GsfElectron eOne, reco::GsfElectron eTwo)
+double EgammaObjects::findRecoMass(const reco::GsfElectron& eOne, const reco::GsfElectron& eTwo)
 {
   double cosTheta
     = (cos(eOne.caloPosition().phi() - eTwo.caloPosition().phi()) + sinh(eOne.caloPosition().eta()) * sinh(eTwo.caloPosition().eta())) /
@@ -811,16 +831,18 @@ void EgammaObjects::getEfficiencyHistosViaDividing()
 
 void EgammaObjects::fitHistos()
 {
-  hist_EtOverTruth_->Fit("gaus","QEM");
+  //Use our own copy for thread safety
+  TF1 gaus("mygaus","gaus");
+  hist_EtOverTruth_->Fit(&gaus,"QEM");
 //  hist_EtNumRecoOverNumTrue_->Fit("pol1","QEM");
 
-  hist_EOverTruth_->Fit("gaus","QEM");
+  hist_EOverTruth_->Fit(&gaus,"QEM");
 //  hist_ENumRecoOverNumTrue_->Fit("pol1","QEM");
 
-  hist_EtaOverTruth_->Fit("gaus","QEM");
+  hist_EtaOverTruth_->Fit(&gaus,"QEM");
 //  hist_EtaNumRecoOverNumTrue_->Fit("pol1","QEM");
 
-  hist_PhiOverTruth_->Fit("gaus","QEM");
+  hist_PhiOverTruth_->Fit(&gaus,"QEM");
 //  hist_PhiNumRecoOverNumTrue_->Fit("pol1","QEM");
 
   /*

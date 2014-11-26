@@ -15,12 +15,13 @@
 #include "FWCore/Utilities/interface/ProductHolderIndex.h"
 
 #include "boost/array.hpp"
-#include "boost/shared_ptr.hpp"
+#include <memory>
 
 #include <iosfwd>
 #include <map>
 #include <string>
 #include <vector>
+#include "FWCore/Utilities/interface/HideStdSharedPtrFromRoot.h"
 
 namespace edm {
   class ProductHolderIndexHelper;
@@ -101,18 +102,13 @@ namespace edm {
        return transient_.constProductList_;
     }
 
-    boost::shared_ptr<ProductHolderIndexHelper> const& productLookup(BranchType branchType) const;
+    std::shared_ptr<ProductHolderIndexHelper> const& productLookup(BranchType branchType) const;
 
     // returns the appropriate ProductHolderIndex else ProductHolderIndexInvalid if no BranchID is available
     ProductHolderIndex indexFrom(BranchID const& iID) const;
 
     bool productProduced(BranchType branchType) const {return transient_.productProduced_[branchType];}
     bool anyProductProduced() const {return transient_.anyProductProduced_;}
-    BranchListIndex producedBranchListIndex() const {return transient_.producedBranchListIndex_;}
-
-    void setProducedBranchListIndex(BranchListIndex blix) {
-      transient_.producedBranchListIndex_ = blix;
-    }
 
     std::vector<std::string> const& missingDictionaries() const {
       return transient_.missingDictionaries_;
@@ -137,17 +133,15 @@ namespace edm {
       boost::array<bool, NumBranchTypes> productProduced_;
       bool anyProductProduced_;
 
-      boost::shared_ptr<ProductHolderIndexHelper> eventProductLookup_;
-      boost::shared_ptr<ProductHolderIndexHelper> lumiProductLookup_;
-      boost::shared_ptr<ProductHolderIndexHelper> runProductLookup_;
+      std::shared_ptr<ProductHolderIndexHelper> eventProductLookup_;
+      std::shared_ptr<ProductHolderIndexHelper> lumiProductLookup_;
+      std::shared_ptr<ProductHolderIndexHelper> runProductLookup_;
 
       ProductHolderIndex eventNextIndexValue_;
       ProductHolderIndex lumiNextIndexValue_;
       ProductHolderIndex runNextIndexValue_;
 
       std::map<BranchID, ProductHolderIndex> branchIDToIndex_;
-
-      BranchListIndex producedBranchListIndex_;
 
       std::vector<std::string> missingDictionaries_;
     };

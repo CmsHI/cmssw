@@ -29,7 +29,7 @@ public:
 
 
   SiTrackerGSRecHit2D( const LocalPoint&, const LocalError&,
-		       const DetId&,
+		       GeomDet const & idet,
 		       const int simhitId,
 		       const int simtrackId,
 		       const uint32_t eeId,
@@ -37,7 +37,7 @@ public:
 		       const int pixelMultiplicityX,
 		       const int pixelMultiplicityY);     
   
-  virtual SiTrackerGSRecHit2D * clone() const {return new SiTrackerGSRecHit2D( * this); }
+  virtual SiTrackerGSRecHit2D * clone() const {SiTrackerGSRecHit2D * p = new SiTrackerGSRecHit2D( * this); p->load(); return p;}
   
   const int& simhitId()    const { return simhitId_;}
   const int& simtrackId()  const { return simtrackId_;}

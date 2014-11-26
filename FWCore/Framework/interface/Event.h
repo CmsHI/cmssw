@@ -19,10 +19,10 @@ For its usage, see "FWCore/Framework/interface/PrincipalGetAdapter.h"
 
 #include "DataFormats/Common/interface/BasicHandle.h"
 #include "DataFormats/Common/interface/ConvertHandle.h"
-#include "DataFormats/Common/interface/WrapperOwningHolder.h"
 #include "DataFormats/Common/interface/Handle.h"
 #include "DataFormats/Common/interface/OrphanHandle.h"
 #include "DataFormats/Common/interface/Wrapper.h"
+#include "DataFormats/Common/interface/FunctorHandleExceptionFactory.h"
 
 #include "DataFormats/Provenance/interface/EventID.h"
 #include "DataFormats/Provenance/interface/EventSelectionID.h"
@@ -36,8 +36,6 @@ For its usage, see "FWCore/Framework/interface/PrincipalGetAdapter.h"
 #include "FWCore/Utilities/interface/EDGetToken.h"
 #include "FWCore/Utilities/interface/ProductKindOfType.h"
 #include "FWCore/Utilities/interface/StreamID.h"
-
-#include "boost/shared_ptr.hpp"
 
 #include <memory>
 #include <string>
@@ -85,6 +83,16 @@ namespace edm {
 
     RunNumber_t
     run() const {return id().run();}
+    
+    /**If you are caching data from the Event, you should also keep
+     this number.  If this number changes then you know that
+     the data you have cached is invalid.
+     The value of '0' will never be returned so you can use that to
+     denote that you have not yet checked the value.
+     */
+    typedef unsigned long CacheIdentifier_t;
+    CacheIdentifier_t
+    cacheIdentifier() const;
 
     template<typename PROD>
     bool
@@ -104,10 +112,18 @@ namespace edm {
     OrphanHandle<PROD>
     put(std::auto_ptr<PROD> product) {return put<PROD>(product, std::string());}
 
+    template<typename PROD>
+    OrphanHandle<PROD>
+    put(std::unique_ptr<PROD> product) {return put<PROD>(std::move(product), std::string());}
+
     ///Put a new product with a 'product instance name'
     template<typename PROD>
     OrphanHandle<PROD>
     put(std::auto_ptr<PROD> product, std::string const& productInstanceName);
+
+    template<typename PROD>
+    OrphanHandle<PROD>
+    put(std::unique_ptr<PROD> product, std::string const& productInstanceName);
 
     ///Returns a RefProd to a product before that product has been placed into the Event.
     /// The RefProd (and any Ref's made from it) will no work properly until after the
@@ -200,7 +216,7 @@ namespace edm {
 
     ModuleCallingContext const* moduleCallingContext() const { return moduleCallingContext_; }
 
-    typedef std::vector<std::pair<WrapperOwningHolder, BranchDescription const*> > ProductPtrVec;
+    typedef std::vector<std::pair<std::unique_ptr<WrapperBase>, BranchDescription const*> > ProductPtrVec;
 
   private:
     EventPrincipal const&
@@ -220,7 +236,6 @@ namespace edm {
     // alternative is not great either.  Putting it into the
     // public interface is asking for trouble
     friend class ProducerSourceBase;
-    friend class DaqSource;
     friend class InputSource;
     friend class RawInputSource;
     friend class ProducerBase;
@@ -236,6 +251,7 @@ namespace edm {
     ProductPtrVec const& putProducts() const {return putProducts_;}
 
     ProductPtrVec& putProductsWithoutParents() {return putProductsWithoutParents_;}
+
     ProductPtrVec const& putProductsWithoutParents() const {return putProductsWithoutParents_;}
 
     PrincipalGetAdapter provRecorder_;
@@ -248,7 +264,7 @@ namespace edm {
     ProductPtrVec putProductsWithoutParents_; // ... but not for these
 
     EventAuxiliary const& aux_;
-    boost::shared_ptr<LuminosityBlock const> const luminosityBlock_;
+    std::shared_ptr<LuminosityBlock const> const luminosityBlock_;
 
     // gotBranchIDs_ must be mutable because it records all 'gets',
     // which do not logically modify the PrincipalGetAdapter. gotBranchIDs_ is
@@ -259,7 +275,7 @@ namespace edm {
     void addToGotBranchIDs(Provenance const& prov) const;
 
     // We own the retrieved Views, and have to destroy them.
-    mutable std::vector<boost::shared_ptr<ViewBase> > gotViews_;
+    mutable std::vector<std::shared_ptr<ViewBase> > gotViews_;
     
     StreamID streamID_;
     ModuleCallingContext const* moduleCallingContext_;
@@ -275,9 +291,9 @@ namespace edm {
     typedef Event::ProductPtrVec ptrvec_t;
     void do_it(ptrvec_t& /*ignored*/,
                ptrvec_t& used,
-               WrapperOwningHolder const& edp,
+               std::unique_ptr<Wrapper<PROD> > wp,
                BranchDescription const* desc) const {
-      used.emplace_back(edp, desc);
+      used.emplace_back(std::move(wp), desc);
     }
   };
 
@@ -287,9 +303,9 @@ namespace edm {
 
     void do_it(ptrvec_t& used,
                ptrvec_t& /*ignored*/,
-               WrapperOwningHolder const& edp,
+               std::unique_ptr<Wrapper<PROD> > wp,
                BranchDescription const* desc) const {
-      used.emplace_back(edp, desc);
+      used.emplace_back(std::move(wp), desc);
     }
   };
 
@@ -299,8 +315,8 @@ namespace edm {
   Event::get(ProductID const& oid, Handle<PROD>& result) const {
     result.clear();
     BasicHandle bh = this->getByProductID_(oid);
-    convert_handle(bh, result);  // throws on conversion error
-    if(bh.failedToGet()) {
+    convert_handle(std::move(bh), result);  // throws on conversion error
+    if(result.failedToGet()) {
       return false;
     }
     addToGotBranchIDs(*bh.provenance());
@@ -314,10 +330,12 @@ namespace edm {
       BasicHandle bh = this->getByProductID_(oid);
 
       if(bh.failedToGet()) {
-          boost::shared_ptr<cms::Exception> whyFailed(new edm::Exception(edm::errors::ProductNotFound));
-          *whyFailed
-              << "get View by ID failed: no product with ID = " << oid <<"\n";
-          Handle<View<ELEMENT> > temp(whyFailed);
+          Handle<View<ELEMENT> > temp(makeHandleExceptionFactory([oid]()->std::shared_ptr<cms::Exception> {
+            std::shared_ptr<cms::Exception> whyFailed = std::make_shared<edm::Exception>(edm::errors::ProductNotFound);
+            *whyFailed
+            << "get View by ID failed: no product with ID = " << oid <<"\n";
+            return whyFailed;
+          }));
           result.swap(temp);
           return false;
       }
@@ -329,6 +347,11 @@ namespace edm {
   template<typename PROD>
   OrphanHandle<PROD>
   Event::put(std::auto_ptr<PROD> product, std::string const& productInstanceName) {
+    return put(std::unique_ptr<PROD>(product.release()),productInstanceName);
+  }
+  template<typename PROD>
+  OrphanHandle<PROD>
+  Event::put(std::unique_ptr<PROD> product, std::string const& productInstanceName) {
     if(product.get() == 0) {                // null pointer is illegal
       TypeID typeID(typeid(PROD));
       principal_get_adapter_detail::throwOnPutOfNullProduct("Event", typeID, productInstanceName);
@@ -344,14 +367,15 @@ namespace edm {
     BranchDescription const& desc =
       provRecorder_.getBranchDescription(TypeID(*product), productInstanceName);
 
-    WrapperOwningHolder edp(new Wrapper<PROD>(product), Wrapper<PROD>::getInterface());
-
+    std::unique_ptr<Wrapper<PROD> > wp(new Wrapper<PROD>(std::move(product)));
+    PROD const* prod = wp->product(); 
+     
     typename boost::mpl::if_c<detail::has_donotrecordparents<PROD>::value,
       RecordInParentless<PROD>,
       RecordInParentfull<PROD> >::type parentage_recorder;
     parentage_recorder.do_it(putProducts(),
                              putProductsWithoutParents(),
-                             edp,
+                             std::move(wp),
                              &desc);
 
     //  putProducts().push_back(std::make_pair(edp, &desc));
@@ -359,7 +383,7 @@ namespace edm {
     // product.release(); // The object has been copied into the Wrapper.
     // The old copy must be deleted, so we cannot release ownership.
 
-    return(OrphanHandle<PROD>(static_cast<Wrapper<PROD> const*>(edp.wrapper())->product(), makeProductID(desc)));
+    return(OrphanHandle<PROD>(prod, makeProductID(desc)));
   }
 
   template<typename PROD>
@@ -378,8 +402,8 @@ namespace edm {
   Event::getByLabel(InputTag const& tag, Handle<PROD>& result) const {
     result.clear();
     BasicHandle bh = provRecorder_.getByLabel_(TypeID(typeid(PROD)), tag, moduleCallingContext_);
-    convert_handle(bh, result);  // throws on conversion error
-    if (bh.failedToGet()) {
+    convert_handle(std::move(bh), result);  // throws on conversion error
+    if (result.failedToGet()) {
       return false;
     }
     addToGotBranchIDs(*result.provenance());
@@ -393,8 +417,8 @@ namespace edm {
                     Handle<PROD>& result) const {
     result.clear();
     BasicHandle bh = provRecorder_.getByLabel_(TypeID(typeid(PROD)), label, productInstanceName, emptyString_, moduleCallingContext_);
-    convert_handle(bh, result);  // throws on conversion error
-    if (bh.failedToGet()) {
+    convert_handle(std::move(bh), result);  // throws on conversion error
+    if (result.failedToGet()) {
       return false;
     }
     addToGotBranchIDs(*result.provenance());
@@ -422,8 +446,8 @@ namespace edm {
   Event::getByToken(EDGetToken token, Handle<PROD>& result) const {
     result.clear();
     BasicHandle bh = provRecorder_.getByToken_(TypeID(typeid(PROD)),PRODUCT_TYPE, token, moduleCallingContext_);
-    convert_handle(bh, result);  // throws on conversion error
-    if (bh.failedToGet()) {
+    convert_handle(std::move(bh), result);  // throws on conversion error
+    if (result.failedToGet()) {
       return false;
     }
     addToGotBranchIDs(*result.provenance());
@@ -435,8 +459,8 @@ namespace edm {
   Event::getByToken(EDGetTokenT<PROD> token, Handle<PROD>& result) const {
     result.clear();
     BasicHandle bh = provRecorder_.getByToken_(TypeID(typeid(PROD)),PRODUCT_TYPE, token, moduleCallingContext_);
-    convert_handle(bh, result);  // throws on conversion error
-    if (bh.failedToGet()) {
+    convert_handle(std::move(bh), result);  // throws on conversion error
+    if (result.failedToGet()) {
       return false;
     }
     addToGotBranchIDs(*result.provenance());
@@ -450,7 +474,7 @@ namespace edm {
     result.clear();
     BasicHandle bh = provRecorder_.getMatchingSequenceByLabel_(TypeID(typeid(ELEMENT)), tag, moduleCallingContext_);
     if(bh.failedToGet()) {
-      Handle<View<ELEMENT> > h(bh.whyFailed());
+      Handle<View<ELEMENT> > h(std::move(bh.whyFailedFactory()));
       h.swap(result);
       return false;
     }
@@ -466,7 +490,7 @@ namespace edm {
     result.clear();
     BasicHandle bh = provRecorder_.getMatchingSequenceByLabel_(TypeID(typeid(ELEMENT)), moduleLabel, productInstanceName, emptyString_, moduleCallingContext_);
     if(bh.failedToGet()) {
-      Handle<View<ELEMENT> > h(bh.whyFailed());
+      Handle<View<ELEMENT> > h(std::move(bh.whyFailedFactory()));
       h.swap(result);
       return false;
     }
@@ -486,7 +510,7 @@ namespace edm {
     result.clear();
     BasicHandle bh = provRecorder_.getByToken_(TypeID(typeid(ELEMENT)),ELEMENT_TYPE, token, moduleCallingContext_);
     if(bh.failedToGet()) {
-      Handle<View<ELEMENT> > h(bh.whyFailed());
+      Handle<View<ELEMENT> > h(std::move(bh.whyFailedFactory()));
       h.swap(result);
       return false;
     }
@@ -500,7 +524,7 @@ namespace edm {
     result.clear();
     BasicHandle bh = provRecorder_.getByToken_(TypeID(typeid(ELEMENT)),ELEMENT_TYPE, token, moduleCallingContext_);
     if(bh.failedToGet()) {
-      Handle<View<ELEMENT> > h(bh.whyFailed());
+      Handle<View<ELEMENT> > h(std::move(bh.whyFailedFactory()));
       h.swap(result);
       return false;
     }
@@ -518,10 +542,9 @@ namespace edm {
     helper_vector_ptr helpers;
     // the following must initialize the
     //  shared pointer and fill the helper vector
-    bh.interface()->fillView(bh.wrapper(), bh.id(), pointersToElements, helpers);
+    bh.wrapper()->fillView(bh.id(), pointersToElements, helpers);
 
-    boost::shared_ptr<View<ELEMENT> >
-      newview(new View<ELEMENT>(pointersToElements, helpers));
+    auto newview = std::make_shared<View<ELEMENT> >(pointersToElements, helpers);
 
     addToGotBranchIDs(*bh.provenance());
     gotViews_.push_back(newview);
@@ -530,3 +553,4 @@ namespace edm {
   }
 }
 #endif
+

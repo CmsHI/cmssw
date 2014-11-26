@@ -4,12 +4,10 @@
 /** \class DTROChainCoding
  *  A class for handling the DT Read-out chain.
  *
- *  $Date: 2006/06/25 15:31:38 $
- *  $Revision: 1.3 $
  *  \author M. Zanetti - INFN Padova
  */
 
-#include <EventFilter/DTRawToDigi/interface/DTDDUWords.h>
+#include <DataFormats/DTDigi/interface/DTDDUWords.h>
 
 #include <vector>
 

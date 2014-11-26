@@ -16,7 +16,6 @@
 //
 // Original Author:  Chris Jones
 //         Created:  Wed Mar  5 09:13:43 EST 2008
-// $Id: FWDetailViewManager.h,v 1.24 2011/02/10 14:58:05 amraktad Exp $
 //
 #include <map>
 #include <string>
@@ -40,16 +39,6 @@ public:
    void newEventCallback();
    void eveWindowDestroyed(TEveWindow*);
 
-protected:
-   FWColorManager                *m_colorManager;
-
-private:
-
-   FWDetailViewManager(const FWDetailViewManager&);    // stop default
-   const FWDetailViewManager& operator=(const FWDetailViewManager&);    // stop default
-
-   std::vector<std::string> findViewersFor(const std::string&) const;
-
    struct ViewFrame 
    {
       TEveCompositeFrameInMainFrame *m_eveFrame;
@@ -59,6 +48,16 @@ private:
       ViewFrame(TEveCompositeFrameInMainFrame *f, FWDetailViewBase* v, TEveWindow* w):
          m_eveFrame(f), m_detailView(v), m_eveWindow(w) {}
    };
+
+protected:
+   FWColorManager                *m_colorManager;
+
+private:
+
+   FWDetailViewManager(const FWDetailViewManager&);    // stop default
+   const FWDetailViewManager& operator=(const FWDetailViewManager&);    // stop default
+
+   std::vector<std::string> findViewersFor(const std::string&) const;
 
    typedef std::vector<ViewFrame> vViews_t;
    typedef vViews_t::iterator     vViews_i;

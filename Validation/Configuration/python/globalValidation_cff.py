@@ -31,9 +31,12 @@ from Validation.RecoEgamma.egammaValidation_cff import *
 from Validation.RecoParticleFlow.PFJetValidation_cff  import *
 from Validation.RecoParticleFlow.PFMETValidation_cff import *
 from Validation.RecoParticleFlow.PFMuonValidation_cff import *
+from Validation.RecoParticleFlow.PFElectronValidation_cff import *
+from Validation.RecoParticleFlow.PFJetResValidation_cff import *
 from Validation.RPCRecHits.rpcRecHitValidation_cfi import *
 from Validation.DTRecHits.DTRecHitQuality_cfi import *
 from Validation.RecoTau.DQMMCValidation_cfi import *
+from Validation.L1T.L1Validator_cfi import *
 from DQMOffline.RecoB.dqmAnalyzer_cff import *
 
 # filter/producer "pre-" sequence for globalValidation
@@ -42,7 +45,7 @@ globalPrevalidation = cms.Sequence(
   * tracksValidationSelectors
   * photonPrevalidationSequence
   * produceDenoms
-  * prebTagSequence
+  * prebTagSequenceMC
 )
 
 # filter/producer "pre-" sequence for validation_preprod
@@ -78,9 +81,43 @@ globalValidation = cms.Sequence(   trackerHitsValidation
                                  + egammaValidation
                                  + pfJetValidationSequence
                                  + pfMETValidationSequence
+                                 + pfElectronValidationSequence
+                                 + pfJetResValidationSequence
                                  + pfMuonValidationSequence
                                  + rpcRecHitValidation_step
 				 + dtLocalRecoValidation_no2D
                                  + pfTauRunDQMValidation
                                  + bTagPlotsMCbcl
+                                 + L1Validator
 )
+
+#lite tracking validator to be used in the Validation matrix
+liteTrackValidator=trackValidator.clone()
+liteTrackValidator.label=cms.VInputTag(cms.InputTag("generalTracks"),
+                                          cms.InputTag("cutsRecoTracksHp")
+                                          )
+
+#lite validation
+globalValidationLiteTracking = cms.Sequence(globalValidation)
+globalValidationLiteTracking.replace(trackValidator,liteTrackValidator)
+
+#lite pre-validation
+globalPrevalidationLiteTracking = cms.Sequence(globalPrevalidation)
+globalPrevalidationLiteTracking.remove(cutsRecoTracksZero)
+globalPrevalidationLiteTracking.remove(cutsRecoTracksZeroHp)
+globalPrevalidationLiteTracking.remove(cutsRecoTracksFirst)
+globalPrevalidationLiteTracking.remove(cutsRecoTracksFirstHp)
+globalPrevalidationLiteTracking.remove(cutsRecoTracksSecond)
+globalPrevalidationLiteTracking.remove(cutsRecoTracksSecondHp)
+globalPrevalidationLiteTracking.remove(cutsRecoTracksThird)
+globalPrevalidationLiteTracking.remove(cutsRecoTracksThirdHp)
+globalPrevalidationLiteTracking.remove(cutsRecoTracksFourth)
+globalPrevalidationLiteTracking.remove(cutsRecoTracksFourthHp)
+globalPrevalidationLiteTracking.remove(cutsRecoTracksFifth)
+globalPrevalidationLiteTracking.remove(cutsRecoTracksFifthHp)
+globalPrevalidationLiteTracking.remove(cutsRecoTracksSixth)
+globalPrevalidationLiteTracking.remove(cutsRecoTracksSixthHp)
+globalPrevalidationLiteTracking.remove(cutsRecoTracksNinth)
+globalPrevalidationLiteTracking.remove(cutsRecoTracksNinthHp)
+globalPrevalidationLiteTracking.remove(cutsRecoTracksTenth)
+globalPrevalidationLiteTracking.remove(cutsRecoTracksTenthHp)

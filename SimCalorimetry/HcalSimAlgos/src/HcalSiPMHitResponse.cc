@@ -10,35 +10,38 @@
 #include "SimCalorimetry/CaloSimAlgos/interface/CaloVHitCorrection.h"
 #include "SimCalorimetry/CaloSimAlgos/interface/CaloVShape.h"
 #include "FWCore/Utilities/interface/isFinite.h"
+#include "SimCalorimetry/HcalSimAlgos/interface/HcalSiPMShape.h"
+
+#include "CLHEP/Random/RandFlat.h"
 
 #include <math.h>
+#include <list>
 
 HcalSiPMHitResponse::HcalSiPMHitResponse(const CaloVSimParameterMap * parameterMap,
 					 const CaloShapes * shapes) :
   CaloHitResponse(parameterMap, shapes), theSiPM(), theRecoveryTime(250.), 
-  TIMEMULT(1), Y11RANGE(80.), Y11MAX(0.04), Y11TIMETORISE(16.65), 
-  theRndFlat(0) {
+  TIMEMULT(1), Y11RANGE(80.), Y11MAX(0.04), Y11TIMETORISE(16.65) {
   theSiPM = new HcalSiPM(2500);
 }
 
 HcalSiPMHitResponse::~HcalSiPMHitResponse() {
   if (theSiPM)
     delete theSiPM;
-  delete theRndFlat;
 }
 
 void HcalSiPMHitResponse::initializeHits() {
   precisionTimedPhotons.clear();
 }
 
-void HcalSiPMHitResponse::finalizeHits() {
+void HcalSiPMHitResponse::finalizeHits(CLHEP::HepRandomEngine* engine) {
 
   photonTimeMap::iterator channelPhotons;
   for (channelPhotons = precisionTimedPhotons.begin();
        channelPhotons != precisionTimedPhotons.end();
        ++channelPhotons) {
     CaloSamples signal(makeSiPMSignal(channelPhotons->first, 
-				      channelPhotons->second));
+				      channelPhotons->second,
+                                      engine));
     bool keep( keepBlank() );
     if (!keep) {
       const unsigned int size ( signal.size() ) ;
@@ -50,6 +53,7 @@ void HcalSiPMHitResponse::finalizeHits() {
     }
 
     LogDebug("HcalSiPMHitResponse") << HcalDetId(signal.id()) << ' ' << signal;
+    // std::cout << HcalDetId(signal.id()) << ' ' << signal;
     if (keep) add(signal);
   }
 }
@@ -64,12 +68,12 @@ void HcalSiPMHitResponse::add(const CaloSamples& signal) {
   }
 }
 
-void HcalSiPMHitResponse::add(const PCaloHit& hit) {
+void HcalSiPMHitResponse::add(const PCaloHit& hit, CLHEP::HepRandomEngine* engine) {
     if (!edm::isNotFinite(hit.time()) &&
 	((theHitFilter == 0) || (theHitFilter->accepts(hit)))) {
       HcalDetId id(hit.id());
       const HcalSimParameters& pars = dynamic_cast<const HcalSimParameters&>(theParameterMap->simParameters(id));
-      double signal(analogSignalAmplitude(id, hit.energy(), pars));
+      double signal(analogSignalAmplitude(id, hit.energy(), pars, engine));
       unsigned int photons(signal + 0.5);
       double time( hit.time() );
 
@@ -92,7 +96,7 @@ void HcalSiPMHitResponse::add(const PCaloHit& hit) {
 		<< " photons: " << photons 
 		<< " time: " << time;
       if (theHitCorrection != 0)
-	time += theHitCorrection->delay(hit);
+	time += theHitCorrection->delay(hit, engine);
       LogDebug("HcalSiPMHitResponse") << " corrected time: " << time;
       LogDebug("HcalSiPMHitResponse") << " timePhase: " << pars.timePhase()
 		<< " tof: " << timeOfFlight(id)
@@ -102,12 +106,14 @@ void HcalSiPMHitResponse::add(const PCaloHit& hit) {
 		   (hit.time() - timeOfFlight(id)) - 
 		   BUNCHSPACE*( pars.binOfMaximum() - thePhaseShift_));
       LogDebug("HcalSiPMHitResponse") << " tzero: " << tzero;
-      tzero += BUNCHSPACE*pars.binOfMaximum() + 72.31;
+      // tzero += BUNCHSPACE*pars.binOfMaximum() + 75.;
+      //move it back 25ns to bin 4
+      tzero += BUNCHSPACE*pars.binOfMaximum() + 50.;
       LogDebug("HcalSiPMHitResponse") << " corrected tzero: " << tzero << '\n';
       double t_pe(0.);
       int t_bin(0);
       for (unsigned int pe(0); pe<photons; ++pe) {
-	t_pe = generatePhotonTime();
+	t_pe = generatePhotonTime(engine);
 	t_bin = int((t_pe + tzero)/(theTDCParams.deltaT()/TIMEMULT) + 0.5);
 	LogDebug("HcalSiPMHitResponse") << "t_pe: " << t_pe << " t_pe + tzero: " << (t_pe+tzero)
 		  << " t_bin: " << t_bin << '\n';
@@ -118,7 +124,7 @@ void HcalSiPMHitResponse::add(const PCaloHit& hit) {
     }
 }
 
-void HcalSiPMHitResponse::run(MixCollection<PCaloHit> & hits) {
+void HcalSiPMHitResponse::run(MixCollection<PCaloHit> & hits, CLHEP::HepRandomEngine* engine) {
   typedef std::multiset <const PCaloHit *, PCaloHitCompareTimes> SortedHitSet;
 
   std::map< DetId, SortedHitSet > sortedhits;
@@ -143,19 +149,11 @@ void HcalSiPMHitResponse::run(MixCollection<PCaloHit> & hits) {
       const PCaloHit& hit = **itr;
       pixelIntegral = pixelHistory.getIntegral(hit.time());
       oldIntegral = pixelIntegral;
-      CaloSamples signal(makeSiPMSignal(i->first, hit, pixelIntegral));
+      CaloSamples signal(makeSiPMSignal(i->first, hit, pixelIntegral, engine));
       pixelHistory.addToHistory(hit.time(), pixelIntegral-oldIntegral);
       add(signal);
     }
   }
-}
-
-
-void HcalSiPMHitResponse::setRandomEngine(CLHEP::HepRandomEngine & engine)
-{
-  theSiPM->initRandomEngine(engine);
-  CaloHitResponse::setRandomEngine(engine);
-  theRndFlat = new CLHEP::RandFlat(engine);
 }
 
 CaloSamples HcalSiPMHitResponse::makeBlankSignal(const DetId& detId) const {
@@ -170,19 +168,20 @@ CaloSamples HcalSiPMHitResponse::makeBlankSignal(const DetId& detId) const {
 
 CaloSamples HcalSiPMHitResponse::makeSiPMSignal(const DetId & id,
                                                 const PCaloHit & inHit, 
-						int & integral ) const {
+						int & integral,
+                                                CLHEP::HepRandomEngine* engine) const {
   
   PCaloHit hit = inHit;
   if (theHitCorrection != 0) {
-    hit.setTime(hit.time() + theHitCorrection->delay(hit));
+    hit.setTime(hit.time() + theHitCorrection->delay(hit, engine));
   }
 
   const HcalSimParameters& pars = dynamic_cast<const HcalSimParameters&>(theParameterMap->simParameters(id));
   theSiPM->setNCells(pars.pixels());
 
-  double signal = analogSignalAmplitude(id, hit.energy(), pars);
+  double signal = analogSignalAmplitude(id, hit.energy(), pars, engine);
   int photons = static_cast<int>(signal + 0.5);
-  int pixels = theSiPM->hitCells(photons, integral);
+  int pixels = theSiPM->hitCells(engine, photons, integral);
   integral += pixels;
   signal = double(pixels);
 
@@ -207,7 +206,8 @@ CaloSamples HcalSiPMHitResponse::makeSiPMSignal(const DetId & id,
 }
 
 CaloSamples HcalSiPMHitResponse::makeSiPMSignal(DetId const& id, 
-						photonTimeHist const& photons) const {
+						photonTimeHist const& photons,
+                                                CLHEP::HepRandomEngine* engine) const {
   const HcalSimParameters& pars = dynamic_cast<const HcalSimParameters&>(theParameterMap->simParameters(id));  
   theSiPM->setNCells(pars.pixels());
   theSiPM->setTau(5.);
@@ -221,6 +221,12 @@ CaloSamples HcalSiPMHitResponse::makeSiPMSignal(DetId const& id,
   double hitPixels(0.), elapsedTime(0.);
   unsigned int sumPE(0);
   double sumHits(0.);
+
+  HcalSiPMShape sipmPulseShape;
+
+  std::list< std::pair<double, double> > pulses;
+  std::list< std::pair<double, double> >::iterator pulse;
+  double timeDiff, pulseBit;
   // std::cout << HcalDetId(id) << '\n';
   for (unsigned int pt(0); pt < photons.size(); ++pt) {
     pe = photons[pt];
@@ -228,8 +234,7 @@ CaloSamples HcalSiPMHitResponse::makeSiPMSignal(DetId const& id,
     preciseBin = pt/TIMEMULT;
     sampleBin = preciseBin/theTDCParams.nbins();
     if (pe > 0) {
-      hitPixels = theSiPM->hitCells(pe, 0., elapsedTime);
-      signal[sampleBin] += hitPixels;
+      hitPixels = theSiPM->hitCells(engine, pe, 0., elapsedTime);
       sumHits += hitPixels;
       // std::cout << " elapsedTime: " << elapsedTime
       // 		<< " sampleBin: " << sampleBin
@@ -237,14 +242,37 @@ CaloSamples HcalSiPMHitResponse::makeSiPMSignal(DetId const& id,
       // 		<< " pe: " << pe 
       // 		<< " hitPixels: " << hitPixels 
       // 		<< '\n';
-      hitPixels *= invdt;
-      signal.preciseAtMod(preciseBin) += 0.6*hitPixels;
-      if (preciseBin > 0)
-	signal.preciseAtMod(preciseBin-1) += 0.2*hitPixels;
-      if (preciseBin < signal.preciseSize() -1)
-	signal.preciseAtMod(preciseBin+1) += 0.2*hitPixels;
+      if (pars.doSiPMSmearing()) {
+	pulses.push_back( std::pair<double, double>(elapsedTime, hitPixels) );
+      } else {
+	signal[sampleBin] += hitPixels;
+	hitPixels *= invdt;
+	signal.preciseAtMod(preciseBin) += 0.6*hitPixels;
+	if (preciseBin > 0)
+	  signal.preciseAtMod(preciseBin-1) += 0.2*hitPixels;
+	if (preciseBin < signal.preciseSize() -1)
+	  signal.preciseAtMod(preciseBin+1) += 0.2*hitPixels;
+      }
     }
-    // signal.preciseAtMod(preciseBin) += sumHits;
+    
+    if (pars.doSiPMSmearing()) {
+      pulse = pulses.begin();
+      while (pulse != pulses.end()) {
+	timeDiff = elapsedTime - pulse->first;
+	pulseBit = sipmPulseShape(timeDiff)*pulse->second;
+	// std::cout << "pulse t: " << pulse->first 
+	// 		<< " pulse A: " << pulse->second
+	// 		<< " timeDiff: " << timeDiff
+	// 		<< " pulseBit: " << pulseBit 
+	// 		<< '\n';
+	signal[sampleBin] += pulseBit;
+	signal.preciseAtMod(preciseBin) += pulseBit*invdt;
+	if (sipmPulseShape(timeDiff) < 1e-6)
+	  pulse = pulses.erase(pulse);
+	else
+	  ++pulse;
+      }
+    }
     elapsedTime += dt;
   }
 
@@ -267,11 +295,11 @@ void HcalSiPMHitResponse::differentiatePreciseSamples(CaloSamples& samples,
   }
 }
 
-double HcalSiPMHitResponse::generatePhotonTime() const {
+double HcalSiPMHitResponse::generatePhotonTime(CLHEP::HepRandomEngine* engine) const {
   double result(0.);
   while (true) {
-    result = theRndFlat->fire(Y11RANGE);
-    if (theRndFlat->fire(Y11MAX) < Y11TimePDF(result))
+    result = CLHEP::RandFlat::shoot(engine, Y11RANGE);
+    if (CLHEP::RandFlat::shoot(engine, Y11MAX) < Y11TimePDF(result))
       return result;
   }
 }

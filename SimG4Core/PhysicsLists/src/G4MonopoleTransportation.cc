@@ -47,6 +47,7 @@
 #include "G4SafetyHelper.hh"
 #include "G4FieldManagerStore.hh"
 #include "SimG4Core/Physics/interface/G4Monopole.hh"
+#include "SimG4Core/MagneticField/interface/ChordFinderSetter.h"
 
 class G4VSensitiveDetector;
 
@@ -54,11 +55,15 @@ class G4VSensitiveDetector;
 //
 // Constructor
 
+namespace {
+  static const G4TouchableHandle nullTouchableHandle;  // Points to (G4VTouchable*) 0
+}
+
 G4MonopoleTransportation::G4MonopoleTransportation(const G4Monopole* mpl,
-						   sim::FieldBuilder* fieldBuilder,
+						   sim::ChordFinderSetter* chordFinderSetter,
 						   G4int verb)
   : G4VProcess( G4String("MonopoleTransportation"), fTransportation ),
-    fFieldBuilder(fieldBuilder),
+    fChordFinderSetter(chordFinderSetter),
     fParticleIsLooping( false ),
     fPreviousSftOrigin (0.,0.,0.),
     fPreviousSafety    ( 0.0 ),
@@ -93,7 +98,6 @@ G4MonopoleTransportation::G4MonopoleTransportation(const G4Monopole* mpl,
   //  is constructed.
   // Instead later the method DoesGlobalFieldExist() is called
 
-  static G4TouchableHandle nullTouchableHandle;  // Points to (G4VTouchable*) 0
   fCurrentTouchableHandle = nullTouchableHandle; 
 
   fEndGlobalTimeComputed  = false;
@@ -128,8 +132,8 @@ AlongStepGetPhysicalInteractionLength( const G4Track&  track,
   
   //magSetup->SetStepperAndChordFinder(1); 
   // change to monopole equation
-  G4FieldManager* fieldMgrX=fFieldPropagator->FindAndSetFieldManager( track.GetVolume() ); 
-  fFieldBuilder->setStepperAndChordFinder (fieldMgrX, 1);
+  G4FieldManager* fieldMgrX=fFieldPropagator->FindAndSetFieldManager(track.GetVolume()); 
+  fChordFinderSetter->setStepperAndChordFinder (fieldMgrX, 1);
   
   G4double geometryStepLength, newSafety ; 
   fParticleIsLooping = false ;
@@ -265,16 +269,29 @@ AlongStepGetPhysicalInteractionLength( const G4Track&  track,
     //     G4double       momentumMagnitude = pParticle->GetTotalMomentum() ;
      G4ThreeVector  EndUnitMomentum ;
      G4double       lengthAlongCurve ;
-     G4double       restMass = pParticleDef->GetPDGMass() ;
- 
-     fFieldPropagator->SetChargeMomentumMass( particleMagneticCharge,    // in Mev/c 
-                                              particleElectricCharge,    // in e+ units
-                                              restMass           ) ;  
+     G4double       restMass = pParticleDef->GetPDGMass();
+     G4double       momentumMagnitude = pParticle->GetTotalMomentum();
+
+     // The charge can change (dynamic)
+     //  Magnetic moment:  pParticleDef->GetMagneticMoment(),
+     //  Electric Dipole moment - not in Particle Definition 
+     G4ChargeState chargeState(particleElectricCharge,             
+                               pParticleDef->GetPDGSpin(),
+                               0,  
+                               0,   
+                               particleMagneticCharge );   
+
+     G4EquationOfMotion* equationOfMotion = 
+     (fFieldPropagator->GetChordFinder()->GetIntegrationDriver()->GetStepper())
+     ->GetEquationOfMotion();
+
+     equationOfMotion->SetChargeMomentumMass( chargeState, 
+                                              momentumMagnitude, 
+                                              restMass ) ;  
      
      // SetChargeMomentumMass is _not_ used here as it would in everywhere else, 
      // it's just a workaround to pass the electric charge as well.
      
-
      G4ThreeVector spin        = track.GetPolarization() ;
      G4FieldTrack  aFieldTrack = G4FieldTrack( startPosition, 
                                                track.GetMomentumDirection(),
@@ -455,11 +472,13 @@ AlongStepGetPhysicalInteractionLength( const G4Track&  track,
 G4VParticleChange* G4MonopoleTransportation::AlongStepDoIt( const G4Track& track,
                                                     const G4Step&  stepData )
 {
-  static G4int noCalls=0;
   static const G4ParticleDefinition* fOpticalPhoton =
            G4ParticleTable::GetParticleTable()->FindParticle("opticalphoton");
 
+#ifdef G4VERBOSE
+  static thread_local G4int noCalls=0;
   noCalls++;
+#endif
 
   fParticleChange.Initialize(track) ;
 
@@ -597,7 +616,7 @@ PostStepGetPhysicalInteractionLength( const G4Track& track,
   //magSetup->SetStepperAndChordFinder(0);
   // change back to usual equation
   G4FieldManager* fieldMgr=fFieldPropagator->FindAndSetFieldManager( track.GetVolume() ); 
-  fFieldBuilder->setStepperAndChordFinder (fieldMgr, 0);
+  fChordFinderSetter->setStepperAndChordFinder (fieldMgr, 0);
   
   *pForceCond = Forced ; 
   return DBL_MAX ;  // was kInfinity ; but convention now is DBL_MAX
@@ -735,7 +754,7 @@ G4MonopoleTransportation::StartTracking(G4Track* aTrack)
   }
 
   // Make sure to clear the chord finders of all fields (ie managers)
-  static G4FieldManagerStore* fieldMgrStore= G4FieldManagerStore::GetInstance();
+  G4FieldManagerStore* fieldMgrStore= G4FieldManagerStore::GetInstance();
   fieldMgrStore->ClearAllChordFindersState(); 
 
   // Update the current touchable handle  (from the track's)

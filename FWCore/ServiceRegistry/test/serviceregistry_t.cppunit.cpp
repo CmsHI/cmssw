@@ -19,6 +19,8 @@
 
 #include "boost/thread/thread.hpp"
 
+#include <atomic>
+
 class testServiceRegistry: public CppUnit::TestFixture
 {
    CPPUNIT_TEST_SUITE(testServiceRegistry);
@@ -113,8 +115,7 @@ testServiceRegistry::externalServiceTest()
 
    {
       std::auto_ptr<DummyService> dummyPtr(new DummyService);
-      boost::shared_ptr<edm::serviceregistry::ServiceWrapper<DummyService> >
-	  wrapper(new edm::serviceregistry::ServiceWrapper<DummyService>(dummyPtr));
+      auto wrapper = std::make_shared<edm::serviceregistry::ServiceWrapper<DummyService> >(dummyPtr);
       edm::ServiceToken token(edm::ServiceRegistry::createContaining(wrapper));
 
       wrapper->get().value_ = 2;
@@ -239,9 +240,9 @@ namespace {
          isUnique_ = (otherRegistry_ != &(edm::ServiceRegistry::instance()));
       }
       void* otherRegistry_;
-      static bool isUnique_;
+      static std::atomic<bool> isUnique_;
    };
-   bool UniqueRegistry::isUnique_ = false;
+   std::atomic<bool> UniqueRegistry::isUnique_{false};
 
    struct PassServices {
       PassServices(edm::ServiceToken iToken,

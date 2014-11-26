@@ -1,7 +1,7 @@
 #ifndef RecoLocalCalo_EcalRecProducers_EcalUncalibRecHitProducer_hh
 #define RecoLocalCalo_EcalRecProducers_EcalUncalibRecHitProducer_hh
 
-#include "FWCore/Framework/interface/EDProducer.h"
+#include "FWCore/Framework/interface/stream/EDProducer.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
@@ -12,20 +12,23 @@
 #include "RecoLocalCalo/EcalRecProducers/interface/EcalUncalibRecHitWorkerBaseClass.h"
 
 
-class EcalUncalibRecHitProducer : public edm::EDProducer {
+class EBDigiCollection;
+class EEDigiCollection;
+
+class EcalUncalibRecHitProducer : public edm::stream::EDProducer<> {
 
         public:
                 explicit EcalUncalibRecHitProducer(const edm::ParameterSet& ps);
                 ~EcalUncalibRecHitProducer();
-                virtual void produce(edm::Event& evt, const edm::EventSetup& es);
+                virtual void produce(edm::Event& evt, const edm::EventSetup& es) override;
 
         private:
 
-                edm::InputTag ebDigiCollection_; // collection of EB digis
-                edm::InputTag eeDigiCollection_; // collection of EE digis
+		edm::EDGetTokenT<EBDigiCollection>  ebDigiCollectionToken_; 
+                edm::EDGetTokenT<EEDigiCollection>  eeDigiCollectionToken_; 
 
-                std::string ebHitCollection_; // secondary name to be given to collection of hits
-                std::string eeHitCollection_; // secondary name to be given to collection of hits
+                std::string ebHitCollection_; 
+                std::string eeHitCollection_; 
 
                 EcalUncalibRecHitWorkerBaseClass * worker_;
 };

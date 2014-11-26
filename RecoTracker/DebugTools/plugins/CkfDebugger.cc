@@ -7,6 +7,8 @@
 #include "DataFormats/GeometryCommonDetAlgo/interface/MeasurementVector.h"
 #include "RecoTracker/MeasurementDet/interface/MeasurementTracker.h"
 #include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
+#include "TrackingTools/DetLayers/interface/NavigationSchool.h"
+#include "RecoTracker/Record/interface/NavigationSchoolRecord.h"
 #include "RecoTracker/DebugTools/interface/TSOSFromSimHitFactory.h"
 #include "TrackingTools/MeasurementDet/interface/MeasurementDet.h"
 #include "TrackingTools/MaterialEffects/interface/PropagatorWithMaterial.h"
@@ -18,7 +20,7 @@
 
 #include "DataFormats/SiStripDetId/interface/StripSubdetector.h"
 #include "DataFormats/SiPixelDetId/interface/PixelSubdetector.h"
-#include "RecoTracker/TkNavigation/interface/TkLayerLess.h"
+#include "TrackingTools/DetLayers/interface/TkLayerLess.h"
 #include "RecoTracker/Record/interface/TrackerRecoGeometryRecord.h"
 #include "TrackingTools/DetLayers/interface/BarrelDetLayer.h"
 // #include "RecoTracker/TkDetLayers/interface/PixelBarrelLayer.h"
@@ -51,6 +53,9 @@ CkfDebugger::CkfDebugger( edm::EventSetup const & es ):totSeeds(0)
   es.get<IdealGeometryRecord>().get(tTopoHand);
   theTopo=tTopoHand.product();
 
+  edm::ESHandle<NavigationSchool> nav;
+  es.get<NavigationSchoolRecord>().get("SimpleNavigationSchool", nav);
+  theNavSchool = nav.product();
 
   for (int i=0; i!=17; i++){
     dump.push_back(0);
@@ -676,6 +681,7 @@ pair<CTTRHp, double> CkfDebugger::analyseRecHitExistance( const PSimHit& sh, con
 {
   LogTrace("CkfDebugger") << "now in analyseRecHitExistance" ;
 
+#if 0
   std::pair<CTTRHp, double> result;
   
   const MeasurementDet* simHitDet = theMeasurementTracker->idToDet( DetId( sh.detUnitId()));
@@ -879,6 +885,7 @@ pair<CTTRHp, double> CkfDebugger::analyseRecHitExistance( const PSimHit& sh, con
     return std::pair<CTTRHp, double>((CTTRHp)(0),-2);
   }
   other++;
+#endif
   return std::pair<CTTRHp, double>((CTTRHp)(0),0);//other
 }
 
@@ -901,7 +908,7 @@ int CkfDebugger::analyseRecHitNotFound(const Trajectory& traj, CTTRHp correctRec
   LogTrace("CkfDebugger") << "correct layer id=" << correctLayId ;
 
   TSOS currentState( traj.lastMeasurement().updatedState() );
-  std::vector<const DetLayer*> nl = traj.lastLayer()->nextLayers( *currentState.freeState(),traj.direction() );
+  std::vector<const DetLayer*> nl = theNavSchool->nextLayers(*traj.lastLayer(),*currentState.freeState(),traj.direction() );
   if (nl.empty()) {
     edm::LogVerbatim("CkfDebugger") << "no compatible layers" ;
     no_layer++;return 2;

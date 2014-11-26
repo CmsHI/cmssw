@@ -16,11 +16,8 @@
 #include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
 #include "DataFormats/ParticleFlowCandidate/interface/PFCandidateFwd.h"
 
-#include "DQMServices/Core/interface/DQMStore.h"
-#include "DQMServices/Core/interface/MonitorElement.h"
-
 //#include "FWCore/ServiceRegistry/interface/Service.h" 
-#include "CommonTools/UtilAlgos/interface/TFileService.h"
+
 #include "TH1F.h"
 #include "TH2F.h"
 #include <string>
@@ -28,12 +25,7 @@
 #include <vector>
 
 
-class PFJetBenchmark;
-
-class TH1F;
-class TH2F;
-
-//class DQMStore; // CMSSW_2_X_X not needed here?
+class DQMStore;
 
 class PFJetBenchmark {
 	

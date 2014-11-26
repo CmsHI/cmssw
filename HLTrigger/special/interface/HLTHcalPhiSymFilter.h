@@ -6,14 +6,13 @@
 // Package:    HLTHcalPhiSymFilter
 // Class:      HLTHcalPhiSymFilter
 //
-/**\class HLTHcalPhiSymFilter HLTHcalPhiSymFilter.cc 
+/**\class HLTHcalPhiSymFilter HLTHcalPhiSymFilter.cc
 
  Description: Producer for HcalRecHits to be used for phi-symmetry HCAL calibration . Discard events in which no suitable rechit is available
 
 */
 //
 // Original Author:  Grigory Safronov
-//         Created:  $Date: 2008/01/21 16:49:16 $
 //
 
 
@@ -42,7 +41,7 @@ class HLTHcalPhiSymFilter : public HLTFilter {
       explicit HLTHcalPhiSymFilter(const edm::ParameterSet&);
       ~HLTHcalPhiSymFilter();
       static void fillDescriptions(edm::ConfigurationDescriptions & descriptions);
-      virtual bool hltFilter(edm::Event &, const edm::EventSetup&, trigger::TriggerFilterObjectWithRefs & filterproduct);
+      virtual bool hltFilter(edm::Event &, const edm::EventSetup&, trigger::TriggerFilterObjectWithRefs & filterproduct) const override;
 
    private:
       // ----------member data ---------------------------

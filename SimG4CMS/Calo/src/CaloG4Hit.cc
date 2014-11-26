@@ -5,7 +5,9 @@
 #include "SimG4CMS/Calo/interface/CaloG4Hit.h"
 #include <iostream>
 
-G4Allocator<CaloG4Hit> CaloG4HitAllocator;
+#include "G4SystemOfUnits.hh"
+
+G4ThreadLocal G4Allocator<CaloG4Hit> *fpCaloG4HitAllocator = 0;
 
 CaloG4Hit::CaloG4Hit(){
 

@@ -1,7 +1,5 @@
 #include <algorithm>
 
-#include "boost/bind.hpp"
-
 #include "FWCore/Framework/interface/TriggerResultsBasedEventSelector.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Utilities/interface/Algorithms.h"
@@ -121,7 +119,7 @@ namespace edm
                                         inputTag_,
                                         nullptr,
                                         mcc);
-      convert_handle(h,product_);
+      convert_handle(std::move(h),product_);
     }
     
     typedef detail::NamedEventSelector NES;
@@ -264,7 +262,7 @@ namespace edm
     void
     TriggerResultsBasedEventSelector::clear()
     { 
-      for_all(selectors_, boost::bind(&NamedEventSelector::clear, _1));
+      for_all(selectors_, std::bind(&NamedEventSelector::clear, std::placeholders::_1));
       fillDone_ = false;
       numberFound_ = 0;
     }

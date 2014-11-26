@@ -10,27 +10,30 @@
 #include "DataFormats/VertexReco/interface/VertexFwd.h"
 #include "DataFormats/BeamSpot/interface/BeamSpot.h"
 #include "FWCore/Utilities/interface/InputTag.h"
+#include "FWCore/Framework/interface/ConsumesCollector.h"
 
 class GlobalTrackingRegionWithVerticesProducer : public TrackingRegionProducer
 {
 public:
 
-  GlobalTrackingRegionWithVerticesProducer(const edm::ParameterSet& cfg)
+  GlobalTrackingRegionWithVerticesProducer(const edm::ParameterSet& cfg,
+	   edm::ConsumesCollector && iC)
   { 
     edm::ParameterSet regionPSet = cfg.getParameter<edm::ParameterSet>("RegionPSet");
 
     thePtMin            = regionPSet.getParameter<double>("ptMin");
     theOriginRadius     = regionPSet.getParameter<double>("originRadius");
     theNSigmaZ          = regionPSet.getParameter<double>("nSigmaZ");
-    theBeamSpotTag      = regionPSet.getParameter<edm::InputTag>("beamSpot");
+    token_beamSpot      = iC.consumes<reco::BeamSpot>(regionPSet.getParameter<edm::InputTag>("beamSpot"));
     thePrecise          = regionPSet.getParameter<bool>("precise"); 
 
     theSigmaZVertex     = regionPSet.getParameter<double>("sigmaZVertex");
     theFixedError       = regionPSet.getParameter<double>("fixedError");
 
     theUseFoundVertices = regionPSet.getParameter<bool>("useFoundVertices");
+    theUseFakeVertices  = regionPSet.existsAs<bool>("useFakeVertices") ? regionPSet.getParameter<bool>("useFakeVertices") : false;
     theUseFixedError    = regionPSet.getParameter<bool>("useFixedError");
-    vertexCollName      = regionPSet.getParameter<edm::InputTag>("VertexCollection");
+    token_vertex      = iC.consumes<reco::VertexCollection>(regionPSet.getParameter<edm::InputTag>("VertexCollection"));
   }   
 
   virtual ~GlobalTrackingRegionWithVerticesProducer(){}
@@ -42,7 +45,7 @@ public:
 
     GlobalPoint theOrigin;
     edm::Handle<reco::BeamSpot> bsHandle;
-    ev.getByLabel( theBeamSpotTag, bsHandle);
+    ev.getByToken( token_beamSpot, bsHandle);
     double bsSigmaZ;
     if(bsHandle.isValid()) {
       const reco::BeamSpot & bs = *bsHandle; 
@@ -55,10 +58,11 @@ public:
     if(theUseFoundVertices)
     {
       edm::Handle<reco::VertexCollection> vertexCollection;
-      ev.getByLabel(vertexCollName,vertexCollection);
+      ev.getByToken(token_vertex,vertexCollection);
 
       for(reco::VertexCollection::const_iterator iV=vertexCollection->begin(); iV != vertexCollection->end() ; iV++) {
-          if (iV->isFake() || !iV->isValid()) continue;
+          if (!iV->isValid()) continue;
+          if (iV->isFake() && !(theUseFakeVertices && theUseFixedError)) continue;
 	  GlobalPoint theOrigin_       = GlobalPoint(iV->x(),iV->y(),iV->z());
 	  double theOriginHalfLength_ = (theUseFixedError ? theFixedError : (iV->zError())*theSigmaZVertex); 
 	  result.push_back( new GlobalTrackingRegion(thePtMin, theOrigin_, theOriginRadius, theOriginHalfLength_, thePrecise) );
@@ -88,8 +92,10 @@ private:
   bool thePrecise;
   
   bool theUseFoundVertices;
+  bool theUseFakeVertices;
   bool theUseFixedError;
-  edm::InputTag vertexCollName;
+  edm::EDGetTokenT<reco::VertexCollection> 	 token_vertex; 
+  edm::EDGetTokenT<reco::BeamSpot> 	 token_beamSpot; 
 
 
 };

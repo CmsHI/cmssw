@@ -24,10 +24,13 @@ DQMProvInfo::DQMProvInfo(const edm::ParameterSet& ps){
   parameters_ = ps;
   
   dbe_ = edm::Service<DQMStore>().operator->();
-  globalTag_ = "MODULE::DEFAULT"; 
-  runType_ = parameters_.getUntrackedParameter<std::string>("runType", "No run type selected") ;
-  provinfofolder_ = parameters_.getUntrackedParameter<std::string>("provInfoFolder", "ProvInfo") ;
-  subsystemname_ = parameters_.getUntrackedParameter<std::string>("subSystemFolder", "Info") ;
+  globalTag_           = "MODULE::DEFAULT"; 
+  runType_             = parameters_.getUntrackedParameter<std::string>("runType", "No run type selected") ;
+  provinfofolder_      = parameters_.getUntrackedParameter<std::string>("provInfoFolder", "ProvInfo") ;
+  subsystemname_       = parameters_.getUntrackedParameter<std::string>("subSystemFolder", "Info") ;
+  L1gt_                = consumes<L1GlobalTriggerReadoutRecord>(parameters_.getUntrackedParameter<std::string>("L1gt","gtDigis"));
+  L1gtEvm_             = consumes<L1GlobalTriggerEvmReadoutRecord>(parameters_.getUntrackedParameter<std::string>("L1gtEvm","gtEvmDigis"));
+  dcsStatusCollection_ = consumes<DcsStatusCollection>(parameters_.getUntrackedParameter<std::string>("dcsStatusCollection","scalersRawToDigi"));
   
   // initialize
   nameProcess_ = "HLT"; // the process name is not contained in this ps
@@ -180,21 +183,11 @@ DQMProvInfo::endLuminosityBlock(const edm::LuminosityBlock& l, const edm::EventS
   // set to previous in case there was a jump or no previous fill
   for (int l=lastlumi_+1;l<nlumi;l++)
   {
-    if (lastlumi_ > 0 && reportSummaryMap_->getBinContent(lastlumi_,YBINS+1) == 1) 
-    {
-      reportSummaryMap_->setBinContent(l,YBINS+1,0.);
-      for (int i=0;i<YBINS;i++)
-      {
-	  float lastvalue = reportSummaryMap_->getBinContent(lastlumi_,i+1);
-	  reportSummaryMap_->setBinContent(l,i+1,lastvalue);
-      }
-    }
-    else
-    {
-      reportSummaryMap_->setBinContent(l,YBINS+1,0.);
-      for (int i=0;i<YBINS;i++)
-	reportSummaryMap_->setBinContent(l,i+1,-1.);
-    }
+    // setting valid flag to zero for missed LSs
+    reportSummaryMap_->setBinContent(l,YBINS+1,0.);
+    // setting all other bins to -1 for missed LSs
+    for (int i=0;i<YBINS;i++)
+      reportSummaryMap_->setBinContent(l,i+1,-1.);
   }
 
       
@@ -270,59 +263,6 @@ DQMProvInfo::endLuminosityBlock(const edm::LuminosityBlock& l, const edm::EventS
   
 }
 
-// run showtag command line
-std::string 
-DQMProvInfo::getShowTags(void)
-{
-   TString out;
-   TString cwd;
-   TString showtagswd;
-   cwd=gSystem->pwd();
-   showtagswd=gSystem->ExpandPathName("$CMSSW_BASE/");
-   gSystem->ChangeDirectory(showtagswd);
-   FILE *pipe = gSystem->OpenPipe("showtags u -t", "r");
-
-   TString line;
-   while (line.Gets(pipe,true)) {
-     if (line.Contains("Test Release")) continue;
-     if (line.Contains("Base Release")) continue;
-     if (line.Contains("Test release")) continue;
-     if (line.Contains("--- Tag ---")) continue;
-     if (line.Contains(" ")) line.Replace(line.First(" "),1,":");
-     line.ReplaceAll(" ","");
-     out = out + line + ";";
-     if (line.Contains("-------------------")) break;
-     if (out.Length()>XBINS) break;
-   }
-   out.ReplaceAll("--","");
-   out.ReplaceAll(";-",";");
-   out.ReplaceAll(";;",";");
-   out.ReplaceAll("\n","");
-
-   Int_t r = gSystem->ClosePipe(pipe);
-   gSystem->ChangeDirectory(cwd);
-   if (r) {
-     gSystem->Error("ShowTags","problem running command showtags -u -t");
-   }
-
-   std::string str(out);
-   if (str.length()>2000) str.resize(2000);
-
-   std::string safestr =
-     "/ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-;:";
-   size_t found=str.find_first_not_of(safestr);
-   if (found!=std::string::npos)
-   {
-     edm::LogWarning("DQMProvInfo::ShowTags") << " Illegal character found: " 
-               << str[found] 
-               << " at position " 
-               << int(found) ;
-     return "notags";
-   }   
-   return str;
-}
-
-
 void 
 DQMProvInfo::makeProvInfo()
 {
@@ -339,7 +279,6 @@ DQMProvInfo::makeProvInfo()
     //versDataset_   = dbe_->bookString("Dataset",workflow_);
     versGlobaltag_ = dbe_->bookString("Globaltag",globalTag_);
     versRuntype_ = dbe_->bookString("Run Type",runType_);
-    versTaglist_   = dbe_->bookString("Taglist",getShowTags()); 
 
     isComplete_ = dbe_->bookInt("runIsComplete"); 
     //isComplete_->Fill((runIsComplete_?1:0));
@@ -353,7 +292,7 @@ DQMProvInfo::makeDcsInfo(const edm::Event& e)
 {
 
   edm::Handle<DcsStatusCollection> dcsStatus;
-  e.getByLabel("scalersRawToDigi", dcsStatus);
+  e.getByToken(dcsStatusCollection_, dcsStatus);
   for (DcsStatusCollection::const_iterator dcsStatusItr = dcsStatus->begin(); 
                             dcsStatusItr != dcsStatus->end(); ++dcsStatusItr) 
   {
@@ -422,7 +361,7 @@ DQMProvInfo::makeGtInfo(const edm::Event& e)
 {
 
   edm::Handle<L1GlobalTriggerReadoutRecord> gtrr_handle;
-  e.getByLabel("gtDigis", gtrr_handle);
+  e.getByToken(L1gt_, gtrr_handle);
   L1GlobalTriggerReadoutRecord const* gtrr = gtrr_handle.product();
   L1GtFdlWord fdlWord ; 
   if (gtrr)
@@ -439,7 +378,7 @@ DQMProvInfo::makeGtInfo(const edm::Event& e)
 
   //
   edm::Handle<L1GlobalTriggerEvmReadoutRecord> gtEvm_handle;
-  e.getByLabel("gtEvmDigis", gtEvm_handle);
+  e.getByToken(L1gtEvm_, gtEvm_handle);
   L1GlobalTriggerEvmReadoutRecord const* gtevm = gtEvm_handle.product();
 
   L1GtfeWord gtfeEvmWord;

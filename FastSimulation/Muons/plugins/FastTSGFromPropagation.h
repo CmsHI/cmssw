@@ -19,6 +19,7 @@
 #include "TrackingTools/PatternTools/interface/TrajectoryStateUpdator.h"
 #include "RecoMuon/TrackingTools/interface/MuonErrorMatrix.h"
 #include "DataFormats/BeamSpot/interface/BeamSpot.h"
+#include "TrackingTools/MeasurementDet/interface/LayerMeasurements.h"
 
 #include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
 #include "MagneticField/Engine/interface/MagneticField.h"
@@ -28,6 +29,7 @@
 
 #include "TrackingTools/TransientTrackingRecHit/interface/TransientTrackingRecHitBuilder.h"
 #include "RecoTracker/TransientTrackingRecHit/interface/TkTransientTrackingRecHitBuilder.h"
+#include "FWCore/Framework/interface/ConsumesCollector.h"
 
 
 class LayerMeasurements;
@@ -45,9 +47,9 @@ class FastTSGFromPropagation : public TrackerSeedGenerator {
 
 public:
   /// constructor
-  FastTSGFromPropagation(const edm::ParameterSet &pset);
+  FastTSGFromPropagation(const edm::ParameterSet &pset,edm::ConsumesCollector& iC);
 
-  FastTSGFromPropagation(const edm::ParameterSet& par, const MuonServiceProxy*);
+  FastTSGFromPropagation(const edm::ParameterSet& par, const MuonServiceProxy*,edm::ConsumesCollector& iC);
 
   /// destructor
   virtual ~FastTSGFromPropagation();
@@ -72,7 +74,7 @@ private:
 
   TrajectoryStateOnSurface outerTkState(const TrackCand&) const;
 
-  const LayerMeasurements* tkLayerMeasurements() const { return theTkLayerMeasurements; } 
+  const LayerMeasurements* tkLayerMeasurements() const { return &theTkLayerMeasurements; } 
 
   const TrajectoryStateUpdator* updator() const {return theUpdator;}
 
@@ -128,7 +130,7 @@ private:
 
   std::string theCategory;
 
-  const LayerMeasurements*  theTkLayerMeasurements;
+  LayerMeasurements  theTkLayerMeasurements;
 
   edm::ESHandle<GeometricSearchTracker> theTracker;
 
@@ -172,10 +174,12 @@ private:
 
   edm::ParameterSet theConfig;
   edm::InputTag beamSpot_;
+  edm::InputTag theMeasurementTrackerEventTag;
 
   edm::Handle<reco::BeamSpot> theBeamSpot;
   edm::Handle<edm::SimTrackContainer> theSimTracks;
   edm::Handle<SiTrackerGSMatchedRecHit2DCollection> theGSRecHits;
+  edm::Handle<MeasurementTrackerEvent> theMeasTrackerEvent;
   edm::ESHandle<TransientTrackingRecHitBuilder> theTTRHBuilder;
 
 };

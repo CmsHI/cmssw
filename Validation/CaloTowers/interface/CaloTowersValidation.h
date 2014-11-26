@@ -13,11 +13,13 @@
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
 
-#include "DQMServices/Core/interface/DQMStore.h"
 
 #include "DataFormats/DetId/interface/DetId.h"
 #include "DataFormats/CaloTowers/interface/CaloTowerDetId.h"
 #include "DataFormats/Math/interface/Vector3D.h"
+
+#include "DataFormats/CaloTowers/interface/CaloTowerCollection.h"
+#include "SimDataFormats/GeneratorProducts/interface/HepMCProduct.h"
 
 #include <vector>
 #include <utility>
@@ -26,22 +28,20 @@
 #include <algorithm>
 #include <cmath>
 #include "DQMServices/Core/interface/MonitorElement.h"
+#include "DQMServices/Core/interface/DQMEDAnalyzer.h"
 
-
-class CaloTowersValidation : public edm::EDAnalyzer {
+class CaloTowersValidation : public DQMEDAnalyzer {
  public:
    CaloTowersValidation(edm::ParameterSet const& conf);
   ~CaloTowersValidation();
   virtual void analyze(edm::Event const& e, edm::EventSetup const& c);
-  virtual void beginJob() ;
-  virtual void endJob() ;
   virtual void beginRun() ;
   virtual void endRun() ;
+  virtual void bookHistograms(DQMStore::IBooker &, edm::Run const &, edm::EventSetup const &) override;
 
  private:
   double dR(double eta1, double phi1, double eta2, double phi2);
    
-  DQMStore* dbe_;
   std::string outputFile_;
   std::string hcalselector_;
   std::string mc_;
@@ -49,7 +49,8 @@ class CaloTowersValidation : public edm::EDAnalyzer {
 
   typedef math::RhoEtaPhiVector Vector;
 
-  edm::InputTag theCaloTowerCollectionLabel;
+  edm::EDGetTokenT<CaloTowerCollection> tok_calo_;
+  edm::EDGetTokenT<edm::HepMCProduct> tok_evt_;
 
   int isub;
   int nevent;

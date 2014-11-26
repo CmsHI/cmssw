@@ -4,6 +4,7 @@
 #include "DataFormats/HepMCCandidate/interface/GenParticleFwd.h"
 #include "SimDataFormats/CrossingFrame/interface/CrossingFrame.h"
 #include <string>
+#include "FastSimulation/Particle/interface/ParticleTable.h"
 
 namespace HepMC {
   class GenEvent;
@@ -21,7 +22,7 @@ class TrajectoryManager;
 class PileUpSimulator;
 class MagneticField;
 class CalorimetryManager;
-class RandomEngine;
+class RandomEngineAndDistribution;
 class TrackerTopology;
 
 // using trailing _ for private data members, m_p prefix for PSet variables (MSt)
@@ -51,10 +52,12 @@ class FamosManager
   void reconstruct(const HepMC::GenEvent* evt, 
 		   const reco::GenParticleCollection* particles,
 		   const HepMC::GenEvent* pu,
-		   const TrackerTopology *tTopo);
+		   const TrackerTopology *tTopo,
+                   RandomEngineAndDistribution const*);
   
   void reconstruct(const reco::GenParticleCollection* particles,
-		   const TrackerTopology *tTopo);
+		   const TrackerTopology *tTopo,
+                   RandomEngineAndDistribution const*);
 
   /// The tracker 
   TrajectoryManager * trackerManager() const {return myTrajectoryManager;}
@@ -81,11 +84,5 @@ class FamosManager
   double weight_;    
   int m_pRunNumber;
   int m_pVerbose;
-
- private:
-
-  const RandomEngine* random;
-
 };
-                       
 #endif

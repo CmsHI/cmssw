@@ -1,6 +1,8 @@
 import FWCore.ParameterSet.Config as cms
 
 TrackProducer = cms.EDProducer("TrackProducer",
+    useSimpleMF = cms.bool(False),
+    SimpleMagneticField = cms.string(""),
     src = cms.InputTag("ckfTrackCandidates"),
     clusterRemovalInfo = cms.InputTag(""),
     beamSpot = cms.InputTag("offlineBeamSpot"),
@@ -21,7 +23,8 @@ TrackProducer = cms.EDProducer("TrackProducer",
     ### These are paremeters related to the filling of the Secondary hit-patterns                               
     #set to "", the secondary hit pattern will not be filled (backward compatible with DetLayer=0)    
     NavigationSchool = cms.string('SimpleNavigationSchool'),          
-    MeasurementTracker = cms.string('')                   
+    MeasurementTracker = cms.string(''),
+    MeasurementTrackerEvent = cms.InputTag('MeasurementTrackerEvent'),                   
 )
 
 

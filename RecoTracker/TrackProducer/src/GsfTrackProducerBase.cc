@@ -20,6 +20,8 @@
 
 #include "TrackingTools/GsfTracking/interface/TrajGsfTrackAssociation.h"
 
+#include "RecoTracker/TransientTrackingRecHit/interface/Traj2TrackHits.h"
+
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
 #include "DataFormats/SiStripDetId/interface/SiStripDetId.h"
 
@@ -32,7 +34,7 @@ GsfTrackProducerBase::putInEvt(edm::Event& evt,
 			       std::auto_ptr<reco::TrackExtraCollection>& selTrackExtras,
 			       std::auto_ptr<reco::GsfTrackExtraCollection>& selGsfTrackExtras,
 			       std::auto_ptr<std::vector<Trajectory> >&   selTrajectories,
-			       AlgoProductCollection& algoResults,
+			       AlgoProductCollection& algoResults, TransientTrackingRecHitBuilder const * hitBuilder,
 			       const reco::BeamSpot& bs)
 {
 
@@ -57,8 +59,6 @@ GsfTrackProducerBase::putInEvt(edm::Event& evt,
       iTjRef++;
     }
 
-    // const TrajectoryFitter::RecHitContainer& transHits = theTraj->recHits(useSplitting);  // NO: the return type in Trajectory is by VALUE
-    TrajectoryFitter::RecHitContainer transHits = theTraj->recHits(useSplitting);
     reco::GsfTrack * theTrack = (*i).second.first;
     PropagationDirection seedDir = (*i).second.second;  
     
@@ -106,8 +106,10 @@ GsfTrackProducerBase::putInEvt(edm::Event& evt,
     //======= I want to set the second hitPattern here =============
     if (theSchool.isValid())
       {
-	NavigationSetter setter( *theSchool );
-	setSecondHitPattern(theTraj,track,prop,measTk);
+        edm::Handle<MeasurementTrackerEvent> mte;
+        evt.getByToken(mteSrc_, mte);
+	// NavigationSetter setter( *theSchool );
+	setSecondHitPattern(theTraj,track,prop,&*mte);
       }
     //==============================================================
     
@@ -119,31 +121,46 @@ GsfTrackProducerBase::putInEvt(edm::Event& evt,
 
     reco::TrackExtra & tx = selTrackExtras->back();
 
+    // ---  NOTA BENE: the convention is to sort hits and measurements "along the momentum".
+    // This is consistent with innermost and outermost labels only for tracks from LHC collisions
+    Traj2TrackHits t2t(hitBuilder,false);
+    auto ih = selHits->size();
+    assert(ih==hidx);
+    t2t(*theTraj,*selHits,useSplitting);
+    auto ie = selHits->size();
+    for (;ih<ie; ++ih) {
+      auto const & hit = (*selHits)[ih];
+      track.appendHitPattern(hit);
+      tx.add( TrackingRecHitRef( rHits, hidx ++ ) );
+    }
 
-    size_t ih = 0;
+
+    /*
+    TrajectoryFitter::RecHitContainer transHits; theTraj->recHitsV(transHits,useSplitting);
     // ---  NOTA BENE: the convention is to sort hits and measurements "along the momentum".
     // This is consistent with innermost and outermost labels only for tracks from LHC collisions
     if (theTraj->direction() == alongMomentum) {
-      for( TrajectoryFitter::RecHitContainer::const_iterator j = transHits.begin();
-	   j != transHits.end(); j ++ ) {
-	if ((**j).hit()!=0){
-	  TrackingRecHit * hit = (**j).hit()->clone();
-	  track.setHitPattern( * hit, ih ++ );
-	  selHits->push_back( hit );
-	  tx.add( TrackingRecHitRef( rHits, hidx ++ ) );
-	}
-      }
+        for(TrajectoryFitter::RecHitContainer::const_iterator j = transHits.begin(); 
+                j != transHits.end(); j++) {
+            if ((**j).hit() != 0){
+                TrackingRecHit *hit = (**j).hit()->clone();
+                track.appendHitPattern(*hit);
+                selHits->push_back(hit);
+                tx.add(TrackingRecHitRef(rHits, hidx++));
+            }
+        }
     }else{
-      for( TrajectoryFitter::RecHitContainer::const_iterator j = transHits.end()-1;
-	   j != transHits.begin()-1; --j ) {
-	if ((**j).hit()!=0){
-	  TrackingRecHit * hit = (**j).hit()->clone();
-	  track.setHitPattern( * hit, ih ++ );
-	  selHits->push_back( hit );
-	tx.add( TrackingRecHitRef( rHits, hidx ++ ) );
-	}
-      }
+        for(TrajectoryFitter::RecHitContainer::const_iterator j = transHits.end() - 1;
+                j != transHits.begin() - 1; --j) {
+            if ((**j).hit() != 0){
+                TrackingRecHit *hit = (**j).hit()->clone();
+                track.appendHitPattern(*hit);
+                selHits->push_back(hit);
+                tx.add(TrackingRecHitRef(rHits, hidx++));
+            }
+        }
     }
+    */
     // ----
 
     std::vector<reco::GsfTangent> tangents;

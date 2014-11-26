@@ -9,7 +9,6 @@
  * By requiring the return value to be zero one can select reco taus
  * that have the decay mode correctly reconstructed.
  *
- * $Id. $
  */
 
 #include "RecoTauTag/RecoTau/interface/RecoTauBuilderPlugins.h"
@@ -30,7 +29,7 @@ namespace tautools {
 class RecoTauDecayModeTruthMatchPlugin : public reco::tau::RecoTauCleanerPlugin
 {
   public:
-    explicit RecoTauDecayModeTruthMatchPlugin(const edm::ParameterSet& pset);
+  explicit RecoTauDecayModeTruthMatchPlugin(const edm::ParameterSet& pset, edm::ConsumesCollector &&iC);
     virtual ~RecoTauDecayModeTruthMatchPlugin() {}
     double operator()(const reco::PFTauRef&) const override;
     void beginEvent() override;
@@ -43,7 +42,7 @@ class RecoTauDecayModeTruthMatchPlugin : public reco::tau::RecoTauCleanerPlugin
 
 // ctor
 RecoTauDecayModeTruthMatchPlugin::RecoTauDecayModeTruthMatchPlugin(
-    const edm::ParameterSet& pset): RecoTauCleanerPlugin(pset),
+								   const edm::ParameterSet& pset, edm::ConsumesCollector &&iC): RecoTauCleanerPlugin(pset,std::move(iC)),
   matchingSrc_(pset.getParameter<edm::InputTag>("matching")) {}
 
 // Called by base class at the beginning of each event

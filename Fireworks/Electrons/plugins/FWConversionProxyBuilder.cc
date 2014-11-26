@@ -8,7 +8,6 @@
 //
 // Original Author:  Chris Jones
 //         Created:  Tue Dec  2 14:17:03 EST 2008
-// $Id: FWConversionProxyBuilder.cc,v 1.19 2010/11/11 20:25:28 amraktad Exp $
 //
 #include "TEveCompound.h"
 #include "TEveLine.h"
@@ -47,6 +46,7 @@ private:
    FWConversionProxyBuilder( const FWConversionProxyBuilder& ); // stop default
    const FWConversionProxyBuilder& operator=( const FWConversionProxyBuilder& ); // stop default
   
+   using FWSimpleProxyBuilderTemplate<reco::Conversion>::buildViewType;
    virtual void buildViewType(const reco::Conversion& iData, unsigned int iIndex, TEveElement& oItemHolder, FWViewType::EType type , const FWViewContext*) override;
 
    TEveElementList* requestCommon();

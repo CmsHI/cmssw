@@ -2,23 +2,18 @@ import FWCore.ParameterSet.Config as cms
 
 # NEW CLUSTERS (remove previously used clusters)
 lowPtBarrelTripletStepClusters = cms.EDProducer("TrackClusterRemover",
-    clusterLessSolution= cms.bool(True),
     trajectories = cms.InputTag("lowPtForwardTripletStepTracks"),
     oldClusterRemovalInfo = cms.InputTag("lowPtForwardTripletStepClusters"),
     overrideTrkQuals = cms.InputTag('lowPtForwardTripletStepSelector','lowPtForwardTripletStep'),
     TrackQuality = cms.string('highPurity'),
     pixelClusters = cms.InputTag("siPixelClusters"),
     stripClusters = cms.InputTag("siStripClusters"),
-    Common = cms.PSet(
-        maxChi2 = cms.double(9.0)
-    )
+    maxChi2 = cms.double(9.0)
 )
 
 # SEEDING LAYERS
 import RecoTracker.TkSeedingLayers.PixelLayerTriplets_cfi
-lowPtBarrelTripletStepSeedLayers = RecoTracker.TkSeedingLayers.PixelLayerTriplets_cfi.pixellayertriplets.clone(
-    ComponentName = 'lowPtBarrelTripletStepSeedLayers'
-    )
+lowPtBarrelTripletStepSeedLayers = RecoTracker.TkSeedingLayers.PixelLayerTriplets_cfi.PixelLayerTriplets.clone()
 lowPtBarrelTripletStepSeedLayers.BPix.skipClusters = cms.InputTag('lowPtBarrelTripletStepClusters')
 lowPtBarrelTripletStepSeedLayers.FPix.skipClusters = cms.InputTag('lowPtBarrelTripletStepClusters')
 lowPtBarrelTripletStepSeedLayers.layerList = cms.vstring('BPix1+BPix2+BPix3') 
@@ -40,18 +35,16 @@ lowPtBarrelTripletStepSeeds = RecoTracker.TkSeedGenerator.GlobalSeedsFromTriplet
 lowPtBarrelTripletStepSeeds.OrderedHitsFactoryPSet.SeedingLayers = 'lowPtBarrelTripletStepSeedLayers'
 
 from RecoPixelVertexing.PixelLowPtUtilities.ClusterShapeHitFilterESProducer_cfi import *
-lowPtBarrelTripletStepSeeds.OrderedHitsFactoryPSet.GeneratorPSet.SeedComparitorPSet.ComponentName = 'LowPtClusterShapeSeedComparitor'
+import RecoPixelVertexing.PixelLowPtUtilities.LowPtClusterShapeSeedComparitor_cfi
+lowPtBarrelTripletStepSeeds.OrderedHitsFactoryPSet.GeneratorPSet.SeedComparitorPSet = RecoPixelVertexing.PixelLowPtUtilities.LowPtClusterShapeSeedComparitor_cfi.LowPtClusterShapeSeedComparitor
 
 
 # QUALITY CUTS DURING TRACK BUILDING
-import TrackingTools.TrajectoryFiltering.TrajectoryFilterESProducer_cfi
-lowPtBarrelTripletStepTrajectoryFilter = TrackingTools.TrajectoryFiltering.TrajectoryFilterESProducer_cfi.trajectoryFilterESProducer.clone(
-    ComponentName = 'lowPtBarrelTripletStepTrajectoryFilter',
-    filterPset = TrackingTools.TrajectoryFiltering.TrajectoryFilterESProducer_cfi.trajectoryFilterESProducer.filterPset.clone(
+import TrackingTools.TrajectoryFiltering.TrajectoryFilter_cff
+lowPtBarrelTripletStepTrajectoryFilter = TrackingTools.TrajectoryFiltering.TrajectoryFilter_cff.CkfBaseTrajectoryFilter_block.clone(
     #maxLostHits = 3, # use LostHitFraction filter instead
     minimumNumberOfHits = 3,
     minPt = 0.1
-    )
     )
 
 import TrackingTools.KalmanUpdators.Chi2MeasurementEstimatorESProducer_cfi
@@ -62,11 +55,10 @@ lowPtBarrelTripletStepChi2Est = TrackingTools.KalmanUpdators.Chi2MeasurementEsti
 )
 
 # TRACK BUILDING
-import RecoTracker.CkfPattern.GroupedCkfTrajectoryBuilderESProducer_cfi
-lowPtBarrelTripletStepTrajectoryBuilder = RecoTracker.CkfPattern.GroupedCkfTrajectoryBuilderESProducer_cfi.GroupedCkfTrajectoryBuilder.clone(
-    ComponentName = 'lowPtBarrelTripletStepTrajectoryBuilder',
+import RecoTracker.CkfPattern.GroupedCkfTrajectoryBuilder_cfi
+lowPtBarrelTripletStepTrajectoryBuilder = RecoTracker.CkfPattern.GroupedCkfTrajectoryBuilder_cfi.GroupedCkfTrajectoryBuilder.clone(
     MeasurementTrackerName = '',
-    trajectoryFilterName = 'lowPtBarrelTripletStepTrajectoryFilter',
+    trajectoryFilter = cms.PSet(refToPSet_ = cms.string('lowPtBarrelTripletStepTrajectoryFilter')),
     clustersToSkip = cms.InputTag('lowPtBarrelTripletStepClusters'),
     maxCand = 3,
 
@@ -89,7 +81,7 @@ lowPtBarrelTripletStepTrackCandidates = RecoTracker.CkfPattern.CkfTrackCandidate
     numHitsForSeedCleaner = cms.int32(50),
     onlyPixelHitsForSeedCleaner = cms.bool(True),
 
-    TrajectoryBuilder = 'lowPtBarrelTripletStepTrajectoryBuilder',
+    TrajectoryBuilderPSet = cms.PSet(refToPSet_ = cms.string('lowPtBarrelTripletStepTrajectoryBuilder')),
     doSeedingRegionRebuilding = True,
     useHitsSplitting = True,
     TransientInitialStateEstimatorParameters = cms.PSet(
@@ -131,7 +123,7 @@ lowPtBarrelTripletStepKFFittingSmoother = TrackingTools.TrackFitters.KFFittingSm
 import RecoTracker.TrackProducer.TrackProducer_cfi
 lowPtBarrelTripletStepTracks = RecoTracker.TrackProducer.TrackProducer_cfi.TrackProducer.clone(
     src = 'lowPtBarrelTripletStepTrackCandidates',
-    AlgorithmName = cms.string('iter1'),
+    AlgorithmName = cms.string('lowPtTripletStep'),
     Fitter = cms.string('lowPtBarrelTripletStepKFFittingSmoother'),
     #Propagator = cms.string('PropagatorWithMaterialForLoopers'),
     #NavigationSchool = cms.string('') ### Is the outerHitPattern filled correctly for loopers???
@@ -159,6 +151,7 @@ lowPtBarrelTripletStepSelector = RecoTracker.FinalTrackSelectors.multiTrackSelec
 
 # Final sequence
 LowPtBarrelTripletStep = cms.Sequence(lowPtBarrelTripletStepClusters*
+                                      lowPtBarrelTripletStepSeedLayers*
                                       lowPtBarrelTripletStepSeeds*
                                       lowPtBarrelTripletStepTrackCandidates*
                                       lowPtBarrelTripletStepTracks*

@@ -23,6 +23,13 @@
 #include "DQMServices/Core/interface/DQMStore.h"
 #include "DQMServices/Core/interface/MonitorElement.h"
 
+// L1 containers
+#include "DataFormats/L1DTTrackFinder/interface/L1MuDTChambPhContainer.h"
+#include "DataFormats/L1DTTrackFinder/interface/L1MuDTChambPhDigi.h"
+#include "DataFormats/L1DTTrackFinder/interface/L1MuDTChambThContainer.h"
+#include "DataFormats/L1DTTrackFinder/interface/L1MuDTChambThDigi.h"
+#include "DataFormats/L1DTTrackFinder/interface/L1MuDTTrackContainer.h"
+
 //
 // class decleration
 //
@@ -46,6 +53,10 @@ class L1TDTTPG : public edm::EDAnalyzer {
 
   // EndJob
   void endJob(void);
+
+  // BeginRun
+  void beginRun(edm::Run const& iRun, edm::EventSetup const& iSetup);
+
 
  private:
 
@@ -96,8 +107,13 @@ class L1TDTTPG : public edm::EDAnalyzer {
   std::string outputFile_; //file name for ROOT ouput
   bool verbose_;
   bool monitorDaemon_;
-  ofstream logFile_;
+  std::ofstream logFile_;
+  edm::EDGetTokenT<L1MuDTChambPhContainer> dttpgSourcePhContainer_token_;
+  edm::EDGetTokenT<L1MuDTChambThContainer> dttpgSourceThContainer_token_;
   edm::InputTag dttpgSource_;
+
+  std::string trstring_;
+  edm::EDGetTokenT<L1MuDTTrackContainer> trToken_;
 };
 
 #endif

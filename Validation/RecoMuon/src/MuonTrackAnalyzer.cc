@@ -15,9 +15,6 @@
 #include "Geometry/CommonDetUnit/interface/GeomDet.h"
 
 #include "TrackingTools/TransientTrack/interface/TransientTrack.h"
-#include "DataFormats/TrajectorySeed/interface/TrajectorySeedCollection.h"
-#include "DataFormats/TrackReco/interface/Track.h"
-#include "DataFormats/TrajectorySeed/interface/TrajectorySeedCollection.h"
 #include "TrackingTools/DetLayers/interface/DetLayer.h"
 #include "DataFormats/Math/interface/deltaR.h"
 
@@ -32,10 +29,6 @@
 #include "Validation/RecoMuon/src/Histograms.h"
 #include "Validation/RecoMuon/src/HTrack.h"
 
-#include "SimDataFormats/TrackingHit/interface/PSimHit.h"
-#include "SimDataFormats/TrackingHit/interface/PSimHitContainer.h"
-#include "SimDataFormats/Track/interface/SimTrackContainer.h"
-
 #include "TFile.h"
 #include "TH1F.h"
 #include "TH2F.h"
@@ -44,19 +37,25 @@ using namespace std;
 using namespace edm;
 
 /// Constructor
-MuonTrackAnalyzer::MuonTrackAnalyzer(const ParameterSet& pset){
+MuonTrackAnalyzer::MuonTrackAnalyzer(const ParameterSet& ps){
   
   // service parameters
+  pset = ps;
   ParameterSet serviceParameters = pset.getParameter<ParameterSet>("ServiceParameters");
   // the services
   theService = new MuonServiceProxy(serviceParameters);
   
+  theSimTracksLabel = edm::InputTag("g4SimHits");
+  theSimTracksToken = consumes<edm::SimTrackContainer>(theSimTracksLabel);
+
   theTracksLabel = pset.getParameter<InputTag>("Tracks");
+  theTracksToken = consumes<reco::TrackCollection>(theTracksLabel);
   doTracksAnalysis = pset.getUntrackedParameter<bool>("DoTracksAnalysis",true);
 
   doSeedsAnalysis = pset.getUntrackedParameter<bool>("DoSeedsAnalysis",false);
   if(doSeedsAnalysis){
     theSeedsLabel = pset.getParameter<InputTag>("MuonSeed");
+    theSeedsToken =  consumes<TrajectorySeedCollection>(theSeedsLabel);
     ParameterSet updatorPar = pset.getParameter<ParameterSet>("MuonUpdatorAtVertexParameters");
     theSeedPropagatorName = updatorPar.getParameter<string>("Propagator");
 
@@ -66,6 +65,9 @@ MuonTrackAnalyzer::MuonTrackAnalyzer(const ParameterSet& pset){
   theCSCSimHitLabel = pset.getParameter<InputTag>("CSCSimHit");
   theDTSimHitLabel = pset.getParameter<InputTag>("DTSimHit");
   theRPCSimHitLabel = pset.getParameter<InputTag>("RPCSimHit");
+  theCSCSimHitToken = consumes<std::vector<PSimHit> >(theCSCSimHitLabel);
+  theDTSimHitToken = consumes<std::vector<PSimHit> >(theDTSimHitLabel);
+  theRPCSimHitToken = consumes<std::vector<PSimHit> >(theRPCSimHitLabel);
 
   theEtaRange = (EtaRange) pset.getParameter<int>("EtaRange");
   
@@ -77,7 +79,7 @@ MuonTrackAnalyzer::MuonTrackAnalyzer(const ParameterSet& pset){
   dbe_ = edm::Service<DQMStore>().operator->();
   out = pset.getUntrackedParameter<string>("rootFileName");
   dirName_ = pset.getUntrackedParameter<std::string>("dirName");
-
+  subsystemname_ = pset.getUntrackedParameter<std::string>("subSystemFolder", "YourSubsystem") ;
 }
 
 /// Destructor
@@ -86,9 +88,16 @@ MuonTrackAnalyzer::~MuonTrackAnalyzer(){
 }
 
 void MuonTrackAnalyzer::beginJob(){
-  dbe_->showDirStructure();
+
+  //theFile->cd();
+}
+void MuonTrackAnalyzer::bookHistograms(DQMStore::IBooker & ibooker,
+				       edm::Run const & iRun,
+				       edm::EventSetup const & /* iSetup */){
   
-  dbe_->cd();
+  ibooker.cd();
+
+
   InputTag algo = theTracksLabel;
   string dirName=dirName_;
   if (algo.process()!="")
@@ -101,90 +110,87 @@ void MuonTrackAnalyzer::beginJob(){
     dirName.replace(dirName.find("Tracks"),6,"");
   }
   std::replace(dirName.begin(), dirName.end(), ':', '_');
-  dbe_->setCurrentFolder(dirName.c_str());
+  ibooker.setCurrentFolder(dirName.c_str());
   
-  //dbe_->goUp();
+  //ibooker.goUp();
   std::string simName = dirName;
   simName+="/SimTracks";
-  hSimTracks = new HTrackVariables(simName.c_str(),"SimTracks"); 
+  hSimTracks = new HTrackVariables(ibooker,simName.c_str(),"SimTracks"); 
 
-  dbe_->cd();
-  dbe_->setCurrentFolder(dirName.c_str());
+  ibooker.cd();
+  ibooker.setCurrentFolder(dirName.c_str());
 
   // Create the root file
   //theFile = new TFile(theRootFileName.c_str(), "RECREATE");
 
   if(doSeedsAnalysis){
-    dbe_->cd();
-    dbe_->setCurrentFolder(dirName.c_str());
-    hRecoSeedInner = new HTrack(dirName.c_str(),"RecoSeed","Inner");
-    hRecoSeedPCA = new HTrack(dirName.c_str(),"RecoSeed","PCA");
+    ibooker.cd();
+    ibooker.setCurrentFolder(dirName.c_str());
+    hRecoSeedInner = new HTrack(ibooker,dirName.c_str(),"RecoSeed","Inner");
+    hRecoSeedPCA = new HTrack(ibooker,dirName.c_str(),"RecoSeed","PCA");
   }
   
   if(doTracksAnalysis){
-    dbe_->cd();
-    dbe_->setCurrentFolder(dirName.c_str());    
-    hRecoTracksPCA = new HTrack(dirName.c_str(),"RecoTracks","PCA"); 
-    hRecoTracksInner = new HTrack(dirName.c_str(),"RecoTracks","Inner"); 
-    hRecoTracksOuter = new HTrack(dirName.c_str(),"RecoTracks","Outer"); 
+    ibooker.cd();
+    ibooker.setCurrentFolder(dirName.c_str());    
+    hRecoTracksPCA = new HTrack(ibooker,dirName.c_str(),"RecoTracks","PCA"); 
+    hRecoTracksInner = new HTrack(ibooker,dirName.c_str(),"RecoTracks","Inner"); 
+    hRecoTracksOuter = new HTrack(ibooker,dirName.c_str(),"RecoTracks","Outer"); 
 
-    dbe_->cd();
-    dbe_->setCurrentFolder(dirName.c_str());
+    ibooker.cd();
+    ibooker.setCurrentFolder(dirName.c_str());
     
     // General Histos
 
 
-    hChi2 = dbe_->book1D("chi2","#chi^2",200,0,200);
-    hChi2VsEta = dbe_->book2D("chi2VsEta","#chi^2 VS #eta",120,-3.,3.,200,0,200);
+    hChi2 = ibooker.book1D("chi2","#chi^2",200,0,200);
+    hChi2VsEta = ibooker.book2D("chi2VsEta","#chi^2 VS #eta",120,-3.,3.,200,0,200);
     
-    hChi2Norm = dbe_->book1D("chi2Norm","Normalized #chi^2",400,0,100);
-    hChi2NormVsEta = dbe_->book2D("chi2NormVsEta","Normalized #chi^2 VS #eta",120,-3.,3.,400,0,100);
+    hChi2Norm = ibooker.book1D("chi2Norm","Normalized #chi^2",400,0,100);
+    hChi2NormVsEta = ibooker.book2D("chi2NormVsEta","Normalized #chi^2 VS #eta",120,-3.,3.,400,0,100);
     
-    hHitsPerTrack  = dbe_->book1D("HitsPerTrack","Number of hits per track",55,0,55);
-    hHitsPerTrackVsEta  = dbe_->book2D("HitsPerTrackVsEta","Number of hits per track VS #eta",
+    hHitsPerTrack  = ibooker.book1D("HitsPerTrack","Number of hits per track",55,0,55);
+    hHitsPerTrackVsEta  = ibooker.book2D("HitsPerTrackVsEta","Number of hits per track VS #eta",
 				   120,-3.,3.,55,0,55);
     
-    hDof  = dbe_->book1D("dof","Number of Degree of Freedom",55,0,55);
-    hDofVsEta  = dbe_->book2D("dofVsEta","Number of Degree of Freedom VS #eta",120,-3.,3.,55,0,55);
+    hDof  = ibooker.book1D("dof","Number of Degree of Freedom",55,0,55);
+    hDofVsEta  = ibooker.book2D("dofVsEta","Number of Degree of Freedom VS #eta",120,-3.,3.,55,0,55);
     
-    hChi2Prob = dbe_->book1D("chi2Prob","#chi^2 probability",200,0,1);
-    hChi2ProbVsEta = dbe_->book2D("chi2ProbVsEta","#chi^2 probability VS #eta",120,-3.,3.,200,0,1);
+    hChi2Prob = ibooker.book1D("chi2Prob","#chi^2 probability",200,0,1);
+    hChi2ProbVsEta = ibooker.book2D("chi2ProbVsEta","#chi^2 probability VS #eta",120,-3.,3.,200,0,1);
     
-    hNumberOfTracks = dbe_->book1D("NumberOfTracks","Number of reconstructed tracks per event",200,0,200);
-    hNumberOfTracksVsEta = dbe_->book2D("NumberOfTracksVsEta",
+    hNumberOfTracks = ibooker.book1D("NumberOfTracks","Number of reconstructed tracks per event",200,0,200);
+    hNumberOfTracksVsEta = ibooker.book2D("NumberOfTracksVsEta",
 				    "Number of reconstructed tracks per event VS #eta",
 				    120,-3.,3.,10,0,10);
     
-    hChargeVsEta = dbe_->book2D("ChargeVsEta","Charge vs #eta gen",120,-3.,3.,4,-2.,2.);
-    hChargeVsPt = dbe_->book2D("ChargeVsPt","Charge vs P_{T} gen",250,0,200,4,-2.,2.);
-    hPtRecVsPtGen = dbe_->book2D("PtRecVsPtGen","P_{T} rec vs P_{T} gen",250,0,200,250,0,200);
+    hChargeVsEta = ibooker.book2D("ChargeVsEta","Charge vs #eta gen",120,-3.,3.,4,-2.,2.);
+    hChargeVsPt = ibooker.book2D("ChargeVsPt","Charge vs P_{T} gen",250,0,200,4,-2.,2.);
+    hPtRecVsPtGen = ibooker.book2D("PtRecVsPtGen","P_{T} rec vs P_{T} gen",250,0,200,250,0,200);
 
-    hDeltaPtVsEta = dbe_->book2D("DeltaPtVsEta","#Delta P_{t} vs #eta gen",120,-3.,3.,500,-250.,250.);
-    hDeltaPt_In_Out_VsEta = dbe_->book2D("DeltaPt_In_Out_VsEta_","P^{in}_{t} - P^{out}_{t} vs #eta gen",120,-3.,3.,500,-250.,250.);
+    hDeltaPtVsEta = ibooker.book2D("DeltaPtVsEta","#Delta P_{t} vs #eta gen",120,-3.,3.,500,-250.,250.);
+    hDeltaPt_In_Out_VsEta = ibooker.book2D("DeltaPt_In_Out_VsEta_","P^{in}_{t} - P^{out}_{t} vs #eta gen",120,-3.,3.,500,-250.,250.);
   }    
 
-  //theFile->cd();
 }
 
-void MuonTrackAnalyzer::endJob(){
+void MuonTrackAnalyzer::endRun(DQMStore::IBooker & ibooker) {
   LogInfo("MuonTrackAnalyzer")<< "Number of Sim tracks: " << numberOfSimTracks;
 
   LogInfo("MuonTrackAnalyzer") << "Number of Reco tracks: " << numberOfRecTracks;
 
   
   if(doTracksAnalysis){
-    double eff = hRecoTracksPCA->computeEfficiency(hSimTracks);
+    double eff = hRecoTracksPCA->computeEfficiency(hSimTracks,ibooker);
     LogInfo("MuonTrackAnalyzer") <<" *Track Efficiency* = "<< eff <<"%";
   }
 
   if(doSeedsAnalysis){
-    double eff = hRecoSeedInner->computeEfficiency(hSimTracks);
+    double eff = hRecoSeedInner->computeEfficiency(hSimTracks,ibooker);
     LogInfo("MuonTrackAnalyzer")<<" *Seed Efficiency* = "<< eff <<"%";
   }
-
   if ( out.size() != 0 && dbe_ ) dbe_->save(out);
 }
-
 void MuonTrackAnalyzer::analyze(const Event & event, const EventSetup& eventSetup){
   
   LogDebug("MuonTrackAnalyzer") << "Run: " << event.id().run() << " Event: " << event.id().event();
@@ -193,7 +199,7 @@ void MuonTrackAnalyzer::analyze(const Event & event, const EventSetup& eventSetu
   theService->update(eventSetup);
 
   Handle<SimTrackContainer> simTracks;
-  event.getByLabel("g4SimHits",simTracks);  
+  event.getByToken(theSimTracksToken,simTracks);  
   fillPlots(event,simTracks);
 
   
@@ -213,7 +219,7 @@ void MuonTrackAnalyzer::seedsAnalysis(const Event & event, const EventSetup& eve
 
   // Get the RecTrack collection from the event
   Handle<TrajectorySeedCollection> seeds;
-  event.getByLabel(theSeedsLabel, seeds);
+  event.getByToken(theSeedsToken, seeds);
   
   LogTrace("MuonTrackAnalyzer")<<"Number of reconstructed seeds: " << seeds->size()<<endl;
 
@@ -243,7 +249,7 @@ void MuonTrackAnalyzer::tracksAnalysis(const Event & event, const EventSetup& ev
   
   // Get the RecTrack collection from the event
   Handle<reco::TrackCollection> tracks;
-  event.getByLabel(theTracksLabel, tracks);
+  event.getByToken(theTracksToken, tracks);
 
   LogTrace("MuonTrackAnalyzer")<<"Reconstructed tracks: " << tracks->size() << endl;
   hNumberOfTracks->Fill(tracks->size());
@@ -432,13 +438,14 @@ bool MuonTrackAnalyzer::checkMuonSimHitPresence(const Event & event,
 
   // Get the SimHit collection from the event
   Handle<PSimHitContainer> dtSimHits;
-  event.getByLabel(theDTSimHitLabel.instance(),theDTSimHitLabel.label(), dtSimHits);
+  event.getByToken(theDTSimHitToken, dtSimHits);
+
   
   Handle<PSimHitContainer> cscSimHits;
-  event.getByLabel(theCSCSimHitLabel.instance(),theCSCSimHitLabel.label(), cscSimHits);
+  event.getByToken(theCSCSimHitToken, cscSimHits);
   
   Handle<PSimHitContainer> rpcSimHits;
-  event.getByLabel(theRPCSimHitLabel.instance(),theRPCSimHitLabel.label(), rpcSimHits);  
+  event.getByToken(theRPCSimHitToken, rpcSimHits);  
   
   map<unsigned int, vector<const PSimHit*> > mapOfMuonSimHits;
   
@@ -498,7 +505,7 @@ TrajectoryStateOnSurface MuonTrackAnalyzer::getSeedTSOS(const TrajectorySeed& se
 
   // ask for compatible layers
   vector<const DetLayer*> detLayers;
-  detLayers = initialLayer->compatibleLayers( *initialState.freeState(),detLayerOrder);
+  detLayers = theService->muonNavigationSchool()->compatibleLayers(*initialLayer, *initialState.freeState(),detLayerOrder);
   
   TrajectoryStateOnSurface result = initialState;
   if(detLayers.size()){

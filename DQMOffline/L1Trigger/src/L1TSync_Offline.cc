@@ -1,5 +1,4 @@
-
-/*
+/**
  * \class L1TSync_Offline
  *
  *
@@ -35,9 +34,6 @@
 #include "DataFormats/Scalers/interface/Level1TriggerRates.h"
 #include "DataFormats/Scalers/interface/Level1TriggerScalers.h"
 
-#include "DataFormats/L1GlobalTrigger/interface/L1GlobalTriggerReadoutRecord.h"
-#include "DataFormats/L1GlobalTrigger/interface/L1GlobalTriggerEvmReadoutRecord.h"
-
 #include "DataFormats/Common/interface/ConditionsInEdm.h" // Parameters associated to Run, LS and Event
 
 #include "CondFormats/L1TObjects/interface/L1GtTriggerMenuFwd.h"
@@ -52,8 +48,8 @@
 //#include "DataFormats/Luminosity/interface/LumiSummary.h"
 
 // L1TMonitor includes
-///#include "DQM/L1TMonitor/interface/L1TMenuHelper.h"
-#include "DQMOffline/L1Trigger/interface/L1TMenuHelper.h"
+#include "DQM/L1TMonitor/interface/L1TMenuHelper.h"
+//#include "DQMOffline/L1Trigger/interface/L1TMenuHelper.h"
 
 #include "TList.h"
 
@@ -67,9 +63,8 @@ L1TSync_Offline::L1TSync_Offline(const ParameterSet & pset){
   m_parameters = pset;
   
   // Mapping parameter input variables
-  m_scalersSource       = pset.getParameter         <InputTag>("inputTagScalersResults");
-  m_l1GtDataDaqInputTag = pset.getParameter         <InputTag>("inputTagL1GtDataDaq");
-  m_l1GtEvmSource       = pset.getParameter         <InputTag>("inputTagtEvmSource");
+  m_l1GtDataDaqInputTag = consumes<L1GlobalTriggerReadoutRecord>(pset.getParameter         <InputTag>("inputTagL1GtDataDaq"));
+  m_l1GtEvmSource       = consumes<L1GlobalTriggerEvmReadoutRecord>(pset.getParameter      <InputTag>("inputTagtEvmSource"));
   m_verbose             = pset.getUntrackedParameter<bool>    ("verbose",false);
   m_refPrescaleSet      = pset.getParameter         <int>     ("refPrescaleSet");  
 
@@ -373,7 +368,7 @@ void L1TSync_Offline::analyze(const Event & iEvent, const EventSetup & eventSetu
     
     // Retriving information from GT
     edm::Handle<L1GlobalTriggerEvmReadoutRecord> gtEvmReadoutRecord;
-    iEvent.getByLabel(m_l1GtEvmSource, gtEvmReadoutRecord);
+    iEvent.getByToken(m_l1GtEvmSource, gtEvmReadoutRecord);
 
     // Determining beam mode and fill number
     if(gtEvmReadoutRecord.isValid()){
@@ -423,7 +418,7 @@ void L1TSync_Offline::analyze(const Event & iEvent, const EventSetup & eventSetu
 
     // Getting Final Decision Logic (FDL) Data from GT
     edm::Handle<L1GlobalTriggerReadoutRecord> gtReadoutRecordData;
-    iEvent.getByLabel(m_l1GtDataDaqInputTag, gtReadoutRecordData);
+    iEvent.getByToken(m_l1GtDataDaqInputTag, gtReadoutRecordData);
 
     if(gtReadoutRecordData.isValid()){
 
@@ -529,7 +524,7 @@ void L1TSync_Offline::getBeamConfOffline(const Event& iEvent){
   // Running over FDL results to get which bits fired for BPTX (temporary fix Savannah ticket https://savannah.cern.ch/task/?31857 )
   // Getting Final Decision Logic (FDL) Data from GT
   edm::Handle<L1GlobalTriggerReadoutRecord> gtReadoutRecordData;
-  iEvent.getByLabel(m_l1GtDataDaqInputTag, gtReadoutRecordData);
+  iEvent.getByToken(m_l1GtDataDaqInputTag, gtReadoutRecordData);
   
   if(gtReadoutRecordData.isValid()){
     

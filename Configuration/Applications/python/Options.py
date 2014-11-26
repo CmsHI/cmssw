@@ -34,6 +34,12 @@ parser.add_option("--conditions",
                   default=None,
                   dest="conditions")
 
+parser.add_option("--useCondDBv1",
+                  help="use conditions DB V1",
+                  action="store_false",
+                  default=False,
+                  dest="useCondDBv1")
+
 parser.add_option("--eventcontent",
                   help="What event content to write out. Default=FEVTDEBUG, or FEVT (for cosmics)",
                   default='RECOSIM',
@@ -53,7 +59,7 @@ parser.add_option("--filetype",
                   help="The type of the infile (EDM, LHE or MCDB).",
                   default=defaultOptions.filetype,
                   dest="filetype",
-                  choices=['EDM','DAT','LHE','MDCB','DQM']
+                  choices=['EDM','DAT','LHE','MDCB','DQM','DQMDAQ']
                   )
 
 parser.add_option("-n", "--number",
@@ -98,6 +104,12 @@ parser.add_option("--runsScenarioForMC",
                   default=None,
                   dest="runsScenarioForMC")
 
+parser.add_option("--runUnscheduled",
+                  help="Enable unscheduled mode",
+                  action="store_true",
+                  default=False,
+                  dest="runUnscheduled")
+
 # expert settings
 expertSettings.add_option("--beamspot",
                           help="What beam spot to use (from Configuration/StandardSequences). Default depends on scenario",
@@ -106,8 +118,14 @@ expertSettings.add_option("--beamspot",
 
 expertSettings.add_option("--customise",
                           help="Specify the file where the code to modify the process object is stored.",
-                          default="",
+                          default=[],
+                          action="append",
                           dest="customisation_file")
+expertSettings.add_option("--customise_unsch",
+                          help="Specify the file where the code to modify the process object is stored.",
+                          default=[],
+                          action="append",
+                          dest="customisation_file_unsch")
 expertSettings.add_option("--customise_commands",
                           help="Specify a string of commands",
                           default="",
@@ -250,10 +268,15 @@ expertSettings.add_option("--particle_table",
                           default=defaultOptions.particleTable,
                           dest="particleTable")
 
-expertSettings.add_option("--dbsquery",
-                          help="Allow to define the source.fileNames from the dbs search command",
+expertSettings.add_option("--dasquery",
+                          help="Allow to define the source.fileNames from the das search command",
                           default='',
-                          dest="dbsquery")
+                          dest="dasquery")
+
+expertSettings.add_option("--dbsquery",
+                          help="Deprecated. Please use dasquery option. Functions for backward compatibility",
+                          default='',
+                          dest="dasquery")
 
 expertSettings.add_option("--lazy_download",
                   help="Enable lazy downloading of input files",
@@ -348,4 +371,10 @@ expertSettings.add_option("--lumiToProcess",
                           help="specify a certification json file in input to run on certified data",
                           default=None,
                           dest='lumiToProcess'
+                          )
+
+expertSettings.add_option("--timeoutOutput",
+                          help="use a TimeoutPoolOutputModule instead of a PoolOutputModule (needed for evt. display)",
+                          default=False,
+                          dest='timeoutOutput'
                           )

@@ -7,6 +7,7 @@
 
 #include "SimG4Core/Application/interface/ParametrisedEMPhysics.h"
 #include "SimG4Core/Application/interface/GFlashEMShowerModel.h"
+#include "SimG4Core/Application/interface/ElectronLimiter.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 
 #include "G4FastSimulationManagerProcess.hh"
@@ -18,8 +19,14 @@
 #include "G4ShortLivedConstructor.hh"
 #include "G4IonConstructor.hh"
 #include "G4RegionStore.hh"
+#include "G4Electron.hh"
+#include "G4Positron.hh"
 
 #include "G4EmProcessOptions.hh"
+#include "G4PhysicsListHelper.hh"
+#include "G4SystemOfUnits.hh"
+#include "G4UAtomicDeexcitation.hh"
+#include "G4LossTableManager.hh"
 
 ParametrisedEMPhysics::ParametrisedEMPhysics(std::string name, const edm::ParameterSet & p) 
   : G4VPhysicsConstructor(name), theParSet(p) 
@@ -63,9 +70,9 @@ void ParametrisedEMPhysics::ConstructProcess() {
       << gem << "  " << ghad;
     G4FastSimulationManagerProcess * theFastSimulationManagerProcess = 
       new G4FastSimulationManagerProcess();
-    theParticleIterator->reset();
-    while ((*theParticleIterator)()) {
-      G4ParticleDefinition * particle = theParticleIterator->value();
+    aParticleIterator->reset();
+    while ((*aParticleIterator)()) {
+      G4ParticleDefinition * particle = aParticleIterator->value();
       G4ProcessManager * pmanager = particle->GetProcessManager();
       G4String pname = particle->GetParticleName();
       if(pname == "e-" || pname == "e+") {
@@ -74,7 +81,8 @@ void ParametrisedEMPhysics::ConstructProcess() {
     }
 
     if(gem) {
-      G4Region* aRegion = G4RegionStore::GetInstance()->GetRegion("EcalRegion");
+      G4Region* aRegion = 
+	G4RegionStore::GetInstance()->GetRegion("EcalRegion");
 
       if(!aRegion){
 	edm::LogInfo("SimG4CoreApplication") 
@@ -90,7 +98,8 @@ void ParametrisedEMPhysics::ConstructProcess() {
       }    
     }
     if(ghad) {
-      G4Region* aRegion = G4RegionStore::GetInstance()->GetRegion("HcalRegion");
+      G4Region* aRegion = 
+	G4RegionStore::GetInstance()->GetRegion("HcalRegion");
       if(!aRegion) {
 	edm::LogInfo("SimG4CoreApplication") 
 	  << "ParametrisedEMPhysics::ConstructProcess: " 
@@ -107,53 +116,31 @@ void ParametrisedEMPhysics::ConstructProcess() {
   }
   // Russian Roulette part 
   G4EmProcessOptions opt;
-  const G4String rname[8] = {"EcalRegion", "HcalRegion", "QuadRegion", "MuonIron",
-			     "PreshowerRegion","CastorRegion","BeamPipeOutsideRegion",
-			     "DefaultRegionForTheWorld"};
-  G4double rrfact[8] = { 1.0 };
+  const G4int NREG = 6; 
+  const G4String rname[NREG] = {"EcalRegion", "HcalRegion", "MuonIron",
+				"PreshowerRegion","CastorRegion",
+				"DefaultRegionForTheWorld"};
+  G4double rrfact[NREG] = { 1.0 };
 
-  // Russian roulette for gamma
-  G4double energyLim = theParSet.getParameter<double>("RusRoGammaEnergyLimit")*MeV;
-  if(energyLim > 0.0) {
-    rrfact[0] = theParSet.getParameter<double>("RusRoEcalGamma");
-    rrfact[1] = theParSet.getParameter<double>("RusRoHcalGamma");
-    rrfact[2] = theParSet.getParameter<double>("RusRoQuadGamma");
-    rrfact[3] = theParSet.getParameter<double>("RusRoMuonIronGamma");
-    rrfact[4] = theParSet.getParameter<double>("RusRoPreShowerGamma");
-    rrfact[5] = theParSet.getParameter<double>("RusRoCastorGamma");
-    rrfact[6] = theParSet.getParameter<double>("RusRoBeamPipeOutGamma");
-    rrfact[7] = theParSet.getParameter<double>("RusRoWorldGamma");
-    for(int i=0; i<8; ++i) {
-      if(rrfact[i] < 1.0) {
-	opt.ActivateSecondaryBiasing("eBrem",rname[i],rrfact[i],energyLim);
-	edm::LogInfo("SimG4CoreApplication") 
-	  << "ParametrisedEMPhysics: Russian Roulette"
-	  << " for gamma Prob= " << rrfact[i]  
-	  << " Elimit(MeV)= " << energyLim/CLHEP::MeV
-	  << " inside " << rname[i];
-      }
-    }
-  }
   // Russian roulette for e-
-  energyLim = theParSet.getParameter<double>("RusRoElectronEnergyLimit")*MeV;
+  double energyLim = 
+    theParSet.getParameter<double>("RusRoElectronEnergyLimit")*MeV;
   if(energyLim > 0.0) {
     rrfact[0] = theParSet.getParameter<double>("RusRoEcalElectron");
     rrfact[1] = theParSet.getParameter<double>("RusRoHcalElectron");
-    rrfact[2] = theParSet.getParameter<double>("RusRoQuadElectron");
-    rrfact[3] = theParSet.getParameter<double>("RusRoMuonIronElectron");
-    rrfact[4] = theParSet.getParameter<double>("RusRoPreShowerElectron");
-    rrfact[5] = theParSet.getParameter<double>("RusRoCastorElectron");
-    rrfact[6] = theParSet.getParameter<double>("RusRoBeamPipeOutElectron");
-    rrfact[7] = theParSet.getParameter<double>("RusRoWorldElectron");
-    for(int i=0; i<8; ++i) {
+    rrfact[2] = theParSet.getParameter<double>("RusRoMuonIronElectron");
+    rrfact[3] = theParSet.getParameter<double>("RusRoPreShowerElectron");
+    rrfact[4] = theParSet.getParameter<double>("RusRoCastorElectron");
+    rrfact[5] = theParSet.getParameter<double>("RusRoWorldElectron");
+    for(int i=0; i<NREG; ++i) {
       if(rrfact[i] < 1.0) {
 	opt.ActivateSecondaryBiasing("eIoni",rname[i],rrfact[i],energyLim);
 	opt.ActivateSecondaryBiasing("hIoni",rname[i],rrfact[i],energyLim);
-	opt.ActivateSecondaryBiasing("muIoni",rname[i],rrfact[i],energyLim);
-	opt.ActivateSecondaryBiasing("ionIoni",rname[i],rrfact[i],energyLim);
-	opt.ActivateSecondaryBiasingForGamma("phot",rname[i],rrfact[i],energyLim);
-	opt.ActivateSecondaryBiasingForGamma("compt",rname[i],rrfact[i],energyLim);
-	opt.ActivateSecondaryBiasingForGamma("conv",rname[i],rrfact[i],energyLim);
+	//opt.ActivateSecondaryBiasing("muIoni",rname[i],rrfact[i],energyLim);
+	//opt.ActivateSecondaryBiasing("ionIoni",rname[i],rrfact[i],energyLim);
+	//opt.ActivateSecondaryBiasingForGamma("phot",rname[i],rrfact[i],energyLim);
+	//opt.ActivateSecondaryBiasingForGamma("compt",rname[i],rrfact[i],energyLim);
+	//opt.ActivateSecondaryBiasingForGamma("conv",rname[i],rrfact[i],energyLim);
 	edm::LogInfo("SimG4CoreApplication") 
 	  << "ParametrisedEMPhysics: Russian Roulette"
 	  << " for e- Prob= " << rrfact[i]  
@@ -161,5 +148,34 @@ void ParametrisedEMPhysics::ConstructProcess() {
 	  << " inside " << rname[i];
       }
     }
+  }
+
+  // Step limiters for e+-
+  bool eLimiter = theParSet.getParameter<bool>("ElectronStepLimit");
+  bool rLimiter = theParSet.getParameter<bool>("ElectronRangeTest");
+  bool pLimiter = theParSet.getParameter<bool>("PositronStepLimit");
+
+  if(eLimiter || rLimiter ||  pLimiter) {
+    G4PhysicsListHelper* ph = G4PhysicsListHelper::GetPhysicsListHelper();
+
+    if(eLimiter || rLimiter) {
+      theElectronLimiter = new ElectronLimiter(theParSet);
+      theElectronLimiter->SetRangeCheckFlag(rLimiter);
+      theElectronLimiter->SetFieldCheckFlag(eLimiter);
+      ph->RegisterProcess(theElectronLimiter, G4Electron::Electron());
+    }
+  
+    if(pLimiter){
+      thePositronLimiter = new ElectronLimiter(theParSet);
+      thePositronLimiter->SetFieldCheckFlag(pLimiter);
+      ph->RegisterProcess(theElectronLimiter, G4Positron::Positron());
+    }
+  }
+  // enable fluorescence
+  bool fluo = theParSet.getParameter<bool>("FlagFluo");
+  if(fluo) {
+    G4VAtomDeexcitation* de = new G4UAtomicDeexcitation();
+    G4LossTableManager::Instance()->SetAtomDeexcitation(de);
+    de->SetFluo(true);
   }
 }

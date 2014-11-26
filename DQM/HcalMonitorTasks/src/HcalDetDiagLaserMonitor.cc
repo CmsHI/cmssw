@@ -76,7 +76,7 @@ int phi;
 int depth;
 }Raddam_ch;
 
-Raddam_ch RADDAM_CH[56]={{-30,35,1},{-30,71,1},{-32,15,1},{-32,51,1},{-34,35,1},{-34,71,1},{-36,15,1},
+static const Raddam_ch RADDAM_CH[56]={{-30,35,1},{-30,71,1},{-32,15,1},{-32,51,1},{-34,35,1},{-34,71,1},{-36,15,1},
                          {-36,51,1},{-38,35,1},{-38,71,1},{-40,15,1},{-40,51,1},{-41,35,1},{-41,71,1},
                          {30,21,1}, {30,57,1}, {32,1,1},  {32,37,1}, {34,21,1}, {34,57,1}, {36,1,1  },
                          {36,37,1}, {38,21,1}, {38,57,1}, {40,35,1}, {40,71,1}, {41,19,1}, {41,55,1 },
@@ -126,7 +126,11 @@ public:
 	     undeflow=0;
           }
    void   reset1(){
-             Xe1=XXe1=Xt1=XXt1=n1=0;
+             Xe1=0;
+             XXe1=0;
+             Xt1=0;
+             XXt1=0;
+             n1=0;
 	     overflow1=0;
 	     undeflow1=0;
           }
@@ -286,9 +290,13 @@ class HcalDetDiagLaserMonitor : public HcalBaseDQMonitor {
 
       const HcalElectronicsMap  *emap;
       edm::InputTag inputLabelDigi_;
-      edm::InputTag calibDigiLabel_;
-      edm::InputTag rawDataLabel_;
-      edm::InputTag hcalTBTriggerDataTag_;
+
+    edm::EDGetTokenT<FEDRawDataCollection> tok_raw_;
+    edm::EDGetTokenT<HcalCalibDigiCollection> tok_calib_;
+    edm::EDGetTokenT<HcalTBTriggerData> tok_tb_;
+    edm::EDGetTokenT<HBHEDigiCollection> tok_hbhe_;
+    edm::EDGetTokenT<HODigiCollection> tok_ho_;
+    edm::EDGetTokenT<HFDigiCollection> tok_hf_;
 
       void SaveReference();
       void SaveRaddamData();
@@ -370,9 +378,9 @@ class HcalDetDiagLaserMonitor : public HcalBaseDQMonitor {
       std::map<unsigned int, int> KnownBadCells_;
 };
 
-HcalDetDiagLaserMonitor::HcalDetDiagLaserMonitor(const edm::ParameterSet& iConfig) :
-  hcalTBTriggerDataTag_(iConfig.getParameter<edm::InputTag>("hcalTBTriggerDataTag"))
-{
+HcalDetDiagLaserMonitor::HcalDetDiagLaserMonitor(const edm::ParameterSet& iConfig) {
+ 
+
   ievt_=-1;
   emap=0;
   dataset_seq_number=1;
@@ -384,8 +392,6 @@ HcalDetDiagLaserMonitor::HcalDetDiagLaserMonitor(const edm::ParameterSet& iConfi
   nHBHEchecks=nHOchecks=nHFchecks=0;
 
   inputLabelDigi_  = iConfig.getUntrackedParameter<edm::InputTag>("digiLabel",edm::InputTag("hcalDigis"));
-  calibDigiLabel_  = iConfig.getUntrackedParameter<edm::InputTag>("calibDigiLabel",edm::InputTag("hcalDigis"));
-  rawDataLabel_   =  iConfig.getUntrackedParameter<edm::InputTag>("RawDataLabel",edm::InputTag("source"));
 
   ReferenceData    = iConfig.getUntrackedParameter<std::string>("LaserReferenceData" ,"");
   OutputFilePath   = iConfig.getUntrackedParameter<std::string>("OutputFilePath", "");
@@ -407,11 +413,20 @@ HcalDetDiagLaserMonitor::HcalDetDiagLaserMonitor(const edm::ParameterSet& iConfi
   LaserEnergyThreshold = iConfig.getUntrackedParameter<double>("LaserEnergyThreshold",0.1);
   RaddamThreshold1     = iConfig.getUntrackedParameter<double>("RaddamThreshold1",10.0);
   RaddamThreshold2     = iConfig.getUntrackedParameter<double>("RaddamThreshold2",0.95);
+
+  // register for data access
+   tok_tb_ = consumes<HcalTBTriggerData>(iConfig.getParameter<edm::InputTag>("hcalTBTriggerDataTag"));
+  tok_raw_  = consumes<FEDRawDataCollection>(iConfig.getUntrackedParameter<edm::InputTag>("RawDataLabel",edm::InputTag("source")));
+  tok_calib_  = consumes<HcalCalibDigiCollection>(iConfig.getUntrackedParameter<edm::InputTag>("calibDigiLabel",edm::InputTag("hcalDigis")));
+  tok_hbhe_ = consumes<HBHEDigiCollection>(inputLabelDigi_);
+  tok_ho_  = consumes<HODigiCollection>(inputLabelDigi_);
+  tok_hf_ = consumes<HFDigiCollection>(inputLabelDigi_);
+
 }
 void HcalDetDiagLaserMonitor::beginRun(const edm::Run& run, const edm::EventSetup& c){
   edm::ESHandle<HcalChannelQuality> p;
-  c.get<HcalChannelQualityRcd>().get(p);
-  HcalChannelQuality* chanquality= new HcalChannelQuality(*p.product());
+  c.get<HcalChannelQualityRcd>().get("withTopo",p);
+  const HcalChannelQuality* chanquality= p.product();
   std::vector<DetId> mydetids = chanquality->getAllChannels();
   KnownBadCells_.clear();
 
@@ -567,7 +582,7 @@ static int  lastHBHEorbit,lastHOorbit,lastHForbit,nChecksHBHE,nChecksHO,nChecksH
    meRUN_->Fill(iEvent.id().run());
    // for local runs 
    edm::Handle<HcalTBTriggerData> trigger_data;
-   iEvent.getByLabel(hcalTBTriggerDataTag_, trigger_data);
+   iEvent.getByToken(tok_tb_, trigger_data);
    if(trigger_data.isValid()){
        if(trigger_data->wasLaserTrigger()) LaserEvent=true;
        LocalRun=true;
@@ -607,7 +622,7 @@ static int  lastHBHEorbit,lastHOorbit,lastHForbit,nChecksHBHE,nChecksHO,nChecksH
    // Abort Gap laser 
    if(LocalRun==false || LaserEvent==false){
      edm::Handle<FEDRawDataCollection> rawdata;
-     iEvent.getByLabel(rawDataLabel_ ,rawdata);
+     iEvent.getByToken(tok_raw_ ,rawdata);
        // edm::Handle<FEDRawDataCollection> rawdata;
        // iEvent.getByType(rawdata);
        //checking FEDs for calibration information
@@ -625,13 +640,13 @@ static int  lastHBHEorbit,lastHOorbit,lastHForbit,nChecksHBHE,nChecksHO,nChecksH
    }   
    if(!LaserEvent) return;
    edm::Handle<HBHEDigiCollection> hbhe; 
-   iEvent.getByLabel(inputLabelDigi_,hbhe);
+   iEvent.getByToken(tok_hbhe_,hbhe);
    edm::Handle<HODigiCollection> ho; 
-   iEvent.getByLabel(inputLabelDigi_,ho);
+   iEvent.getByToken(tok_ho_,ho);
    edm::Handle<HFDigiCollection> hf;
-   iEvent.getByLabel(inputLabelDigi_,hf);
+   iEvent.getByToken(tok_hf_,hf);
    edm::Handle<HcalCalibDigiCollection> calib;
-   iEvent.getByLabel(calibDigiLabel_, calib); 
+   iEvent.getByToken(tok_calib_, calib); 
 
    if(LocalRun && LaserEvent){
       int N=0; 
@@ -1537,7 +1552,7 @@ char   Subdet[10],str[500];
          sprintf(str,"HcalDetDiagLaser.xml");
       }
       std::string xmlName=str;
-      ofstream xmlFile;
+      std::ofstream xmlFile;
       xmlFile.open(xmlName.c_str());
 
       xmlFile<<"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n";
@@ -1650,7 +1665,7 @@ char   Subdet[10],str[500];
       //create CALIB XML file 
       sprintf(str,"HcalDetDiagLaserCalib_%i_%i.xml",run_number,dataset_seq_number);
       std::string xmlNameCalib=str;
-      ofstream xmlFileCalib;
+      std::ofstream xmlFileCalib;
       xmlFileCalib.open(xmlNameCalib.c_str());
 
       xmlFileCalib<<"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n";
@@ -1741,7 +1756,7 @@ char   Subdet[10],str[500];
    for(int i=0;i<85;i++)for(int j=0;j<72;j++)for(int k=0;k<4;k++)   he_data[i][j][k].reset1();
    for(int i=0;i<85;i++)for(int j=0;j<72;j++)for(int k=0;k<4;k++)   ho_data[i][j][k].reset1();
    for(int i=0;i<85;i++)for(int j=0;j<72;j++)for(int k=0;k<4;k++)   hf_data[i][j][k].reset1();
-   for(int i=1;i<=4;i++)for(int j=-2;j<=2;j++)for(int k=1;k<=72;k++)calib_data[i][j][k].reset1();
+   for(int i=0;i<5;i++)for(int j=0;j<5;j++)for(int k=0;k<72;k++)calib_data[i][j][k].reset1();
    ievt_=0;
    dataset_seq_number++;
 }
@@ -1892,7 +1907,7 @@ char str[100];
             S2[i]->Fill(adc2fC[j]-2.5,Raddam_data[i].s2_adc[j]); 
           }
           double parm[3];
-          S1[i]->Fit("fitFunc");
+          S1[i]->Fit(fitFunc);
           S1[i]->GetFunction("fitFunc")->GetParameters(parm);
           Raddam_data[i].S1MEAN=S1[i]->GetMean();
           Raddam_data[i].S1RMS=S1[i]->GetRMS();
@@ -1902,7 +1917,7 @@ char str[100];
           Raddam_data[i].S1CHI2=S1[i]->GetFunction("fitFunc")->GetChisquare();
           Raddam_data[i].S1NDF=S1[i]->GetFunction("fitFunc")->GetNDF();
           Raddam_data[i].S1BINWIDTH=Ws1;
-          S2[i]->Fit("fitFunc");
+          S2[i]->Fit(fitFunc);
           S2[i]->GetFunction("fitFunc")->GetParameters(parm);
           Raddam_data[i].S2MEAN=S2[i]->GetMean();
           Raddam_data[i].S2RMS=S2[i]->GetRMS();
@@ -1923,7 +1938,7 @@ char str[100];
              sprintf(str,"HcalDetDiagRaddam.xml");
           }
           std::string xmlName=str;
-          ofstream xmlFile;
+          std::ofstream xmlFile;
           xmlFile.open(xmlName.c_str());
           xmlFile<<"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\" ?>\n";
           xmlFile<<"<ROOT>\n";

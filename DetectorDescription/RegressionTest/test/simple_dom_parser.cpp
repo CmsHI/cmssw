@@ -2,7 +2,7 @@
 #include "DetectorDescription/RegressionTest/src/TinyDomTest.h"
 #include "DetectorDescription/RegressionTest/src/StrX.h"
 
-#include <xercesc/util/PlatformUtils.hpp>
+#include "FWCore/Concurrency/interface/Xerces.h"
 #include <xercesc/sax2/SAX2XMLReader.hpp>
 #include <xercesc/sax2/XMLReaderFactory.hpp>
 #include <fstream>
@@ -10,6 +10,7 @@
 #include <stdlib.h>
 
 using namespace std;
+using namespace xercesc;
 
 class ADummy
 {
@@ -49,7 +50,7 @@ int main(int argC, char* argV[])
     // Initialize the XML4C2 system
     try
     {
-        XMLPlatformUtils::Initialize();
+        cms::concurrency::xercesInitialize();
     }
 
     catch (const XMLException& toCatch)
@@ -63,7 +64,7 @@ int main(int argC, char* argV[])
     if (argC < 2)
     {
         usage();
-        XMLPlatformUtils::Terminate();
+        cms::concurrency::xercesTerminate();
         return 1;
     }
 
@@ -87,7 +88,7 @@ int main(int argC, char* argV[])
         if (!strcmp(argV[argInd], "-?"))
         {
             usage();
-            XMLPlatformUtils::Terminate();
+            cms::concurrency::xercesTerminate();
             return 2;
         }
          else if (!strncmp(argV[argInd], "-v=", 3)
@@ -104,7 +105,7 @@ int main(int argC, char* argV[])
             else
             {
                 cerr << "Unknown -v= value: " << parm << endl;
-                XMLPlatformUtils::Terminate();
+                cms::concurrency::xercesTerminate();
                 return 2;
             }
         }
@@ -155,7 +156,7 @@ int main(int argC, char* argV[])
     if (argInd != argC - 1)
     {
         usage();
-        XMLPlatformUtils::Terminate();
+        cms::concurrency::xercesTerminate();
         return 1;
     }
 
@@ -275,7 +276,8 @@ int main(int argC, char* argV[])
 	      }
 	      cout << endl;
 	   }
-	   cout << "dom-size=" << handler.dom().size() << endl;
+	   cout << "dom-size=" << handler.dom().size()
+		<< "duration " << duration << endl;
 	   /*
 	   TinyDomWalker walker(handler.dom());
 	   bool go = true;
@@ -304,7 +306,7 @@ int main(int argC, char* argV[])
     delete parser;
 
     // And call the termination method
-    XMLPlatformUtils::Terminate();
+    cms::concurrency::xercesTerminate();
 
     if (errorOccurred)
         return 4;

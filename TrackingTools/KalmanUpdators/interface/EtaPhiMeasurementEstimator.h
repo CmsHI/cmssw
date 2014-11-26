@@ -7,8 +7,6 @@
  *  Plane. The TrajectoryState must have errors.
  *  Works for any RecHit dimension. Ported from ORCA.
  *
- *  $Date: 2012/12/25 14:24:26 $
- *  $Revision: 1.2 $
  *  tschudi
  */
 
@@ -25,7 +23,7 @@ public:
   ~EtaPhiMeasurementEstimator(){}
 
   std::pair<bool,double> estimate(const TrajectoryStateOnSurface&,
-				  const TransientTrackingRecHit&) const;
+				  const TrackingRecHit&) const;
 
   virtual bool estimate(const TrajectoryStateOnSurface& tsos,
 			const Plane& plane) const;

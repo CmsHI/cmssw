@@ -55,9 +55,9 @@ class PFCandidateMixer : public edm::EDProducer {
       ~PFCandidateMixer();
 
    private:
-      virtual void beginJob() override ;
-      virtual void produce(edm::Event&, const edm::EventSetup&) override;
-      virtual void endJob() override ;
+      virtual void beginJob() ;
+      virtual void produce(edm::Event&, const edm::EventSetup&);
+      virtual void endJob() ;
 
       void mix(edm::Event& iEvent, const edm::Handle<reco::TrackCollection>& trackCol, const edm::Handle<reco::MuonCollection>& muonCol, const edm::Handle<reco::GsfElectronCollection>& electronCol, const reco::PFCandidateCollection& pfIn1, const reco::PFCandidateCollection& pfIn2);
      

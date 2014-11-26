@@ -4,7 +4,7 @@
 #include <memory>
 
 #include "FWCore/Framework/interface/Frameworkfwd.h"
-#include "FWCore/Framework/interface/EDProducer.h"
+#include "FWCore/Framework/interface/stream/EDProducer.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
@@ -12,10 +12,11 @@
 #include "DataFormats/EgammaReco/interface/BasicClusterFwd.h"
 #include "RecoEcal/EgammaClusterAlgos/interface/Multi5x5BremRecoveryClusterAlgo.h"
 
+#include "DataFormats/EgammaReco/interface/BasicClusterFwd.h"
 //
 
 
-class Multi5x5SuperClusterProducer : public edm::EDProducer 
+class Multi5x5SuperClusterProducer : public edm::stream::EDProducer<>
 {
   
   public:
@@ -24,19 +25,16 @@ class Multi5x5SuperClusterProducer : public edm::EDProducer
 
       ~Multi5x5SuperClusterProducer();
 
-      virtual void produce(edm::Event&, const edm::EventSetup&);
-      virtual void endJob();
+      virtual void produce(edm::Event&, const edm::EventSetup&) override;
+      virtual void endStream() override;
 
    private:
 
       int nMaxPrintout_; // max # of printouts
       int nEvt_;         // internal counter of events
  
-      std::string endcapClusterCollection_;
-      std::string barrelClusterCollection_;
-
-      std::string endcapClusterProducer_;
-      std::string barrelClusterProducer_;
+	  edm::EDGetTokenT<reco::BasicClusterCollection> eeClustersToken_; 
+	  edm::EDGetTokenT<reco::BasicClusterCollection> ebClustersToken_; 
 
       std::string endcapSuperclusterCollection_;
       std::string barrelSuperclusterCollection_;
@@ -56,12 +54,13 @@ class Multi5x5SuperClusterProducer : public edm::EDProducer
       int noSuperClusters;
 
       
-      void getClusterPtrVector(edm::Event& evt, std::string clusterProducer_, std::string clusterCollection_, reco::CaloClusterPtrVector *);
+      void getClusterPtrVector(edm::Event& evt, 
+							   const edm::EDGetTokenT<reco::BasicClusterCollection>& clustersToken,
+							   reco::CaloClusterPtrVector *);
   
       void produceSuperclustersForECALPart(edm::Event& evt, 
-					   std::string clusterProducer, 
-					   std::string clusterCollection,
-					   std::string superclusterColection);
+							   const edm::EDGetTokenT<reco::BasicClusterCollection>& clustersToken,
+							   std::string superclusterColection);
 
       void outputValidationInfo(reco::SuperClusterCollection &superclusterCollection);
     

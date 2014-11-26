@@ -79,9 +79,9 @@ class MatrixInjector(object):
             print '\n\tFound wmclient\n'
             
         self.defaultChain={
-            "RequestType" :   "TaskChain",                    #this is how we handle relvals
-            "AcquisitionEra": {},                             #Acq Era
-            "ProcessingString": {},                           # processing string to label the dataset
+            "RequestType" :    "TaskChain",                    #this is how we handle relvals
+            "SubRequestType" : "RelVal",                       #this is how we handle relvals, now that TaskChain is also used for central MC production
+            "RequestPriority": 999999,
             "Requestor": self.user,                           #Person responsible
             "Group": self.group,                              #group for the request
             "CMSSWVersion": os.getenv('CMSSW_VERSION'),       #CMSSW Version (used for all tasks in chain)
@@ -90,11 +90,10 @@ class MatrixInjector(object):
             "ProcessingVersion": self.version,                #Processing Version (used for all tasks in chain)
             "GlobalTag": None,                                #Global Tag (overridden per task)
             "CouchURL": self.couch,                           #URL of CouchDB containing Config Cache
-            "ConfigCacheURL": self.couch,                           #URL of CouchDB containing Config Cache
-            "DbsUrl": "http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet",
-            #"CouchDBName": self.couchDB,                      #Name of Couch Database containing config cache
+            "ConfigCacheURL": self.couch,                     #URL of CouchDB containing Config Cache
+            "DbsUrl": "https://cmsweb.cern.ch/dbs/prod/global/DBSReader",
             #- Will contain all configs for all Tasks
-            "SiteWhitelist" : ["T2_CH_CERN", "T1_US_FNAL"],   #Site whitelist
+            #"SiteWhitelist" : ["T2_CH_CERN", "T1_US_FNAL"],   #Site whitelist
             "TaskChain" : None,                                  #Define number of tasks in chain.
             "nowmTasklist" : [],  #a list of tasks as we put them in
             "unmergedLFNBase" : "/store/unmerged",
@@ -106,7 +105,7 @@ class MatrixInjector(object):
             }
 
         self.defaultHarvest={
-            "EnableDQMHarvest" : 1,
+            "EnableHarvesting" : "True",
             "DQMUploadUrl" : self.dqmgui,
             "DQMConfigCacheID" : None
             }
@@ -115,8 +114,8 @@ class MatrixInjector(object):
             "TaskName" : None,                            #Task Name
             "ConfigCacheID" : None,                   #Generator Config id
             "GlobalTag": None,
-            "SplittingAlgorithm"  : "EventBased",             #Splitting Algorithm
-            "SplittingArguments" : {"events_per_job" : None},  #Size of jobs in terms of splitting algorithm
+            "SplittingAlgo"  : "EventBased",             #Splitting Algorithm
+            "EventsPerJob" : None,                       #Size of jobs in terms of splitting algorithm
             "RequestNumEvents" : None,                      #Total number of events to generate
             "Seeding" : "AutomaticSeeding",                          #Random seeding method
             "PrimaryDataset" : None,                          #Primary Dataset to be created
@@ -128,8 +127,8 @@ class MatrixInjector(object):
             "ConfigCacheID" : None,                                      #Processing Config id
             "GlobalTag": None,
             "InputDataset" : None,                                       #Input Dataset to be processed
-            "SplittingAlgorithm"  : "LumiBased",                        #Splitting Algorithm
-            "SplittingArguments" : {"lumis_per_job" : 10},               #Size of jobs in terms of splitting algorithm
+            "SplittingAlgo"  : "LumiBased",                        #Splitting Algorithm
+            "LumisPerJob" : 10,               #Size of jobs in terms of splitting algorithm
             "nowmIO": {},
             "KeepOutput" : False
             }
@@ -139,8 +138,8 @@ class MatrixInjector(object):
             "InputFromOutputModule" : None,                    #OutputModule name in the input task that will provide files to process
             "ConfigCacheID" : None,                            #Processing Config id
             "GlobalTag": None,
-            "SplittingAlgorithm"  : "LumiBased",                        #Splitting Algorithm
-            "SplittingArguments" : {"lumis_per_job" : 10},               #Size of jobs in terms of splitting algorithm
+            "SplittingAlgo"  : "LumiBased",                        #Splitting Algorithm
+            "LumisPerJob" : 10,               #Size of jobs in terms of splitting algorithm
             "nowmIO": {},
             "KeepOutput" : False
             }
@@ -159,8 +158,12 @@ class MatrixInjector(object):
             wmsplit['DIGIPU']=4
             wmsplit['DIGIPU1']=4
             wmsplit['RECOPU1']=1
+            wmsplit['DIGIUP15_PU50']=1
+            wmsplit['RECOUP15_PU50']=1
+            wmsplit['DIGIUP15_PU25']=1
+            wmsplit['RECOUP15_PU25']=1
             wmsplit['DIGIHISt3']=5
-            wmsplit['RECOHISt4']=5
+            wmsplit['RECODSplit']=1
             wmsplit['SingleMuPt10_ID']=1
             wmsplit['DIGI_ID']=1
             wmsplit['RECO_ID']=1
@@ -188,6 +191,8 @@ class MatrixInjector(object):
                     index=0
                     splitForThisWf=None
                     thisLabel=self.speciallabel
+                    if 'HARVESTGEN' in s[3]:
+                        thisLabel=thisLabel+"_gen"
                     processStrPrefix=''
                     setPrimaryDs=None
                     for step in s[3]:
@@ -214,9 +219,11 @@ class MatrixInjector(object):
                                     arg=s[2][index].split()
                                     ns=map(int,arg[arg.index('--relval')+1].split(','))
                                     chainDict['nowmTasklist'][-1]['RequestNumEvents'] = ns[0]
-                                    chainDict['nowmTasklist'][-1]['SplittingArguments']['events_per_job'] = ns[1]
+                                    chainDict['nowmTasklist'][-1]['EventsPerJob'] = ns[1]
                                 if 'FASTSIM' in s[2][index] or '--fast' in s[2][index]:
                                     thisLabel+='_FastSim'
+                                if 'lhe' in s[2][index] in s[2][index]:
+                                    chainDict['nowmTasklist'][-1]['LheInputFiles'] =True
 
                             elif nextHasDSInput:
                                 chainDict['nowmTasklist'].append(copy.deepcopy(self.defaultInput))
@@ -227,9 +234,9 @@ class MatrixInjector(object):
                                     return -15
                                 chainDict['nowmTasklist'][-1]['InputDataset']=nextHasDSInput.dataSet
                                 splitForThisWf=nextHasDSInput.split
-                                chainDict['nowmTasklist'][-1]['SplittingArguments']['lumis_per_job']=splitForThisWf
+                                chainDict['nowmTasklist'][-1]['LumisPerJob']=splitForThisWf
                                 if step in wmsplit:
-                                    chainDict['nowmTasklist'][-1]['SplittingArguments']['lumis_per_job']=wmsplit[step]
+                                    chainDict['nowmTasklist'][-1]['LumisPerJob']=wmsplit[step]
                                 # get the run numbers or #events
                                 if len(nextHasDSInput.run):
                                     chainDict['nowmTasklist'][-1]['RunWhitelist']=nextHasDSInput.run
@@ -252,9 +259,9 @@ class MatrixInjector(object):
                                     print "Failed to find",'%s/%s.io'%(dir,step),".The workflows were probably not run on cfg not created"
                                     return -15
                                 if splitForThisWf:
-                                    chainDict['nowmTasklist'][-1]['SplittingArguments']['lumis_per_job']=splitForThisWf
+                                    chainDict['nowmTasklist'][-1]['LumisPerJob']=splitForThisWf
                                 if step in wmsplit:
-                                    chainDict['nowmTasklist'][-1]['SplittingArguments']['lumis_per_job']=wmsplit[step]
+                                    chainDict['nowmTasklist'][-1]['LumisPerJob']=wmsplit[step]
 
                             #print step
                             chainDict['nowmTasklist'][-1]['TaskName']=step
@@ -265,9 +272,18 @@ class MatrixInjector(object):
                             chainDict['GlobalTag']=chainDict['nowmTasklist'][-1]['nowmIO']['GT'] #set in general to the last one of the chain
                             if 'pileup' in chainDict['nowmTasklist'][-1]['nowmIO']:
                                 chainDict['nowmTasklist'][-1]['MCPileup']=chainDict['nowmTasklist'][-1]['nowmIO']['pileup']
-                            if '--pileup' in s[2][index]:
-                                processStrPrefix='PU_'
-                                
+                            if '--pileup ' in s[2][index]:      # catch --pileup (scenarion) and not --pileup_ (dataset to be mixed) => works also making PRE-MIXed dataset
+                                processStrPrefix='PU_'          # take care of pu overlay done with GEN-SIM mixing
+                                if (  s[2][index].split()[  s[2][index].split().index('--pileup')+1 ]  ).find('25ns')  > 0 :
+                                    processStrPrefix='PU25ns_'
+                                elif   (  s[2][index].split()[  s[2][index].split().index('--pileup')+1 ]  ).find('50ns')  > 0 :
+                                    processStrPrefix='PU50ns_'
+                            if 'DIGIPREMIX_S2' in s[2][index] : # take care of pu overlay done with DIGI mixing of premixed events
+                                if s[2][index].split()[ s[2][index].split().index('--pileup_input')+1  ].find('25ns')  > 0 :
+                                    processStrPrefix='PUpmx25ns_'
+                                elif s[2][index].split()[ s[2][index].split().index('--pileup_input')+1  ].find('50ns')  > 0 :
+                                    processStrPrefix='PUpmx50ns_'
+
                             if acqEra:
                                 #chainDict['AcquisitionEra'][step]=(chainDict['CMSSWVersion']+'-PU_'+chainDict['nowmTasklist'][-1]['GlobalTag']).replace('::All','')+thisLabel
                                 chainDict['AcquisitionEra'][step]=chainDict['CMSSWVersion']

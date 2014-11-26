@@ -36,7 +36,6 @@
 
 #include "DataFormats/L1GlobalMuonTrigger/interface/L1MuGMTReadoutCollection.h"
 
-#include "L1Trigger/GlobalTrigger/interface/L1GlobalTrigger.h"
 #include "L1Trigger/GlobalTrigger/interface/L1GlobalTriggerPSB.h"
 #include "L1Trigger/GlobalTrigger/interface/L1GlobalTriggerGTL.h"
 #include "L1Trigger/GlobalTrigger/interface/L1GlobalTriggerFDL.h"
@@ -53,7 +52,7 @@
 L1GtAnalyzer::L1GtAnalyzer(const edm::ParameterSet& parSet) :
 
             m_retrieveL1Extra(
-                    parSet.getParameter<edm::ParameterSet> ("L1ExtraInputTags")),
+			      parSet.getParameter<edm::ParameterSet> ("L1ExtraInputTags"),consumesCollector()),
 
             m_printOutput(parSet.getUntrackedParameter<int>("PrintOutput", 3)),
 

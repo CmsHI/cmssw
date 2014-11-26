@@ -9,8 +9,9 @@
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "Geometry/Records/interface/IdealGeometryRecord.h"
+#include "RecoLocalCalo/EcalRecAlgos/interface/EcalSeverityLevelAlgoRcd.h"
 #include "RecoLocalCalo/CaloTowersCreator/interface/CaloTowersCreationAlgo.h"
-
+#include "RecoLocalCalo/CaloTowersCreator/interface/EScales.h"
 
 /** \class CaloTowersCreator
   *  
@@ -34,8 +35,11 @@ private:
   static const std::vector<double>& getGridValues();
 
   CaloTowersCreationAlgo algo_;
-  edm::InputTag hbheLabel_,hoLabel_,hfLabel_;
+  edm::EDGetTokenT<HBHERecHitCollection> tok_hbhe_;
+  edm::EDGetTokenT<HORecHitCollection> tok_ho_;
+  edm::EDGetTokenT<HFRecHitCollection> tok_hf_;
   std::vector<edm::InputTag> ecalLabels_;
+  std::vector<edm::EDGetTokenT<EcalRecHitCollection> > toks_ecal_;
   bool allowMissingInputs_;
 
 
@@ -69,6 +73,8 @@ private:
   edm::ESWatcher<HcalSeverityLevelComputerRcd> hcalSevLevelWatcher_;
   edm::ESWatcher<HcalChannelQualityRcd> hcalChStatusWatcher_;
   edm::ESWatcher<IdealGeometryRecord> caloTowerConstituentsWatcher_;
+  edm::ESWatcher<EcalSeverityLevelAlgoRcd>  ecalSevLevelWatcher_;
+  EScales eScales_;
 
 };
 

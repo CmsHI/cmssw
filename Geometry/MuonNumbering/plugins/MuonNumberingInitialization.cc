@@ -13,23 +13,22 @@
 //
 // Original Author:  Michael Case
 //         Created:  Thu Sep 28 16:40:29 PDT 2006
-// $Id: MuonNumberingInitialization.cc,v 1.3 2010/03/25 22:08:44 case Exp $
 //
 //
 
 #include <memory>
 #include <boost/shared_ptr.hpp>
 
-#include <FWCore/Framework/interface/ModuleFactory.h>
-#include <FWCore/Framework/interface/ESProducer.h>
-#include <FWCore/Framework/interface/ESTransientHandle.h>
-#include <FWCore/MessageLogger/interface/MessageLogger.h>
+#include "FWCore/Framework/interface/ModuleFactory.h"
+#include "FWCore/Framework/interface/ESProducer.h"
+#include "FWCore/Framework/interface/ESTransientHandle.h"
+#include "FWCore/MessageLogger/interface/MessageLogger.h"
 
-#include <DetectorDescription/Core/interface/DDFilter.h>
-#include <DetectorDescription/Core/interface/DDFilteredView.h>
-#include <DetectorDescription/Core/interface/DDsvalues.h>
-#include <Geometry/MuonNumbering/interface/MuonDDDConstants.h>
-#include <Geometry/Records/interface/MuonNumberingRecord.h>
+#include "DetectorDescription/Core/interface/DDFilter.h"
+#include "DetectorDescription/Core/interface/DDFilteredView.h"
+#include "DetectorDescription/Core/interface/DDsvalues.h"
+#include "Geometry/MuonNumbering/interface/MuonDDDConstants.h"
+#include "Geometry/Records/interface/MuonNumberingRecord.h"
 
 class MuonNumberingInitialization : public edm::ESProducer
 {

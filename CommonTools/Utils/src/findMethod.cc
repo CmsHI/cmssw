@@ -3,6 +3,8 @@
 #include "CommonTools/Utils/interface/Exception.h"
 #include "FWCore/Utilities/interface/BaseWithDict.h"
 #include "FWCore/Utilities/interface/TypeWithDict.h"
+#include "TInterpreter.h"
+#include "TVirtualMutex.h"
 #include <cassert>
 
 using namespace std;
@@ -88,6 +90,7 @@ namespace reco {
     type = edm::TypeWithDict(type, 0L); // strip const, volatile, c++ ref, ..
 
     pair<edm::FunctionWithDict, bool> mem; mem.second = false;
+    int                               err_fatal = 0;
 
     // suitable members and number of integer->real casts required to get them
     vector<pair<int,edm::FunctionWithDict> > oks;
@@ -103,13 +106,20 @@ namespace reco {
         } else {
            oError = -1*casts;
            //is this a show stopper error?
-           if(fatalErrorCondition(oError)) {
-              return mem;
+           if(fatalErrorCondition(oError) && err_fatal == 0) {
+              err_fatal = oError;
            }
         }
       }
     }
     //std::cout << "At base scope (type " << (type.name()) << ") found " << oks.size() << " methods." << std::endl; 
+
+    if (oks.empty() && err_fatal)
+    {
+       oError = err_fatal;
+       return mem;
+    }
+
     // found at least one method
     if (!oks.empty()) {
         if (oks.size() > 1) {
@@ -133,6 +143,7 @@ namespace reco {
     // if nothing was found, look in parent scopes (without checking for cross-scope overloading, as it's not allowed)
     int baseError=parser::kNameDoesNotExist;
     if(! mem.first) {
+      R__LOCKGUARD(gCINTMutex);
       edm::TypeBases bases(type);
       for(auto const& base : bases) {
 	      if((mem = findMethod(edm::BaseWithDict(base).typeOf(), name, args, fixuppedArgs,iIterator,baseError)).first) break;

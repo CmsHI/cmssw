@@ -23,21 +23,13 @@
 #include <iostream>
 #include <stdlib.h>
 
-/*#include "DataFormats/TrackReco/interface/Track.h"
-#include "DataFormats/TrackCandidate/interface/TrackCandidateCollection.h" 
-#include "DataFormats/TrackCandidate/interface/TrackCandidate.h" 
-#include "DataFormats/TrackReco/interface/Track.h" 
-#include "DataFormats/TrackReco/interface/TrackFwd.h" 
-#include "DataFormats/VertexReco/interface/VertexFwd.h"
-#include "DataFormats/VertexReco/interface/Vertex.h"
-*/
 
-
+#include <DQMServices/Core/interface/DQMEDAnalyzer.h>
 
 //using namespace reco;
 
 class DQMStore;
-class SiStripBaselineValidator : public edm::EDAnalyzer
+class SiStripBaselineValidator : public DQMEDAnalyzer
 {
  public:
   explicit SiStripBaselineValidator(const edm::ParameterSet&);
@@ -46,6 +38,7 @@ class SiStripBaselineValidator : public edm::EDAnalyzer
   virtual void beginJob();
   virtual void endJob();  
   virtual void analyze(const edm::Event&, const edm::EventSetup&);
+  void bookHistograms(DQMStore::IBooker &, edm::Run const &, edm::EventSetup const &) override;
 
   private:
 
@@ -56,7 +49,6 @@ class SiStripBaselineValidator : public edm::EDAnalyzer
 
   edm::InputTag srcProcessedRawDigi_;
   edm::EDGetTokenT<edm::DetSetVector<SiStripRawDigi> > moduleRawDigiToken_;
- // edm::InputTag hiSelectedTracks;
   std::string outputFile_;
   bool createOutputFile_;
 

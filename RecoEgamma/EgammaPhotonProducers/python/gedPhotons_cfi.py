@@ -1,27 +1,47 @@
 import FWCore.ParameterSet.Config as cms
 
+from RecoEgamma.PhotonIdentification.pfIsolationCalculator_cfi import *
 from RecoEgamma.PhotonIdentification.isolationCalculator_cfi import *
 from RecoEgamma.PhotonIdentification.mipVariable_cfi import *
 from RecoEcal.EgammaClusterProducers.hybridSuperClusters_cfi import *
 from RecoEcal.EgammaClusterProducers.multi5x5BasicClusters_cfi import *
+
 #
 # producer for photons
 #
 gedPhotons = cms.EDProducer("GEDPhotonProducer",
-    photonCoreProducer = cms.InputTag("gedPhotonCore"),
+    photonProducer = cms.InputTag("gedPhotonsTmp"),                        
+    reconstructionStep = cms.string("tmp"),
+    #old regression <<<<<< >>>>>> do not use
     regressionWeightsFromDB =   cms.bool(True),                    
     energyRegressionWeightsFileLocation = cms.string('/afs/cern.ch/user/b/bendavid/cmspublic/regweights/gbrph.root'),
-    energyRegressionWeightsDBLocation = cms.string('wgbrph'), 
+    energyRegressionWeightsDBLocation = cms.string('wgbrph'),
+    # refined SC regression setup
+    useRegression = cms.bool(True),
+    regressionConfig = cms.PSet(
+       regressionKeyEB = cms.string('gedphoton_EBCorrection_offline_v1'),
+       regressionKeyEE = cms.string('gedphoton_EECorrection_offline_v1'),
+       uncertaintyKeyEB = cms.string('gedphoton_EBUncertainty_offline_v1'),
+       uncertaintyKeyEE = cms.string('gedphoton_EEUncertainty_offline_v1'),
+       vertexCollection = cms.InputTag("offlinePrimaryVertices"),
+       ecalRecHitsEB = cms.InputTag('ecalRecHit','EcalRecHitsEB'),
+       ecalRecHitsEE = cms.InputTag('ecalRecHit','EcalRecHitsEE')
+       ),
     superClusterEnergyCorrFunction =  cms.string("EcalClusterEnergyCorrection"),                  
     superClusterEnergyErrorFunction = cms.string("EcalClusterEnergyUncertainty"),
     superClusterCrackEnergyCorrFunction =  cms.string("EcalClusterCrackCorrection"),                                       
-    photonEcalEnergyCorrFunction = cms.string("EcalClusterEnergyCorrectionObjectSpecific"),             
+    photonEcalEnergyCorrFunction = cms.string("EcalClusterEnergyCorrectionObjectSpecific"),
+    pfEgammaCandidates = cms.InputTag("particleFlowEGamma"),
+    pfCandidates = cms.InputTag("particleFlowTmp"),                        
+    outputPhotonCollection = cms.string(""),                         
+    valueMapPhotons = cms.string("valMapPFEgammaCandToPhoton"),             
     #candidateP4type = cms.string("fromRegression"),
-    candidateP4type = cms.string("fromEcalEnergy"),                     
+    candidateP4type = cms.string("fromRefinedSCRegression"),
     isolationSumsCalculatorSet = cms.PSet(isolationSumsCalculator),
+    PFIsolationCalculatorSet = cms.PSet(pfIsolationCalculator),                        
     mipVariableSet = cms.PSet(mipVariable), 
     usePrimaryVertex = cms.bool(True),
-    primaryVertexProducer = cms.string('offlinePrimaryVerticesWithBS'),
+    primaryVertexProducer = cms.InputTag('offlinePrimaryVerticesWithBS'),
     posCalc_t0_endcPresh = cms.double(3.6),
     posCalc_logweight = cms.bool(True),
     posCalc_w0 = cms.double(4.2),

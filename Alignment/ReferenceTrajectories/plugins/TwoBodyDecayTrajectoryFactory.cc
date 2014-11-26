@@ -9,8 +9,7 @@
 
 #include "TrackingTools/TransientTrack/interface/TransientTrack.h"
 
-#include "DataFormats/GeometryCommonDetAlgo/interface/ErrorFrameTransformer.h"
-#include "DataFormats/TrackingRecHit/interface/AlignmentPositionError.h"
+#include "Geometry/CommonDetUnit/interface/TrackerGeomDet.h"
 
 #include "MagneticField/Records/interface/IdealMagneticFieldRecord.h" 
 
@@ -222,11 +221,17 @@ TwoBodyDecayTrajectoryFactory::constructTrajectories( const ConstTrajTrackPairCo
   }
 
   // always use the refitted trajectory state for matching
-  TransientTrackingRecHit::ConstRecHitPointer updatedRecHit1( recHits.first.front()->clone( tsos.first ) );
+  // FIXME FIXME CLONE
+  //TrackingRecHit::ConstRecHitPointer updatedRecHit1( recHits.first.front()->clone( tsos.first ) );
+  // TrackingRecHit::ConstRecHitPointer updatedRecHit2( recHits.second.front()->clone( tsos.second ) );
+
+  TrackingRecHit::ConstRecHitPointer updatedRecHit1( recHits.first.front() );
+  TrackingRecHit::ConstRecHitPointer updatedRecHit2( recHits.second.front() );
+
+
   bool valid1 = match( trajectoryState.trajectoryStates( true ).first,
 		       updatedRecHit1 );
 
-  TransientTrackingRecHit::ConstRecHitPointer updatedRecHit2( recHits.second.front()->clone( tsos.second ) );
   bool valid2 = match( trajectoryState.trajectoryStates( true ).second,
 		       updatedRecHit2 );
 
@@ -260,16 +265,6 @@ bool TwoBodyDecayTrajectoryFactory::match( const TrajectoryStateOnSurface& state
 
   double varX = le.xx();
   double varY = le.yy();
-
-  AlignmentPositionError* gape = recHit->det()->alignmentPositionError();
-  if ( gape )
-  {
-    ErrorFrameTransformer eft;
-    LocalError lape = eft.transform( gape->globalError(), recHit->det()->surface() );
-
-    varX += lape.xx();
-    varY += lape.yy();
-  }
 
   return ( ( fabs(deltaX)/sqrt(varX) < theNSigmaCutValue ) && ( fabs(deltaY)/sqrt(varY) < theNSigmaCutValue ) );
 }

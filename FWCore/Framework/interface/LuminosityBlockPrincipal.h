@@ -18,7 +18,7 @@ is the DataBlock.
 #include "FWCore/Utilities/interface/LuminosityBlockIndex.h"
 #include "FWCore/Framework/interface/Principal.h"
 
-#include "boost/shared_ptr.hpp"
+#include <memory>
 
 #include <vector>
 
@@ -35,15 +35,15 @@ namespace edm {
     typedef LuminosityBlockAuxiliary Auxiliary;
     typedef Principal Base;
     LuminosityBlockPrincipal(
-        boost::shared_ptr<LuminosityBlockAuxiliary> aux,
-        boost::shared_ptr<ProductRegistry const> reg,
+        std::shared_ptr<LuminosityBlockAuxiliary> aux,
+        std::shared_ptr<ProductRegistry const> reg,
         ProcessConfiguration const& pc,
         HistoryAppender* historyAppender,
         unsigned int index);
 
     ~LuminosityBlockPrincipal() {}
 
-    void fillLuminosityBlockPrincipal(ProcessHistoryRegistry& processHistoryRegistry, DelayedReader* reader = 0);
+    void fillLuminosityBlockPrincipal(ProcessHistoryRegistry const& processHistoryRegistry, DelayedReader* reader = 0);
 
     RunPrincipal const& runPrincipal() const {
       return *runPrincipal_;
@@ -53,7 +53,7 @@ namespace edm {
       return *runPrincipal_;
     }
 
-    void setRunPrincipal(boost::shared_ptr<RunPrincipal> rp) {
+    void setRunPrincipal(std::shared_ptr<RunPrincipal> rp) {
       runPrincipal_ = rp;
     }
 
@@ -93,11 +93,12 @@ namespace edm {
       return aux_->mergeAuxiliary(aux);
     }
 
-    void setUnscheduledHandler(boost::shared_ptr<UnscheduledHandler>) {}
+    void setUnscheduledHandler(std::shared_ptr<UnscheduledHandler>) {}
 
     void put(
         BranchDescription const& bd,
-        WrapperOwningHolder const& edp);
+        std::unique_ptr<WrapperBase> edp);
+
 
     void readImmediate() const;
 
@@ -112,11 +113,13 @@ namespace edm {
     virtual bool unscheduledFill(std::string const&,
                                  ModuleCallingContext const* mcc) const override {return false;}
 
+    virtual unsigned int transitionIndex_() const override;
+
     void resolveProductImmediate(ProductHolderBase const& phb) const;
 
-    boost::shared_ptr<RunPrincipal> runPrincipal_;
+    std::shared_ptr<RunPrincipal> runPrincipal_;
 
-    boost::shared_ptr<LuminosityBlockAuxiliary> aux_;
+    std::shared_ptr<LuminosityBlockAuxiliary> aux_;
 
     LuminosityBlockIndex index_;
     

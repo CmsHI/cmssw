@@ -1,7 +1,7 @@
 #ifndef ZDCSIMPLERECONSTRUCTOR_H
 #define ZDCSIMPLERECONSTRUCTOR_H 1
 
-#include "FWCore/Framework/interface/EDProducer.h"
+#include "FWCore/Framework/interface/stream/EDProducer.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "DataFormats/Common/interface/Handle.h"
 #include "CondFormats/HcalObjects/interface/HcalLongRecoParams.h"
@@ -11,12 +11,15 @@
 
 #include "RecoLocalCalo/HcalRecAlgos/interface/ZdcSimpleRecAlgo.h"
 
+#include "DataFormats/HcalDigi/interface/HcalDigiCollections.h"
+#include "DataFormats/HcalRecHit/interface/HcalRecHitCollections.h"
+
 
     /** \class HcalSimpleReconstructor	
     \author E. Garcia - CSU
     ** Based on HcalSimpleReconstructor.h by J. Mans
     */
-     class ZdcSimpleReconstructor : public edm::EDProducer {
+     class ZdcSimpleReconstructor : public edm::stream::EDProducer<> {
     public:
       explicit ZdcSimpleReconstructor(const edm::ParameterSet& ps);
       virtual ~ZdcSimpleReconstructor();
@@ -28,7 +31,7 @@
       DetId::Detector det_;
       int subdet_;
       HcalOtherSubdetector subdetOther_;
-      edm::InputTag inputLabel_;
+      edm::EDGetTokenT<ZDCDigiCollection> tok_input_;
 
       bool dropZSmarkedPassed_; // turn on/off dropping of zero suppression marked and passed digis
       

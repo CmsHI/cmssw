@@ -1,7 +1,6 @@
 #ifndef PhysicsTools_PatAlgos_PATSingleVertexSelector_h
 #define PhysicsTools_PatAlgos_PATSingleVertexSelector_h
 //
-// $Id: PATSingleVertexSelector.h,v 1.5 2011/06/15 11:47:25 friis Exp $
 //
 
 /**
@@ -44,11 +43,11 @@ namespace pat {
       bool hasMode_(Mode mode) const ;
       // configurables
       std::vector<Mode> modes_; // mode + optional fallbacks
-      edm::InputTag vertices_;
-      std::vector<edm::InputTag> candidates_;
+      edm::EDGetTokenT<std::vector<reco::Vertex> > verticesToken_;
+      std::vector<edm::EDGetTokenT<edm::View<reco::Candidate> > > candidatesToken_;
       std::auto_ptr<VtxSel > vtxPreselection_;
       std::auto_ptr<CandSel> candPreselection_;
-      edm::InputTag beamSpot_;
+      edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;
       // transient data. meaningful while 'filter()' is on the stack
       std::vector<const reco::Vertex *> selVtxs_;
       const reco::Candidate *           bestCand_;

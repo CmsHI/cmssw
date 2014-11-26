@@ -7,7 +7,7 @@
 #include "FWCore/Framework/interface/LuminosityBlock.h"
 #include "FWCore/Framework/interface/Run.h"
 
-#include "EventFilter/Utilities/interface/ModuleWeb.h"
+#include "DataFormats/FEDRawData/interface/FEDRawDataCollection.h"
 
 #include <iostream>
 #include <fstream>
@@ -22,16 +22,16 @@ class SiPixelInformationExtractor;
 class SiPixelDataQuality;
 class SiPixelActionExecutor;
  
-class SiPixelEDAClient: public edm::EDAnalyzer, public evf::ModuleWeb{
+class SiPixelEDAClient: public edm::EDAnalyzer{
 
 public:
 
   SiPixelEDAClient(const edm::ParameterSet& ps);
   virtual ~SiPixelEDAClient();
   
-  void defaultWebPage(xgi::Input *in, 
-                      xgi::Output *out); 
-  void publish(xdata::InfoSpace *){};
+  //void defaultWebPage(xgi::Input *in, 
+  //xgi::Output *out); 
+  //void publish(xdata::InfoSpace *){};
 
 protected:
 
@@ -81,11 +81,13 @@ private:
   bool Tier0Flag_;
   bool firstRun;
   bool doHitEfficiency_;
+  bool isUpgrade_;
   std::string inputSource_;
   
   std::ostringstream html_out_;
   
-  
+  //define Token(-s)
+  edm::EDGetTokenT<FEDRawDataCollection> inputSourceToken_;
 };
 
 

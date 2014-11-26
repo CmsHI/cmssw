@@ -19,7 +19,6 @@
    cells which would normally exist in the full CMS HCAL, but are not
    present for the specified topology.
     
-   $Date: 2012/11/12 21:38:35 $
    $Revision: 1.17 $
    \author J. Mans - Minnesota
 */
@@ -74,6 +73,8 @@ public:
   bool decIPhi(const HcalDetId& id, HcalDetId &neighbor) const;
   /** Get the detector behind this one */
   bool incrementDepth(HcalDetId& id) const;
+  /** Get the detector in front of this one */
+  bool decrementDepth(HcalDetId& id) const;
 
   int firstHBRing() const {return firstHBRing_;}
   int lastHBRing()  const {return lastHBRing_;}

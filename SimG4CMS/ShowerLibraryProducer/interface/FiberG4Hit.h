@@ -42,9 +42,9 @@ public:
   inline void setTowerId(G4int tower)    {theTowerId = tower;}
   inline void setDepth(G4int depth)      {theDepth = depth;}
   inline void setNpe(G4int npe)          {theNpe = npe;}
-  inline void setPos(math::XYZPoint xyz) {theHitPos = xyz;}
+  inline void setPos(const math::XYZPoint& xyz) {theHitPos = xyz;}
   inline void setTime(G4double t)        {theTime = t; }
-  inline void setPhoton(std::vector<HFShowerPhoton> photon) {thePhoton = photon; }
+  inline void setPhoton(const std::vector<HFShowerPhoton>& photon) {thePhoton = photon; }
       
   inline G4int towerId()  const       {return theTowerId;}
   inline G4int depth()    const       {return theDepth;}
@@ -58,15 +58,15 @@ public:
 
 typedef G4THitsCollection<FiberG4Hit> FiberG4HitsCollection;
 
-extern G4Allocator<FiberG4Hit> FiberG4HitAllocator;
+extern G4ThreadLocal G4Allocator<FiberG4Hit> *fFiberG4HitAllocator;
 
 inline void* FiberG4Hit::operator new(size_t) {
-  void* aHit;
-  aHit = (void*) FiberG4HitAllocator.MallocSingle();
-  return aHit;
+  if (!fFiberG4HitAllocator) fFiberG4HitAllocator = 
+    new G4Allocator<FiberG4Hit>;
+  return (void*)fFiberG4HitAllocator->MallocSingle();
 }
 
 inline void FiberG4Hit::operator delete(void *aHit) {
-  FiberG4HitAllocator.FreeSingle((FiberG4Hit*) aHit);
+  fFiberG4HitAllocator->FreeSingle((FiberG4Hit*) aHit);
 }
 #endif

@@ -21,19 +21,27 @@
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 
+#include "DataFormats/EgammaReco/interface/SuperCluster.h"
+#include "DataFormats/EgammaReco/interface/SuperClusterFwd.h"
+
+namespace edm {
+  class ConfigurationDescriptions;
+}
 
 class EgammaHLTRemoveDuplicatedSC : public edm::EDProducer {
-	
-   public:
-     explicit EgammaHLTRemoveDuplicatedSC(const edm::ParameterSet&);
-     ~EgammaHLTRemoveDuplicatedSC();
-     virtual void produce(edm::Event&, const edm::EventSetup&);
+  
+ public:
+  explicit EgammaHLTRemoveDuplicatedSC(const edm::ParameterSet&);
+  ~EgammaHLTRemoveDuplicatedSC();
+  virtual void produce(edm::Event&, const edm::EventSetup&);
+  static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
-   private:
-     // vars to get products
-     edm::InputTag sCInputProducer_;
-     edm::InputTag alreadyExistingSC_;
-     std::string outputCollection_;
-
+ private:
+  // vars to get products
+  edm::EDGetTokenT<reco::SuperClusterCollection> sCInputProducer_;
+  edm::EDGetTokenT<reco::SuperClusterCollection> alreadyExistingSC_;
+  
+  std::string outputCollection_;
+  
 };
 #endif

@@ -394,8 +394,12 @@ void TrackValHistoPublisher(char* newFile="NEW_FILE",char* refFile="REF_FILE")
    sdir->GetObject(collname2+"/num_simul_pT",sh3);
    rdir->GetObject(collname1+"/num_reco_pT",rh4);
    sdir->GetObject(collname2+"/num_reco_pT",sh4);
+   rdir->GetObject(collname1+"/missing_inner_layers",rh5);
+   sdir->GetObject(collname2+"/missing_inner_layers",sh5);
+   rdir->GetObject(collname1+"/missing_outer_layers",rh6);
+   sdir->GetObject(collname2+"/missing_outer_layers",sh6);
    
-   canvas = new TCanvas("Tracks1","Tracks: hits and Pt",1000,1050);
+   canvas = new TCanvas("Tracks1","Tracks: hits and Pt",1000,1400);
    
    rh1->GetYaxis()->SetRangeUser(8,24);
    sh1->GetYaxis()->SetRangeUser(8,24);
@@ -414,15 +418,19 @@ void TrackValHistoPublisher(char* newFile="NEW_FILE",char* refFile="REF_FILE")
    rh4->GetXaxis()->SetTitle("p_{t}");
    NormalizeHistograms(rh3,sh3);
    NormalizeHistograms(rh4,sh4);
+   NormalizeHistograms(rh5,sh5);
+   NormalizeHistograms(rh6,sh6);
    
-   plot4histos(canvas,
-	      sh1,rh1,sh2,rh2,
-	      sh3,rh3,sh4,rh4,
-	      te,"UU",-1);
+   plot6histos(canvas,
+	       sh5,rh5,sh6,rh6,
+	       sh1,rh1,sh2,rh2,    
+	       sh3,rh3,sh4,rh4,    
+	       te,"UU",-1);
    
    canvas->cd();
    
-   l = new TLegend(0.20,0.49,0.90,0.54);
+   //l = new TLegend(0.20,0.49,0.90,0.54);
+   l = new TLegend(0.10,0.64,0.90,0.69);    
    l->SetTextSize(0.016);
    l->SetLineColor(1);
    l->SetLineWidth(1);
@@ -1119,16 +1127,43 @@ void TrackValHistoPublisher(char* newFile="NEW_FILE",char* refFile="REF_FILE")
    rh2->GetYaxis()->SetTitleOffset(1.2);
    rh2->SetTitle("");
 
+   rdir->GetObject(collname1+"/effic_vs_dr",rh3);
+   sdir->GetObject(collname2+"/effic_vs_dr",sh3);
+   rh3->GetYaxis()->SetRangeUser(0.,1.);
+   sh3->GetYaxis()->SetRangeUser(0.,1.);
+   rh3->GetXaxis()->SetTitle("#DeltaR");
+   rh3->GetYaxis()->SetTitle("efficiency vs #DeltaR");
+   rh3->GetYaxis()->SetTitleSize(0.05);
+   rh3->GetYaxis()->SetTitleOffset(1.2);
+
+   rdir->GetObject(collname1+"/fakerate_vs_dr",rh4);
+   sdir->GetObject(collname2+"/fakerate_vs_dr",sh4);
+   rh4->GetXaxis()->SetTitle("#DeltaR");
+   rh4->GetYaxis()->SetTitle("Fake rate vs #DeltaR");
+   rh4->GetYaxis()->SetRangeUser(0.,MAXFAKE);
+   sh4->GetYaxis()->SetRangeUser(0.,MAXFAKE);
+   rh4->GetYaxis()->SetTitleSize(0.05);
+   rh4->GetYaxis()->SetTitleOffset(1.2);
+   rh4->SetTitle("");
+
+
    canvas = new TCanvas("Tracks9","Tracks: efficiency & fakerate",1000,1400);
 
-   TH1 * r[2]={rh1,rh2};
-   TH1 * s[2]={sh1,sh2};
+   //TH1 * r[2]={rh1,rh2};
+   //TH1 * s[2]={sh1,sh2};
 
-   plotBuilding(canvas,s, r,2,
-		te,"UU",-1);
+   //plotBuilding(canvas,s, r,2,
+   //	te,"UU",-1);
+
+   Int_t optstat = gStyle->GetOptStat();
+   plot4histos(canvas,
+           sh1,rh1,sh2,rh2,
+           sh3,rh3,sh4,rh4,
+           te,"UU",-1,0.1,false,false);
 
    canvas->cd();
-   l = new TLegend(0.10,0.14,0.90,0.19);
+   //l = new TLegend(0.10,0.14,0.90,0.19);
+   l = new TLegend(0.17,0.465,0.97,0.515);
    l->SetTextSize(0.016);
    l->SetLineColor(1);
    l->SetLineWidth(1);
@@ -1139,6 +1174,7 @@ void TrackValHistoPublisher(char* newFile="NEW_FILE",char* refFile="REF_FILE")
    l->AddEntry(sh1,newLabel,"LPF");
    l->Draw();
    canvas->Print("effvspos.pdf");   
+   gStyle->SetOptStat(optstat);
    delete l;
 
    //===== dE/dx
@@ -1363,7 +1399,7 @@ void plot4histos(TCanvas *canvas,
 		TH1 *s1,TH1 *r1, TH1 *s2,TH1 *r2, 
 		TH1 *s3,TH1 *r3, TH1 *s4,TH1 *r4,
 		TText* te,
-	       char * option, double startingY, double startingX = .1,bool fit = false){
+	       char * option, double startingY, double startingX = .1,bool fit = false, bool statflag = true){
   canvas->Divide(2,2);
 
   s1->SetMarkerStyle(20);
@@ -1415,6 +1451,116 @@ void plot4histos(TCanvas *canvas,
 
   //setStats(r1,s1, startingY, startingX, fit);
   canvas->cd(1);
+  if (statflag) setStats(s1,r1, 0.6, 0.65, false);
+  r1->Draw();
+  if (statflag) s1->Draw("sames");
+  else s1->Draw("same");    
+
+  canvas->cd(2);
+  if (statflag) setStats(s2,r2, 0.6, 0.65, false);
+  r2->Draw();
+  if (statflag) s2->Draw("sames");
+  else s2->Draw("same");    
+
+  canvas->cd(3);
+  if (statflag) setStats(s3,r3, 0.6, 0.65, false);
+  r3->Draw();
+  if (statflag) s3->Draw("sames");
+  else s3->Draw("same");    
+
+  canvas->cd(4);
+  if (statflag) setStats(s4,r4, 0.6, 0.65, false);
+  else gStyle->SetOptStat(0);
+  r4->Draw();
+  if (statflag) s4->Draw("sames");
+  else s4->Draw("same");    
+
+  TPad *pad=canvas->cd(3);
+  if(!statflag)pad->SetLogx();
+  pad=(TPad*)canvas->cd(4);
+  if(!statflag)pad->SetLogx();
+
+}
+
+void plot6histos(TCanvas *canvas,
+        TH1 *s1,TH1 *r1, TH1 *s2,TH1 *r2,
+        TH1 *s3,TH1 *r3, TH1 *s4,TH1 *r4,
+        TH1 *s5,TH1 *r5, TH1 *s6,TH1 *r6,
+        TText* te,
+           char * option, double startingY, double startingX = .1,bool fit = false){
+  canvas->Divide(2,3);
+  
+  s1->SetMarkerStyle(20);
+  r1->SetMarkerStyle(21);
+  s1->SetMarkerColor(2);
+  r1->SetMarkerColor(4);
+  s1->SetMarkerSize(0.7);
+  r1->SetMarkerSize(0.7);
+  s1->SetLineColor(2);
+  r1->SetLineColor(4);
+  s1->SetLineWidth(2);
+  r1->SetLineWidth(2);
+  
+
+
+  s2->SetMarkerStyle(20);
+  r2->SetMarkerStyle(21);
+  s2->SetMarkerColor(2);
+  r2->SetMarkerColor(4);
+  s2->SetMarkerSize(0.1);
+  r2->SetMarkerSize(0.1);
+  s2->SetLineColor(2);
+  r2->SetLineColor(4);
+  s2->SetLineWidth(2);
+  r2->SetLineWidth(2);
+  
+  s3->SetMarkerStyle(20);
+  r3->SetMarkerStyle(21);
+  s3->SetMarkerColor(2);
+  r3->SetMarkerColor(4);
+  s3->SetMarkerSize(0.7);
+  r3->SetMarkerSize(0.7);
+  s3->SetLineColor(2);
+  r3->SetLineColor(4);
+  r3->SetLineWidth(2);
+  s3->SetLineWidth(2);
+
+  s4->SetMarkerStyle(20);
+  r4->SetMarkerStyle(21);
+  s4->SetMarkerColor(2);
+  r4->SetMarkerColor(4);
+  s4->SetMarkerSize(0.7);
+  r4->SetMarkerSize(0.7);
+  s4->SetLineColor(2);
+  r4->SetLineColor(4);
+  r4->SetLineWidth(2);
+  s4->SetLineWidth(2);
+
+  s5->SetMarkerStyle(20);
+  r5->SetMarkerStyle(21);
+  s5->SetMarkerColor(2);
+  r5->SetMarkerColor(4);
+  s5->SetMarkerSize(0.7);
+  r5->SetMarkerSize(0.7);
+  s5->SetLineColor(2);
+  r5->SetLineColor(4);
+  r5->SetLineWidth(2);
+  s5->SetLineWidth(2);
+
+  s6->SetMarkerStyle(20);
+  r6->SetMarkerStyle(21);
+  s6->SetMarkerColor(2);
+  r6->SetMarkerColor(4);
+  s6->SetMarkerSize(0.7);
+  r6->SetMarkerSize(0.7);
+  s6->SetLineColor(2);
+  r6->SetLineColor(4);
+  r6->SetLineWidth(2);
+  s6->SetLineWidth(2);
+
+
+  //setStats(r1,s1, startingY, startingX, fit);
+  canvas->cd(1);
   setStats(s1,r1, 0.6, 0.65, false);
   r1->Draw();
   s1->Draw("sames");
@@ -1433,6 +1579,16 @@ void plot4histos(TCanvas *canvas,
   setStats(s4,r4, 0.6, 0.65, false);
   r4->Draw();
   s4->Draw("sames");
+
+  canvas->cd(5);
+  setStats(s5,r5, 0.6, 0.65, false);
+  r5->Draw();
+  s5->Draw("sames");
+
+  canvas->cd(6);
+  setStats(s6,r6, 0.6, 0.65, false);
+  r6->Draw();
+  s6->Draw("sames");
 
 }
 

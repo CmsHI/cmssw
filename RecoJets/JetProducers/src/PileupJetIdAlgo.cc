@@ -6,6 +6,8 @@
 #include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
 #include "DataFormats/Math/interface/deltaR.h"
 #include "FWCore/ParameterSet/interface/FileInPath.h"
+#include "CommonTools/Utils/interface/TMVAZipReader.h"
+
 #include "TMatrixDSym.h"
 #include "TMatrixDSymEigen.h"
 
@@ -188,7 +190,7 @@ void setPtEtaPhi(const reco::Candidate & p, float & pt, float & eta, float &phi 
 // ------------------------------------------------------------------------------------------
 void PileupJetIdAlgo::bookReader()
 {
-	reader_ = new TMVA::Reader("!Color:!Silent");
+	reader_ = new TMVA::Reader("!Color:Silent");
 	assert( ! tmvaMethod_.empty() && !  tmvaWeights_.empty() );
 	for(std::vector<std::string>::iterator it=tmvaVariables_.begin(); it!=tmvaVariables_.end(); ++it) {
 		if(  tmvaNames_[*it].empty() ) { 
@@ -202,7 +204,7 @@ void PileupJetIdAlgo::bookReader()
 		}
 		reader_->AddSpectator( *it, variables_[ tmvaNames_[*it] ].first );
 	}
-	reader_->BookMVA(tmvaMethod_.c_str(), tmvaWeights_.c_str());
+	reco::details::loadTMVAWeights(reader_,  tmvaMethod_.c_str(), tmvaWeights_.c_str() ); 
 }
 
 // ------------------------------------------------------------------------------------------
@@ -217,7 +219,7 @@ void PileupJetIdAlgo::runMva()
 	if( cutBased_ ) {
 		internalId_.idFlag_ = computeCutIDflag(internalId_.betaStarClassic_,internalId_.dR2Mean_,internalId_.nvtx_,internalId_.jetPt_,internalId_.jetEta_);
 	} else {
-		if( ! reader_ ) { bookReader(); std::cerr << "Reader booked" << std::endl; }
+		if( ! reader_ ) { bookReader();}
 		if(fabs(internalId_.jetEta_) <  5.0) internalId_.mva_ = reader_->EvaluateMVA( tmvaMethod_.c_str() );
 		if(fabs(internalId_.jetEta_) >= 5.0) internalId_.mva_ = -2.;
 		internalId_.idFlag_ = computeIDflag(internalId_.mva_,internalId_.jetPt_,internalId_.jetEta_);
@@ -288,7 +290,7 @@ PileupJetIdentifier PileupJetIdAlgo::computeIdVariables(const reco::Jet * jet, f
 							const reco::VertexCollection & allvtx,
 							bool calculateMva) 
 {
-	static int printWarning = 10; 
+	static std::atomic<int> printWarning{10};
 	typedef std::vector <reco::PFCandidatePtr> constituents_type;
 	typedef std::vector <reco::PFCandidatePtr>::iterator constituents_iterator;
 

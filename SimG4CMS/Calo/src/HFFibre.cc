@@ -11,6 +11,7 @@
 #include "FWCore/Utilities/interface/Exception.h"
 
 #include "CLHEP/Units/GlobalSystemOfUnits.h"
+#include "CLHEP/Units/GlobalPhysicalConstants.h"
 #include <iostream>
 
 //#define DebugLog
@@ -128,7 +129,7 @@ double HFFibre::attLength(double lambda) {
   return att;
 }
 
-double HFFibre::tShift(G4ThreeVector point, int depth, int fromEndAbs) {
+double HFFibre::tShift(const G4ThreeVector& point, int depth, int fromEndAbs) {
 
   double zFibre = zShift(point, depth, fromEndAbs);
   double time   = zFibre/cFibre;
@@ -140,7 +141,7 @@ double HFFibre::tShift(G4ThreeVector point, int depth, int fromEndAbs) {
   return time;
 }
 
-double HFFibre::zShift(G4ThreeVector point, int depth, int fromEndAbs) { // point is z-local
+double HFFibre::zShift(const G4ThreeVector& point, int depth, int fromEndAbs) { // point is z-local
 
   double zFibre = 0;
   double hR     = sqrt((point.x())*(point.x())+(point.y())*(point.y()));

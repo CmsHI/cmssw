@@ -16,7 +16,6 @@ Implementation:
 //                   Maria Spiropulu
 //         Created:  Wed Aug 29 15:10:56 CEST 2007
 //  Philip Hebda, July 2009
-// $Id: TriggerValidator.cc,v 1.23 2010/06/27 14:15:01 wmtan Exp $
 //
 //
 
@@ -41,16 +40,6 @@ Implementation:
 
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
-//Added by Max for the Trigger
-#include "DataFormats/HLTReco/interface/TriggerEventWithRefs.h"
-#include "DataFormats/Common/interface/TriggerResults.h"
-//#include "DataFormats/L1Trigger/interface/L1ParticleMap.h"
-#include "DataFormats/L1GlobalTrigger/interface/L1GlobalTriggerReadoutRecord.h"
-
-#include "DataFormats/L1GlobalTrigger/interface/L1GlobalTriggerReadoutRecord.h"
-#include "DataFormats/L1GlobalTrigger/interface/L1GlobalTriggerObjectMapRecord.h"
-#include "DataFormats/L1GlobalTrigger/interface/L1GlobalTriggerObjectMap.h"
-
 
 //Added for the DQM
 #include "DQMServices/Core/interface/MonitorElement.h"
@@ -64,6 +53,7 @@ Implementation:
 #include "TObjString.h"
 #include "TString.h"
 #include "TObject.h"
+#include "TPRegexp.h"
 
 //
 // constants, enums and typedefs
@@ -89,8 +79,9 @@ TriggerValidator::TriggerValidator(const edm::ParameterSet& iConfig):
 					      std::string("SusyBsmTriggerValidation.root"))),
   StatFileName(iConfig.getUntrackedParameter("statFileName",
 					      std::string("SusyBsmTriggerValidation.stat"))),
-  l1Label(iConfig.getParameter<edm::InputTag>("L1Label")),
+  l1Label(consumes<L1GlobalTriggerObjectMapRecord>(iConfig.getParameter<edm::InputTag>("L1Label"))),
   hltLabel(iConfig.getParameter<edm::InputTag>("HltLabel")),
+  hlt_token_(consumes<TriggerResults>(iConfig.getParameter<edm::InputTag>("HltLabel"))),
   mcFlag(iConfig.getUntrackedParameter<bool>("mc_flag",false)),
   l1Flag(iConfig.getUntrackedParameter<bool>("l1_flag",false)),
   reco_parametersets(iConfig.getParameter<VParameterSet>("reco_parametersets")),
@@ -101,7 +92,8 @@ TriggerValidator::TriggerValidator(const edm::ParameterSet& iConfig):
   muonTag_(iConfig.getParameter<edm::InputTag>("muonTag")),
   triggerTag_(iConfig.getParameter<edm::InputTag>("triggerTag")),
   processName_(iConfig.getParameter<std::string>("hltConfigName")),
-  triggerName_(iConfig.getParameter<std::string>("triggerName"))
+  hltPathsToCheck_(iConfig.getParameter<vector<string>>("hltPathsToCheck")),
+  gtDigis_token_(consumes<L1GlobalTriggerReadoutRecord>(iConfig.getUntrackedParameter<edm::InputTag>("gtDigis",edm::InputTag("gtDigis"))))
 {
   //now do what ever initialization is needed
   theHistoFile = 0;
@@ -111,7 +103,6 @@ TriggerValidator::TriggerValidator(const edm::ParameterSet& iConfig):
 
   nHltPaths = 0;
   nL1Bits = 0;
-
 
   // --- set the names in the dbe folders ---
   triggerBitsDir = "/TriggerBits";
@@ -128,9 +119,6 @@ TriggerValidator::TriggerValidator(const edm::ParameterSet& iConfig):
   if (iConfig.getUntrackedParameter < bool > ("DQMStore", false)) {
     dbe_->setVerbose(0);
   }
-
-  
-
   
   if (dbe_ != 0 ) {
     dbe_->setCurrentFolder(dirname_);
@@ -140,6 +128,12 @@ TriggerValidator::TriggerValidator(const edm::ParameterSet& iConfig):
    plotMakerL1Input.addParameter<std::string>("dirname",dirname_);
    plotMakerRecoInput.addParameter<std::string>("dirname",dirname_);
 
+  //pass consumes list to the helper classes
+  for(unsigned int i=0; i<reco_parametersets.size(); ++i) myRecoSelector.push_back(new RecoSelector(reco_parametersets[i], consumesCollector()));
+  if(mcFlag) for(unsigned int i=0; i<mc_parametersets.size(); ++i) myMcSelector.push_back(new McSelector(mc_parametersets[i], consumesCollector()));
+  if(l1Flag) myPlotMakerL1     = new PlotMakerL1(plotMakerL1Input, consumesCollector());
+  myPlotMakerReco   = new PlotMakerReco(plotMakerRecoInput, consumesCollector());
+  myMuonAnalyzer = new MuonAnalyzerSBSM(triggerTag_, muonTag_, consumesCollector());
 }
 
 
@@ -179,8 +173,7 @@ TriggerValidator::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
   // Get the L1 Info
   // ********************************************************    
   Handle<L1GlobalTriggerReadoutRecord> L1GTRR;
-  //  try {iEvent.getByType(L1GTRR);} catch (...) {;}
-  iEvent.getByLabel("gtDigis",L1GTRR);
+  iEvent.getByToken(gtDigis_token_,L1GTRR);
   if (!L1GTRR.isValid()) {edm::LogWarning("Readout Error|L1") << "L1ParticleMapCollection Not Valid!";}
   int nL1size = L1GTRR->decisionWord().size();
   if(firstEvent) {
@@ -202,9 +195,7 @@ TriggerValidator::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
     //for the moment the names are not included in L1GlobalTriggerReadoutRecord
     //we need to use L1GlobalTriggerObjectMapRecord
     edm::Handle<L1GlobalTriggerObjectMapRecord> gtObjectMapRecord;
-    //    iEvent.getByLabel("l1GtEmulDigis", gtObjectMapRecord);
-    //    iEvent.getByLabel("hltL1GtObjectMap", gtObjectMapRecord);
-    iEvent.getByLabel(l1Label, gtObjectMapRecord);
+    iEvent.getByToken(l1Label, gtObjectMapRecord);
      const std::vector<L1GlobalTriggerObjectMap>& objMapVec =
       gtObjectMapRecord->gtObjectMap();
      for (std::vector<L1GlobalTriggerObjectMap>::const_iterator itMap = objMapVec.begin();
@@ -279,44 +270,21 @@ TriggerValidator::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
   // Get the HLT Info
   // ******************************************************** 
   edm::Handle<TriggerResults> trhv;
-  iEvent.getByLabel(hltLabel,trhv);
+  iEvent.getByToken(hlt_token_,trhv);
   if( ! trhv.isValid() ) {
-    LogDebug("") << "HL TriggerResults with label ["+hltLabel.encode()+"] not found!";
+    LogDebug("SUSYBSM") << "HL TriggerResults with label ["+hltLabel.encode()+"] not found!";
     return;
   }  
 
-
-//   if(!trhv.isValid()) {
-//     std::cout << "invalid handle for HLT TriggerResults" << std::endl;
-//   } 
-
-
   if(firstEvent) {
 
-
- 
-    //
-    // The following piece of code concerns efficiencies and so must be moved to the client
-    //
-
-
-//     //resize the eff and overlap vectors ccording to the number of L1 paths
-//     effHltBeforeCuts.resize(trhv->size()+1);
-//     effHltAfterRecoCuts.resize(trhv->size()+1);
-//     effHltAfterMcCuts.resize(trhv->size()+1);
-     vCorrHlt.resize(trhv->size());
-    for(unsigned int i=0; i<trhv->size(); i++) {vCorrHlt[i].resize(trhv->size());}
-    vCorrNormHlt.resize(trhv->size());
-    for(unsigned int i=0; i<trhv->size(); i++) {vCorrNormHlt[i].resize(trhv->size());}
-
-
-    //resize the name vector and get the names
-    const edm::TriggerNames & triggerNames = iEvent.triggerNames(*trhv);
-    hlNames_=triggerNames.triggerNames();
-    hlNames_.push_back("Total");
+    vCorrHlt.resize(hlNames_.size());
+    for(unsigned int i=0; i<hlNames_.size(); i++) {vCorrHlt[i].resize(hlNames_.size());}
+    vCorrNormHlt.resize(hlNames_.size());
+    for(unsigned int i=0; i<hlNames_.size(); i++) {vCorrNormHlt[i].resize(hlNames_.size());}
 
     //set the bin names for the "path" histos
-    for (unsigned int i=0; i<hlNames_.size(); ++i) {
+    for(unsigned int i=0; i < hlNames_.size(); i++) {
       hHltPathsBeforeCuts->setBinLabel(i+1,hlNames_[i].c_str(),1);
       for(unsigned int j=0; j<hHltPathsAfterRecoCuts.size(); ++j) hHltPathsAfterRecoCuts[j]->setBinLabel(i+1,hlNames_[i].c_str(),1);
       for(unsigned int j=0; j<hHltPathsAfterMcCuts.size(); ++j) hHltPathsAfterMcCuts[j]->setBinLabel(i+1,hlNames_[i].c_str(),1);
@@ -324,55 +292,52 @@ TriggerValidator::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
   }
 
   //fill the eff vectors and histos for HLT
-  for(unsigned int i=0; i< trhv->size(); i++) {
-    hltbits.push_back(trhv->at(i).accept());
-    if(trhv->at(i).accept()) {
-      numTotHltBitsBeforeCuts[i]++;
-      hHltBitsBeforeCuts->Fill(i);
-      hHltPathsBeforeCuts->Fill(i);
-      for(unsigned int j=0; j<eventRecoSelected.size(); ++j)
-	if(eventRecoSelected[j]) {
-	  numTotHltBitsAfterRecoCuts[j][i]++;
-	  hHltBitsAfterRecoCuts[j]->Fill(i);
-	  hHltPathsAfterRecoCuts[j]->Fill(i);
-	}
-      for(unsigned int j=0; j<eventMcSelected.size(); ++j)
-	if(eventMcSelected[j]) {
-	  numTotHltBitsAfterMcCuts[j][i]++;
-	  hHltBitsAfterMcCuts[j]->Fill(i);
-	  hHltPathsAfterMcCuts[j]->Fill(i);
-	}
-    }      
+  for(unsigned int i=0; i < hlNames_.size(); i++) {
+    const unsigned int path_index(hltConfig_.triggerIndex(hlNames_[i]));
+    if ( path_index < hltConfig_.size() ){
+      hltbits.push_back(trhv->at(path_index).accept());
+      if( trhv->at(path_index).accept() ) {
+        numTotHltBitsBeforeCuts[i]++;
+        hHltBitsBeforeCuts->Fill(i);
+        hHltPathsBeforeCuts->Fill(i);
+        for(unsigned int j=0; j<eventRecoSelected.size(); ++j)
+          if(eventRecoSelected[j]) {
+            numTotHltBitsAfterRecoCuts[j][i]++;
+            hHltBitsAfterRecoCuts[j]->Fill(i);
+            hHltPathsAfterRecoCuts[j]->Fill(i);
+          }
+        for(unsigned int j=0; j<eventMcSelected.size(); ++j)
+  	  if(eventMcSelected[j]) {
+  	    numTotHltBitsAfterMcCuts[j][i]++;
+  	    hHltBitsAfterMcCuts[j]->Fill(i);
+  	    hHltPathsAfterMcCuts[j]->Fill(i);
+  	  }
+      }      
+    }
   }
 
   //Calculate the overlap among HLT paths
- for(unsigned int i=0; i< trhv->size(); i++) {
-   for(unsigned int j=0; j< trhv->size(); j++) {
-//      cout << "trhv->size() = " << trhv->size() << endl;
-//      cout << "hltbits["<< i << "] = " << hltbits[i] << endl;
-//      cout << "hltbits["<< j << "] = " << hltbits[j] << endl;
-     if(hltbits[i]*hltbits[j]) vCorrHlt[i][j]++;
-   }
- }
-
-
-  //The overlap histos are filled in the endJob() method
+  for(unsigned int i=0; i< hltbits.size(); i++) {
+    for(unsigned int j=0; j< hltbits.size(); j++) {
+      if(hltbits[i]*hltbits[j]) vCorrHlt[i][j]++;
+    }
+  }
 
   //fill the last bin with the total of events
-  numTotHltBitsBeforeCuts[trhv->size()]++;
-  hHltBitsBeforeCuts->Fill(trhv->size());
-  hHltPathsBeforeCuts->Fill(trhv->size());
+  numTotHltBitsBeforeCuts[hlNames_.size()]++;
+  hHltBitsBeforeCuts->Fill(hlNames_.size());
+  hHltPathsBeforeCuts->Fill(hlNames_.size());
   for(unsigned int i=0; i<eventRecoSelected.size(); ++i)
     if(eventRecoSelected[i]) {
-      numTotHltBitsAfterRecoCuts[i][trhv->size()]++;
-      hHltBitsAfterRecoCuts[i]->Fill(trhv->size());
-      hHltPathsAfterRecoCuts[i]->Fill(trhv->size());
+      numTotHltBitsAfterRecoCuts[i][hlNames_.size()]++;
+      hHltBitsAfterRecoCuts[i]->Fill(hlNames_.size());
+      hHltPathsAfterRecoCuts[i]->Fill(hlNames_.size());
     }
   for(unsigned int i=0; i<eventMcSelected.size(); ++i)
     if(eventMcSelected[i]) {
-      numTotHltBitsAfterMcCuts[i][trhv->size()]++;
-      hHltBitsAfterMcCuts[i]->Fill(trhv->size());
-      hHltPathsAfterMcCuts[i]->Fill(trhv->size());
+      numTotHltBitsAfterMcCuts[i][hlNames_.size()]++;
+      hHltBitsAfterMcCuts[i]->Fill(hlNames_.size());
+      hHltPathsAfterMcCuts[i]->Fill(hlNames_.size());
     }
 
 
@@ -416,58 +381,36 @@ void TriggerValidator::beginRun(const edm::Run& run, const edm::EventSetup& c)
     dbe_->setCurrentFolder(dirname_);
   }  
   
-  
-  bool changed(true);
-  //  cout << "hltConfig_.init(run,c,processName_,changed) = " << (int) hltConfig_.init(run,c,processName_,changed) << endl;
-  //  cout << "changed = " << (int) changed << endl;
-  if (hltConfig_.init(run,c,processName_,changed)) {
-    //    cout << "AAAA" << endl;
-    if (changed) {
-      //     cout << "BBBBBBB" << endl;
-     // check if trigger name in (new) config
-      if (triggerName_!="@") { // "@" means: analyze all triggers in config
-	//	cout << "hltConfig_.size() = " << hltConfig_.size() << endl;
-	nHltPaths = hltConfig_.size();
-	const unsigned int triggerIndex(hltConfig_.triggerIndex(triggerName_));
-	if (triggerIndex>=nHltPaths) {
-// 	  cout << "HLTriggerOffline/SUSYBSM"
-// 	       << " TriggerName " << triggerName_ 
-// 	       << " not available in (new) config!" << endl;
-// 	  cout << "Available TriggerNames are: " << endl;
-	  hltConfig_.dump("Triggers");
-	}
-      }
-      else {
-	//     cout << "CCCCCCCC" << endl;
-	nHltPaths = hltConfig_.size();
-      }
-    }
-  } else {
-//     cout << "HLTriggerOffline/SUSYBSM"
-// 	 << " config extraction failure with process name "
-// 	 << processName_ << endl;
+ // Initialize hltConfig
+  bool changed;
+  if (!hltConfig_.init(run,c,processName_,changed)) {
+    LogError("SUSYBSM") << "Initialization of HLTConfigProvider failed!!";
+    return;
   }
 
-  //  cout << "nHltPaths = " << nHltPaths << endl;
+
+  // Get the set of trigger paths we want to make plots for
+  for (size_t i = 0; i < hltPathsToCheck_.size(); i++) {
+    TPRegexp pattern(hltPathsToCheck_[i]);
+    for (size_t j = 0; j < hltConfig_.triggerNames().size(); j++)
+      if (TString(hltConfig_.triggerNames()[j]).Contains(pattern))
+        hlNames_.push_back(hltConfig_.triggerNames()[j]);
+  }
+  hlNames_.push_back("Total");
+  nHltPaths = hlNames_.size();  
+
   nL1Bits = 128; 
 
-  
-
-  for(unsigned int i=0; i<reco_parametersets.size(); ++i) myRecoSelector.push_back(new RecoSelector(reco_parametersets[i]));
-  if(mcFlag) for(unsigned int i=0; i<mc_parametersets.size(); ++i) myMcSelector.push_back(new McSelector(mc_parametersets[i]));
-  if(l1Flag) myPlotMakerL1     = new PlotMakerL1(plotMakerL1Input);
-  myPlotMakerReco   = new PlotMakerReco(plotMakerRecoInput);
-//   myTurnOnMaker = new TurnOnMaker(turnOn_params);
   firstEvent = true;
 
-  //resize the vectors ccording to the number of L1 paths
+  //resize the vectors according to the number of L1 paths
   numTotL1BitsBeforeCuts.resize(nL1Bits+1);
   numTotL1BitsAfterRecoCuts.resize(reco_parametersets.size());
   for(unsigned int i=0; i<numTotL1BitsAfterRecoCuts.size(); ++i) numTotL1BitsAfterRecoCuts[i].resize(nL1Bits+1);
   numTotL1BitsAfterMcCuts.resize(mc_parametersets.size());
   for(unsigned int i=0; i<numTotL1BitsAfterMcCuts.size(); ++i) numTotL1BitsAfterMcCuts[i].resize(nL1Bits+1);
 
-  //resize the vectors ccording to the number of HLT paths
+  //resize the vectors according to the number of HLT paths
   numTotHltBitsBeforeCuts.resize(nHltPaths+1);
   numTotHltBitsAfterRecoCuts.resize(reco_parametersets.size());
   for(unsigned int i=0; i<numTotHltBitsAfterRecoCuts.size(); ++i) numTotHltBitsAfterRecoCuts[i].resize(nHltPaths+1);
@@ -488,10 +431,6 @@ void TriggerValidator::beginRun(const edm::Run& run, const edm::EventSetup& c)
   //add 1 bin for the Total
   hL1BitsBeforeCuts  = dbe_->book1D("L1Bits", "L1 Trigger Bits",nL1Bits+1, 0, nL1Bits+1);    
   hHltBitsBeforeCuts = dbe_->book1D("HltBits","HL Trigger Bits",nHltPaths+1, 0, nHltPaths+1);
-//   hL1OverlapNormToTotal        = dbe_->book2D("L1OverlapNormToTotal"       ,"Overlap among L1 paths, norm to the Total number of Events", 1, 0, 1, 1, 0, 1);
-//   hHltOverlapNormToTotal       = dbe_->book2D("HltOverlapNormToTotal"      ,"Overlap among Hlt paths, norm to the Total number of Events ", 1, 0, 1, 1, 0, 1);
-//   hL1OverlapNormToLargestPath  = dbe_->book2D("L1OverlapNormToLargestPath" ,"Overlap among L1 paths, norm to the Largest of the couple ", 1, 0, 1, 1, 0, 1);
-//   hHltOverlapNormToLargestPath = dbe_->book2D("HltOverlapNormToLargestPath","Overlap among Hlt paths, norm to the Largest of the couple ", 1, 0, 1, 1, 0, 1);
 
   for(unsigned int i=0; i<myRecoSelector.size(); ++i)
     {
@@ -530,7 +469,6 @@ void TriggerValidator::beginRun(const edm::Run& run, const edm::EventSetup& c)
   dbe_->setCurrentFolder(dirname_+triggerBitsDir);
   TH1F* hTemp = (TH1F*) (hL1BitsBeforeCuts->getTH1F())->Clone("L1Paths");
   hL1PathsBeforeCuts  = dbe_->book1D("L1Paths", hTemp);
-  //  hL1PathsBeforeCuts  = dbe_->book1D("L1Paths", hL1BitsBeforeCuts->getTH1F());
   hTemp = (TH1F*) (hHltBitsBeforeCuts->getTH1F())->Clone("HltPaths");
   hHltPathsBeforeCuts = dbe_->book1D("HltPaths", hTemp);
 
@@ -538,12 +476,10 @@ void TriggerValidator::beginRun(const edm::Run& run, const edm::EventSetup& c)
     {
       string path_name = myRecoSelector[i]->GetName();
       char histo_name[256];
-      //sprintf(histo_name, "L1Paths");
       sprintf(histo_name, "L1Paths_%s", path_name.c_str());
       dbe_->setCurrentFolder(dirname_+recoSelBitsDir+"/"+path_name);
       hTemp = (TH1F*) (hL1BitsAfterRecoCuts[i]->getTH1F())->Clone(histo_name);
       hL1PathsAfterRecoCuts.push_back(dbe_->book1D(histo_name, hTemp));
-      //sprintf(histo_name, "HltPaths");
       sprintf(histo_name, "HltPaths_%s", path_name.c_str());
       hTemp = (TH1F*) (hHltBitsAfterRecoCuts[i]->getTH1F())->Clone(histo_name);
       hHltPathsAfterRecoCuts.push_back(dbe_->book1D(histo_name, hTemp));
@@ -553,18 +489,15 @@ void TriggerValidator::beginRun(const edm::Run& run, const edm::EventSetup& c)
     {
       string path_name = myMcSelector[i]->GetName();
       char histo_name[256];
-      //sprintf(histo_name, "L1Paths");
       sprintf(histo_name, "L1Paths_%s", path_name.c_str());
       dbe_->setCurrentFolder(dirname_+mcSelBitsDir+"/"+path_name);
       hTemp = (TH1F*) (hL1BitsAfterMcCuts[i]->getTH1F())->Clone(histo_name);
       hL1PathsAfterMcCuts.push_back(dbe_->book1D(histo_name, hTemp));
-      //sprintf(histo_name, "HltPaths");
       sprintf(histo_name, "HltPaths_%s", path_name.c_str());
       hTemp = (TH1F*) (hHltBitsAfterMcCuts[i]->getTH1F())->Clone(histo_name);
       hHltPathsAfterMcCuts.push_back(dbe_->book1D(histo_name, hTemp));
     }
 
-  myMuonAnalyzer = new MuonAnalyzerSBSM(triggerTag_, muonTag_);
   myMuonAnalyzer->InitializePlots(dbe_, dirname_);
 }
 

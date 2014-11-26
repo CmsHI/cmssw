@@ -3,7 +3,6 @@
 // Package:     Muons
 // Class  :     FWPhotonLegoProxyBuilder
 //
-// $Id: FWPhotonLegoProxyBuilder.cc,v 1.3 2010/06/18 12:42:18 yana Exp $
 //
 
 #include "TEveStraightLineSet.h"
@@ -24,6 +23,7 @@ private:
    FWPhotonLegoProxyBuilder(const FWPhotonLegoProxyBuilder&);
    const FWPhotonLegoProxyBuilder& operator=(const FWPhotonLegoProxyBuilder&);
 
+   using FWSimpleProxyBuilderTemplate<reco::Photon>  ::build;
    virtual void build(const reco::Photon& iData, unsigned int iIndex, TEveElement& oItemHolder, const FWViewContext*) override;
 };
 

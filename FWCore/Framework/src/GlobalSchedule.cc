@@ -16,15 +16,15 @@
 #include <map>
 
 namespace edm {
-  GlobalSchedule::GlobalSchedule(TriggerResultInserter* inserter,
-                                 boost::shared_ptr<ModuleRegistry> modReg,
+  GlobalSchedule::GlobalSchedule(std::shared_ptr<TriggerResultInserter> inserter,
+                                 std::shared_ptr<ModuleRegistry> modReg,
                                  std::vector<std::string> const& iModulesToUse,
                                  ParameterSet& proc_pset,
                                  ProductRegistry& pregistry,
                                  PreallocationConfiguration const& prealloc,
                                  ExceptionToActionTable const& actions,
-                                 boost::shared_ptr<ActivityRegistry> areg,
-                                 boost::shared_ptr<ProcessConfiguration> processConfiguration,
+                                 std::shared_ptr<ActivityRegistry> areg,
+                                 std::shared_ptr<ProcessConfiguration> processConfiguration,
                                  ProcessContext const* processContext) :
     workerManager_(modReg,areg,actions),
     actReg_(areg),
@@ -46,6 +46,7 @@ namespace edm {
     }
     if(inserter) {
       results_inserter_.reset(new edm::WorkerT<TriggerResultInserter::ModuleType>(inserter, inserter->moduleDescription(), &actions));
+      inserter->doPreallocate(prealloc);
       results_inserter_->setActivityRegistry(actReg_);
       addToAllWorkers(results_inserter_.get());
     }
@@ -92,7 +93,7 @@ namespace edm {
 
   void
   GlobalSchedule::addToAllWorkers(Worker* w) {
-    workerManager_.addToAllWorkers(w, false);
+    workerManager_.addToAllWorkers(w);
   }
 
 }

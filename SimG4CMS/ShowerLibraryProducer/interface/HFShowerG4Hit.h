@@ -44,9 +44,9 @@ public:
   inline void setEnergy(G4double edep)         {theEdep  = edep;}
   inline void updateEnergy(G4double edep)      {theEdep += edep;}
   inline void setTime(G4double t)              {theTime  = t;}
-  inline void setLocalPos(G4ThreeVector xyz)   {localPos  = xyz;}
-  inline void setGlobalPos(G4ThreeVector xyz)  {globalPos = xyz;}
-  inline void setPrimMomDir(G4ThreeVector xyz) {momDir    = xyz;}
+  inline void setLocalPos(const G4ThreeVector& xyz)   {localPos  = xyz;}
+  inline void setGlobalPos(const G4ThreeVector& xyz)  {globalPos = xyz;}
+  inline void setPrimMomDir(const G4ThreeVector& xyz) {momDir    = xyz;}
       
   inline G4int hitId()                  const {return theHitId;}
   inline G4int trackId()                const {return theTrackId;}
@@ -59,15 +59,15 @@ public:
 
 typedef G4THitsCollection<HFShowerG4Hit> HFShowerG4HitsCollection;
 
-extern G4Allocator<HFShowerG4Hit> HFShowerG4HitAllocator;
+extern G4ThreadLocal G4Allocator<HFShowerG4Hit>* fHFShowerG4HitAllocator;
 
 inline void* HFShowerG4Hit::operator new(size_t) {
-  void* aHit;
-  aHit = (void*) HFShowerG4HitAllocator.MallocSingle();
-  return aHit;
+  if (!fHFShowerG4HitAllocator) fHFShowerG4HitAllocator = 
+    new G4Allocator<HFShowerG4Hit>;
+  return (void*)fHFShowerG4HitAllocator->MallocSingle();
 }
 
 inline void HFShowerG4Hit::operator delete(void *aHit) {
-  HFShowerG4HitAllocator.FreeSingle((HFShowerG4Hit*) aHit);
+  fHFShowerG4HitAllocator->FreeSingle((HFShowerG4Hit*) aHit);
 }
 #endif

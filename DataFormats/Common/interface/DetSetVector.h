@@ -41,8 +41,10 @@ behavior (usually a core dump).
 
 #include "boost/concept_check.hpp"
 #include "boost/mpl/if.hpp"
+#if !defined(__CINT__) && !defined(__MAKECINT__) && !defined(__REFLEX__)
+#else
 #include "boost/bind.hpp"
-
+#endif
 
 #include "DataFormats/Common/interface/CMS_CLASS_VERSION.h"
 #include "DataFormats/Common/interface/DetSet.h"
@@ -147,6 +149,9 @@ namespace edm {
 
     /// Return the number of contained DetSets
     size_type size() const;
+
+   // reserve...
+   void reserve(size_t s) { _sets.reserve(s);}
 
     // Do we need a short-hand method to return the number of T
     // instances? If so, do we optimize for size (calculate on the
@@ -262,7 +267,11 @@ namespace edm {
 
     // Insert the right thing, in the right place, and return a
     // reference to the newly inserted thing.
+#if defined( __GXX_EXPERIMENTAL_CXX0X__)
+    return *(_sets.emplace(p.first, id));
+#else
     return *(_sets.insert(p.first, detset(id)));
+#endif
   }
 
   template <class T>
@@ -373,18 +382,28 @@ namespace edm {
   {
     std::transform(this->begin(), this->end(),
 		   std::back_inserter(result),
+#if !defined(__CINT__) && !defined(__MAKECINT__) && !defined(__REFLEX__)
+		   std::bind(&DetSet<T>::id,std::placeholders::_1));
+#else
 		   boost::bind(&DetSet<T>::id,_1));
+#endif
   }
 
   template <class T>
   inline
   void
   DetSetVector<T>::post_insert() {
+#ifndef CMS_NOCXX11
+    _sets.shrink_to_fit();
+#endif
     if (_alreadySorted) return; 
     typename collection_type::iterator i = _sets.begin();
     typename collection_type::iterator e = _sets.end();
     // For each DetSet...
     for (; i != e; ++i) {
+#ifndef CMS_NOCXX11
+      i->data.shrink_to_fit();
+#endif
       // sort the Detset pointed to by
       std::sort(i->data.begin(), i->data.end());
     }

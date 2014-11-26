@@ -1,8 +1,7 @@
-#include "CondFormats/HcalObjects/interface/HcalCondObjectContainer.h"
+#include "CondFormats/HcalObjects/src/headers.h"
 
-#include "CondFormats/HcalObjects/interface/AllObjects.h"
 
-namespace {
+namespace CondFormats_HcalObjects {
   struct dictionary {
 
     HcalPedestals mypeds();
@@ -83,6 +82,17 @@ namespace {
 
     HcalTimingParams myTimingParams;
     std::vector<HcalTimingParam> myTimingParamVec;
+
+    // OOT pileup correction objects
+    std::map<std::string, AbsOOTPileupCorrection*> myInnerMap;
+    std::map<std::string, std::map<std::string, AbsOOTPileupCorrection*> > myOuterMap;
+    ScalingExponential myScalingExponential;
+    PiecewiseScalingPolynomial myPiecewiseScalingPolynomial;
+    OOTPileupCorrDataFcn myOOTPileupCorrDataFcn;
+    OOTPileupCorrData myOOTPileupCorrData;
+    DummyOOTPileupCorrection myDummyOOTPileupCorrection;
+    OOTPileupCorrectionMapColl myOOTPileupCorrectionMapColl;
+    OOTPileupCorrectionBuffer myOOTPileupCorrectionBuffer;
   };
 }
 

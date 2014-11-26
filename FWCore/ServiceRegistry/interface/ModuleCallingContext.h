@@ -39,9 +39,17 @@ namespace edm {
     };
 
     ModuleCallingContext(ModuleDescription const* moduleDescription);
-    ModuleCallingContext(ModuleDescription const* moduleDescription, State state, ParentContext const& parent);
 
-    void setContext(State state, ParentContext const& parent);
+    ModuleCallingContext(ModuleDescription const* moduleDescription,
+                         State state,
+                         ParentContext const& parent,
+                         ModuleCallingContext const* previousOnThread);
+
+    void setContext(State state,
+                    ParentContext const& parent,
+                    ModuleCallingContext const* previousOnThread);
+
+    void setState(State state) { state_ = state; }
 
     ModuleDescription const* moduleDescription() const { return moduleDescription_; }
     State state() const { return state_; }
@@ -64,8 +72,14 @@ namespace edm {
     // pointer to itself.
     ModuleCallingContext const* getTopModuleCallingContext() const;
 
-  private:
+    // Returns the number of ModuleCallingContexts above this ModuleCallingContext
+    // in the series of linked context objects.
+    unsigned depth() const;
 
+    ModuleCallingContext const* previousModuleOnThread() const { return previousModuleOnThread_; }
+
+  private:
+    ModuleCallingContext const* previousModuleOnThread_;
     ModuleDescription const* moduleDescription_;
     ParentContext parent_;
     State state_;

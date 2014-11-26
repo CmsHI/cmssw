@@ -6,8 +6,6 @@
  *  
  *  This class provides access routines to get hold of the HLT Configuration
  *
- *  $Date: 2012/10/03 06:24:00 $
- *  $Revision: 1.46 $
  *
  *  \author Martin Grunewald
  *
@@ -34,14 +32,6 @@
 class HLTConfigProvider {
 
  private:
-  struct HLTConfigCounterSentry {
-    HLTConfigCounterSentry();
-    HLTConfigCounterSentry(HLTConfigCounterSentry const&);
-    HLTConfigCounterSentry(HLTConfigCounterSentry&&); // only C++11
-    ~HLTConfigCounterSentry();
-  };
-  HLTConfigCounterSentry sentry_;
-
  public:
   /// c'tor
   HLTConfigProvider();
@@ -255,6 +245,8 @@ class HLTConfigProvider {
   std::pair<int,int> prescaleValues(const edm::Event& iEvent, const edm::EventSetup& iSetup, const std::string& trigger) const;
   // any one negative => error in retrieving this (L1T or HLT) prescale
 
+  // In case of a complex Boolean expression as L1 seed
+  std::pair<std::vector<std::pair<std::string,int> >,int> prescaleValuesInDetail(const edm::Event& iEvent, const edm::EventSetup& iSetup, const std::string& trigger) const;
 
   /// low-level data member access 
   const std::vector<std::string>& prescaleLabels() const {

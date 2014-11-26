@@ -84,16 +84,31 @@ namespace edm {
     
     template< typename T>
     void
-    ProducingModuleAdaptorBase<T>::itemsToGet(BranchType iType, std::vector<ProductHolderIndex>& iIndices) const {
+    ProducingModuleAdaptorBase<T>::itemsToGet(BranchType iType, std::vector<ProductHolderIndexAndSkipBit>& iIndices) const {
       assert(not m_streamModules.empty());
       m_streamModules[0]->itemsToGet(iType,iIndices);
     }
     
     template< typename T>
     void
-    ProducingModuleAdaptorBase<T>::itemsMayGet(BranchType iType, std::vector<ProductHolderIndex>& iIndices) const {
+    ProducingModuleAdaptorBase<T>::itemsMayGet(BranchType iType, std::vector<ProductHolderIndexAndSkipBit>& iIndices) const {
       assert(not m_streamModules.empty());
-      m_streamModules[0]->itemsToGet(iType,iIndices);
+      m_streamModules[0]->itemsMayGet(iType,iIndices);
+    }
+
+    template<typename T>
+    std::vector<edm::ProductHolderIndexAndSkipBit> const&
+    ProducingModuleAdaptorBase<T>::itemsToGetFromEvent() const {
+      assert(not m_streamModules.empty());
+      return m_streamModules[0]->itemsToGetFromEvent();
+    }
+
+    template< typename T>
+    void
+    ProducingModuleAdaptorBase<T>::modulesDependentUpon(const std::string& iProcessName,
+                                                        std::vector<const char*>& oModuleLabels) const {
+      assert(not m_streamModules.empty());
+      return m_streamModules[0]->modulesDependentUpon(iProcessName, oModuleLabels);
     }
 
     template< typename T>
@@ -114,7 +129,7 @@ namespace edm {
     template< typename T>
     void
     ProducingModuleAdaptorBase<T>::doBeginStream(StreamID id) {
-      m_streamModules[id]->beginStream();
+      m_streamModules[id]->beginStream(id);
     }
     template< typename T>
     void
@@ -187,9 +202,26 @@ namespace edm {
     ProducingModuleAdaptorBase<T>::doRespondToCloseInputFile(FileBlock const& fb){}
     template< typename T>
     void
-    ProducingModuleAdaptorBase<T>::doPreForkReleaseResources(){}
+    ProducingModuleAdaptorBase<T>::doPreForkReleaseResources(){
+      for(auto m: m_streamModules) {
+        m->preForkReleaseResources();
+      }
+    }
     template< typename T>
     void
-    ProducingModuleAdaptorBase<T>::doPostForkReacquireResources(unsigned int iChildIndex, unsigned int iNumberOfChildren){}
+    ProducingModuleAdaptorBase<T>::doPostForkReacquireResources(unsigned int iChildIndex, unsigned int iNumberOfChildren){
+      for(auto m: m_streamModules) {
+        m->postForkReacquireResources(iChildIndex,iNumberOfChildren);
+      }
+    }
+
+    template< typename T>
+    void
+    ProducingModuleAdaptorBase<T>::doRegisterThinnedAssociations(ProductRegistry const& registry,
+                                                                 ThinnedAssociationsHelper& helper) {
+      assert(not m_streamModules.empty());
+      auto mod = m_streamModules[0];
+      mod->registerThinnedAssociations(registry, helper);
+    }
   }
 }

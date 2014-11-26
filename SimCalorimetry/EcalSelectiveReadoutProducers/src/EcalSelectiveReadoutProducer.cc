@@ -13,6 +13,7 @@
 
 #include <memory>
 #include <fstream>
+#include <atomic>
 
 
 using namespace std;
@@ -64,9 +65,17 @@ EcalSelectiveReadoutProducer::EcalSelectiveReadoutProducer(const edm::ParameterS
     produces<EESrFlagCollection>(eeSrFlagCollection_);
   }
 
+  useFullReadout_ = false;
+  useFullReadout_ = params.getParameter<bool>("UseFullReadout");
+
   theGeometry = 0;
   theTriggerTowerMap = 0;
   theElecMap = 0;
+
+  EB_token = consumes<EBDigiCollection>(edm::InputTag(digiProducer_, ebdigiCollection_));
+  EE_token = consumes<EEDigiCollection>(edm::InputTag(digiProducer_, eedigiCollection_));;
+  EcTP_token = consumes<EcalTrigPrimDigiCollection>(edm::InputTag(trigPrimProducer_, trigPrimCollection_));;
+
 }
 
 
@@ -81,7 +90,13 @@ EcalSelectiveReadoutProducer::produce(edm::Event& event, const edm::EventSetup& 
   if(useCondDb_){
     //getting selective readout configuration:
     edm::ESHandle<EcalSRSettings> hSr;
-    eventSetup.get<EcalSRSettingsRcd>().get(hSr);
+
+    if(useFullReadout_){
+      eventSetup.get<EcalSRSettingsRcd>().get("fullReadout",hSr);
+    }
+    else{
+      eventSetup.get<EcalSRSettingsRcd>().get(hSr);
+    }
     settings_ = hSr.product();
   }
   
@@ -171,7 +186,7 @@ const EBDigiCollection*
 EcalSelectiveReadoutProducer::getEBDigis(edm::Event& event) const
 {
   edm::Handle<EBDigiCollection> hEBDigis;
-  event.getByLabel(digiProducer_, ebdigiCollection_, hEBDigis);
+  event.getByToken(EB_token, hEBDigis);
   //product() method is called before id() in order to get an exception
   //if the handle is not available (check not done by id() method).
   const EBDigiCollection* result = hEBDigis.product();
@@ -187,7 +202,7 @@ const EEDigiCollection*
 EcalSelectiveReadoutProducer::getEEDigis(edm::Event& event) const
 {
   edm::Handle<EEDigiCollection> hEEDigis;
-  event.getByLabel(digiProducer_, eedigiCollection_, hEEDigis);
+  event.getByToken(EE_token, hEEDigis);
   //product() method is called before id() in order to get an exception
   //if the handle is not available (check not done by id() method).
   const EEDigiCollection* result = hEEDigis.product();
@@ -203,7 +218,7 @@ const EcalTrigPrimDigiCollection*
 EcalSelectiveReadoutProducer::getTrigPrims(edm::Event& event) const
 {
   edm::Handle<EcalTrigPrimDigiCollection> hTPDigis;
-  event.getByLabel(trigPrimProducer_, trigPrimCollection_, hTPDigis);
+  event.getByToken(EcTP_token, hTPDigis);
   return hTPDigis.product();
 }
 
@@ -295,13 +310,13 @@ void EcalSelectiveReadoutProducer::checkWeights(const edm::Event& evt,
 						const edm::ProductID& noZsDigiId) const{
   const vector<float> & weights = settings_->dccNormalizedWeights_[0]; //params_.getParameter<vector<double> >("dccNormalizedWeights");
   int nFIRTaps = EcalSelectiveReadoutSuppressor::getFIRTapCount();
-  static bool warnWeightCnt = true;
-  if((int)weights.size() > nFIRTaps && warnWeightCnt){
+  static std::atomic<bool> warnWeightCnt{true};
+  bool expected = true;
+  if((int)weights.size() > nFIRTaps && warnWeightCnt.compare_exchange_strong(expected,false,std::memory_order_acq_rel)){
       edm::LogWarning("Configuration") << "The list of DCC zero suppression FIR "
 	"weights given in parameter dccNormalizedWeights is longer "
 	"than the expected depth of the FIR filter :(" << nFIRTaps << "). "
 	"The last weights will be discarded.";
-      warnWeightCnt = false; //it's not needed to repeat the warning.
   }
 
   if(weights.size()>0){

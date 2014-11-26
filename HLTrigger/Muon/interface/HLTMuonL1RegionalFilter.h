@@ -3,11 +3,9 @@
 
 /** \class HLTMuonL1RegionalFilter
  *
- *  
+ *
  *  This filter cuts on MinPt and Quality in specified eta regions
  *
- *  $Date: 2011/05/01 08:22:48 $
- *  $Revision: 1.3 $
  *
  *  \author Cristina Botta, Zoltan Gecse
  *
@@ -24,7 +22,7 @@ class HLTMuonL1RegionalFilter : public HLTFilter {
     explicit HLTMuonL1RegionalFilter(const edm::ParameterSet&);
     ~HLTMuonL1RegionalFilter();
     static void fillDescriptions(edm::ConfigurationDescriptions & descriptions);
-    virtual bool hltFilter(edm::Event&, const edm::EventSetup&, trigger::TriggerFilterObjectWithRefs & filterproduct);
+    virtual bool hltFilter(edm::Event&, const edm::EventSetup&, trigger::TriggerFilterObjectWithRefs & filterproduct) const override;
 
   private:
     /// input tag identifying the product containing muons
@@ -59,7 +57,7 @@ class HLTMuonL1RegionalFilter : public HLTFilter {
     /// the eight lowest order or least significant bits correspond to the qulity codes above;
     /// if a bit is 1, that code is accepted, otherwise not;
     /// example: 11101000 accepts qualities 3, 5, 6, 7
-    /// 
+    ///
     /// the vector of quality bit masks, one for each eta region
     std::vector<int> qualityBitMasks_;
 

@@ -3,13 +3,11 @@
 
 /** \class HLTFiltCand
  *
- *  
+ *
  *  This class is an HLTFilter (-> EDFilter) implementing a very basic
  *  HLT trigger acting on candidates, requiring a g/e/m/j tuple above
  *  pt cuts
  *
- *  $Date: 2009/04/08 14:24:27 $
- *  $Revision: 1.4 $
  *
  *  \author Martin Grunewald
  *
@@ -41,7 +39,7 @@ class HLTFiltCand : public HLTFilter {
       explicit HLTFiltCand(const edm::ParameterSet&);
       ~HLTFiltCand();
       static void fillDescriptions(edm::ConfigurationDescriptions & descriptions);
-      virtual bool hltFilter(edm::Event&, const edm::EventSetup&, trigger::TriggerFilterObjectWithRefs & filterproduct);
+      virtual bool hltFilter(edm::Event&, const edm::EventSetup&, trigger::TriggerFilterObjectWithRefs & filterproduct) const override;
 
    private:
       edm::InputTag photTag_;  // input tag identifying product containing photons

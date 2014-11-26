@@ -405,7 +405,7 @@ mergeOfflineParallelResults="""
 # if merged file already exists it will be moved to a backup file (~)
 
 # run TkAlOfflinejobs.C
-echo "Merging results from parallel jobs with TkAlOfflineJobsMerge.C"
+echo -e "\n\nMerging results from parallel jobs with TkAlOfflineJobsMerge.C"
 #set directory to which TkAlOfflineJobsMerge.C saves the merged file
 # export OUTPUTDIR=.oO[datadir]Oo.
 export OUTPUTDIR=.
@@ -416,22 +416,15 @@ cp .oO[CMSSW_BASE]Oo./src/Alignment/OfflineValidation/scripts/merge_TrackerOffli
 # ls -al .oO[datadir]Oo./AlignmentValidation*.root > .oO[datadir]Oo./log_rootfilelist.txt
 ls -al AlignmentValidation*.root > .oO[datadir]Oo./log_rootfilelist.txt
 
-# Remove parallel job files if merged file exists
-for file in $(cmsLs -l /store/caf/user/$USER/.oO[eosdir]Oo. |awk '{print $5}')
-do
-    if [[ ${file} = /store/caf/user/$USER/.oO[eosdir]Oo./AlignmentValidation*_[0-9].root ]]
-    then
-        cmsRm ${file}
-    fi
-done
-
+# Remove parallel job files
+.oO[rmUnmerged]Oo.
 """
 
 
 ######################################################################
 ######################################################################
 mergeOfflineParJobsTemplate="""
-void TkAlOfflineJobsMerge(TString pars, TString outFile)
+int TkAlOfflineJobsMerge(TString pars, TString outFile)
 {
 // load framework lite just to find the CMSSW libs...
 gSystem->Load("libFWCoreFWLite");
@@ -439,7 +432,7 @@ AutoLibraryLoader::enable();
 //compile the macro
 gROOT->ProcessLine(".L merge_TrackerOfflineValidation.C++");
 
-hadd(pars, outFile);
+return hadd(pars, outFile);
 }
 """
 

@@ -1,5 +1,4 @@
 
-// $Id: BeamProfileVtxGenerator.cc,v 1.11 2009/08/29 00:12:38 sunanda Exp $
 
 #include "IOMC/EventVertexGenerators/interface/BeamProfileVtxGenerator.h"
 #include "FWCore/Utilities/interface/Exception.h"
@@ -18,7 +17,7 @@
 #include<string>
 
 BeamProfileVtxGenerator::BeamProfileVtxGenerator(const edm::ParameterSet & p) :
-  BaseEvtVtxGenerator(p), fRandom(0) {
+  BaseEvtVtxGenerator(p) {
   
   meanX(p.getParameter<double>("BeamMeanX")*cm);
   meanY(p.getParameter<double>("BeamMeanY")*cm);
@@ -39,7 +38,7 @@ BeamProfileVtxGenerator::BeamProfileVtxGenerator(const edm::ParameterSet & p) :
   
   if (ffile) {
     std::string file = p.getParameter<std::string>("File");
-    ifstream is(file.c_str(), std::ios::in);
+    std::ifstream is(file.c_str(), std::ios::in);
     if (is) {
       double elem,sum=0;
       while (!is.eof()) {
@@ -83,15 +82,14 @@ BeamProfileVtxGenerator::BeamProfileVtxGenerator(const edm::ParameterSet & p) :
 }
 
 BeamProfileVtxGenerator::~BeamProfileVtxGenerator() {
-  delete fRandom;
 }
 
 
 //Hep3Vector * BeamProfileVtxGenerator::newVertex() {
-HepMC::FourVector* BeamProfileVtxGenerator::newVertex() {
+HepMC::FourVector* BeamProfileVtxGenerator::newVertex(CLHEP::HepRandomEngine* engine) {
   double aX, aY;
   if (ffile) {
-    double r1 = (dynamic_cast<CLHEP::RandFlat*>(fRandom))->fire();
+    double r1 = engine->flat();
     int ixy = 0, ix, iy;
     for (unsigned int i=0; i<fdistn.size(); i++) {
       if (r1 > fdistn[i]) ixy = i+1;
@@ -101,15 +99,15 @@ HepMC::FourVector* BeamProfileVtxGenerator::newVertex() {
     } else {
       ix = ixy%nBinx; iy = (ixy-ix)/nBinx;
     }
-    aX = 0.5*(2*ix-nBinx+2*(dynamic_cast<CLHEP::RandFlat*>(fRandom))->fire())*fSigmaX + fMeanX ;
-    aY = 0.5*(2*iy-nBiny+2*(dynamic_cast<CLHEP::RandFlat*>(fRandom))->fire())*fSigmaY + fMeanY ;
+    aX = 0.5*(2*ix-nBinx+2*engine->flat())*fSigmaX + fMeanX ;
+    aY = 0.5*(2*iy-nBiny+2*engine->flat())*fSigmaY + fMeanY ;
   } else {
     if (fType) {
-      aX = fSigmaX*(dynamic_cast<CLHEP::RandGaussQ*>(fRandom))->fire() +fMeanX;
-      aY = fSigmaY*(dynamic_cast<CLHEP::RandGaussQ*>(fRandom))->fire() +fMeanY;
+      aX = fSigmaX*CLHEP::RandGaussQ::shoot(engine) + fMeanX;
+      aY = fSigmaY*CLHEP::RandGaussQ::shoot(engine) + fMeanY;
     } else {
-      aX = (dynamic_cast<CLHEP::RandFlat*>(fRandom))->fire(-0.5*fSigmaX,0.5*fSigmaX) + fMeanX ;
-      aY = (dynamic_cast<CLHEP::RandFlat*>(fRandom))->fire(-0.5*fSigmaY,0.5*fSigmaY) + fMeanY;
+      aX = CLHEP::RandFlat::shoot(engine, -0.5*fSigmaX, 0.5*fSigmaX) + fMeanX ;
+      aY = CLHEP::RandFlat::shoot(engine, -0.5*fSigmaY, 0.5*fSigmaY) + fMeanY;
     }
   }
 
@@ -200,12 +198,5 @@ void BeamProfileVtxGenerator::eta(double s) {
 }
 
 void BeamProfileVtxGenerator::setType(bool s) { 
-
   fType = s;
-  delete fRandom;
-  
-  if (fType == true)
-    fRandom = new CLHEP::RandGaussQ(getEngine());
-  else
-    fRandom = new CLHEP::RandFlat(getEngine());
 }

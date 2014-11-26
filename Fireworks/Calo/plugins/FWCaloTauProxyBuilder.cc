@@ -8,7 +8,6 @@
 //
 // Original Author:
 //         Created:  Sun Jan  6 23:57:00 EST 2008
-// $Id: FWCaloTauProxyBuilder.cc,v 1.16 2010/10/22 14:34:44 amraktad Exp $
 //
 
 // system include files
@@ -43,6 +42,7 @@ private:
    FWCaloTauProxyBuilder(const FWCaloTauProxyBuilder&);    // stop default
    const FWCaloTauProxyBuilder& operator=(const FWCaloTauProxyBuilder&);    // stop default
 
+   using FWTauProxyBuilderBase::buildViewType;
    virtual void buildViewType( const FWEventItem* iItem, TEveElementList* product, FWViewType::EType viewType , const FWViewContext* vc);
 
 };

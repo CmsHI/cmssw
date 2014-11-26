@@ -15,13 +15,14 @@
  * to a RecoTauPiZero and returns a double indicating the quality of
  * the candidate.  Lower numbers are better.
  *
- * $Id $
  */
 
 #include <vector>
 #include <boost/ptr_container/ptr_vector.hpp>
 #include "DataFormats/ParticleFlowCandidate/interface/PFCandidateFwd.h"
 #include "RecoTauTag/RecoTau/interface/RecoTauPluginsCommon.h"
+
+#include "FWCore/Framework/interface/ConsumesCollector.h"
 
 namespace reco {
 // Forward declarations
@@ -36,7 +37,7 @@ class RecoTauPiZeroBuilderPlugin : public RecoTauEventHolderPlugin {
     // Storing the result in an auto ptr on function return allows
     // allows us to safely release the ptr_vector in the virtual function
     typedef std::auto_ptr<PiZeroVector> return_type;
-    explicit RecoTauPiZeroBuilderPlugin(const edm::ParameterSet& pset):
+    explicit RecoTauPiZeroBuilderPlugin(const edm::ParameterSet& pset, edm::ConsumesCollector &&iC):
         RecoTauEventHolderPlugin(pset) {}
     virtual ~RecoTauPiZeroBuilderPlugin() {}
     /// Build a collection of piZeros from objects in the input jet
@@ -59,5 +60,5 @@ class RecoTauPiZeroQualityPlugin : public RecoTauNamedPlugin {
 typedef edmplugin::PluginFactory<reco::tau::RecoTauPiZeroQualityPlugin*
 (const edm::ParameterSet&)> RecoTauPiZeroQualityPluginFactory;
 typedef edmplugin::PluginFactory<reco::tau::RecoTauPiZeroBuilderPlugin*
-(const edm::ParameterSet&)> RecoTauPiZeroBuilderPluginFactory;
+(const edm::ParameterSet&, edm::ConsumesCollector &&iC)> RecoTauPiZeroBuilderPluginFactory;
 #endif

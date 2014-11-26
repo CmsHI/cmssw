@@ -11,9 +11,7 @@
  *
  * \author Christian Veelken, LLR
  *
- * \version $Revision: 1.4 $
  *
- * $Id: PATJetCorrExtractor.h,v 1.4 2011/11/20 10:26:47 veelken Exp $
  *
  */
 
@@ -21,7 +19,8 @@
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/Utilities/interface/Exception.h"
 
-#include "JetMETCorrections/Objects/interface/JetCorrector.h"
+#include "JetMETCorrections/Type1MET/interface/JetCorrExtractorT.h"
+
 #include "DataFormats/Common/interface/RefToBase.h"
 #include "DataFormats/JetReco/interface/Jet.h"
 #include "DataFormats/PatCandidates/interface/Jet.h"
@@ -35,7 +34,7 @@ namespace
   std::string format_vstring(const std::vector<std::string>& v)
   {
     std::string retVal;
-  
+
     retVal.append("{ ");
 
     unsigned numEntries = v.size();
@@ -43,9 +42,9 @@ namespace
       retVal.append(v[iEntry]);
       if ( iEntry < (numEntries - 1) ) retVal.append(", ");
     }
-    
+
     retVal.append(" }");
-    
+
     return retVal;
   }
 }
@@ -54,17 +53,24 @@ class PATJetCorrExtractor
 {
  public:
 
-  reco::Candidate::LorentzVector operator()(const pat::Jet& jet, const std::string& jetCorrLabel, 
-					    const edm::Event* evt = 0, const edm::EventSetup* es = 0, 
-					    double jetCorrEtaMax = 9.9, 
-					    const reco::Candidate::LorentzVector* rawJetP4_specified = 0)
+  reco::Candidate::LorentzVector operator()(const pat::Jet rawJet, const reco::JetCorrector* jetCorr,
+					    double jetCorrEtaMax = 9.9,
+					    const reco::Candidate::LorentzVector * const rawJetP4_specified = nullptr) const
+  {
+     JetCorrExtractorT<pat::Jet> jetCorrExtractor;
+     return jetCorrExtractor(rawJet, jetCorr, jetCorrEtaMax, rawJetP4_specified);
+  }
+
+  reco::Candidate::LorentzVector operator()(const pat::Jet& jet, const std::string& jetCorrLabel,
+					    double jetCorrEtaMax = 9.9,
+					    const reco::Candidate::LorentzVector* const rawJetP4_specified = nullptr) const
   {
     reco::Candidate::LorentzVector corrJetP4;
 
     try {
       corrJetP4 = jet.correctedP4(jetCorrLabel);
     } catch( cms::Exception e ) {
-      throw cms::Exception("InvalidRequest") 
+      throw cms::Exception("InvalidRequest")
 	<< "The JEC level " << jetCorrLabel << " does not exist !!\n"
 	<< "Available levels = " << format_vstring(jet.availableJECLevels()) << ".\n";
     }

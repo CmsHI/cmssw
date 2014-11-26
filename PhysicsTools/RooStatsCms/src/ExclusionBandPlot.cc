@@ -1,8 +1,7 @@
-// @(#)root/hist:$Id: ExclusionBandPlot.cc,v 1.3 2009/04/15 11:10:44 dpiparo Exp $
 // Author: Danilo.Piparo@cern.ch   01/06/2008
 
-#include "assert.h"
-#include "math.h"
+#include <cassert>
+#include <cmath>
 
 #if (defined (STANDALONE) or defined (__CINT__) )
    #include "ExclusionBandPlot.h"

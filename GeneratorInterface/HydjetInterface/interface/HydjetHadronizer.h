@@ -1,7 +1,6 @@
 #ifndef HydjetHadronizer_h
 #define HydjetHadronizer_h
 
-// $Id: HydjetHadronizer.h,v 1.9 2011/02/17 20:54:45 yarba Exp $
 
 /** \class HydjetHadronizer
 *
@@ -20,6 +19,10 @@
 #include <string>
 #include <vector>
 #include <math.h>
+
+namespace CLHEP {
+  class HepRandomEngine;
+}
 
 namespace HepMC {
   class GenEvent;
@@ -51,6 +54,12 @@ namespace gen
     const char* classname() const;
 
   private:
+
+    virtual void doSetRandomEngine(CLHEP::HepRandomEngine* v) override;
+    virtual std::vector<std::string> const& doSharedResources() const override { return theSharedResources; }
+
+    static const std::vector<std::string> theSharedResources;
+
     void					add_heavy_ion_rec(HepMC::GenEvent *evt);
     HepMC::GenParticle*	                        build_hyjet( int index, int barcode );	
     HepMC::GenVertex*                           build_hyjet_vertex(int i, int id);

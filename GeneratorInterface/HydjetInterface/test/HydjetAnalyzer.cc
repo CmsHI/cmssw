@@ -13,7 +13,6 @@
 //
 // Original Author:  Yetkin Yilmaz
 //         Created:  Tue Dec 18 09:44:41 EST 2007
-// $Id: HydjetAnalyzer.cc,v 1.24 2011/01/21 15:45:18 yilmaz Exp $
 //
 //
 
@@ -59,7 +58,6 @@
 using namespace std;
 
 static const int MAXPARTICLES = 5000000;
-static const int MAXVTX = 1000;
 static const int ETABINS = 3; // Fix also in branch string
 
 //

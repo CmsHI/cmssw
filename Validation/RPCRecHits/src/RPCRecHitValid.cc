@@ -5,12 +5,9 @@
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 
 #include "SimDataFormats/TrackingAnalysis/interface/TrackingParticle.h"
-#include "SimDataFormats/TrackingHit/interface/PSimHitContainer.h"
-#include "DataFormats/TrackingRecHit/interface/TrackingRecHitFwd.h"
 #include "DataFormats/TrackReco/interface/Track.h"
 #include "DataFormats/MuonReco/interface/Muon.h"
 #include "DataFormats/MuonDetId/interface/MuonSubdetId.h"
-#include "DataFormats/RPCRecHit/interface/RPCRecHitCollection.h"
 #include "Geometry/CommonDetUnit/interface/GeomDet.h"
 #include "Geometry/CommonDetUnit/interface/TrackingGeometry.h"
 #include "Geometry/CommonTopologies/interface/StripTopology.h"
@@ -19,7 +16,6 @@
 #include "Geometry/RPCGeometry/interface/RPCGeometry.h"
 #include "Geometry/RPCGeometry/interface/RPCGeomServ.h"
 #include "Geometry/Records/interface/MuonGeometryRecord.h"
-#include "SimGeneral/TrackingAnalysis/interface/SimHitTPAssociationProducer.h"
 
 #include <algorithm>
 
@@ -29,25 +25,24 @@ typedef MonitorElement* MEP;
 
 RPCRecHitValid::RPCRecHitValid(const edm::ParameterSet& pset)
 {
-  simHitLabel_ = pset.getParameter<edm::InputTag>("simHit");
-  recHitLabel_ = pset.getParameter<edm::InputTag>("recHit");
-  simParticleLabel_ = pset.getParameter<edm::InputTag>("simTrack");
-  simHitAssocLabel_ = pset.getParameter<edm::InputTag>("simHitAssoc");
-  muonLabel_ = pset.getParameter<edm::InputTag>("muon");
-  dbe_ = edm::Service<DQMStore>().operator->();
-  if ( !dbe_ )
-  {
-    edm::LogError("RPCRecHitValid") << "No DQMStore instance\n";
-    return;
-  }
+  simHitToken_ = consumes<SimHits>(pset.getParameter<edm::InputTag>("simHit"));
+  recHitToken_ = consumes<RecHits>(pset.getParameter<edm::InputTag>("recHit"));
+  simParticleToken_ = consumes<SimParticles>(pset.getParameter<edm::InputTag>("simTrack"));
+  simHitAssocToken_ = consumes<SimHitAssoc>(pset.getParameter<edm::InputTag>("simHitAssoc"));
+  muonToken_ = consumes<reco::MuonCollection>(pset.getParameter<edm::InputTag>("muon"));
 
-  // Book MonitorElements
   subDir_ = pset.getParameter<std::string>("subDir");
-  h_.bookHistograms(dbe_, subDir_);
+}
+
+void RPCRecHitValid::bookHistograms(DQMStore::IBooker& booker,
+                                    edm::Run const & run, edm::EventSetup const & eventSetup)
+{
+  // Book MonitorElements
+  h_.bookHistograms(booker, subDir_);
 
   // SimHit plots, not compatible to RPCPoint-RPCRecHit comparison
-  dbe_->setCurrentFolder(subDir_+"/HitProperty");
-  h_simParticleType = dbe_->book1D("SimHitPType", "SimHit particle type", 11, 0, 11);
+  booker.setCurrentFolder(subDir_+"/HitProperty");
+  h_simParticleType = booker.book1D("SimHitPType", "SimHit particle type", 11, 0, 11);
   h_simParticleType->getTH1()->SetMinimum(0);
   if ( TH1* h = h_simParticleType->getTH1() )
   {
@@ -64,17 +59,17 @@ RPCRecHitValid::RPCRecHitValid(const edm::ParameterSet& pset)
     h->GetXaxis()->SetBinLabel(11, "Other"  );
   }
 
-  dbe_->setCurrentFolder(subDir_+"/Track");
+  booker.setCurrentFolder(subDir_+"/Track");
 
-  h_nRPCHitPerSimMuon        = dbe_->book1D("NRPCHitPerSimMuon"       , "Number of RPC SimHit per SimMuon", 11, -0.5, 10.5);
-  h_nRPCHitPerSimMuonBarrel  = dbe_->book1D("NRPCHitPerSimMuonBarrel" , "Number of RPC SimHit per SimMuon", 11, -0.5, 10.5);
-  h_nRPCHitPerSimMuonOverlap = dbe_->book1D("NRPCHitPerSimMuonOverlap", "Number of RPC SimHit per SimMuon", 11, -0.5, 10.5);
-  h_nRPCHitPerSimMuonEndcap  = dbe_->book1D("NRPCHitPerSimMuonEndcap" , "Number of RPC SimHit per SimMuon", 11, -0.5, 10.5);
+  h_nRPCHitPerSimMuon        = booker.book1D("NRPCHitPerSimMuon"       , "Number of RPC SimHit per SimMuon", 11, -0.5, 10.5);
+  h_nRPCHitPerSimMuonBarrel  = booker.book1D("NRPCHitPerSimMuonBarrel" , "Number of RPC SimHit per SimMuon", 11, -0.5, 10.5);
+  h_nRPCHitPerSimMuonOverlap = booker.book1D("NRPCHitPerSimMuonOverlap", "Number of RPC SimHit per SimMuon", 11, -0.5, 10.5);
+  h_nRPCHitPerSimMuonEndcap  = booker.book1D("NRPCHitPerSimMuonEndcap" , "Number of RPC SimHit per SimMuon", 11, -0.5, 10.5);
 
-  h_nRPCHitPerRecoMuon        = dbe_->book1D("NRPCHitPerRecoMuon"       , "Number of RPC RecHit per RecoMuon", 11, -0.5, 10.5);
-  h_nRPCHitPerRecoMuonBarrel  = dbe_->book1D("NRPCHitPerRecoMuonBarrel" , "Number of RPC RecHit per RecoMuon", 11, -0.5, 10.5);
-  h_nRPCHitPerRecoMuonOverlap = dbe_->book1D("NRPCHitPerRecoMuonOverlap", "Number of RPC RecHit per RecoMuon", 11, -0.5, 10.5);
-  h_nRPCHitPerRecoMuonEndcap  = dbe_->book1D("NRPCHitPerRecoMuonEndcap" , "Number of RPC RecHit per RecoMuon", 11, -0.5, 10.5);
+  h_nRPCHitPerRecoMuon        = booker.book1D("NRPCHitPerRecoMuon"       , "Number of RPC RecHit per RecoMuon", 11, -0.5, 10.5);
+  h_nRPCHitPerRecoMuonBarrel  = booker.book1D("NRPCHitPerRecoMuonBarrel" , "Number of RPC RecHit per RecoMuon", 11, -0.5, 10.5);
+  h_nRPCHitPerRecoMuonOverlap = booker.book1D("NRPCHitPerRecoMuonOverlap", "Number of RPC RecHit per RecoMuon", 11, -0.5, 10.5);
+  h_nRPCHitPerRecoMuonEndcap  = booker.book1D("NRPCHitPerRecoMuonEndcap" , "Number of RPC RecHit per RecoMuon", 11, -0.5, 10.5);
 
   h_nRPCHitPerSimMuon        ->getTH1()->SetMinimum(0);
   h_nRPCHitPerSimMuonBarrel  ->getTH1()->SetMinimum(0);
@@ -88,31 +83,31 @@ RPCRecHitValid::RPCRecHitValid(const edm::ParameterSet& pset)
 
   float ptBins[] = {0, 1, 2, 5, 10, 20, 30, 50, 100, 200, 300, 500};
   const int nPtBins = sizeof(ptBins)/sizeof(float)-1;
-  h_simMuonBarrel_pt   = dbe_->book1D("SimMuonBarrel_pt"  , "SimMuon RPCHit in Barrel  p_{T};p_{T} [GeV/c^{2}]", nPtBins, ptBins);
-  h_simMuonOverlap_pt  = dbe_->book1D("SimMuonOverlap_pt" , "SimMuon RPCHit in Overlap p_{T};p_{T} [GeV/c^{2}]", nPtBins, ptBins);
-  h_simMuonEndcap_pt   = dbe_->book1D("SimMuonEndcap_pt"  , "SimMuon RPCHit in Endcap  p_{T};p_{T} [GeV/c^{2}]", nPtBins, ptBins);
-  h_simMuonNoRPC_pt    = dbe_->book1D("SimMuonNoRPC_pt" , "SimMuon without RPCHit p_{T};p_{T} [GeV/c^{2}]", nPtBins, ptBins);
-  h_simMuonBarrel_eta  = dbe_->book1D("SimMuonBarrel_eta" , "SimMuon RPCHit in Barrel  #eta;#eta", 50, -2.5, 2.5);
-  h_simMuonOverlap_eta = dbe_->book1D("SimMuonOverlap_eta", "SimMuon RPCHit in Overlap #eta;#eta", 50, -2.5, 2.5);
-  h_simMuonEndcap_eta  = dbe_->book1D("SimMuonEndcap_eta" , "SimMuon RPCHit in Endcap  #eta;#eta", 50, -2.5, 2.5);
-  h_simMuonNoRPC_eta   = dbe_->book1D("SimMuonNoRPC_eta", "SimMuon without RPCHit #eta;#eta", 50, -2.5, 2.5);
-  h_simMuonBarrel_phi  = dbe_->book1D("SimMuonBarrel_phi" , "SimMuon RPCHit in Barrel  #phi;#phi", 36, -TMath::Pi(), TMath::Pi());
-  h_simMuonOverlap_phi = dbe_->book1D("SimMuonOverlap_phi", "SimMuon RPCHit in Overlap #phi;#phi", 36, -TMath::Pi(), TMath::Pi());
-  h_simMuonEndcap_phi  = dbe_->book1D("SimMuonEndcap_phi" , "SimMuon RPCHit in Endcap  #phi;#phi", 36, -TMath::Pi(), TMath::Pi());
-  h_simMuonNoRPC_phi   = dbe_->book1D("SimMuonNoRPC_phi", "SimMuon without RPCHit #phi;#phi", 36, -TMath::Pi(), TMath::Pi());
+  h_simMuonBarrel_pt   = booker.book1D("SimMuonBarrel_pt"  , "SimMuon RPCHit in Barrel  p_{T};p_{T} [GeV/c^{2}]", nPtBins, ptBins);
+  h_simMuonOverlap_pt  = booker.book1D("SimMuonOverlap_pt" , "SimMuon RPCHit in Overlap p_{T};p_{T} [GeV/c^{2}]", nPtBins, ptBins);
+  h_simMuonEndcap_pt   = booker.book1D("SimMuonEndcap_pt"  , "SimMuon RPCHit in Endcap  p_{T};p_{T} [GeV/c^{2}]", nPtBins, ptBins);
+  h_simMuonNoRPC_pt    = booker.book1D("SimMuonNoRPC_pt" , "SimMuon without RPCHit p_{T};p_{T} [GeV/c^{2}]", nPtBins, ptBins);
+  h_simMuonBarrel_eta  = booker.book1D("SimMuonBarrel_eta" , "SimMuon RPCHit in Barrel  #eta;#eta", 50, -2.5, 2.5);
+  h_simMuonOverlap_eta = booker.book1D("SimMuonOverlap_eta", "SimMuon RPCHit in Overlap #eta;#eta", 50, -2.5, 2.5);
+  h_simMuonEndcap_eta  = booker.book1D("SimMuonEndcap_eta" , "SimMuon RPCHit in Endcap  #eta;#eta", 50, -2.5, 2.5);
+  h_simMuonNoRPC_eta   = booker.book1D("SimMuonNoRPC_eta", "SimMuon without RPCHit #eta;#eta", 50, -2.5, 2.5);
+  h_simMuonBarrel_phi  = booker.book1D("SimMuonBarrel_phi" , "SimMuon RPCHit in Barrel  #phi;#phi", 36, -TMath::Pi(), TMath::Pi());
+  h_simMuonOverlap_phi = booker.book1D("SimMuonOverlap_phi", "SimMuon RPCHit in Overlap #phi;#phi", 36, -TMath::Pi(), TMath::Pi());
+  h_simMuonEndcap_phi  = booker.book1D("SimMuonEndcap_phi" , "SimMuon RPCHit in Endcap  #phi;#phi", 36, -TMath::Pi(), TMath::Pi());
+  h_simMuonNoRPC_phi   = booker.book1D("SimMuonNoRPC_phi", "SimMuon without RPCHit #phi;#phi", 36, -TMath::Pi(), TMath::Pi());
 
-  h_recoMuonBarrel_pt   = dbe_->book1D("RecoMuonBarrel_pt"  , "RecoMuon RPCHit in Barrel  p_{T};p_{T} [GeV/c^{2}]", nPtBins, ptBins);
-  h_recoMuonOverlap_pt  = dbe_->book1D("RecoMuonOverlap_pt" , "RecoMuon RPCHit in Overlap p_{T};p_{T} [GeV/c^{2}]", nPtBins, ptBins);
-  h_recoMuonEndcap_pt   = dbe_->book1D("RecoMuonEndcap_pt"  , "RecoMuon RPCHit in Endcap  p_{T};p_{T} [GeV/c^{2}]", nPtBins, ptBins);
-  h_recoMuonNoRPC_pt    = dbe_->book1D("RecoMuonNoRPC_pt" , "RecoMuon without RPCHit p_{T};p_{T} [GeV/c^{2}]", nPtBins, ptBins);
-  h_recoMuonBarrel_eta  = dbe_->book1D("RecoMuonBarrel_eta" , "RecoMuon RPCHit in Barrel  #eta;#eta", 50, -2.5, 2.5);
-  h_recoMuonOverlap_eta = dbe_->book1D("RecoMuonOverlap_eta", "RecoMuon RPCHit in Overlap #eta;#eta", 50, -2.5, 2.5);
-  h_recoMuonEndcap_eta  = dbe_->book1D("RecoMuonEndcap_eta" , "RecoMuon RPCHit in Endcap  #eta;#eta", 50, -2.5, 2.5);
-  h_recoMuonNoRPC_eta   = dbe_->book1D("RecoMuonNoRPC_eta", "RecoMuon without RPCHit #eta;#eta", 50, -2.5, 2.5);
-  h_recoMuonBarrel_phi  = dbe_->book1D("RecoMuonBarrel_phi" , "RecoMuon RPCHit in Barrel  #phi;#phi", 36, -TMath::Pi(), TMath::Pi());
-  h_recoMuonOverlap_phi = dbe_->book1D("RecoMuonOverlap_phi", "RecoMuon RPCHit in Overlap #phi;#phi", 36, -TMath::Pi(), TMath::Pi());
-  h_recoMuonEndcap_phi  = dbe_->book1D("RecoMuonEndcap_phi" , "RecoMuon RPCHit in Endcap  #phi;#phi", 36, -TMath::Pi(), TMath::Pi());
-  h_recoMuonNoRPC_phi   = dbe_->book1D("RecoMuonNoRPC_phi", "RecoMuon without RPCHit #phi;#phi", 36, -TMath::Pi(), TMath::Pi());
+  h_recoMuonBarrel_pt   = booker.book1D("RecoMuonBarrel_pt"  , "RecoMuon RPCHit in Barrel  p_{T};p_{T} [GeV/c^{2}]", nPtBins, ptBins);
+  h_recoMuonOverlap_pt  = booker.book1D("RecoMuonOverlap_pt" , "RecoMuon RPCHit in Overlap p_{T};p_{T} [GeV/c^{2}]", nPtBins, ptBins);
+  h_recoMuonEndcap_pt   = booker.book1D("RecoMuonEndcap_pt"  , "RecoMuon RPCHit in Endcap  p_{T};p_{T} [GeV/c^{2}]", nPtBins, ptBins);
+  h_recoMuonNoRPC_pt    = booker.book1D("RecoMuonNoRPC_pt" , "RecoMuon without RPCHit p_{T};p_{T} [GeV/c^{2}]", nPtBins, ptBins);
+  h_recoMuonBarrel_eta  = booker.book1D("RecoMuonBarrel_eta" , "RecoMuon RPCHit in Barrel  #eta;#eta", 50, -2.5, 2.5);
+  h_recoMuonOverlap_eta = booker.book1D("RecoMuonOverlap_eta", "RecoMuon RPCHit in Overlap #eta;#eta", 50, -2.5, 2.5);
+  h_recoMuonEndcap_eta  = booker.book1D("RecoMuonEndcap_eta" , "RecoMuon RPCHit in Endcap  #eta;#eta", 50, -2.5, 2.5);
+  h_recoMuonNoRPC_eta   = booker.book1D("RecoMuonNoRPC_eta", "RecoMuon without RPCHit #eta;#eta", 50, -2.5, 2.5);
+  h_recoMuonBarrel_phi  = booker.book1D("RecoMuonBarrel_phi" , "RecoMuon RPCHit in Barrel  #phi;#phi", 36, -TMath::Pi(), TMath::Pi());
+  h_recoMuonOverlap_phi = booker.book1D("RecoMuonOverlap_phi", "RecoMuon RPCHit in Overlap #phi;#phi", 36, -TMath::Pi(), TMath::Pi());
+  h_recoMuonEndcap_phi  = booker.book1D("RecoMuonEndcap_phi" , "RecoMuon RPCHit in Endcap  #phi;#phi", 36, -TMath::Pi(), TMath::Pi());
+  h_recoMuonNoRPC_phi   = booker.book1D("RecoMuonNoRPC_phi", "RecoMuon without RPCHit #phi;#phi", 36, -TMath::Pi(), TMath::Pi());
 
   h_simMuonBarrel_pt   ->getTH1()->SetMinimum(0);
   h_simMuonOverlap_pt  ->getTH1()->SetMinimum(0);
@@ -140,9 +135,9 @@ RPCRecHitValid::RPCRecHitValid(const edm::ParameterSet& pset)
   h_recoMuonEndcap_phi ->getTH1()->SetMinimum(0);
   h_recoMuonNoRPC_phi  ->getTH1()->SetMinimum(0);
 
-  dbe_->setCurrentFolder(subDir_+"/Occupancy");
+  booker.setCurrentFolder(subDir_+"/Occupancy");
 
-  h_eventCount = dbe_->book1D("EventCount", "Event count", 3, 1, 4);
+  h_eventCount = booker.book1D("EventCount", "Event count", 3, 1, 4);
   h_eventCount->getTH1()->SetMinimum(0);
   if ( h_eventCount )
   {
@@ -151,13 +146,14 @@ RPCRecHitValid::RPCRecHitValid(const edm::ParameterSet& pset)
     h->GetXaxis()->SetBinLabel(2, "eventEnd");
     h->GetXaxis()->SetBinLabel(3, "run");
   }
+  h_eventCount->Fill(3);
 
-  h_refPunchOccupancyBarrel_wheel   = dbe_->book1D("RefPunchOccupancyBarrel_wheel"  , "RefPunchthrough occupancy", 5, -2.5, 2.5);
-  h_refPunchOccupancyEndcap_disk    = dbe_->book1D("RefPunchOccupancyEndcap_disk"   , "RefPunchthrough occupancy", 9, -4.5, 4.5);
-  h_refPunchOccupancyBarrel_station = dbe_->book1D("RefPunchOccupancyBarrel_station", "RefPunchthrough occupancy", 4,  0.5, 4.5);
-  h_recPunchOccupancyBarrel_wheel   = dbe_->book1D("RecPunchOccupancyBarrel_wheel"  , "Punchthrough recHit occupancy", 5, -2.5, 2.5);
-  h_recPunchOccupancyEndcap_disk    = dbe_->book1D("RecPunchOccupancyEndcap_disk"   , "Punchthrough recHit occupancy", 9, -4.5, 4.5);
-  h_recPunchOccupancyBarrel_station = dbe_->book1D("RecPunchOccupancyBarrel_station", "Punchthrough recHit occupancy", 4,  0.5, 4.5);
+  h_refPunchOccupancyBarrel_wheel   = booker.book1D("RefPunchOccupancyBarrel_wheel"  , "RefPunchthrough occupancy", 5, -2.5, 2.5);
+  h_refPunchOccupancyEndcap_disk    = booker.book1D("RefPunchOccupancyEndcap_disk"   , "RefPunchthrough occupancy", 9, -4.5, 4.5);
+  h_refPunchOccupancyBarrel_station = booker.book1D("RefPunchOccupancyBarrel_station", "RefPunchthrough occupancy", 4,  0.5, 4.5);
+  h_recPunchOccupancyBarrel_wheel   = booker.book1D("RecPunchOccupancyBarrel_wheel"  , "Punchthrough recHit occupancy", 5, -2.5, 2.5);
+  h_recPunchOccupancyEndcap_disk    = booker.book1D("RecPunchOccupancyEndcap_disk"   , "Punchthrough recHit occupancy", 9, -4.5, 4.5);
+  h_recPunchOccupancyBarrel_station = booker.book1D("RecPunchOccupancyBarrel_station", "Punchthrough recHit occupancy", 4,  0.5, 4.5);
 
   h_refPunchOccupancyBarrel_wheel   ->getTH1()->SetMinimum(0);
   h_refPunchOccupancyEndcap_disk    ->getTH1()->SetMinimum(0);
@@ -166,10 +162,10 @@ RPCRecHitValid::RPCRecHitValid(const edm::ParameterSet& pset)
   h_recPunchOccupancyEndcap_disk    ->getTH1()->SetMinimum(0);
   h_recPunchOccupancyBarrel_station ->getTH1()->SetMinimum(0);
 
-  h_refPunchOccupancyBarrel_wheel_station = dbe_->book2D("RefPunchOccupancyBarrel_wheel_station", "RefPunchthrough occupancy", 5, -2.5, 2.5, 4, 0.5, 4.5);
-  h_refPunchOccupancyEndcap_disk_ring     = dbe_->book2D("RefPunchOccupancyEndcap_disk_ring"    , "RefPunchthrough occupancy", 9, -4.5, 4.5, 4, 0.5, 4.5);
-  h_recPunchOccupancyBarrel_wheel_station = dbe_->book2D("RecPunchOccupancyBarrel_wheel_station", "Punchthrough recHit occupancy", 5, -2.5, 2.5, 4, 0.5, 4.5);
-  h_recPunchOccupancyEndcap_disk_ring     = dbe_->book2D("RecPunchOccupancyEndcap_disk_ring"    , "Punchthrough recHit occupancy", 9, -4.5, 4.5, 4, 0.5, 4.5);
+  h_refPunchOccupancyBarrel_wheel_station = booker.book2D("RefPunchOccupancyBarrel_wheel_station", "RefPunchthrough occupancy", 5, -2.5, 2.5, 4, 0.5, 4.5);
+  h_refPunchOccupancyEndcap_disk_ring     = booker.book2D("RefPunchOccupancyEndcap_disk_ring"    , "RefPunchthrough occupancy", 9, -4.5, 4.5, 4, 0.5, 4.5);
+  h_recPunchOccupancyBarrel_wheel_station = booker.book2D("RecPunchOccupancyBarrel_wheel_station", "Punchthrough recHit occupancy", 5, -2.5, 2.5, 4, 0.5, 4.5);
+  h_recPunchOccupancyEndcap_disk_ring     = booker.book2D("RecPunchOccupancyEndcap_disk_ring"    , "Punchthrough recHit occupancy", 9, -4.5, 4.5, 4, 0.5, 4.5);
 
   h_refPunchOccupancyBarrel_wheel_station->getTH2F()->SetOption("COLZ");
   h_refPunchOccupancyEndcap_disk_ring    ->getTH2F()->SetOption("COLZ");
@@ -224,24 +220,6 @@ RPCRecHitValid::RPCRecHitValid(const edm::ParameterSet& pset)
     h_refPunchOccupancyEndcap_disk_ring  ->getTH2F()->GetYaxis()->SetBinLabel(i, binLabel);
     h_recPunchOccupancyEndcap_disk_ring  ->getTH2F()->GetYaxis()->SetBinLabel(i, binLabel);
   }
-}
-
-RPCRecHitValid::~RPCRecHitValid()
-{
-}
-
-void RPCRecHitValid::beginJob()
-{
-}
-
-void RPCRecHitValid::endJob()
-{
-}
-
-void RPCRecHitValid::beginRun(const edm::Run& run, const edm::EventSetup& eventSetup)
-{
-  if ( !dbe_ ) return;
-  h_eventCount->Fill(3);
 
   // Book roll-by-roll histograms
   edm::ESHandle<RPCGeometry> rpcGeom;
@@ -252,7 +230,7 @@ void RPCRecHitValid::beginRun(const edm::Run& run, const edm::EventSetup& eventS
   TrackingGeometry::DetContainer rpcDets = rpcGeom->dets();
   for ( auto det : rpcDets )
   {
-    RPCChamber* rpcCh = dynamic_cast<RPCChamber*>(det);
+    auto rpcCh = dynamic_cast<const RPCChamber*>(det);
     if ( !rpcCh ) continue;
 
     std::vector<const RPCRoll*> rolls = rpcCh->rolls();
@@ -279,13 +257,13 @@ void RPCRecHitValid::beginRun(const edm::Run& run, const edm::EventSetup& eventS
     }
   }
 
-  dbe_->setCurrentFolder(subDir_+"/Occupancy");
-  h_matchOccupancyBarrel_detId = dbe_->book1D("MatchOccupancyBarrel_detId", "Matched hit occupancy;roll index (can be arbitrary)", nRPCRollBarrel, 0, nRPCRollBarrel);
-  h_matchOccupancyEndcap_detId = dbe_->book1D("MatchOccupancyEndcap_detId", "Matched hit occupancy;roll index (can be arbitrary)", nRPCRollEndcap, 0, nRPCRollEndcap);
-  h_refOccupancyBarrel_detId = dbe_->book1D("RefOccupancyBarrel_detId", "Reference hit occupancy;roll index (can be arbitrary)", nRPCRollBarrel, 0, nRPCRollBarrel);
-  h_refOccupancyEndcap_detId = dbe_->book1D("RefOccupancyEndcap_detId", "Reference hit occupancy;roll index (can be arbitrary)", nRPCRollEndcap, 0, nRPCRollEndcap);
-  h_noiseOccupancyBarrel_detId = dbe_->book1D("NoiseOccupancyBarrel_detId", "Noise occupancy;roll index (can be arbitrary)", nRPCRollBarrel, 0, nRPCRollBarrel);
-  h_noiseOccupancyEndcap_detId = dbe_->book1D("NoiseOccupancyEndcap_detId", "Noise occupancy;roll index (can be arbitrary)", nRPCRollEndcap, 0, nRPCRollEndcap);
+  booker.setCurrentFolder(subDir_+"/Occupancy");
+  h_matchOccupancyBarrel_detId = booker.book1D("MatchOccupancyBarrel_detId", "Matched hit occupancy;roll index (can be arbitrary)", nRPCRollBarrel, 0, nRPCRollBarrel);
+  h_matchOccupancyEndcap_detId = booker.book1D("MatchOccupancyEndcap_detId", "Matched hit occupancy;roll index (can be arbitrary)", nRPCRollEndcap, 0, nRPCRollEndcap);
+  h_refOccupancyBarrel_detId = booker.book1D("RefOccupancyBarrel_detId", "Reference hit occupancy;roll index (can be arbitrary)", nRPCRollBarrel, 0, nRPCRollBarrel);
+  h_refOccupancyEndcap_detId = booker.book1D("RefOccupancyEndcap_detId", "Reference hit occupancy;roll index (can be arbitrary)", nRPCRollEndcap, 0, nRPCRollEndcap);
+  h_noiseOccupancyBarrel_detId = booker.book1D("NoiseOccupancyBarrel_detId", "Noise occupancy;roll index (can be arbitrary)", nRPCRollBarrel, 0, nRPCRollBarrel);
+  h_noiseOccupancyEndcap_detId = booker.book1D("NoiseOccupancyEndcap_detId", "Noise occupancy;roll index (can be arbitrary)", nRPCRollEndcap, 0, nRPCRollEndcap);
 
   h_matchOccupancyBarrel_detId->getTH1()->SetMinimum(0);
   h_matchOccupancyEndcap_detId->getTH1()->SetMinimum(0);
@@ -294,8 +272,8 @@ void RPCRecHitValid::beginRun(const edm::Run& run, const edm::EventSetup& eventS
   h_noiseOccupancyBarrel_detId->getTH1()->SetMinimum(0);
   h_noiseOccupancyEndcap_detId->getTH1()->SetMinimum(0);
 
-  h_rollAreaBarrel_detId = dbe_->bookProfile("RollAreaBarrel_detId", "Roll area;roll index;Area", nRPCRollBarrel, 0., 1.*nRPCRollBarrel, 0., 1e5);
-  h_rollAreaEndcap_detId = dbe_->bookProfile("RollAreaEndcap_detId", "Roll area;roll index;Area", nRPCRollEndcap, 0., 1.*nRPCRollEndcap, 0., 1e5);
+  h_rollAreaBarrel_detId = booker.bookProfile("RollAreaBarrel_detId", "Roll area;roll index;Area", nRPCRollBarrel, 0., 1.*nRPCRollBarrel, 0., 1e5);
+  h_rollAreaEndcap_detId = booker.bookProfile("RollAreaEndcap_detId", "Roll area;roll index;Area", nRPCRollEndcap, 0., 1.*nRPCRollEndcap, 0., 1e5);
 
   for ( auto detIdToIndex : detIdToIndexMapBarrel_ )
   {
@@ -330,17 +308,11 @@ void RPCRecHitValid::beginRun(const edm::Run& run, const edm::EventSetup& eventS
 
     h_rollAreaEndcap_detId->Fill(index, area);
   }
-}
-
-void RPCRecHitValid::endRun(const edm::Run& run, const edm::EventSetup& eventSetup)
-{
-  if ( !dbe_ ) return;
 
 }
 
 void RPCRecHitValid::analyze(const edm::Event& event, const edm::EventSetup& eventSetup)
 {
-  if ( !dbe_ ) return;
   h_eventCount->Fill(1);
 
   // Get the RPC Geometry
@@ -349,7 +321,7 @@ void RPCRecHitValid::analyze(const edm::Event& event, const edm::EventSetup& eve
 
   // Retrieve SimHits from the event
   edm::Handle<edm::PSimHitContainer> simHitHandle;
-  if ( !event.getByLabel(simHitLabel_, simHitHandle) )
+  if ( !event.getByToken(simHitToken_, simHitHandle) )
   {
     edm::LogInfo("RPCRecHitValid") << "Cannot find simHit collection\n";
     return;
@@ -357,7 +329,7 @@ void RPCRecHitValid::analyze(const edm::Event& event, const edm::EventSetup& eve
 
   // Retrieve RecHits from the event
   edm::Handle<RPCRecHitCollection> recHitHandle;
-  if ( !event.getByLabel(recHitLabel_, recHitHandle) )
+  if ( !event.getByToken(recHitToken_, recHitHandle) )
   {
     edm::LogInfo("RPCRecHitValid") << "Cannot find recHit collection\n";
     return;
@@ -365,7 +337,7 @@ void RPCRecHitValid::analyze(const edm::Event& event, const edm::EventSetup& eve
 
   // Get SimParticles
   edm::Handle<TrackingParticleCollection> simParticleHandle;
-  if ( !event.getByLabel(simParticleLabel_, simParticleHandle) )
+  if ( !event.getByToken(simParticleToken_, simParticleHandle) )
   {
     edm::LogInfo("RPCRecHitValid") << "Cannot find TrackingParticle collection\n";
     return;
@@ -373,15 +345,15 @@ void RPCRecHitValid::analyze(const edm::Event& event, const edm::EventSetup& eve
 
   // Get SimParticle to SimHit association map
   edm::Handle<SimHitTPAssociationProducer::SimHitTPAssociationList> simHitsTPAssoc;
-  if ( !event.getByLabel(simHitAssocLabel_, simHitsTPAssoc) )
+  if ( !event.getByToken(simHitAssocToken_, simHitsTPAssoc) )
   {
     edm::LogInfo("RPCRecHitValid") << "Cannot find TrackingParticle to SimHit association map\n";
     return;
   }
 
   // Get RecoMuons
-  edm::Handle<edm::View<reco::Muon> > muonHandle;
-  if ( !event.getByLabel(muonLabel_, muonHandle) )
+  edm::Handle<reco::MuonCollection> muonHandle;
+  if ( !event.getByToken(muonToken_, muonHandle) )
   {
     edm::LogInfo("RPCRecHitValid") << "Cannot find muon collection\n";
     return;
@@ -714,7 +686,7 @@ void RPCRecHitValid::analyze(const edm::Event& event, const edm::EventSetup& eve
   h_.nMatchHitEndcap->Fill(nMatchHitEndcap);
 
   // Reco Muon hits
-  for ( edm::View<reco::Muon>::const_iterator muon = muonHandle->begin();
+  for ( reco::MuonCollection::const_iterator muon = muonHandle->begin();
         muon != muonHandle->end(); ++muon )
   {
     if ( !muon->isGlobalMuon() ) continue;
@@ -885,6 +857,7 @@ void RPCRecHitValid::analyze(const edm::Event& event, const edm::EventSetup& eve
   }
 
   h_eventCount->Fill(2);
+
 }
 
 DEFINE_FWK_MODULE(RPCRecHitValid);

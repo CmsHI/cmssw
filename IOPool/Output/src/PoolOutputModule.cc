@@ -1,6 +1,5 @@
 #include "IOPool/Output/interface/PoolOutputModule.h"
 
-#include "FWCore/MessageLogger/interface/JobReport.h"
 #include "IOPool/Output/src/RootOutputFile.h"
 
 #include "FWCore/Framework/interface/EventPrincipal.h"
@@ -29,7 +28,8 @@
 
 namespace edm {
   PoolOutputModule::PoolOutputModule(ParameterSet const& pset) :
-    OutputModule(pset),
+  edm::one::OutputModuleBase::OutputModuleBase(pset),
+  one::OutputModule<WatchInputFiles>(pset),
     rootServiceChecker_(),
     auxItems_(),
     selectedOutputItemList_(),
@@ -250,14 +250,10 @@ namespace edm {
 
   void PoolOutputModule::writeLuminosityBlock(LuminosityBlockPrincipal const& lb, ModuleCallingContext const* mcc) {
     rootOutputFile_->writeLuminosityBlock(lb, mcc);
-      Service<JobReport> reportSvc;
-      reportSvc->reportLumiSection(lb.id().run(), lb.id().luminosityBlock());
   }
 
   void PoolOutputModule::writeRun(RunPrincipal const& r, ModuleCallingContext const* mcc) {
     rootOutputFile_->writeRun(r, mcc);
-      Service<JobReport> reportSvc;
-      reportSvc->reportRunNumber(r.run());
   }
 
   void PoolOutputModule::reallyCloseFile() {
@@ -270,6 +266,7 @@ namespace edm {
     writeProductDescriptionRegistry();
     writeParentageRegistry();
     writeBranchIDListRegistry();
+    writeThinnedAssociationsHelper();
     writeProductDependencies();
     finishEndFile();
   }
@@ -287,6 +284,7 @@ namespace edm {
   void PoolOutputModule::writeProductDescriptionRegistry() { rootOutputFile_->writeProductDescriptionRegistry(); }
   void PoolOutputModule::writeParentageRegistry() { rootOutputFile_->writeParentageRegistry(); }
   void PoolOutputModule::writeBranchIDListRegistry() { rootOutputFile_->writeBranchIDListRegistry(); }
+  void PoolOutputModule::writeThinnedAssociationsHelper() { rootOutputFile_->writeThinnedAssociationsHelper(); }
   void PoolOutputModule::writeProductDependencies() { rootOutputFile_->writeProductDependencies(); }
   void PoolOutputModule::finishEndFile() { rootOutputFile_->finishEndFile(); rootOutputFile_.reset(); }
   bool PoolOutputModule::isFileOpen() const { return rootOutputFile_.get() != 0; }

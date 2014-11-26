@@ -9,6 +9,12 @@
 
 #include "HLTrigger/HLTcore/interface/HLTFilter.h"
 
+#include "DataFormats/HLTReco/interface/TriggerFilterObjectWithRefs.h"
+
+namespace edm {
+  class ConfigurationDescriptions;
+}
+
 //
 // class declaration
 //
@@ -18,20 +24,20 @@ class HLTElectronEtFilter : public HLTFilter {
    public:
       explicit HLTElectronEtFilter(const edm::ParameterSet&);
       ~HLTElectronEtFilter();
-      virtual bool hltFilter(edm::Event&, const edm::EventSetup&, trigger::TriggerFilterObjectWithRefs & filterproduct);
+      virtual bool hltFilter(edm::Event&, const edm::EventSetup&, trigger::TriggerFilterObjectWithRefs & filterproduct) const override;
+      static void fillDescriptions(edm::ConfigurationDescriptions & descriptions);
 
    private:
       edm::InputTag candTag_; // input tag identifying product that contains filtered electrons
-      edm::InputTag isoTag_; // input tag identifying product that contains isolated map
-      edm::InputTag nonIsoTag_; // input tag identifying product that contains non-isolated map
-      
-      double EtEB_;     // threshold for regular cut (x < thr) - ECAL barrel 
+      edm::EDGetTokenT<trigger::TriggerFilterObjectWithRefs> candToken_;
+
+      double EtEB_;     // threshold for regular cut (x < thr) - ECAL barrel
       double EtEE_;     // threshold for regular cut (x < thr) - ECAL endcap
-      
+
       bool doIsolated_;
 
-      edm::InputTag L1IsoCollTag_; 
-      edm::InputTag L1NonIsoCollTag_; 
+      edm::InputTag L1IsoCollTag_;
+      edm::InputTag L1NonIsoCollTag_;
       int ncandcut_;
 };
 

@@ -9,7 +9,6 @@
 //
 // Original Author:  Chris Jones
 //         Created:  Thu May 29 20:58:23 CDT 2008
-// $Id: CmsShowMainFrame.cc,v 1.121 2012/03/16 02:51:51 amraktad Exp $
 
 #include "FWCore/Common/interface/EventBase.h"
 
@@ -543,7 +542,7 @@ void CmsShowMainFrame::loadEvent(const edm::EventBase& event)
 {
    m_runEntry  ->SetUIntNumber(event.id().run());
    m_lumiEntry ->SetUIntNumber(event.id().luminosityBlock());
-   m_eventEntry->SetUIntNumber(event.id().event());
+   m_eventEntry->SetULong64Number(event.id().event());
 
    m_timeText->SetText( fireworks::getLocalTime( event ).c_str() );
 }
@@ -744,7 +743,7 @@ CmsShowMainFrame::showFWorksInfo()
          TString infoFileName("/data/version.txt");
          fireworks::setPath(infoFileName);
          std::string line;
-         ifstream infoFile(infoFileName);
+         std::ifstream infoFile(infoFileName);
          while (std::getline(infoFile, line))
          {
             ++number_of_lines;

@@ -44,10 +44,12 @@ using namespace std;
 PreshowerPhiClusterProducer::PreshowerPhiClusterProducer(const edm::ParameterSet& ps) {
 
   // use configuration file to setup input/output collection names 
-  preshHitProducer_   = ps.getParameter<edm::InputTag>("preshRecHitProducer");
+  preshHitToken_   =  
+	  consumes<EcalRecHitCollection>(ps.getParameter<edm::InputTag>("preshRecHitProducer"));
   
   // Name of a SuperClusterCollection to make associations:
-  endcapSClusterProducer_   = ps.getParameter<edm::InputTag>("endcapSClusterProducer");
+  endcapSClusterToken_   = 
+      consumes<reco::SuperClusterCollection>(ps.getParameter<edm::InputTag>("endcapSClusterProducer"));
   
   // Output collections:
   preshClusterCollectionX_ = ps.getParameter<std::string>("preshClusterCollectionX");
@@ -62,6 +64,8 @@ PreshowerPhiClusterProducer::PreshowerPhiClusterProducer(const edm::ParameterSet
   float esStripECut          = ps.getParameter<double>("esStripEnergyCut");
   esPhiClusterDeltaEta_      = ps.getParameter<double>("esPhiClusterDeltaEta");
   esPhiClusterDeltaPhi_      = ps.getParameter<double>("esPhiClusterDeltaPhi");
+
+  etThresh_                  = ps.getParameter<double>("etThresh");
 
   presh_algo = new PreshowerPhiClusterAlgo(esStripECut);
 }
@@ -97,11 +101,11 @@ void PreshowerPhiClusterProducer::produce(edm::Event& evt, const edm::EventSetup
     topology_p  = new EcalPreshowerTopology(geoHandle);
   
   // fetch the product (pSuperClusters)
-  evt.getByLabel(endcapSClusterProducer_, pSuperClusters);   
+  evt.getByToken(endcapSClusterToken_, pSuperClusters);   
   const reco::SuperClusterCollection* SClusts = pSuperClusters.product();
   
   // fetch the product (RecHits)
-  evt.getByLabel( preshHitProducer_, pRecHits);
+  evt.getByToken( preshHitToken_, pRecHits);
   // pointer to the object in the product
   const EcalRecHitCollection* rechits = pRecHits.product(); // EcalRecHitCollection hit_collection = *rhcHandle;
   
@@ -248,8 +252,13 @@ void PreshowerPhiClusterProducer::produce(edm::Event& evt, const edm::EventSetup
     else if (condP1 == 0 && condP2 == 1) sc.setPreshowerPlanesStatus(2);
     else if (condP1 == 0 && condP2 == 0) sc.setPreshowerPlanesStatus(3);
 
-    new_SC.push_back(sc);
-    //cout<<"result : "<<sc.energy()<<" "<<it_super->energy()<<" "<<deltaE<<" "<<e1*mip_<<" "<<e2*mip_<<endl;    
+    if (etThresh_>0){ // calling postion().theta can be expensive
+        if (sc.energy()*sin(sc.position().theta())>etThresh_ ) 
+            new_SC.push_back(sc);
+    } else {
+        new_SC.push_back(sc);
+    }
+    
   } // end of cycle over SCs
   
   // copy the preshower clusters into collections and put in the Event:

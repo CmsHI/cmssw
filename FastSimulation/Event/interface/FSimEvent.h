@@ -26,18 +26,12 @@
  *
  */
 
-class RandomEngine;
-
 class FSimEvent : public FBaseSimEvent {
 
 public:
 
   /// Default constructor
   FSimEvent(const edm::ParameterSet& kine);
-
-  FSimEvent(const edm::ParameterSet& vtx,
-	    const edm::ParameterSet& kine,
-	    const RandomEngine* engine);
 
   ///  usual virtual destructor
   virtual ~FSimEvent();

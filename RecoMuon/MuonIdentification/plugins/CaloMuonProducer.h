@@ -14,9 +14,13 @@
 
 // user include files
 #include "FWCore/Framework/interface/Frameworkfwd.h"
-#include "FWCore/Framework/interface/EDProducer.h"
+#include "FWCore/Framework/interface/stream/EDProducer.h"
 
-class CaloMuonProducer : public edm::EDProducer {
+#include "DataFormats/MuonReco/interface/MuonFwd.h"
+#include "DataFormats/MuonReco/interface/CaloMuon.h"
+
+
+class CaloMuonProducer : public edm::stream::EDProducer<> {
  public:
    explicit CaloMuonProducer(const edm::ParameterSet&);
    ~CaloMuonProducer();
@@ -24,4 +28,5 @@ class CaloMuonProducer : public edm::EDProducer {
  private:
    virtual void     produce( edm::Event&, const edm::EventSetup& );
    edm::InputTag inputCollection;
+  edm::EDGetTokenT<reco::CaloMuonCollection > muonToken_;
 };

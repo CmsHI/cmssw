@@ -15,15 +15,15 @@ class TrackIPTagPlotter : public BaseTagInfoPlotter {
  public:
 
   TrackIPTagPlotter (const std::string & tagName, const EtaPtBin & etaPtBin,
-	const edm::ParameterSet& pSet, const bool& update, const unsigned int& mc, const bool& wf);
+		     const edm::ParameterSet& pSet, const unsigned int& mc, 
+		     const bool& wf, DQMStore::IBooker & ibook);
 
   ~TrackIPTagPlotter () ;
 
-  void analyzeTag (const reco::BaseTagInfo * baseTagInfo, const int & jetFlavour);
-  void analyzeTag (const reco::BaseTagInfo * baseTagInfo, const int & jetFlavour, const float & w);
+  void analyzeTag (const reco::BaseTagInfo * baseTagInfo, const double & jec, const int & jetFlavour);
+  void analyzeTag (const reco::BaseTagInfo * baseTagInfo, const double & jec, const int & jetFlavour, const float & w);
 
-  virtual void createPlotsForFinalize ();
-  virtual void finalize ();
+  virtual void finalize (DQMStore::IBooker & ibook_, DQMStore::IGetter & igetter_);
 
   void epsPlot(const std::string & name);
 
@@ -78,8 +78,6 @@ class TrackIPTagPlotter : public BaseTagInfoPlotter {
   FlavourHistograms<int> * selectedTrackQualHisto;
   FlavourHistograms2D<double, int> * trackMultVsJetPtHisto;
   FlavourHistograms2D<double, int> * selectedTrackMultVsJetPtHisto;
-
-  bool finalized;
 } ;
 
 #endif

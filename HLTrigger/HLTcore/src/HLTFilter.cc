@@ -1,12 +1,10 @@
 /** \class HLTFilter
  *
- *  
+ *
  *  This class derives from EDFilter and adds a few HLT specific
  *  items. Any and all HLT filters must derive from the HLTFilter
  *  class!
  *
- *  $Date: 2012/01/21 14:52:28 $
- *  $Revision: 1.8 $
  *
  *  \author Martin Grunewald
  *
@@ -22,7 +20,7 @@
 HLTFilter::HLTFilter(const edm::ParameterSet & config) :
   EDFilter(),
   saveTags_(config.getParameter<bool>("saveTags"))
-{ 
+{
   // register common HLTFilter products
   produces<trigger::TriggerFilterObjectWithRefs>();
 }
@@ -32,10 +30,10 @@ HLTFilter::makeHLTFilterDescription(edm::ParameterSetDescription& desc) {
   desc.add<bool>("saveTags",false);
 }
 
-HLTFilter::~HLTFilter() 
+HLTFilter::~HLTFilter()
 { }
 
-bool HLTFilter::filter(edm::Event & event, const edm::EventSetup & setup) {
+bool HLTFilter::filter(edm::StreamID, edm::Event & event, const edm::EventSetup & setup) const {
   std::auto_ptr<trigger::TriggerFilterObjectWithRefs> filterproduct( new trigger::TriggerFilterObjectWithRefs(path(event), module(event)) );
 
   // compute the result of the HLTFilter implementation

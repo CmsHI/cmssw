@@ -12,6 +12,7 @@ Test of the EventPrincipal class.
 #include "DataFormats/Provenance/interface/ProductRegistry.h"
 #include "DataFormats/Provenance/interface/BranchDescription.h"
 #include "DataFormats/Provenance/interface/BranchIDListHelper.h"
+#include "DataFormats/Provenance/interface/ThinnedAssociationsHelper.h"
 #include "DataFormats/Provenance/interface/Timestamp.h"
 #include "DataFormats/TestObjects/interface/ToyProducts.h"
 
@@ -28,8 +29,6 @@ Test of the EventPrincipal class.
 #include "FWCore/Version/interface/GetReleaseVersion.h"
 
 #include "cppunit/extensions/HelperMacros.h"
-
-#include "boost/shared_ptr.hpp"
 
 #include <cassert>
 #include <iostream>
@@ -66,28 +65,28 @@ void testEventGetRefBeforePut::failGetProductNotRegisteredTest() {
 
   std::auto_ptr<edm::ProductRegistry> preg(new edm::ProductRegistry);
   preg->setFrozen();
-  boost::shared_ptr<edm::BranchIDListHelper> branchIDListHelper(new edm::BranchIDListHelper());
-  branchIDListHelper->updateRegistries(*preg);
+  auto branchIDListHelper = std::make_shared<edm::BranchIDListHelper>();
+  branchIDListHelper->updateFromRegistry(*preg);
+  auto thinnedAssociationsHelper = std::make_shared<edm::ThinnedAssociationsHelper>();
   edm::EventID col(1L, 1L, 1L);
   std::string uuid = edm::createGlobalIdentifier();
   edm::Timestamp fakeTime;
   edm::ProcessConfiguration pc("PROD", edm::ParameterSetID(), edm::getReleaseVersion(), edm::getPassID());
-  boost::shared_ptr<edm::ProductRegistry const> pregc(preg.release());
-  boost::shared_ptr<edm::RunAuxiliary> runAux(new edm::RunAuxiliary(col.run(), fakeTime, fakeTime));
-  boost::shared_ptr<edm::RunPrincipal> rp(new edm::RunPrincipal(runAux, pregc, pc, &historyAppender_,0));
-  boost::shared_ptr<edm::LuminosityBlockAuxiliary> lumiAux(new edm::LuminosityBlockAuxiliary(rp->run(), 1, fakeTime, fakeTime));
-  boost::shared_ptr<edm::LuminosityBlockPrincipal>lbp(new edm::LuminosityBlockPrincipal(lumiAux, pregc, pc, &historyAppender_,0));
+  std::shared_ptr<edm::ProductRegistry const> pregc(preg.release());
+  auto runAux = std::make_shared<edm::RunAuxiliary>(col.run(), fakeTime, fakeTime);
+  auto rp = std::make_shared<edm::RunPrincipal>(runAux, pregc, pc, &historyAppender_,0);
+  auto lumiAux = std::make_shared<edm::LuminosityBlockAuxiliary>(rp->run(), 1, fakeTime, fakeTime);
+  auto lbp = std::make_shared<edm::LuminosityBlockPrincipal>(lumiAux, pregc, pc, &historyAppender_,0);
   lbp->setRunPrincipal(rp);
   edm::EventAuxiliary eventAux(col, uuid, fakeTime, true);
-  edm::EventPrincipal ep(pregc, branchIDListHelper, pc, &historyAppender_,edm::StreamID::invalidStreamID());
+  edm::EventPrincipal ep(pregc, branchIDListHelper, thinnedAssociationsHelper, pc, &historyAppender_,edm::StreamID::invalidStreamID());
   edm::ProcessHistoryRegistry phr;
   ep.fillEventPrincipal(eventAux, phr);
   ep.setLuminosityBlockPrincipal(lbp);
   try {
      edm::ParameterSet pset;
      pset.registerIt();
-     boost::shared_ptr<edm::ProcessConfiguration> processConfiguration(
-      new edm::ProcessConfiguration());
+     auto processConfiguration = std::make_shared<edm::ProcessConfiguration>();
      edm::ModuleDescription modDesc(pset.id(), "Blah", "blahs", processConfiguration.get(), edm::ModuleDescription::getUniqueID());
      edm::Event event(ep, modDesc, nullptr);
 
@@ -115,8 +114,7 @@ void testEventGetRefBeforePut::getRefTest() {
 
   edm::ParameterSet dummyProcessPset;
   dummyProcessPset.registerIt();
-  boost::shared_ptr<edm::ProcessConfiguration> processConfiguration(
-    new edm::ProcessConfiguration());
+  auto processConfiguration = std::make_shared<edm::ProcessConfiguration>();
   processConfiguration->setParameterSetID(dummyProcessPset.id());
 
   edm::ParameterSet pset;
@@ -138,21 +136,22 @@ void testEventGetRefBeforePut::getRefTest() {
   std::auto_ptr<edm::ProductRegistry> preg(new edm::ProductRegistry);
   preg->addProduct(product);
   preg->setFrozen();
-  boost::shared_ptr<edm::BranchIDListHelper> branchIDListHelper(new edm::BranchIDListHelper());
-  branchIDListHelper->updateRegistries(*preg);
+  auto branchIDListHelper = std::make_shared<edm::BranchIDListHelper>();
+  branchIDListHelper->updateFromRegistry(*preg);
+  auto thinnedAssociationsHelper = std::make_shared<edm::ThinnedAssociationsHelper>();
   edm::EventID col(1L, 1L, 1L);
   std::string uuid = edm::createGlobalIdentifier();
   edm::Timestamp fakeTime;
-  boost::shared_ptr<edm::ProcessConfiguration> pcPtr(new edm::ProcessConfiguration(processName, dummyProcessPset.id(), edm::getReleaseVersion(), edm::getPassID()));
+  auto pcPtr = std::make_shared<edm::ProcessConfiguration>(processName, dummyProcessPset.id(), edm::getReleaseVersion(), edm::getPassID());
   edm::ProcessConfiguration& pc = *pcPtr;
-  boost::shared_ptr<edm::ProductRegistry const> pregc(preg.release());
-  boost::shared_ptr<edm::RunAuxiliary> runAux(new edm::RunAuxiliary(col.run(), fakeTime, fakeTime));
-  boost::shared_ptr<edm::RunPrincipal> rp(new edm::RunPrincipal(runAux, pregc, pc, &historyAppender_,0));
-  boost::shared_ptr<edm::LuminosityBlockAuxiliary> lumiAux(new edm::LuminosityBlockAuxiliary(rp->run(), 1, fakeTime, fakeTime));
-  boost::shared_ptr<edm::LuminosityBlockPrincipal>lbp(new edm::LuminosityBlockPrincipal(lumiAux, pregc, pc, &historyAppender_,0));
+  std::shared_ptr<edm::ProductRegistry const> pregc(preg.release());
+  auto runAux = std::make_shared<edm::RunAuxiliary>(col.run(), fakeTime, fakeTime);
+  auto rp = std::make_shared<edm::RunPrincipal>(runAux, pregc, pc, &historyAppender_,0);
+  auto lumiAux = std::make_shared<edm::LuminosityBlockAuxiliary>(rp->run(), 1, fakeTime, fakeTime);
+  auto lbp = std::make_shared<edm::LuminosityBlockPrincipal>(lumiAux, pregc, pc, &historyAppender_,0);
   lbp->setRunPrincipal(rp);
   edm::EventAuxiliary eventAux(col, uuid, fakeTime, true);
-  edm::EventPrincipal ep(pregc, branchIDListHelper, pc, &historyAppender_,edm::StreamID::invalidStreamID());
+  edm::EventPrincipal ep(pregc, branchIDListHelper, thinnedAssociationsHelper, pc, &historyAppender_,edm::StreamID::invalidStreamID());
   edm::ProcessHistoryRegistry phr;
   ep.fillEventPrincipal(eventAux, phr);
   ep.setLuminosityBlockPrincipal(lbp);
@@ -162,11 +161,11 @@ void testEventGetRefBeforePut::getRefTest() {
     edm::ModuleDescription modDesc("Blah", label, pcPtr.get());
 
     edm::Event event(ep, modDesc, nullptr);
-    std::auto_ptr<edmtest::IntProduct> pr(new edmtest::IntProduct);
+    std::unique_ptr<edmtest::IntProduct> pr(new edmtest::IntProduct);
     pr->value = 10;
 
     refToProd = event.getRefBeforePut<edmtest::IntProduct>(productInstanceName);
-    event.put(pr,productInstanceName);
+    event.put(std::move(pr),productInstanceName);
     event.commit_();
   }
   catch (cms::Exception& x) {

@@ -2,7 +2,7 @@
 #define HcalRecHitsValidation_H
 
 #include "FWCore/Framework/interface/Frameworkfwd.h"
-#include "FWCore/Framework/interface/EDAnalyzer.h"
+#include "DQMServices/Core/interface/DQMEDAnalyzer.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/Framework/interface/ESHandle.h"
@@ -11,8 +11,6 @@
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/PluginManager/interface/ModuleDef.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
-
-#include "DQMServices/Core/interface/DQMStore.h"
 
 #include "DataFormats/HcalRecHit/interface/HcalRecHitCollections.h"
 #include "DataFormats/HcalRecHit/interface/HcalSourcePositionData.h"
@@ -55,13 +53,14 @@
 #include "RecoLocalCalo/EcalRecAlgos/interface/EcalSeverityLevelAlgo.h"
 
 
-class HcalRecHitsValidation : public edm::EDAnalyzer {
+class HcalRecHitsValidation : public thread_unsafe::DQMEDAnalyzer {
  public:
   HcalRecHitsValidation(edm::ParameterSet const& conf);
   ~HcalRecHitsValidation();
   virtual void analyze(edm::Event const& ev, edm::EventSetup const& c);
-  virtual void beginJob() ;
-  virtual void endJob() ;
+
+  virtual void bookHistograms(DQMStore::IBooker &, edm::Run const &, edm::EventSetup const &);
+
  private:
   
   virtual void fillRecHitsTmp(int subdet_, edm::Event const& ev);
@@ -69,8 +68,6 @@ class HcalRecHitsValidation : public edm::EDAnalyzer {
   double phi12(double phi1, double en1, double phi2, double en2);
   double dPhiWsign(double phi1,double phi2);  
 
-  DQMStore* dbe_;
-  
   std::string outputFile_;
   std::string hcalselector_;
   std::string ecalselector_;
@@ -81,9 +78,13 @@ class HcalRecHitsValidation : public edm::EDAnalyzer {
   bool        useAllHistos_;
 
   //RecHit Collection input tags
-  edm::InputTag theHBHERecHitCollectionLabel;
-  edm::InputTag theHFRecHitCollectionLabel;
-  edm::InputTag theHORecHitCollectionLabel;
+  edm::EDGetTokenT<edm::HepMCProduct> tok_evt_;
+  edm::EDGetTokenT<EBRecHitCollection> tok_EB_;
+  edm::EDGetTokenT<EERecHitCollection> tok_EE_;
+  edm::EDGetTokenT<edm::PCaloHitContainer> tok_hh_;
+  edm::EDGetTokenT<HBHERecHitCollection> tok_hbhe_;
+  edm::EDGetTokenT<HFRecHitCollection> tok_hf_;
+  edm::EDGetTokenT<HORecHitCollection> tok_ho_;
 
   // choice of subdetector in config : noise/HB/HE/HO/HF/ALL (0/1/2/3/4/5)
   int subdet_;

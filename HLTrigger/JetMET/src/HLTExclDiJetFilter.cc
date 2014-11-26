@@ -9,9 +9,6 @@
 
 #include "DataFormats/Common/interface/Ref.h"
 #include "DataFormats/Common/interface/Handle.h"
-#include "DataFormats/CaloTowers/interface/CaloTowerCollection.h"
-//#include "DataFormats/JetReco/interface/CaloJetCollection.h"
-//#include "DataFormats/Math/interface/deltaPhi.h"
 
 #include "FWCore/Framework/interface/ESHandle.h"
 #include "FWCore/Framework/interface/EventSetup.h"
@@ -28,18 +25,21 @@
 // constructors and destructor
 //
 template<typename T>
-HLTExclDiJetFilter<T>::HLTExclDiJetFilter(const edm::ParameterSet& iConfig) : 
+HLTExclDiJetFilter<T>::HLTExclDiJetFilter(const edm::ParameterSet& iConfig) :
   HLTFilter(iConfig),
-  inputJetTag_ (iConfig.template getParameter< edm::InputTag > ("inputJetTag")),
-  minPtJet_    (iConfig.template getParameter<double> ("minPtJet")), 
-  minHFe_      (iConfig.template getParameter<double> ("minHFe")), 
+  inputJetTag_ (iConfig.template getParameter<edm::InputTag> ("inputJetTag")),
+  caloTowerTag_(iConfig.template getParameter<edm::InputTag> ("caloTowerTag")),
+  minPtJet_    (iConfig.template getParameter<double> ("minPtJet")),
+  minHFe_      (iConfig.template getParameter<double> ("minHFe")),
   HF_OR_       (iConfig.template getParameter<bool> ("HF_OR")),
-  triggerType_    (iConfig.template getParameter<int> ("triggerType"))
+  triggerType_ (iConfig.template getParameter<int> ("triggerType"))
 {
   m_theJetToken = consumes<std::vector<T>>(inputJetTag_);
+  m_theCaloTowerCollectionToken = consumes<CaloTowerCollection>(caloTowerTag_);
   LogDebug("") << "HLTExclDiJetFilter: Input/minPtJet/minHFe/HF_OR/triggerType : "
 	       << inputJetTag_.encode() << " "
-	       << minPtJet_ << " " 
+	       << caloTowerTag_.encode() << " "
+	       << minPtJet_ << " "
 	       << minHFe_ << " "
 	       << HF_OR_ << " "
 	       << triggerType_;
@@ -51,9 +51,10 @@ HLTExclDiJetFilter<T>::~HLTExclDiJetFilter(){}
 template<typename T>
 void
 HLTExclDiJetFilter<T>::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
-  edm::ParameterSetDescription desc; 
+  edm::ParameterSetDescription desc;
   makeHLTFilterDescription(desc);
   desc.add<edm::InputTag>("inputJetTag",edm::InputTag("hltMCJetCorJetIcone5HF07"));
+  desc.add<edm::InputTag>("caloTowerTag",edm::InputTag("hltTowerMakerForAll"));
   desc.add<double>("minPtJet",30.0);
   desc.add<double>("minHFe",50.0);
   desc.add<bool>("HF_OR",false);
@@ -64,7 +65,7 @@ HLTExclDiJetFilter<T>::fillDescriptions(edm::ConfigurationDescriptions& descript
 // ------------ method called to produce the data  ------------
 template<typename T>
 bool
-HLTExclDiJetFilter<T>::hltFilter(edm::Event& iEvent, const edm::EventSetup& iSetup, trigger::TriggerFilterObjectWithRefs & filterproduct)
+HLTExclDiJetFilter<T>::hltFilter(edm::Event& iEvent, const edm::EventSetup& iSetup, trigger::TriggerFilterObjectWithRefs & filterproduct) const
 {
   using namespace std;
   using namespace edm;
@@ -82,15 +83,15 @@ HLTExclDiJetFilter<T>::hltFilter(edm::Event& iEvent, const edm::EventSetup& iSet
 
   // look at all candidates,  check cuts and add to filter object
   int n(0);
-  
-  double ptjet1=0., ptjet2=0.;  
+
+  double ptjet1=0., ptjet2=0.;
   double phijet1=0., phijet2=0.;
-  
+
   if(recojets->size() > 1){
     // events with two or more jets
-    
+
     int countjets =0;
-    
+
     TRef JetRef1,JetRef2;
 
     typename TCollection::const_iterator recojet ( recojets->begin() );
@@ -105,7 +106,7 @@ HLTExclDiJetFilter<T>::hltFilter(edm::Event& iEvent, const edm::EventSetup& iSet
       //
       if(countjets==1) {
 	ptjet2 = recojet->pt();
-        phijet2 = recojet->phi(); 
+        phijet2 = recojet->phi();
 
 	JetRef2 = TRef(recojets,distance(recojets->begin(),recojet));
       }
@@ -126,14 +127,14 @@ HLTExclDiJetFilter<T>::hltFilter(edm::Event& iEvent, const edm::EventSetup& iSet
   } // events with two or more jets
 
   // calotowers
-  bool hf_accept=false; 
+  bool hf_accept=false;
 
   if(n>0) {
      double ehfp(0.);
      double ehfm(0.);
 
      Handle<CaloTowerCollection> o;
-     iEvent.getByLabel("hltTowerMakerForAll",o);
+     iEvent.getByToken(m_theCaloTowerCollectionToken,o);
 //     if( o.isValid()) {
       for( CaloTowerCollection::const_iterator cc = o->begin(); cc != o->end(); ++cc ) {
        if(std::abs(cc->ieta())>28 && cc->energy()<4.0) continue;
@@ -150,8 +151,8 @@ HLTExclDiJetFilter<T>::hltFilter(edm::Event& iEvent, const edm::EventSetup& iSet
   } // n>0
 
 
-////////////////////////////////////////////////////////  
-  
+////////////////////////////////////////////////////////
+
 // filter decision
   bool accept(n>0 && hf_accept);
 

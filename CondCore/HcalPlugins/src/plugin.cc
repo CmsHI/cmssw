@@ -10,6 +10,29 @@
 #include "CondFormats/HcalObjects/interface/AllObjects.h"
 #include "CondFormats/DataRecord/interface/HcalAllRcds.h"
 
+#include "CondFormats/DataRecord/interface/HcalOOTPileupCorrectionRcd.h"
+#include "CondFormats/HcalObjects/interface/OOTPileupCorrectionColl.h"
+
+#include "CondFormats/DataRecord/interface/HcalOOTPileupCompatibilityRcd.h"
+#include "CondFormats/HcalObjects/interface/OOTPileupCorrectionBuffer.h"
+
+#include "CondFormats/DataRecord/interface/HcalOOTPileupCorrectionMapCollRcd.h"
+#include "CondFormats/HcalObjects/interface/OOTPileupCorrectionMapColl.h"
+
+//
+#include "CondCore/CondDB/interface/Serialization.h"
+
+
+// required for compiling ( the only available constructor in this class ). Can't be used in persistency without this...
+namespace cond {
+  template <> HcalCalibrationQIEData* createPayload<HcalCalibrationQIEData>( const std::string& payloadTypeName ){
+    if( payloadTypeName == "HcalCalibrationQIEData" ) return new HcalCalibrationQIEData(0);
+    throwException(std::string("Type mismatch, target object is type \"")+payloadTypeName+"\"",
+		   "createPayload" );
+  }
+
+}
+
 REGISTER_PLUGIN(HcalPedestalsRcd,HcalPedestals);
 REGISTER_PLUGIN(HcalPedestalWidthsRcd,HcalPedestalWidths);
 REGISTER_PLUGIN(HcalGainsRcd,HcalGains);
@@ -35,3 +58,6 @@ REGISTER_PLUGIN(HcalLongRecoParamsRcd,HcalLongRecoParams);
 REGISTER_PLUGIN(HcalMCParamsRcd,HcalMCParams);
 REGISTER_PLUGIN(HcalFlagHFDigiTimeParamsRcd,HcalFlagHFDigiTimeParams);
 REGISTER_PLUGIN(HcalTimingParamsRcd,HcalTimingParams);
+REGISTER_PLUGIN(HcalOOTPileupCorrectionRcd,OOTPileupCorrectionColl);
+REGISTER_PLUGIN(HcalOOTPileupCompatibilityRcd,OOTPileupCorrectionBuffer);
+REGISTER_PLUGIN(HcalOOTPileupCorrectionMapCollRcd,OOTPileupCorrectionMapColl);

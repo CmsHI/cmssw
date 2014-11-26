@@ -27,7 +27,7 @@ process.gbrwrappermaker = cms.EDAnalyzer('GBRWrapperMaker'
 
 process.load("CondCore.DBCommon.CondDBCommon_cfi")
 # output database (in this case local sqlite file)
-process.CondDBCommon.connect = 'sqlite_file:GBRWrapper.db'
+process.CondDBCommon.connect = 'sqlite_file:gedelectron_p4combination_14122013.db'
 
 
 process.PoolDBOutputService = cms.Service("PoolDBOutputService",
@@ -35,33 +35,10 @@ process.PoolDBOutputService = cms.Service("PoolDBOutputService",
     timetype = cms.untracked.string('runnumber'),
     toPut = cms.VPSet(
       cms.PSet(
-        record = cms.string('wgbrph_EBCorrection'),
-        tag = cms.string('wgbrph_EBCorrection')
-      ),
-      cms.PSet(
-        record = cms.string('wgbrph_EBUncertainty'),
-        tag = cms.string('wgbrph_EBUncertainty')
-      ),    
-      cms.PSet(
-        record = cms.string('wgbrph_EECorrection'),
-        tag = cms.string('wgbrph_EECorrection')
-      ),
-      cms.PSet(
-        record = cms.string('wgbrph_EEUncertainty'),
-        tag = cms.string('wgbrph_EEUncertainty')
-      ),
-      cms.PSet(
-    record = cms.string('wgbrph_PFLCCorrection'),
-    tag = cms.string('wgbrph_PFLCCorrection')
-    ),
-            cms.PSet(
-    record = cms.string('wgbrph_PFGlobalCorrection'),
-    tag = cms.string('wgbrph_PFGlobalCorrection')
-    ),
-                  cms.PSet(
-    record = cms.string('wgbrph_PFResolution'),
-    tag = cms.string('wgbrph_PFResolution')
-    ),
+        record = cms.string('gedelectron_p4combination'),
+        tag = cms.string('gedelectron_p4combination')
+      )
+      
   )
 )
             

@@ -10,6 +10,7 @@
 #include "FWCore/Utilities/interface/ProductKindOfType.h"
 #include "DataFormats/Provenance/interface/ModuleDescription.h"
 #include "DataFormats/Provenance/interface/ProductHolderIndexHelper.h"
+#include "DataFormats/Common/interface/FunctorHandleExceptionFactory.h"
 #include "FWCore/Framework/interface/EDConsumerBase.h"
 
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
@@ -26,13 +27,6 @@ namespace edm {
   }
 
   PrincipalGetAdapter::~PrincipalGetAdapter() {
-  }
-
-
-  void
-  principal_get_adapter_detail::deleter::operator()(std::pair<WrapperOwningHolder, BranchDescription const*> const p) const {
-    WrapperOwningHolder* edp = const_cast<WrapperOwningHolder*>(&p.first);
-    edp->reset();
   }
 
   void
@@ -108,17 +102,21 @@ namespace edm {
                                               EDGetToken token) const {
     EDConsumerBase::Labels labels;
     consumer_->labelsForToken(token,labels);
-    boost::shared_ptr<cms::Exception> exception(new Exception(errors::ProductNotFound));
-    if (kindOfType == PRODUCT_TYPE) {
-      *exception << "Principal::getByToken: Found zero products matching all criteria\nLooking for type: " << productType << "\n"
-      << "Looking for module label: " << labels.module << "\n" << "Looking for productInstanceName: " << labels.productInstance << "\n"
-      << (0==labels.process[0] ? "" : "Looking for process: ") << labels.process << "\n";
-    } else {
-      *exception << "Principal::getByToken: Found zero products matching all criteria\nLooking for a container with elements of type: " << productType << "\n"
-      << "Looking for module label: " << labels.module << "\n" << "Looking for productInstanceName: " << labels.productInstance << "\n"
-      << (0==labels.process[0] ? "" : "Looking for process: ") << labels.process << "\n";
-    }
-    return BasicHandle(exception);
+    //no need to copy memory since the exception will no occur after the
+    // const char* have been deleted
+    return BasicHandle(makeHandleExceptionFactory([labels,kindOfType,productType]()->std::shared_ptr<cms::Exception> {
+      std::shared_ptr<cms::Exception> exception(std::make_shared<Exception>(errors::ProductNotFound));
+      if (kindOfType == PRODUCT_TYPE) {
+        *exception << "Principal::getByToken: Found zero products matching all criteria\nLooking for type: " << productType << "\n"
+        << "Looking for module label: " << labels.module << "\n" << "Looking for productInstanceName: " << labels.productInstance << "\n"
+        << (0==labels.process[0] ? "" : "Looking for process: ") << labels.process << "\n";
+      } else {
+        *exception << "Principal::getByToken: Found zero products matching all criteria\nLooking for a container with elements of type: " << productType << "\n"
+        << "Looking for module label: " << labels.module << "\n" << "Looking for productInstanceName: " << labels.productInstance << "\n"
+        << (0==labels.process[0] ? "" : "Looking for process: ") << labels.process << "\n";
+      }
+      return exception;
+    }));
   }
 
   void
@@ -159,7 +157,9 @@ namespace edm {
   BasicHandle
   PrincipalGetAdapter::getByToken_(TypeID const& id, KindOfType kindOfType, EDGetToken token,
                                    ModuleCallingContext const* mcc) const {
-    ProductHolderIndex index = consumer_->indexFrom(token,InEvent,id);
+    ProductHolderIndexAndSkipBit indexAndBit = consumer_->indexFrom(token,branchType(),id);
+    ProductHolderIndex index = indexAndBit.productHolderIndex();
+    bool skipCurrentProcess = indexAndBit.skipCurrentProcess();
     if( unlikely(index == ProductHolderIndexInvalid)) {
       return makeFailToGetException(kindOfType,id,token);
     } else if( unlikely(index == ProductHolderIndexAmbiguous)) {
@@ -167,7 +167,7 @@ namespace edm {
       throwAmbiguousException(id, token);
     }
     bool ambiguous = false;
-    BasicHandle h = principal_.getByToken(kindOfType,id,index, token.willSkipCurrentProcess(), ambiguous, mcc);
+    BasicHandle h = principal_.getByToken(kindOfType, id, index, skipCurrentProcess, ambiguous, mcc);
     if (ambiguous) {
       // This deals with ambiguities where the process is not specified
       throwAmbiguousException(id, token);
@@ -221,16 +221,16 @@ namespace edm {
       throw edm::Exception(edm::errors::InsertFailure)
 	<< "Illegal attempt to 'put' an unregistered product.\n"
 	<< "No product is registered for\n"
-	<< "  process name:                '" << md_.processName() << "'\n"
-	<< "  module label:                '" << md_.moduleLabel() << "'\n"
 	<< "  product friendly class name: '" << type.friendlyClassName() << "'\n"
+  << "  module label:                '" << md_.moduleLabel() << "'\n"
 	<< "  product instance name:       '" << productInstanceName << "'\n"
+  << "  process name:                '" << md_.processName() << "'\n"
 
 	<< "The ProductRegistry contains:\n"
 	<< principal_.productRegistry()
 	<< '\n';
     }
-    ProductHolderBase const*  phb = principal_.getProductByIndex(index, false, false, nullptr);
+    ProductHolderBase const*  phb = principal_.getProductHolderByIndex(index);
     assert(phb != nullptr);
     return phb->branchDescription();
   }

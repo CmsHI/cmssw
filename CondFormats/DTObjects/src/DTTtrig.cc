@@ -16,6 +16,7 @@
 // Collaborating Class Headers --
 //-------------------------------
 //#include "CondFormats/DTObjects/interface/DTDataBuffer.h"
+#include "CondFormats/DTObjects/interface/DTBufferTree.h"
 
 //---------------
 // C++ Headers --
@@ -33,17 +34,17 @@
 //----------------
 DTTtrig::DTTtrig():
   dataVersion( " " ),
-  nsPerCount( 25.0 / 32.0 ) {
+  nsPerCount( 25.0 / 32.0 ),
+  dBuf(new DTBufferTree<int,int>) {
   dataList.reserve( 1000 );
-  dBuf = 0;
 }
 
 
 DTTtrig::DTTtrig( const std::string& version ):
   dataVersion( version ),
-  nsPerCount( 25.0 / 32.0 ) {
+  nsPerCount( 25.0 / 32.0 ),
+  dBuf(new DTBufferTree<int,int>) {
   dataList.reserve( 1000 );
-  dBuf = 0;
 }
 
 
@@ -68,8 +69,6 @@ DTTtrigData::DTTtrigData() :
 // Destructor --
 //--------------
 DTTtrig::~DTTtrig() {
-//  DTDataBuffer<int,int>::dropBuffer( mapName() );
-  delete dBuf;
 }
 
 
@@ -79,7 +78,6 @@ DTTtrigId::~DTTtrigId() {
 
 DTTtrigData::~DTTtrigData() {
 }
-
 
 //--------------
 // Operations --
@@ -113,16 +111,6 @@ int DTTtrig::get( int   wheelId,
   tTrig =
   tTrms =
   kFact = 0.0;
-
-//  std::string mName = mapName();
-//  DTBufferTree<int,int>* dBuf =
-//  DTDataBuffer<int,int>::findBuffer( mName );
-//  if ( dBuf == 0 ) {
-//    cacheMap();
-//    dBuf =
-//    DTDataBuffer<int,int>::findBuffer( mName );
-//  }
-  if ( dBuf == 0 ) cacheMap();
 
   std::vector<int> chanKey;
   chanKey.reserve(6);
@@ -251,10 +239,8 @@ std::string& DTTtrig::version() {
 
 
 void DTTtrig::clear() {
-//  DTDataBuffer<int,int>::dropBuffer( mapName() );
-  delete dBuf;
-  dBuf = 0;
   dataList.clear();
+  initialize();
   return;
 }
 
@@ -290,15 +276,6 @@ int DTTtrig::set( int   wheelId,
     tTrms /= nsPerCount;
   }
 
-//  std::string mName = mapName();
-//  DTBufferTree<int,int>* dBuf =
-//  DTDataBuffer<int,int>::findBuffer( mName );
-//  if ( dBuf == 0 ) {
-//    cacheMap();
-//    dBuf =
-//    DTDataBuffer<int,int>::findBuffer( mName );
-//  }
-  if ( dBuf == 0 ) cacheMap();
   std::vector<int> chanKey;
   chanKey.reserve(6);
   chanKey.push_back(   wheelId );
@@ -391,14 +368,9 @@ std::string DTTtrig::mapName() const {
 }
 
 
-void DTTtrig::cacheMap() const {
+void DTTtrig::initialize() {
 
-//  std::string mName = mapName();
-//  DTBufferTree<int,int>* dBuf =
-//  DTDataBuffer<int,int>::openBuffer( mName );
-  DTBufferTree<int,int>** pBuf;
-  pBuf = const_cast<DTBufferTree<int,int>**>( &dBuf );
-  *pBuf = new DTBufferTree<int,int>;
+  dBuf->clear();
 
   int entryNum = 0;
   int entryMax = dataList.size();
@@ -416,10 +388,6 @@ void DTTtrig::cacheMap() const {
     chanKey.push_back( chan.  layerId );
     chanKey.push_back( chan.   cellId );
     dBuf->insert( chanKey.begin(), chanKey.end(), entryNum++ );
-
   }
-
   return;
-
 }
-

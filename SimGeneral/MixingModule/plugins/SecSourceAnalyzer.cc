@@ -27,6 +27,7 @@
 
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
+#include "FWCore/Framework/interface/ModuleContextSentry.h"
 
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "SimDataFormats/Track/interface/SimTrackContainer.h"
@@ -63,7 +64,7 @@ SecSourceAnalyzer::SecSourceAnalyzer(const edm::ParameterSet& iConfig)
    TH1F * histoName = new TH1F("h","",10,0,10); 
    bool playback = false;
    
-   input_.reset(new edm::PileUp(iConfig.getParameter<edm::ParameterSet>("input"),
+   input_.reset(new edm::PileUp(iConfig.getParameter<edm::ParameterSet>("input"),"input",
                                 averageNumber,histoName,playback));
       
    dataStep2_ = iConfig.getParameter<bool>("dataStep2");
@@ -101,17 +102,18 @@ SecSourceAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 	 {
 	   input_->readPileUp( iEvent.id(),
                                vectorEventIDs_[ ibx-minBunch_ ],
-			       boost::bind(&SecSourceAnalyzer::getBranches, 
-					   this, _1, iEvent.moduleCallingContext()), ibx
-			       );
+                               boost::bind(&SecSourceAnalyzer::getBranches,
+                                           this, _1, iEvent.moduleCallingContext()), ibx,
+                               iEvent.streamID());
 	 }
        else
 	 {
 	   input_->readPileUp( iEvent.id(),
                                vectorEventIDs_[ ibx-minBunch_ ],
-			       boost::bind(&SecSourceAnalyzer::dummyFunction, 
-					   this, _1), ibx
-			       );
+                               boost::bind(&SecSourceAnalyzer::dummyFunction,
+                                           this, _1),
+                               ibx,
+                               iEvent.streamID());
 	 }
 
        nevt += vectorEventIDs_[ ibx-minBunch_ ].size() ;
@@ -127,7 +129,8 @@ void  SecSourceAnalyzer::getBranches(EventPrincipal const &ep,
   { 
     InternalContext internalContext(ep.id(), mcc);
     ParentContext parentContext(&internalContext);
-    ModuleCallingContext moduleCallingContext(&moduleDescription(), ModuleCallingContext::State::kRunning, parentContext);
+    ModuleCallingContext moduleCallingContext(&moduleDescription());
+    ModuleContextSentry moduleContextSentry(&moduleCallingContext, parentContext);
 
     std::cout <<"-> Get the event:  id " << ep.id() << std::endl;
     std::cout << "-> dataStep2_ = " << dataStep2_ << std::endl;
@@ -140,7 +143,7 @@ void  SecSourceAnalyzer::getBranches(EventPrincipal const &ep,
         // Get the SimTrack collection
         
 	// default version changed to transmit vertexoffset
-        boost::shared_ptr<Wrapper<std::vector<SimTrack> > const> shPtr =
+        std::shared_ptr<Wrapper<std::vector<SimTrack> > const> shPtr =
           getProductByTag<std::vector<SimTrack> >(ep, tag_, &moduleCallingContext);
     
         if (shPtr) 
@@ -154,7 +157,7 @@ void  SecSourceAnalyzer::getBranches(EventPrincipal const &ep,
     
         // default version changed to transmit vertexoffset
 	tag_ = InputTag("CFwriter","g4SimHits");
-        boost::shared_ptr<Wrapper<PCrossingFrame<SimTrack> > const> shPtr =
+        std::shared_ptr<Wrapper<PCrossingFrame<SimTrack> > const> shPtr =
           getProductByTag<PCrossingFrame<SimTrack> >(ep, tag_, &moduleCallingContext);
         
 	if (shPtr) 

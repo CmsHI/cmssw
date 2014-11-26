@@ -1,6 +1,6 @@
 #include "SimCalorimetry/CastorSim/plugins/CastorDigiProducer.h"
-#include "FWCore/Framework/interface/EDProducer.h"
 #include "DataFormats/Common/interface/Handle.h"
+#include "FWCore/Framework/interface/ConsumesCollector.h"
 #include "FWCore/Framework/interface/EDProducer.h"
 #include "FWCore/Framework/interface/ESHandle.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
@@ -14,11 +14,12 @@
 #include "SimDataFormats/CrossingFrame/interface/CrossingFrame.h"
 #include "SimDataFormats/CrossingFrame/interface/MixCollection.h"
 #include "FWCore/Utilities/interface/RandomNumberGenerator.h"
+#include "FWCore/Utilities/interface/StreamID.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
 #include "DataFormats/HcalDetId/interface/HcalCastorDetId.h"
 #include "SimGeneral/MixingModule/interface/PileUpEventPrincipal.h"
 
-CastorDigiProducer::CastorDigiProducer(const edm::ParameterSet& ps, edm::EDProducer& mixMod) 
+CastorDigiProducer::CastorDigiProducer(const edm::ParameterSet& ps, edm::one::EDProducerBase& mixMod, edm::ConsumesCollector& iC) 
 : theParameterMap(new CastorSimParameterMap(ps)),
   theCastorShape(new CastorShape()),
   theCastorIntegratedShape(new CaloShapeIntegrator(theCastorShape)),
@@ -30,6 +31,7 @@ CastorDigiProducer::CastorDigiProducer(const edm::ParameterSet& ps, edm::EDProdu
   theCastorDigitizer(0),
   theCastorHits()
 {
+  iC.consumes<std::vector<PCaloHit> >(edm::InputTag("g4SimHits", "CastorFI"));
   
   mixMod.produces<CastorDigiCollection>();
 
@@ -55,10 +57,6 @@ CastorDigiProducer::CastorDigiProducer(const edm::ParameterSet& ps, edm::EDProdu
          "which is not present in the configuration file.  You must add the service\n"
          "in the configuration file or remove the modules that require it.";
   }
-
-  CLHEP::HepRandomEngine& engine = rng->getEngine();
-  theAmplifier->setRandomEngine(engine);
-  theElectronicsSim->setRandomEngine(engine);
 }
 
 
@@ -92,31 +90,29 @@ void CastorDigiProducer::initializeEvent(edm::Event const&, edm::EventSetup cons
   theCastorDigitizer->initializeHits();
 }
 
-void CastorDigiProducer::accumulateCaloHits(std::vector<PCaloHit> const& hcalHits, int bunchCrossing) {
+void CastorDigiProducer::accumulateCaloHits(std::vector<PCaloHit> const& hcalHits, int bunchCrossing, CLHEP::HepRandomEngine* engine) {
   //fillFakeHits();
 
   if(theHitCorrection != 0) {
     theHitCorrection->fillChargeSums(hcalHits);
   }
-  theCastorDigitizer->add(hcalHits, bunchCrossing); 
+  theCastorDigitizer->add(hcalHits, bunchCrossing, engine);
 }
 
 void CastorDigiProducer::accumulate(edm::Event const& e, edm::EventSetup const&) {
   // Step A: Get and accumulate digitized hits 
-  edm::InputTag castorTag("g4SimHits", "CastorFI");
   edm::Handle<std::vector<PCaloHit> > castorHandle;
-  e.getByLabel(castorTag, castorHandle);
+  e.getByLabel(edm::InputTag("g4SimHits", "CastorFI"), castorHandle);
 
-  accumulateCaloHits(*castorHandle.product(), 0);
+  accumulateCaloHits(*castorHandle.product(), 0, randomEngine(e.streamID()));
 }
 
-void CastorDigiProducer::accumulate(PileUpEventPrincipal const& e, edm::EventSetup const&) {
+void CastorDigiProducer::accumulate(PileUpEventPrincipal const& e, edm::EventSetup const&, edm::StreamID const& streamID) {
   // Step A: Get and accumulate digitized hits 
-  edm::InputTag castorTag("g4SimHits", "CastorFI");
   edm::Handle<std::vector<PCaloHit> > castorHandle;
-  e.getByLabel(castorTag, castorHandle);
+  e.getByLabel(edm::InputTag("g4SimHits", "CastorFI"), castorHandle);
 
-  accumulateCaloHits(*castorHandle.product(), e.bunchCrossing());
+  accumulateCaloHits(*castorHandle.product(), e.bunchCrossing(), randomEngine(streamID));
 }
 
 void CastorDigiProducer::finalizeEvent(edm::Event& e, const edm::EventSetup& eventSetup) {
@@ -125,7 +121,7 @@ void CastorDigiProducer::finalizeEvent(edm::Event& e, const edm::EventSetup& eve
   std::auto_ptr<CastorDigiCollection> castorResult(new CastorDigiCollection());
 
   // Step C: Invoke the algorithm, getting back outputs.
-  theCastorDigitizer->run(*castorResult);
+  theCastorDigitizer->run(*castorResult, randomEngine(e.streamID()));
 
   edm::LogInfo("CastorDigiProducer") << "HCAL/Castor digis   : " << castorResult->size();
 
@@ -166,4 +162,17 @@ void CastorDigiProducer::checkGeometry(const edm::EventSetup & eventSetup) {
   theCastorDigitizer->setDetIds(castorCells);
 }
 
+CLHEP::HepRandomEngine* CastorDigiProducer::randomEngine(edm::StreamID const& streamID) {
+  unsigned int index = streamID.value();
+  if(index >= randomEngines_.size()) {
+    randomEngines_.resize(index + 1, nullptr);
+  }
+  CLHEP::HepRandomEngine* ptr = randomEngines_[index];
+  if(!ptr) {
+    edm::Service<edm::RandomNumberGenerator> rng;
+    ptr = &rng->getEngine(streamID);
+    randomEngines_[index] = ptr;
+  }
+  return ptr;
+}
 

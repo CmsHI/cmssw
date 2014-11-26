@@ -35,6 +35,7 @@
 #include <algorithm>
 #include <cmath>
 #include "DQMServices/Core/interface/MonitorElement.h"
+#include "DQMServices/Core/interface/DQMEDAnalyzer.h"
 
 #include "DataFormats/DetId/interface/DetId.h"
 // channel status
@@ -52,21 +53,18 @@
 #include "RecoLocalCalo/EcalRecAlgos/interface/EcalSeverityLevelAlgo.h"
 
 
-class HcalRecHitsAnalyzer : public edm::EDAnalyzer {
+class HcalRecHitsAnalyzer : public thread_unsafe::DQMEDAnalyzer {
  public:
   HcalRecHitsAnalyzer(edm::ParameterSet const& conf);
-  ~HcalRecHitsAnalyzer();
-  virtual void analyze(edm::Event const& ev, edm::EventSetup const& c);
-  virtual void beginJob() ;
-  virtual void endJob() ;
+
+  virtual void analyze(edm::Event const& ev, edm::EventSetup const& c) override;
+  virtual void bookHistograms(DQMStore::IBooker &, edm::Run const &, edm::EventSetup const &) override;
  private:
   
   virtual void fillRecHitsTmp(int subdet_, edm::Event const& ev);
   double dR(double eta1, double phi1, double eta2, double phi2);
   double phi12(double phi1, double en1, double phi2, double en2);
   double dPhiWsign(double phi1,double phi2);  
-
-  DQMStore* dbe_;
   
   std::string outputFile_;
   std::string hcalselector_;
@@ -78,9 +76,12 @@ class HcalRecHitsAnalyzer : public edm::EDAnalyzer {
   bool        useAllHistos_;
 
   //RecHit Collection input tags
-  edm::InputTag theHBHERecHitCollectionLabel;
-  edm::InputTag theHFRecHitCollectionLabel;
-  edm::InputTag theHORecHitCollectionLabel;
+  edm::EDGetTokenT<HBHERecHitCollection> tok_hbhe_;
+  edm::EDGetTokenT<HORecHitCollection> tok_ho_;
+  edm::EDGetTokenT<HFRecHitCollection> tok_hf_;
+  edm::EDGetTokenT<EBRecHitCollection> tok_EB_;
+  edm::EDGetTokenT<EERecHitCollection> tok_EE_;
+
 
   // choice of subdetector in config : noise/HB/HE/HO/HF/ALL (0/1/2/3/4/5)
   int subdet_;

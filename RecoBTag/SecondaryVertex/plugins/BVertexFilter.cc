@@ -22,7 +22,7 @@
 
 // user include files
 #include "FWCore/Framework/interface/Frameworkfwd.h"
-#include "FWCore/Framework/interface/EDFilter.h"
+#include "FWCore/Framework/interface/stream/EDFilter.h"
 
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
@@ -37,7 +37,7 @@
 // class declaration
 //
 #include "RecoBTag/SecondaryVertex/interface/VertexFilter.h"
-class BVertexFilter : public edm::EDFilter {
+class BVertexFilter : public edm::stream::EDFilter<> {
    public:
       explicit BVertexFilter(const edm::ParameterSet&);
       ~BVertexFilter();
@@ -91,7 +91,7 @@ BVertexFilter::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
       {
             GlobalVector axis(0,0,0);
             if(useVertexKinematicAsJetAxis) axis = GlobalVector(it->p4().X(),it->p4().Y(),it->p4().Z());
-            if(svFilter(primary,reco::SecondaryVertex(primary,*it,axis,true),axis))  {
+            if(svFilter(primary,reco::TemplatedSecondaryVertex<reco::Vertex>(primary,*it,axis,true),axis))  {
                   count++;
                   recoVertices->push_back(*it);
              }

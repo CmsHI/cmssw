@@ -11,32 +11,44 @@
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "HLTrigger/HLTcore/interface/HLTConfigProvider.h"
 
-#include "FWCore/Framework/interface/EDAnalyzer.h"
 #include "FWCore/Utilities/interface/InputTag.h"
+
+#include "DataFormats/EgammaCandidates/interface/GsfElectronFwd.h"
+#include "DataFormats/VertexReco/interface/VertexFwd.h"
+#include "DQMServices/Core/interface/DQMEDAnalyzer.h"
+
+
+namespace reco {
+class Jet;
+class MET;
+class BeamSpot;
+}
 
 class DQMStore;
 class MonitorElement;
-class EwkElecDQM : public edm::EDAnalyzer {
-public:
-  EwkElecDQM (const edm::ParameterSet &);
+class EwkElecDQM : public thread_unsafe::DQMEDAnalyzer {
+ public:
+  EwkElecDQM(const edm::ParameterSet&);
+  //Book histograms
+  void bookHistograms(DQMStore::IBooker &,
+    edm::Run const &, edm::EventSetup const &) override;
+  void dqmBeginRun(const edm::Run&, const edm::EventSetup&);
   virtual void analyze(const edm::Event&, const edm::EventSetup&);
-  virtual void beginJob();
-  virtual void endJob();
-  virtual void beginRun(const edm::Run&, const edm::EventSetup&);
   virtual void endRun(const edm::Run&, const edm::EventSetup&);
 
   double calcDeltaPhi(double phi1, double phi2);
 
-  void init_histograms();
-private:
-
-  edm::InputTag trigTag_;
+ private:
   //  edm::InputTag muonTag_;
-  edm::InputTag elecTag_;
   edm::InputTag metTag_;
-   bool metIncludesMuons_;
   edm::InputTag jetTag_;
-  edm::InputTag vertexTag_;
+  edm::EDGetTokenT<edm::TriggerResults> trigTag_;
+  edm::EDGetTokenT<edm::View<reco::GsfElectron> > elecTag_;
+  edm::EDGetTokenT<edm::View<reco::MET> > metToken_;
+  edm::EDGetTokenT<edm::View<reco::Jet> > jetToken_;
+  edm::EDGetTokenT<edm::View<reco::Vertex> > vertexTag_;
+  edm::EDGetTokenT<reco::BeamSpot> beamSpotTag_;
+  bool metIncludesMuons_;
 
   //  const std::string muonTrig_;
   const std::vector<std::string> elecTrig_;
@@ -58,10 +70,10 @@ private:
   double hcalIsoCutEndcap_;
   double trkIsoCutBarrel_;
   double trkIsoCutEndcap_;
-   double mtMin_;
-   double mtMax_;
-   double metMin_;
-   double metMax_;
+  double mtMin_;
+  double mtMax_;
+  double metMin_;
+  double metMax_;
   //  double acopCut_;
 
   //  double dxyCut_;
@@ -79,20 +91,18 @@ private:
   unsigned int PUMax_, PUBinCount_;
 
   bool isValidHltConfig_;
-  HLTConfigProvider  hltConfigProvider_;
+  HLTConfigProvider hltConfigProvider_;
 
   unsigned int nall;
   unsigned int nrec;
   unsigned int neid;
   unsigned int niso;
-/*   unsigned int nhlt; */
-/*   unsigned int nmet; */
+  /*   unsigned int nhlt; */
+  /*   unsigned int nmet; */
   unsigned int nsel;
 
   //  unsigned int nRecoElectrons;
   unsigned int nGoodElectrons;
-
-  DQMStore* theDbe;
 
   MonitorElement* pt_before_;
   MonitorElement* pt_after_;
@@ -112,17 +122,17 @@ private:
   MonitorElement* detainendcap_before_;
   MonitorElement* detainendcap_after_;
 
-/*   MonitorElement* dxy_before_; */
-/*   MonitorElement* dxy_after_; */
+  /*   MonitorElement* dxy_before_; */
+  /*   MonitorElement* dxy_after_; */
 
-/*   MonitorElement* chi2_before_; */
-/*   MonitorElement* chi2_after_; */
+  /*   MonitorElement* chi2_before_; */
+  /*   MonitorElement* chi2_after_; */
 
-/*   MonitorElement* nhits_before_; */
-/*   MonitorElement* nhits_after_; */
+  /*   MonitorElement* nhits_before_; */
+  /*   MonitorElement* nhits_after_; */
 
-/*   MonitorElement* tkmu_before_; */
-/*   MonitorElement* tkmu_after_; */
+  /*   MonitorElement* tkmu_before_; */
+  /*   MonitorElement* tkmu_after_; */
 
   MonitorElement* ecalisobarrel_before_;
   MonitorElement* ecalisobarrel_after_;
@@ -151,7 +161,7 @@ private:
   MonitorElement* invmassPU_afterZ_;
 
   MonitorElement* npvs_before_;
-  //MonitorElement* npvs_afterW_;
+  // MonitorElement* npvs_afterW_;
   MonitorElement* npvs_afterZ_;
 
   MonitorElement* nelectrons_before_;
@@ -163,25 +173,28 @@ private:
   MonitorElement* met_before_;
   MonitorElement* met_after_;
 
-/*   MonitorElement* acop_before_; */
-/*   MonitorElement* acop_after_; */
+  /*   MonitorElement* acop_before_; */
+  /*   MonitorElement* acop_after_; */
 
-/*   MonitorElement* nz1_before_; */
-/*   MonitorElement* nz1_after_; */
+  /*   MonitorElement* nz1_before_; */
+  /*   MonitorElement* nz1_after_; */
 
-/*   MonitorElement* nz2_before_; */
-/*   MonitorElement* nz2_after_; */
+  /*   MonitorElement* nz2_before_; */
+  /*   MonitorElement* nz2_after_; */
 
   MonitorElement* njets_before_;
-  MonitorElement* njets_after_; 
+  MonitorElement* njets_after_;
   MonitorElement* jet_et_before_;
   MonitorElement* jet_et_after_;
   MonitorElement* jet_eta_before_;
-  MonitorElement* jet_eta_after_; 
-/*   MonitorElement* jet2_et_before_; */
-/*   MonitorElement* jet2_et_after_; */
-
+  MonitorElement* jet_eta_after_;
+  /*   MonitorElement* jet2_et_before_; */
+  /*   MonitorElement* jet2_et_after_; */
 };
 
-
 #endif
+
+// Local Variables:
+// show-trailing-whitespace: t
+// truncate-lines: t
+// End:

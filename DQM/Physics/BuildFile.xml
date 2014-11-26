@@ -8,6 +8,7 @@
 <use   name="DataFormats/METReco"/>
 <use   name="DataFormats/VertexReco"/>
 <use   name="DataFormats/TrackerRecHit2D"/>
+<use   name="DataFormats/HeavyIonEvent"/>
 <use   name="HLTrigger/HLTcore"/>
 <use   name="Geometry/Records"/>
 <use   name="Geometry/TrackerGeometryBuilder"/>
@@ -17,4 +18,6 @@
 <use   name="CondFormats/DataRecord"/>
 <use   name="CondFormats/EcalObjects"/>
 <use   name="RecoJets/JetProducers"/>
+<use   name="RecoJets/JetAlgorithms"/>
+<use   name="DQM/PhysicsHWW"/>
 <flags   EDM_PLUGIN="1"/> 

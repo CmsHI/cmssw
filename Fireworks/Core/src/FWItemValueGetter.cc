@@ -8,7 +8,6 @@
 //
 // Original Author:  Chris Jones
 //         Created:  Sun Nov 30 16:15:43 EST 2008
-// $Id: FWItemValueGetter.cc,v 1.10 2012/08/03 18:20:28 wmtan Exp $
 //
 
 // system include files
@@ -53,6 +52,12 @@ FWItemValueGetter::FWItemValueGetter(const edm::TypeWithDict& iType, const std::
       addEntry("y0", 2, "y", "cm");
       addEntry("z0", 2, "z", "cm");
    }
+   else if (strstr(iPurpose.c_str(), "Vertices") )
+   {
+      addEntry("x", 2, "x", "cm");
+      addEntry("y", 2, "y", "cm");
+      addEntry("z", 2, "z", "cm");
+   }
    else if (strstr(iPurpose.c_str(), "Conversion") )
    {
       addEntry("pairMomentum().rho()", 1, "pt", "GeV" );
@@ -69,6 +74,19 @@ FWItemValueGetter::FWItemValueGetter(const edm::TypeWithDict& iType, const std::
    else if (iPurpose == "Jets" )
    {
       addEntry("et", 1);
+   }
+   else if ( iPurpose == "DT-segments")
+   {
+      addEntry("chamberId().wheel()", 0, "wh");
+      addEntry("chamberId().station()", 0, "st");
+      addEntry("chamberId().sector()", 0, "sc");
+
+   }
+   else if ( iPurpose == "CSC-segments")
+   {
+      addEntry("cscDetId().endcap()", 0, "ec");
+      addEntry("cscDetId().station()", 0, "st");
+      addEntry("cscDetId().ring()", 0, "rn");
    }
    else {
       // by the default  add pt, et, or energy

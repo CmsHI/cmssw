@@ -11,9 +11,7 @@
  *          Florent Lacroix, University of Illinois at Chicago
  *          Christian Veelken, LLR
  *
- * \version $Revision: 1.00 $
  *
- * $Id: CorrectedPFMETProducer.h,v 1.18 2011/05/30 15:19:41 veelken Exp $
  *
  */
 
@@ -30,10 +28,12 @@ namespace CorrectedMETProducer_namespace
 
     reco::PFMET operator()(const reco::PFMET& rawMEt, const CorrMETData& correction) const
     {
-      return reco::PFMET(rawMEt.getSpecific(), 
+      reco::PFMET ret(rawMEt.getSpecific(), 
 			 correctedSumEt(rawMEt, correction), 
 			 correctedP4(rawMEt, correction), 
 			 rawMEt.vertex());
+      ret.setSignificanceMatrix(rawMEt.getSignificanceMatrix()); 
+      return ret;
     }
   };
 }

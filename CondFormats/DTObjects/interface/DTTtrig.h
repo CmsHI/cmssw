@@ -6,8 +6,6 @@
  *       Class to hold drift tubes TTrigs
  *             ( SL by SL time offsets )
  *
- *  $Date: 2008/12/11 09:44:53 $
- *  $Revision: 1.8 $
  *  \author Paolo Ronchese INFN Padova
  *
  */
@@ -20,16 +18,21 @@
 //------------------------------------
 // Collaborating Class Declarations --
 //------------------------------------
+#include "CondFormats/Serialization/interface/Serializable.h"
+
 #include "CondFormats/DTObjects/interface/DTTimeUnits.h"
-#include "CondFormats/DTObjects/interface/DTBufferTree.h"
 #include "DataFormats/MuonDetId/interface/DTWireId.h"
 #include "DataFormats/MuonDetId/interface/DTSuperLayerId.h"
+#include "FWCore/Utilities/interface/ConstRespectingPtr.h"
 
 //---------------
 // C++ Headers --
 //---------------
 #include <string>
 #include <vector>
+#include <utility>
+
+template <class Key, class Content> class DTBufferTree;
 
 //              ---------------------
 //              -- Class Interface --
@@ -49,6 +52,8 @@ class DTTtrigId   {
   int   layerId;
   int    cellId;
 
+
+ COND_SERIALIZABLE;
 };
 
 
@@ -63,6 +68,8 @@ class DTTtrigData {
   float tTrms;
   float kFact;
 
+
+ COND_SERIALIZABLE;
 };
 
 
@@ -177,21 +184,23 @@ class DTTtrig {
   const_iterator begin() const;
   const_iterator end() const;
 
+  void initialize();
+
  private:
+
+  DTTtrig(DTTtrig const&);
+  DTTtrig& operator=(DTTtrig const&);
 
   std::string dataVersion;
   float nsPerCount;
 
   std::vector< std::pair<DTTtrigId,DTTtrigData> > dataList;
 
-  DTBufferTree<int,int>* dBuf;
+  edm::ConstRespectingPtr<DTBufferTree<int,int> > dBuf COND_TRANSIENT;
 
-  /// read and store full content
-  void cacheMap() const;
   std::string mapName() const;
 
+
+ COND_SERIALIZABLE;
 };
-
-
 #endif // DTTtrig_H
-

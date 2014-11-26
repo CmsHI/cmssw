@@ -40,14 +40,18 @@
 #include "DataFormats/TrackerCommon/interface/TrackerTopology.h"
 #include "Geometry/Records/interface/IdealGeometryRecord.h"
 
+#include "FWCore/Framework/interface/ConsumesCollector.h"
+#include "DataFormats/RecoCandidate/interface/RecoChargedCandidateFwd.h"
+#include "DataFormats/MuonReco/interface/MuonFwd.h"
+#include "DataFormats/JetReco/interface/CaloJetCollection.h"
 
 class CosmicRegionalSeedGenerator : public TrackingRegionProducer { 
  
 
  public:
-  explicit CosmicRegionalSeedGenerator(const edm::ParameterSet& conf);
+  explicit CosmicRegionalSeedGenerator(const edm::ParameterSet& conf, edm::ConsumesCollector && iC);
 
-  virtual ~CosmicRegionalSeedGenerator() {};
+  virtual ~CosmicRegionalSeedGenerator() {}
   
   virtual std::vector<TrackingRegion* > regions(const edm::Event& event, const edm::EventSetup& es) const;
 
@@ -67,6 +71,11 @@ class CosmicRegionalSeedGenerator : public TrackingRegionProducer {
   edm::InputTag recoMuonsCollection_;
   edm::InputTag recoTrackMuonsCollection_;
   edm::InputTag recoL2MuonsCollection_;
+  edm::EDGetTokenT<reco::CaloJetCollection>	 recoCaloJetsToken_	; 
+  edm::EDGetTokenT<reco::MuonCollection>	 recoMuonsToken_	; 
+  edm::EDGetTokenT<reco::TrackCollection>	 recoTrackMuonsToken_	; 
+  edm::EDGetTokenT<reco::RecoChargedCandidateCollection> recoL2MuonsToken_	; 
+
   
   bool   doJetsExclusionCheck_;
   double deltaRExclusionSize_;

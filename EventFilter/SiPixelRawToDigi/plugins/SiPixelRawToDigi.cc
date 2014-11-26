@@ -1,6 +1,7 @@
+// Skip FED40 pilot-blade
 // Include parameter driven interface to SiPixelQuality for study purposes
 // exclude ROC(raw) based on bad ROC list in SiPixelQuality
-// enabled by: process.siPixelDigis.UseQualityInfo = True
+// enabled by: process.siPixelDigis.UseQualityInfo = True (BY DEFAULT NOT USED)
 // 20-10-2010 Andrew York (Tennessee)
 
 #include "SiPixelRawToDigi.h"
@@ -27,8 +28,8 @@
 
 #include "CondFormats/SiPixelObjects/interface/SiPixelQuality.h"
 
-#include "EventFilter/SiPixelRawToDigi/interface/R2DTimerObserver.h"
 #include "EventFilter/SiPixelRawToDigi/interface/PixelUnpackingRegions.h"
+#include "FWCore/Framework/interface/ConsumesCollector.h"
 
 #include "TH1D.h"
 #include "TFile.h"
@@ -38,21 +39,20 @@ using namespace std;
 // -----------------------------------------------------------------------------
 SiPixelRawToDigi::SiPixelRawToDigi( const edm::ParameterSet& conf ) 
   : config_(conf), 
-    cabling_(0), 
     badPixelInfo_(0),
     regions_(0),
-    hCPU(0), hDigi(0), theTimer(0)
+    hCPU(0), hDigi(0)
 {
 
   includeErrors = config_.getParameter<bool>("IncludeErrors");
   useQuality = config_.getParameter<bool>("UseQualityInfo");
-  useCablingTree_ = config_.getUntrackedParameter<bool>("UseCablingTree",true);
   if (config_.exists("ErrorList")) {
     tkerrorlist = config_.getParameter<std::vector<int> > ("ErrorList");
   }
   if (config_.exists("UserErrorList")) {
     usererrorlist = config_.getParameter<std::vector<int> > ("UserErrorList");
   }
+  tFEDRawDataCollection = consumes <FEDRawDataCollection> (config_.getParameter<edm::InputTag>("InputLabel"));
 
   //start counters
   ndigis = 0;
@@ -70,17 +70,32 @@ SiPixelRawToDigi::SiPixelRawToDigi( const edm::ParameterSet& conf )
   if (config_.exists("Regions")) {
     if(config_.getParameter<edm::ParameterSet>("Regions").getParameterNames().size() > 0)
     {
-      regions_ = new PixelUnpackingRegions(config_);
+      regions_ = new PixelUnpackingRegions(config_, consumesCollector());
     }
   }
 
   // Timing
   bool timing = config_.getUntrackedParameter<bool>("Timing",false);
   if (timing) {
-    theTimer = new R2DTimerObserver("**** MY TIMING REPORT ***");
+    theTimer.reset( new edm::CPUTimer );
     hCPU = new TH1D ("hCPU","hCPU",100,0.,0.050);
     hDigi = new TH1D("hDigi","hDigi",50,0.,15000.);
   }
+
+  // Control the usage of pilot-blade data, FED=40
+  usePilotBlade = false; 
+  if (config_.exists("UsePilotBlade")) {
+    usePilotBlade = config_.getParameter<bool> ("UsePilotBlade");
+    if(usePilotBlade) edm::LogInfo("SiPixelRawToDigi")  << " Use pilot blade data (FED 40)";
+  }
+
+  // Control the usage of phase1
+  usePhase1 = false;
+  if (config_.exists("UsePhase1")) {
+    usePhase1 = config_.getParameter<bool> ("UsePhase1");
+    if(usePhase1) edm::LogInfo("SiPixelRawToDigi")  << " Use pilot blade data (FED 40)";
+  }
+
 }
 
 
@@ -88,14 +103,12 @@ SiPixelRawToDigi::SiPixelRawToDigi( const edm::ParameterSet& conf )
 SiPixelRawToDigi::~SiPixelRawToDigi() {
   edm::LogInfo("SiPixelRawToDigi")  << " HERE ** SiPixelRawToDigi destructor!";
 
-  if (useCablingTree_) delete cabling_;
   if (regions_) delete regions_;
 
   if (theTimer) {
     TFile rootFile("analysis.root", "RECREATE", "my histograms");
     hCPU->Write();
     hDigi->Write();
-    delete theTimer;
   }
 
 }
@@ -114,20 +127,10 @@ void SiPixelRawToDigi::produce( edm::Event& ev,
 // initialize cabling map or update if necessary
   if (recordWatcher.check( es )) {
     // cabling map, which maps online address (fed->link->ROC->local pixel) to offline (DetId->global pixel)
-    if (useCablingTree_) {
-      delete cabling_;
-      // we are going to make our own copy so safe to let the map be deleted early
-      edm::ESTransientHandle<SiPixelFedCablingMap> cablingMap;
-      es.get<SiPixelFedCablingMapRcd>().get( cablingMap );
-      fedIds   = cablingMap->fedIds();
-      cabling_ = cablingMap->cablingTree();
-    } else {
-      // we are going to hold the pointer so we need the map to stick around
-      edm::ESHandle<SiPixelFedCablingMap> cablingMap;
-      es.get<SiPixelFedCablingMapRcd>().get( cablingMap );
-      fedIds   = cablingMap->fedIds();
-      cabling_ = cablingMap.product();
-    }
+    edm::ESTransientHandle<SiPixelFedCablingMap> cablingMap;
+    es.get<SiPixelFedCablingMapRcd>().get( cablingMap );
+    fedIds   = cablingMap->fedIds();
+    cabling_ = cablingMap->cablingTree();
     LogDebug("map version:")<< cabling_->version();
   }
 // initialize quality record or update if necessary
@@ -142,16 +145,18 @@ void SiPixelRawToDigi::produce( edm::Event& ev,
   }
 
   edm::Handle<FEDRawDataCollection> buffers;
-  label = config_.getParameter<edm::InputTag>("InputLabel");
-  ev.getByLabel( label, buffers);
+  ev.getByToken(tFEDRawDataCollection, buffers);
 
 // create product (digis & errors)
   std::auto_ptr< edm::DetSetVector<PixelDigi> > collection( new edm::DetSetVector<PixelDigi> );
+  // collection->reserve(8*1024);
   std::auto_ptr< edm::DetSetVector<SiPixelRawDataError> > errorcollection( new edm::DetSetVector<SiPixelRawDataError> );
   std::auto_ptr< DetIdCollection > tkerror_detidcollection(new DetIdCollection());
   std::auto_ptr< DetIdCollection > usererror_detidcollection(new DetIdCollection());
 
-  PixelDataFormatter formatter(cabling_);
+  //PixelDataFormatter formatter(cabling_.get()); // phase 0 only
+  PixelDataFormatter formatter(cabling_.get(), usePhase1); // for phase 1 & 0
+
   formatter.setErrorStatus(includeErrors);
 
   if (useQuality) formatter.setQualityStatus(useQuality, badPixelInfo_);
@@ -167,29 +172,22 @@ void SiPixelRawToDigi::produce( edm::Event& ev,
     LogDebug("SiPixelRawToDigi") << "region2unpack #modules (BPIX,EPIX,total): "<<regions_->nBarrelModules()<<" "<<regions_->nForwardModules()<<" "<<regions_->nModules();
   }
 
-  typedef std::vector<unsigned int>::const_iterator IF;
-  for (IF aFed = fedIds.begin(); aFed != fedIds.end(); ++aFed) {
+  for (auto aFed = fedIds.begin(); aFed != fedIds.end(); ++aFed) {
     int fedId = *aFed;
+
+    if(!usePilotBlade && (fedId==40) ) continue; // skip pilot blade data
 
     if (regions_ && !regions_->mayUnpackFED(fedId)) continue;
 
     if(debug) LogDebug("SiPixelRawToDigi")<< " PRODUCE DIGI FOR FED: " <<  fedId << endl;
-    PixelDataFormatter::Digis digis;
+
     PixelDataFormatter::Errors errors;
 
     //get event data for this fed
     const FEDRawData& fedRawData = buffers->FEDData( fedId );
 
     //convert data to digi and strip off errors
-    formatter.interpretRawData( errorsInEvent, fedId, fedRawData, digis, errors);
-
-    //pack digi into collection
-    typedef PixelDataFormatter::Digis::iterator ID;
-    for (ID it = digis.begin(); it != digis.end(); it++) {
-      uint32_t detid = it->first;
-      edm::DetSet<PixelDigi>& detSet = collection->find_or_insert(detid);
-      detSet.data.insert(detSet.data.end(), it->second.begin(), it->second.end());
-    }
+    formatter.interpretRawData( errorsInEvent, fedId, fedRawData, *collection, errors);
 
     //pack errors into collection
     if(includeErrors) {
@@ -238,12 +236,12 @@ void SiPixelRawToDigi::produce( edm::Event& ev,
 
   if (theTimer) {
     theTimer->stop();
-    LogDebug("SiPixelRawToDigi") << "TIMING IS: (real)" << theTimer->lastMeasurement().real() ;
+    LogDebug("SiPixelRawToDigi") << "TIMING IS: (real)" << theTimer->realTime() ;
     ndigis += formatter.nDigis();
     nwords += formatter.nWords();
     LogDebug("SiPixelRawToDigi") << " (Words/Digis) this ev: "
          <<formatter.nWords()<<"/"<<formatter.nDigis() << "--- all :"<<nwords<<"/"<<ndigis;
-    hCPU->Fill( theTimer->lastMeasurement().real() ); 
+    hCPU->Fill( theTimer->realTime() ); 
     hDigi->Fill(formatter.nDigis());
   }
 

@@ -26,7 +26,6 @@
 
 #include "Geometry/CommonDetUnit/interface/GeomDetUnit.h"
 #include "Geometry/CommonDetUnit/interface/GeomDetType.h"
-#include "FWCore/Framework/interface/ESWatcher.h"
 
 
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
@@ -63,7 +62,7 @@ namespace {
     return (std::abs(dr) > 1.e-3f) ? dz/dr : 0;
   }
 
-  inline float phi(float xC, float yC, int charge) {
+  inline float func_phi(float xC, float yC, int charge) {
     return  (charge>0) ? std::atan2(xC,-yC) :  std::atan2(-xC,yC);
   }
 
@@ -109,22 +108,19 @@ reco::Track* PixelFitterByHelixProjections::run(
   vector<GlobalError> errors(nhits);
   vector<bool> isBarrel(nhits);
   
-  static edm::ESWatcher<TrackerDigiGeometryRecord> watcherTrackerDigiGeometryRecord;
-  if (!theTracker || watcherTrackerDigiGeometryRecord.check(es)) {
+  if (theTrackerWatcher.check(es)) {
     edm::ESHandle<TrackerGeometry> trackerESH;
     es.get<TrackerDigiGeometryRecord>().get(trackerESH);
     theTracker = trackerESH.product();
   }
 
-  static edm::ESWatcher<IdealMagneticFieldRecord>  watcherIdealMagneticFieldRecord;
-  if (!theField || watcherIdealMagneticFieldRecord.check(es)) {
+  if (theFieldWatcher.check(es)) {
     edm::ESHandle<MagneticField> fieldESH;
     es.get<IdealMagneticFieldRecord>().get(fieldESH);
     theField = fieldESH.product();
   }
 
-  static edm::ESWatcher<TransientRecHitRecord> watcherTransientRecHitRecord;
-  if (!theTTRecHitBuilder || watcherTransientRecHitRecord.check(es)) {
+  if (theTTRecHitBuilderWatcher.check(es)) {
     edm::ESHandle<TransientTrackingRecHitBuilder> ttrhbESH;
     std::string builderName = theConfig.getParameter<std::string>("TTRHBuilder");
     es.get<TransientRecHitRecord>().get(builderName,ttrhbESH);
@@ -133,7 +129,7 @@ reco::Track* PixelFitterByHelixProjections::run(
 
 
   for ( int i=0; i!=nhits; ++i) {
-    TransientTrackingRecHit::RecHitPointer recHit = theTTRecHitBuilder->build(hits[i]);
+    auto const & recHit = hits[i];
     points[i]  = GlobalPoint( recHit->globalPosition().x()-region.origin().x(), 
 			      recHit->globalPosition().y()-region.origin().y(),
 			      recHit->globalPosition().z()-region.origin().z() 
@@ -157,7 +153,7 @@ reco::Track* PixelFitterByHelixProjections::run(
     valPt = (invPt > 1.e-4f) ? 1.f/invPt : 1.e4f;
     CircleFromThreePoints::Vector2D center = circle.center();
     valTip = iCharge * (center.mag()-1.f/curvature);
-    valPhi = phi(center.x(), center.y(), iCharge);
+    valPhi = func_phi(center.x(), center.y(), iCharge);
   } 
   else {
     valPt = 1.e4f; 

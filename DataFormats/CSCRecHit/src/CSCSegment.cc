@@ -16,7 +16,7 @@ namespace {
 }
 
 CSCSegment::CSCSegment(const std::vector<const CSCRecHit2D*>& proto_segment, LocalPoint origin, 
-	LocalVector direction, AlgebraicSymMatrix errors, double chi2) : 
+	LocalVector direction, const AlgebraicSymMatrix& errors, double chi2) : 
   RecSegment(buildDetId(proto_segment.front()->cscDetId())),
   theOrigin(origin), 
   theLocalDirection(direction), theCovMatrix(errors), theChi2(chi2), aME11a_duplicate(false) {
@@ -67,17 +67,19 @@ AlgebraicVector CSCSegment::parameters() const {
   return result;
 }
 
+AlgebraicMatrix createStaticMatrix()
+{
+  AlgebraicMatrix m( 4, 5, 0);
+  m[0][1] = 1;
+  m[1][2] = 1;
+  m[2][3] = 1;
+  m[3][4] = 1;
+  return m;
+}
+
+static const AlgebraicMatrix theProjectionMatrix = createStaticMatrix();
 
 AlgebraicMatrix CSCSegment::projectionMatrix() const {
-  static AlgebraicMatrix theProjectionMatrix( 4, 5, 0);
-  static bool isInitialized = false;
-  if (!isInitialized) {
-    theProjectionMatrix[0][1] = 1;
-    theProjectionMatrix[1][2] = 1;
-    theProjectionMatrix[2][3] = 1;
-    theProjectionMatrix[3][4] = 1;
-    isInitialized=true;
-  }    
   return theProjectionMatrix;
 }
 

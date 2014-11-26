@@ -36,11 +36,13 @@ PFElectronTranslator::PFElectronTranslator(const edm::ParameterSet & iConfig) {
   		edm::ParameterSet isoVals  = 
 			iConfig.getParameter<edm::ParameterSet> ("isolationValues");
   		inputTagIsoVals_.push_back
-			(isoVals.getParameter<edm::InputTag>("pfChargedHadrons"));
+			(isoVals.getParameter<edm::InputTag>("pfSumChargedHadronPt"));
   		inputTagIsoVals_.push_back
-			(isoVals.getParameter<edm::InputTag>("pfPhotons"));
+			(isoVals.getParameter<edm::InputTag>("pfSumPhotonEt"));
   		inputTagIsoVals_.push_back
-			(isoVals.getParameter<edm::InputTag>("pfNeutralHadrons"));
+			(isoVals.getParameter<edm::InputTag>("pfSumNeutralHadronEt"));
+  		inputTagIsoVals_.push_back
+			(isoVals.getParameter<edm::InputTag>("pfSumPUPt"));
 	}
   }
 
@@ -562,7 +564,7 @@ void PFElectronTranslator::createGsfElectronCores(reco::GsfElectronCoreCollectio
       std::map<reco::GsfTrackRef,reco::SuperClusterRef>::const_iterator 
 	itcheck=scMap_.find(GsfTrackRef_[iGSF]);
       if(itcheck!=scMap_.end())
-	myElectronCore.setPflowSuperCluster(itcheck->second);
+	myElectronCore.setParentSuperCluster(itcheck->second);
       gsfElectronCores.push_back(myElectronCore);
     }
 }
@@ -611,14 +613,14 @@ void PFElectronTranslator::createGsfElectrons(const reco::PFCandidateCollection 
 
       // Mustache
       reco::Mustache myMustache;
-      myMustache.MustacheID(*(myElectron. pflowSuperCluster()), myMvaInput.nClusterOutsideMustache, myMvaInput.etOutsideMustache );
+      myMustache.MustacheID(*(myElectron. parentSuperCluster()), myMvaInput.nClusterOutsideMustache, myMvaInput.etOutsideMustache );
 
       myElectron.setMvaInput(myMvaInput);
 
       // MVA output
       reco::GsfElectron::MvaOutput myMvaOutput;
       myMvaOutput.status = pfCandidate.electronExtraRef()->electronStatus();
-      myMvaOutput.mva = pfCandidate.mva_e_pi();
+      myMvaOutput.mva_e_pi = pfCandidate.mva_e_pi();
       myElectron.setMvaOutput(myMvaOutput);
       
       // ambiguous tracks
@@ -630,9 +632,10 @@ void PFElectronTranslator::createGsfElectrons(const reco::PFCandidateCollection 
       // isolation
       if( isolationValues.size() != 0 ) {
       	reco::GsfElectron::PflowIsolationVariables myPFIso;
-      	myPFIso.chargedHadronIso=(*isolationValues[0])[CandidatePtr_[iGSF]];
-      	myPFIso.photonIso=(*isolationValues[1])[CandidatePtr_[iGSF]];
-      	myPFIso.neutralHadronIso=(*isolationValues[2])[CandidatePtr_[iGSF]];      
+      	myPFIso.sumChargedHadronPt=(*isolationValues[0])[CandidatePtr_[iGSF]];
+      	myPFIso.sumPhotonEt=(*isolationValues[1])[CandidatePtr_[iGSF]];
+      	myPFIso.sumNeutralHadronEt=(*isolationValues[2])[CandidatePtr_[iGSF]];
+      	myPFIso.sumPUPt=(*isolationValues[3])[CandidatePtr_[iGSF]];      
       	myElectron.setPfIsolationVariables(myPFIso);
       }
 

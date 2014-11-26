@@ -10,8 +10,6 @@
  *  pointers to the services, therefore EACH event the setServices(const edm::EventSetup&)
  *  method MUST be called in the code in which the TrackTransformer is used.
  *
- *  $Date: 2009/08/03 13:39:07 $
- *  $Revision: 1.15 $
  *  \author R. Bellan - INFN Torino <riccardo.bellan@cern.ch>
  */
 
@@ -24,6 +22,7 @@
 #include "Geometry/CommonDetUnit/interface/GlobalTrackingGeometry.h"
 #include "MagneticField/Engine/interface/MagneticField.h"
 #include "TrackingTools/TransientTrackingRecHit/interface/TransientTrackingRecHit.h"
+#include "RecoTracker/TransientTrackingRecHit/interface/TkTransientTrackingRecHitBuilder.h"
 
 #include "DataFormats/TrackReco/interface/TrackFwd.h"
 
@@ -68,10 +67,10 @@ public:
   virtual void setServices(const edm::EventSetup&);
 
   /// the refitter used to refit the reco::Track
-  edm::ESHandle<TrajectoryFitter> refitter() const {return theFitter;}
+  std::unique_ptr<TrajectoryFitter> const & refitter() const {return theFitter;}
   
   /// the smoother used to smooth the trajectory which came from the refitting step
-  edm::ESHandle<TrajectorySmoother> smoother() const {return theSmoother;}
+  std::unique_ptr<TrajectorySmoother> const &  smoother() const {return theSmoother;}
 
   TransientTrackingRecHit::ConstRecHitContainer
     getTransientRecHits(const reco::TransientTrack& track) const;
@@ -98,10 +97,10 @@ public:
   edm::ESHandle<MagneticField> theMGField;
   
   std::string theFitterName;
-  edm::ESHandle<TrajectoryFitter> theFitter;
+  std::unique_ptr<TrajectoryFitter> theFitter;
   
   std::string theSmootherName;
-  edm::ESHandle<TrajectorySmoother> theSmoother;
+  std::unique_ptr<TrajectorySmoother> theSmoother;
  
   RefitDirection::GeometricalDirection
     checkRecHitsOrdering(TransientTrackingRecHit::ConstRecHitContainer&) const;
@@ -110,6 +109,7 @@ public:
 
   std::string theTrackerRecHitBuilderName;
   edm::ESHandle<TransientTrackingRecHitBuilder> theTrackerRecHitBuilder;
+  TkClonerImpl hitCloner;
   
   std::string theMuonRecHitBuilderName;
   edm::ESHandle<TransientTrackingRecHitBuilder> theMuonRecHitBuilder;

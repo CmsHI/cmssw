@@ -19,6 +19,11 @@
 #include <DQMServices/Core/interface/DQMStore.h>
 #include <DQMServices/Core/interface/MonitorElement.h>
 
+//DataFormats
+#include "DataFormats/Scalers/interface/DcsStatus.h"
+#include "DataFormats/L1GlobalTrigger/interface/L1GlobalTriggerReadoutRecord.h"
+#include "DataFormats/L1GlobalTrigger/interface/L1GlobalTriggerEvmReadoutRecord.h"
+
 #include <string>
 #include <vector>
 
@@ -41,7 +46,6 @@ protected:
 
 private:
 
-  std::string getShowTags(void);
   void makeProvInfo();  
   void makeHLTKeyInfo(const edm::Run& r, const edm::EventSetup &c);  
   void makeDcsInfo(const edm::Event& e);  
@@ -56,6 +60,9 @@ private:
   std::string globalTag_;
   std::string runType_;
   std::string nameProcess_;
+  edm::EDGetTokenT<L1GlobalTriggerReadoutRecord> L1gt_;
+  edm::EDGetTokenT<L1GlobalTriggerEvmReadoutRecord> L1gtEvm_;
+  edm::EDGetTokenT<DcsStatusCollection> dcsStatusCollection_;
    
   bool physDecl_;
   bool dcs25[25];

@@ -5,7 +5,7 @@
 //
 // Package:    HFFilter
 // Class:      HFFilter
-// 
+//
 /**\class HFFilter HFFilter.cc PhysicsTools/HFFilter/src/HFFilter.cc
 
  Description: Filter to see if there are heavy flavor GenJets in this event
@@ -13,12 +13,11 @@
  Implementation:
      The implementation is simple, it loops over the GenJets and checks if any constituents
      have a pdg ID that matches a list. It also has a switch to count objects from a gluon parent,
-     so the user can turn off counting gluon splitting. 
+     so the user can turn off counting gluon splitting.
 */
 //
 // Original Author:  "Salvatore Rappoccio"
 //         Created:  Tue Apr  8 16:19:45 CDT 2008
-// $Id: HFFilter.h,v 1.2 2010/01/11 13:26:22 hegner Exp $
 //
 //
 
@@ -36,6 +35,8 @@
 
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
+#include "DataFormats/JetReco/interface/GenJet.h"
+
 
 //
 // class declaration
@@ -49,9 +50,9 @@ class HFFilter : public edm::EDFilter {
       virtual bool filter(edm::Event&, const edm::EventSetup&) override;
       virtual void endJob() ;
 
-   private:      
+   private:
       // ----------member data ---------------------------
-      edm::InputTag    genJetsCollName_;        // Input GenJetsCollection
+      edm::EDGetTokenT<std::vector<reco::GenJet> >    genJetsCollToken_;        // Input GenJetsCollection
       double           ptMin_;                  // Min pt
       double           etaMax_;                 // Max abs(eta)
 };

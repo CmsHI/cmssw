@@ -6,7 +6,7 @@
 
 #include <cfloat>
 
-std::vector<double> PosteriorWeightsCalculator::weights(const TransientTrackingRecHit& recHit) const {
+std::vector<double> PosteriorWeightsCalculator::weights(const TrackingRecHit& recHit) const {
         switch (recHit.dimension()) {
                 case 1: return weights<1>(recHit);
                 case 2: return weights<2>(recHit);
@@ -18,12 +18,13 @@ std::vector<double> PosteriorWeightsCalculator::weights(const TransientTrackingR
 }
 
 template<unsigned int D>
-std::vector<double> PosteriorWeightsCalculator::weights(const TransientTrackingRecHit& recHit) const {
+std::vector<double> PosteriorWeightsCalculator::weights(const TrackingRecHit& recHit) const {
   typedef typename AlgebraicROOTObject<D,5>::Matrix MatD5;
   typedef typename AlgebraicROOTObject<5,D>::Matrix Mat5D;
   typedef typename AlgebraicROOTObject<D,D>::SymMatrix SMatDD;
   typedef typename AlgebraicROOTObject<D>::Vector VecD;
-  
+  using ROOT::Math::SMatrixNoInit;
+
   std::vector<double> weights;
   if ( predictedComponents.empty() )  {
     edm::LogError("EmptyPredictedComponents")<<"a multi state is empty. cannot compute any weight.";
@@ -36,28 +37,20 @@ std::vector<double> PosteriorWeightsCalculator::weights(const TransientTrackingR
   std::vector<double> chi2s;
   chi2s.reserve(predictedComponents.size());
 
-  MatD5 H; 
   VecD r, rMeas; 
-  SMatDD V, R;
+  SMatDD V(SMatrixNoInit{}), R(SMatrixNoInit{});
   AlgebraicVector5 x;
+  ProjectMatrix<double,5,D> p;
   //
   // calculate chi2 and determinant / component and find
   //   minimum / maximum of chi2
   //  
   double chi2Min(DBL_MAX);
   for ( unsigned int i=0; i<predictedComponents.size(); i++ ) {
-//     MeasurementExtractor me(predictedComponents[i]);
-//     // Residuals of aPredictedState w.r.t. aRecHit, 
-//     //!!!     AlgebraicVector r(recHit.parameters(predictedComponents[i]) - me.measuredParameters(recHit));
-//     VecD r = asSVector<D>(recHit.parameters()) - me.measuredParameters<D>(recHit);
-//     // and covariance matrix of residuals
-//     //!!!     AlgebraicSymMatrix V(recHit.parametersError(predictedComponents[i]));
-//     SMatDD V = asSMatrix<D>(recHit.parametersError());
-//     SMatDD R = V + me.measuredError<D>(recHit);
 
     KfComponentsHolder holder; 
     x = predictedComponents[i].localParameters().vector();
-    holder.template setup<D>(&r, &V, &H, &rMeas, &R, 
+    holder.template setup<D>(&r, &V, &p, &rMeas, &R, 
 			     x, predictedComponents[i].localError().matrix());
     recHit.getKfComponents(holder);
 

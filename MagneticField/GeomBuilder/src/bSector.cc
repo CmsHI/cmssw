@@ -3,8 +3,6 @@
 /*
  *  See header file for a description of this class.
  *
- *  $Date: 2007/02/03 16:19:08 $
- *  $Revision: 1.4 $
  *  \author N. Amapane - INFN Torino
  */
 
@@ -126,7 +124,8 @@ MagGeoBuilderFromDDD::bSector::bSector(handles::const_iterator begin,
 	DZ1 = 0.;
       }
     }
-
+    
+    if (rods.size()==0) cout << " *** ERROR: bSector has no rods " << DZ << " " << DZ1 << endl;
     if (MagGeoBuilderFromDDD::debug) cout << "-----------------------" << endl;
 
   }

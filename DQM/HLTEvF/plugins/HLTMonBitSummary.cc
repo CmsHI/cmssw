@@ -62,6 +62,8 @@ HLTMonBitSummary::HLTMonBitSummary(const edm::ParameterSet& iConfig) :
   dbe_ = edm::Service < DQMStore > ().operator->();
   dbe_->setVerbose(0);
 
+  //set Token(-s)
+  inputToken_ = consumes<edm::TriggerResults>(iConfig.getParameter<edm::InputTag> ("TriggerResultsTag"));
 }
 
 
@@ -299,7 +301,7 @@ HLTMonBitSummary::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
 
   // get hold of TriggerResults Object
   edm::Handle<edm::TriggerResults> trh;
-  iEvent.getByLabel(inputTag_,trh);
+  iEvent.getByToken(inputToken_, trh);
   
   if (trh.failedToGet()) {
      edm::LogError("HLTMonBitSummary")<<" could not get: "<<inputTag_;
@@ -484,8 +486,7 @@ void HLTMonBitSummary::endJob() {
 }
 
 
-void HLTMonBitSummary::configSelector(std::vector<std::string> selectTriggers, std::vector<std::string > & theSelectTriggers){
-
+void HLTMonBitSummary::configSelector(const std::vector<std::string>& selectTriggers, std::vector<std::string > & theSelectTriggers){
   //get the configuration
   std::vector<std::string> validTriggerNames = hltConfig_.triggerNames(); 
   
@@ -493,7 +494,7 @@ void HLTMonBitSummary::configSelector(std::vector<std::string> selectTriggers, s
   //remove all path names that are not valid
   while(!goodToGo && selectTriggers.size()!=0){
     goodToGo=true;
-    for (std::vector<std::string>::iterator j=selectTriggers.begin();j!=selectTriggers.end();++j){
+    for ( auto j=selectTriggers.begin();j!=selectTriggers.end();++j){
       //bool goodOne = false;
       //check if trigger name is valid
       //use of wildcard

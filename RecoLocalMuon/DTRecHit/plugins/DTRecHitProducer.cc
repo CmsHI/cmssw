@@ -30,17 +30,17 @@ using namespace std;
 
 
 
-DTRecHitProducer::DTRecHitProducer(const ParameterSet& config){
+DTRecHitProducer::DTRecHitProducer(const ParameterSet& config) :
   // Set verbose output
-  debug = config.getUntrackedParameter<bool>("debug", false); 
-
+  debug(config.getUntrackedParameter<bool>("debug", false))
+{
   if(debug)
     cout << "[DTRecHitProducer] Constructor called" << endl;
   
   produces<DTRecHitCollection>();
 
-  theDTDigiLabel = config.getParameter<InputTag>("dtDigiLabel");
-  
+  DTDigiToken_ = consumes<DTDigiCollection>(config.getParameter<InputTag>("dtDigiLabel"));
+
   // Get the concrete reconstruction algo from the factory
   string theAlgoName = config.getParameter<string>("recAlgo");
   theAlgo = DTRecHitAlgoFactory::get()->create(theAlgoName,
@@ -62,7 +62,7 @@ void DTRecHitProducer::produce(Event& event, const EventSetup& setup) {
 
   // Get the digis from the event
   Handle<DTDigiCollection> digis; 
-  event.getByLabel(theDTDigiLabel, digis);
+  event.getByToken(DTDigiToken_, digis);
 
   // Pass the EventSetup to the algo
   theAlgo->setES(setup);
@@ -95,8 +95,3 @@ void DTRecHitProducer::produce(Event& event, const EventSetup& setup) {
 
   event.put(recHitCollection);
 }
-
-
-
-bool
-DTRecHitProducer::debug;

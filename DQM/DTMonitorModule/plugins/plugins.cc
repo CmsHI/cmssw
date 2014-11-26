@@ -65,11 +65,9 @@ DEFINE_FWK_MODULE(DTDCSByLumiTask);
 
 
 #include <DQM/DTMonitorModule/interface/DTDataIntegrityTask.h>
-#include "FWCore/ServiceRegistry/interface/ServiceMaker.h"
+DEFINE_FWK_MODULE(DTDataIntegrityTask);
 
-using namespace edm::serviceregistry;
-
-//typedef ParameterSetMaker<DTDataMonitorInterface,DTDataIntegrityTask> maker;
-typedef edm::serviceregistry::AllArgsMaker<DTDataMonitorInterface,DTDataIntegrityTask> maker;
-
-DEFINE_FWK_SERVICE_MAKER(DTDataIntegrityTask,maker);
+// Local Variables:
+// show-trailing-whitespace: t
+// truncate-lines: t
+// End:

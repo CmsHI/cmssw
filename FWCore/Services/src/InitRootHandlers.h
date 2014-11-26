@@ -1,6 +1,7 @@
 #ifndef FWCore_Services_InitRootHandlers_h
 #define FWCore_Services_InitRootHandlers_h
 
+#include <memory>
 #include "FWCore/Utilities/interface/RootHandlers.h"
 
 namespace edm {
@@ -17,12 +18,18 @@ namespace edm {
       static void fillDescriptions(ConfigurationDescriptions& descriptions);
 
     private:
-      virtual void disableErrorHandler_();
-      virtual void enableErrorHandler_();
-      virtual void enableErrorHandlerWithoutWarnings_();
+      virtual void enableWarnings_() override;
+      virtual void ignoreWarnings_() override;
+      virtual void willBeUsingThreads() override;
+      virtual void initializeThisThreadForUse() override;
+
       bool unloadSigHandler_;
       bool resetErrHandler_;
+      bool loadAllDictionaries_;
       bool autoLibraryLoader_;
+      std::shared_ptr<const void> sigBusHandler_;
+      std::shared_ptr<const void> sigSegvHandler_;
+      std::shared_ptr<const void> sigIllHandler_;
     };
 
     inline

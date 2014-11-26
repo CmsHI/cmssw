@@ -23,12 +23,12 @@
 #include "DataFormats/MuonReco/interface/MuonToMuonMap.h"
 #include "DataFormats/TrackReco/interface/Track.h" 
 #include "DataFormats/Common/interface/AssociationMap.h"
-
+#include "DataFormats/MuonReco/interface/DYTInfo.h"
 
 #include <vector>
 #include <map>
 
-namespace {
+namespace DataFormats_MuonReco {
   struct dictionary {
     std::vector<reco::Muon> v1;
     edm::Wrapper<std::vector<reco::Muon> > c1;
@@ -118,6 +118,15 @@ namespace {
     edm::ValueMap<reco::MuonShower> rms_vm;
     edm::ValueMap<reco::MuonShower>::const_iterator rms_vmci;
     edm::Wrapper<edm::ValueMap<reco::MuonShower> > rms_wvm;
+
+    // DYT part
+    reco::DYTInfo rdyt;
+    std::vector<reco::DYTInfo> rdyt_v;
+    std::vector<reco::DYTInfo>::const_iterator rdyt_vci;
+    edm::Wrapper<std::vector<reco::DYTInfo> > rdyt_wv;
+    edm::ValueMap<reco::DYTInfo> rdyt_vm;
+    edm::ValueMap<reco::DYTInfo>::const_iterator rdyt_vmci;
+    edm::Wrapper<edm::ValueMap<reco::DYTInfo> > rdyt_wvm;
     
     //Ptrs
 #include "DataFormats/Common/interface/Ptr.h"

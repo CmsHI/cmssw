@@ -19,6 +19,7 @@
 //
 
 // system include files
+#include <memory>
 
 // user include files
 #include "FWCore/Framework/interface/ProducerBase.h"
@@ -33,7 +34,11 @@ namespace edm {
   class ModuleCallingContext;
   class PreallocationConfiguration;
   class StreamID;
-  
+  class GlobalSchedule;
+  class ActivityRegistry;
+  class ProductRegistry;
+  class ThinnedAssociationsHelper;
+
   namespace maker {
     template<typename T> class ModuleHolderT;
   }
@@ -47,6 +52,8 @@ namespace edm {
       template <typename T> friend class edm::maker::ModuleHolderT;
       template <typename T> friend class edm::WorkerT;
       typedef EDProducerBase ModuleType;
+      
+      friend class edm::GlobalSchedule;
 
       EDProducerBase();
       virtual ~EDProducerBase();
@@ -60,6 +67,7 @@ namespace edm {
 
     private:
       bool doEvent(EventPrincipal& ep, EventSetup const& c,
+                   ActivityRegistry*,
                    ModuleCallingContext const*);
       void doPreallocate(PreallocationConfiguration const&);
       void doBeginJob();
@@ -94,13 +102,15 @@ namespace edm {
       void doEndLuminosityBlock(LuminosityBlockPrincipal& lbp, EventSetup const& c,
                                 ModuleCallingContext const*);
       
+      void doPreForkReleaseResources();
+      void doPostForkReacquireResources(unsigned int iChildIndex, unsigned int iNumberOfChildren);
+
       //For now, the following are just dummy implemenations with no ability for users to override
       void doRespondToOpenInputFile(FileBlock const& fb);
       void doRespondToCloseInputFile(FileBlock const& fb);
-      void doPreForkReleaseResources();
-      void doPostForkReacquireResources(unsigned int iChildIndex, unsigned int iNumberOfChildren);
-      
-      
+      void doRegisterThinnedAssociations(ProductRegistry const&,
+                                         ThinnedAssociationsHelper&) { }
+
       void registerProductsAndCallbacks(EDProducerBase* module, ProductRegistry* reg) {
         registerProducts(module, reg, moduleDescription_);
       }
@@ -110,6 +120,9 @@ namespace edm {
       virtual void beginJob() {}
       virtual void endJob(){}
 
+      virtual void preForkReleaseResources() {}
+      virtual void postForkReacquireResources(unsigned int /*iChildIndex*/, unsigned int /*iNumberOfChildren*/) {}
+      
       virtual void preallocStreams(unsigned int);
       virtual void doBeginStream_(StreamID id);
       virtual void doEndStream_(StreamID id);
@@ -139,8 +152,8 @@ namespace edm {
         moduleDescription_ = md;
       }
       ModuleDescription moduleDescription_;
-      std::vector<BranchID> previousParentage_; //Per stream in the future?
-      ParentageID previousParentageId_;
+      std::unique_ptr<std::vector<BranchID>[]> previousParentages_;
+      std::unique_ptr<ParentageID[]> previousParentageIds_;
     };
 
   }

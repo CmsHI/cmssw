@@ -8,9 +8,9 @@
  *
  * \author    : Gero Flucke
  * date       : October 2006
- * $Date: 2010/09/10 13:31:54 $
- * $Revision: 1.20 $
- * (last update by $Author: mussgill $)
+ * $Date: 2013/06/18 13:31:29 $
+ * $Revision: 1.29 $
+ * (last update by $Author: jbehr $)
  */
 
 #include <vector>
@@ -28,6 +28,7 @@ class AlignableMuon;
 class AlignableExtras;
 class AlignmentParameterStore;
 class PedeLabelerBase;
+class PedeSteererWeakModeConstraints;
 
 /***************************************
 ****************************************/
@@ -121,7 +122,8 @@ class PedeSteerer
   int myParameterSign; /// old pede versions (before May '07) need a sign flip...
   double theMinHieraConstrCoeff; /// min absolute value of coefficients in hierarchy constraints
   unsigned int theMinHieraParPerConstr; /// hierarchy constraints with less params are ignored
-
+  unsigned int theConstrPrecision; /// precision for writing constraints to text file
+  
   std::vector<std::string> mySteeringFiles; /// keeps track of created 'secondary' steering files
 
   std::set<const Alignable*> myNoHieraCollection; /// Alignables deselected for hierarchy constr.

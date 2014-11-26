@@ -6,7 +6,7 @@
 #include "DataFormats/Math/interface/Point3D.h"
 #include "TMatrixD.h"
 
-class RandomEngine;
+class RandomEngineAndDistribution;
 
 /** A class that generates a primary vertex for the event, in cm*/ 
 
@@ -15,15 +15,15 @@ class PrimaryVertexGenerator : public math::XYZVector {
 public:
   /// Default constructor
   PrimaryVertexGenerator();
-  PrimaryVertexGenerator(const RandomEngine* engine);
   
   /// Destructor
   virtual ~PrimaryVertexGenerator();
 
   /// Generation process (to be implemented)
-  virtual void generate() = 0;
+  virtual void generate(RandomEngineAndDistribution const*) = 0;
 
-  TMatrixD* boost() const;
+  TMatrixD* boost();
+  const TMatrixD* boost() const;
 
   /// Return x0, y0, z0
   inline const math::XYZPoint& beamSpot() const { return beamSpot_; }
@@ -32,7 +32,6 @@ public:
 
   void setBoost(TMatrixD*);
 
-  const RandomEngine* random;
   TMatrixD* boost_;
   math::XYZPoint beamSpot_;
 

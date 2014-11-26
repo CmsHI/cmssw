@@ -19,11 +19,10 @@ pointer to a ProductHolder, when queried.
 ----------------------------------------------------------------------*/
 #include "DataFormats/Common/interface/BasicHandle.h"
 #include "DataFormats/Common/interface/ConvertHandle.h"
+#include "DataFormats/Common/interface/WrapperBase.h"
 #include "DataFormats/Common/interface/EDProductGetter.h"
 #include "DataFormats/Common/interface/OutputHandle.h"
 #include "DataFormats/Common/interface/Wrapper.h"
-#include "DataFormats/Common/interface/WrapperHolder.h"
-#include "DataFormats/Common/interface/WrapperOwningHolder.h"
 #include "DataFormats/Provenance/interface/ProcessHistory.h"
 #include "DataFormats/Provenance/interface/ProvenanceFwd.h"
 #include "FWCore/Framework/interface/Frameworkfwd.h"
@@ -32,7 +31,6 @@ pointer to a ProductHolder, when queried.
 #include "FWCore/Utilities/interface/ProductKindOfType.h"
 
 #include "boost/iterator/filter_iterator.hpp"
-#include "boost/shared_ptr.hpp"
 
 #include <map>
 #include <memory>
@@ -49,23 +47,23 @@ namespace edm {
   class EDConsumerBase;
 
   struct FilledProductPtr {
-    bool operator()(boost::shared_ptr<ProductHolderBase> const& iObj) { return bool(iObj);}
+    bool operator()(std::shared_ptr<ProductHolderBase> const& iObj) { return bool(iObj);}
   };
 
   class Principal : public EDProductGetter {
   public:
-    typedef std::vector<boost::shared_ptr<ProductHolderBase> > ProductHolderCollection;
+    typedef std::vector<std::shared_ptr<ProductHolderBase> > ProductHolderCollection;
     typedef boost::filter_iterator<FilledProductPtr, ProductHolderCollection::const_iterator> const_iterator;
     typedef ProcessHistory::const_iterator ProcessNameConstIterator;
-    typedef ProductHolderBase const* ConstProductPtr;
+    typedef ProductHolderBase const* ConstProductHolderPtr;
     typedef std::vector<BasicHandle> BasicHandleVec;
     typedef ProductHolderCollection::size_type size_type;
 
-    typedef boost::shared_ptr<ProductHolderBase> SharedProductPtr;
+    typedef std::shared_ptr<ProductHolderBase> SharedProductPtr;
     typedef std::string ProcessName;
 
-    Principal(boost::shared_ptr<ProductRegistry const> reg,
-              boost::shared_ptr<ProductHolderIndexHelper const> productLookup,
+    Principal(std::shared_ptr<ProductRegistry const> reg,
+              std::shared_ptr<ProductHolderIndexHelper const> productLookup,
               ProcessConfiguration const& pc,
               BranchType bt,
               HistoryAppender* historyAppender);
@@ -76,17 +74,17 @@ namespace edm {
 
     void adjustIndexesAfterProductRegistryAddition();
 
-    void addScheduledProduct(boost::shared_ptr<BranchDescription const> bd);
+    void addScheduledProduct(std::shared_ptr<BranchDescription const> bd);
 
-    void addSourceProduct(boost::shared_ptr<BranchDescription const> bd);
+    void addSourceProduct(std::shared_ptr<BranchDescription const> bd);
 
-    void addInputProduct(boost::shared_ptr<BranchDescription const> bd);
+    void addInputProduct(std::shared_ptr<BranchDescription const> bd);
 
-    void addUnscheduledProduct(boost::shared_ptr<BranchDescription const> bd);
+    void addUnscheduledProduct(std::shared_ptr<BranchDescription const> bd);
 
-    void addAliasedProduct(boost::shared_ptr<BranchDescription const> bd);
+    void addAliasedProduct(std::shared_ptr<BranchDescription const> bd);
 
-    void fillPrincipal(ProcessHistoryID const& hist, ProcessHistoryRegistry& phr, DelayedReader* reader);
+    void fillPrincipal(ProcessHistoryID const& hist, ProcessHistoryRegistry const& phr, DelayedReader* reader);
 
     void clearPrincipal();
 
@@ -127,6 +125,10 @@ namespace edm {
                            bool& ambiguous,
                            ModuleCallingContext const* mcc) const;
 
+    void prefetch(ProductHolderIndex index,
+                  bool skipCurrentProcess,
+                  ModuleCallingContext const* mcc) const;
+
     void getManyByType(TypeID const& typeID,
                        BasicHandleVec& results,
                        EDConsumerBase const* consumes,
@@ -161,32 +163,32 @@ namespace edm {
     void getAllProvenance(std::vector<Provenance const*>& provenances) const;
 
     BranchType const& branchType() const {return branchType_;}
+    
+    //This will never return 0 so you can use 0 to mean unset
+    typedef unsigned long CacheIdentifier_t;
+    CacheIdentifier_t cacheIdentifier() const {return cacheIdentifier_;}
 
     DelayedReader* reader() const {return reader_;}
 
-    ConstProductPtr getProductHolder(BranchID const& oid,
-                                     bool resolveProd,
-                                     bool fillOnDemand,
-                                     ModuleCallingContext const* mcc) const;
+    ConstProductHolderPtr getProductHolder(BranchID const& oid) const;
 
     ProductData const* findProductByTag(TypeID const& typeID, InputTag const& tag, ModuleCallingContext const* mcc) const;
 
-    // Make my DelayedReader get the EDProduct for a ProductHolder or
-    // trigger unscheduled execution if required.  The ProductHolder is
-    // a cache, and so can be modified through the const reference.
+    // Make my DelayedReader get the EDProduct for a ProductHolder.
+    // The ProductHolder is a cache, and so can be modified through the const
+    // reference.
     // We do not change the *number* of products through this call, and so
     // *this is const.
-    void resolveProduct(ProductHolderBase const& phb, bool fillOnDemand, ModuleCallingContext const* mcc) const {resolveProduct_(phb, fillOnDemand,mcc);}
+    void readFromSource(ProductHolderBase const& phb, ModuleCallingContext const* mcc) const {
+      readFromSource_(phb, mcc);
+    }
 
     virtual bool unscheduledFill(std::string const& moduleLabel,
                                  ModuleCallingContext const* mcc) const = 0;
 
     std::vector<unsigned int> const& lookupProcessOrder() const { return lookupProcessOrder_; }
 
-    ConstProductPtr getProductByIndex(ProductHolderIndex const& oid,
-                                      bool resolveProd,
-                                      bool fillOnDemand,
-                                      ModuleCallingContext const* mcc) const;
+    ConstProductHolderPtr getProductHolderByIndex(ProductHolderIndex const& oid) const;
 
     bool isComplete() const {return isComplete_();}
 
@@ -201,14 +203,19 @@ namespace edm {
     ProductHolderBase* getExistingProduct(ProductHolderBase const& phb);
 
     // throws if the pointed to product is already in the Principal.
-    void checkUniquenessAndType(WrapperOwningHolder const& prod, ProductHolderBase const* productHolder) const;
+    void checkUniquenessAndType(WrapperBase const* prod, ProductHolderBase const* productHolder) const;
 
-    void putOrMerge(WrapperOwningHolder const& prod, ProductHolderBase const* productHolder) const;
+    void putOrMerge(std::unique_ptr<WrapperBase> prod, ProductHolderBase const* productHolder) const;
 
-    void putOrMerge(WrapperOwningHolder const& prod, ProductProvenance& prov, ProductHolderBase* productHolder);
+    void putOrMerge(std::unique_ptr<WrapperBase> prod, ProductProvenance& prov, ProductHolderBase* productHolder);
 
   private:
-    virtual WrapperHolder getIt(ProductID const&) const;
+
+    virtual WrapperBase const* getIt(ProductID const&) const override;
+    virtual WrapperBase const* getThinnedProduct(ProductID const&, unsigned int&) const override;
+    virtual void getThinnedProducts(ProductID const&,
+                                    std::vector<WrapperBase const*>&,
+                                    std::vector<unsigned int>&) const override;
 
     void findProducts(std::vector<ProductHolderBase const*> const& holders,
                       TypeID const& typeID,
@@ -229,15 +236,11 @@ namespace edm {
                                           EDConsumerBase const* consumer,
                                           ModuleCallingContext const* mcc) const;
 
-    // defaults to no-op unless overridden in derived class.
-    virtual void resolveProduct_(ProductHolderBase const&, bool /*fillOnDemand*/,
-                                 ModuleCallingContext const*) const {}
+    virtual void readFromSource_(ProductHolderBase const& phb, ModuleCallingContext const* mcc) const {}
 
     virtual bool isComplete_() const {return true;}
 
-    ProcessHistoryRegistry* processHistoryRegistry_; 
-
-    ProcessHistory const* processHistoryPtr_;
+    std::shared_ptr<ProcessHistory const> processHistoryPtr_;
 
     ProcessHistoryID processHistoryID_;
 
@@ -248,8 +251,8 @@ namespace edm {
 
     // Pointer to the product registry. There is one entry in the registry
     // for each EDProduct in the event.
-    boost::shared_ptr<ProductRegistry const> preg_;
-    boost::shared_ptr<ProductHolderIndexHelper const> productLookup_;
+    std::shared_ptr<ProductRegistry const> preg_;
+    std::shared_ptr<ProductHolderIndexHelper const> productLookup_;
 
     std::vector<unsigned int> lookupProcessOrder_;
     ProcessHistoryID orderProcessHistoryID_;
@@ -267,22 +270,25 @@ namespace edm {
     // input ProcessHistory, the following pointer should be null.
     // The Principal does not own this object.
     HistoryAppender* historyAppender_;
+    
+    CacheIdentifier_t cacheIdentifier_;
 
-    static const ProcessHistory emptyProcessHistory_;
   };
 
   template <typename PROD>
   inline
-  boost::shared_ptr<Wrapper<PROD> const>
+  std::shared_ptr<Wrapper<PROD> const>
     getProductByTag(Principal const& ep, InputTag const& tag, ModuleCallingContext const* mcc) {
     TypeID tid = TypeID(typeid(PROD));
     ProductData const* result = ep.findProductByTag(tid, tag, mcc);
-
-    if(result->getInterface() &&
-       (!(result->getInterface()->dynamicTypeInfo() == typeid(PROD)))) {
-      handleimpl::throwConvertTypeError(typeid(PROD), result->getInterface()->dynamicTypeInfo());
+    if(result == nullptr) {
+      return std::shared_ptr<Wrapper<PROD> const>(); 
     }
-    return boost::static_pointer_cast<Wrapper<PROD> const>(result->wrapper_);
+
+    if(!(result->wrapper_->dynamicTypeInfo() == typeid(PROD))) {
+      handleimpl::throwConvertTypeError(typeid(PROD), result->wrapper_->dynamicTypeInfo());
+    }
+    return std::static_pointer_cast<Wrapper<PROD> const>(result->wrapper_);
   }
 }
 #endif

@@ -12,6 +12,7 @@
 #include "SimDataFormats/TrackingHit/interface/PSimHit.h"
 #include "SimTracker/Common/interface/SimHitInfoForLinks.h"
 #include "DataFormats/Math/interface/approx_exp.h"
+#include "SimDataFormats/PileupSummaryInfo/interface/PileupMixingContent.h"
 
 // forward declarations
 
@@ -19,8 +20,6 @@
 // For the random numbers
 namespace CLHEP {
   class HepRandomEngine;
-  class RandGaussQ;
-  class RandFlat;
 }
 
 namespace edm {
@@ -43,7 +42,7 @@ class TrackerTopology;
 
 class SiPixelDigitizerAlgorithm  {
  public:
-  SiPixelDigitizerAlgorithm(const edm::ParameterSet& conf, CLHEP::HepRandomEngine&);
+  SiPixelDigitizerAlgorithm(const edm::ParameterSet& conf);
   ~SiPixelDigitizerAlgorithm();
 
   // initialization that cannot be done in the constructor
@@ -56,12 +55,18 @@ class SiPixelDigitizerAlgorithm  {
   //run the algorithm to digitize a single det
   void accumulateSimHits(const std::vector<PSimHit>::const_iterator inputBegin,
                          const std::vector<PSimHit>::const_iterator inputEnd,
-                         const PixelGeomDetUnit *pixdet,
-                         const GlobalVector& bfield);
+			 const size_t inputBeginGlobalIndex,
+			 const unsigned int tofBin,
+			 const PixelGeomDetUnit *pixdet,
+                         const GlobalVector& bfield,
+			 const TrackerTopology *tTopo,
+                         CLHEP::HepRandomEngine*);
   void digitize(const PixelGeomDetUnit *pixdet,
                 std::vector<PixelDigi>& digis,
                 std::vector<PixelDigiSimLink>& simlinks,
-		const TrackerTopology *tTopo);
+		const TrackerTopology *tTopo,
+                CLHEP::HepRandomEngine*);
+  void calculateInstlumiFactor(PileupMixingContent* puInfo);
 
  private:
   
@@ -91,8 +96,8 @@ class SiPixelDigitizerAlgorithm  {
       }
     }
 
-    Amplitude( float amp, const PSimHit* hitp, float frac) :
-      _amp(amp), _frac(1, frac), _hitInfo(new SimHitInfoForLinks(hitp)) {
+    Amplitude( float amp, const PSimHit* hitp, size_t hitIndex, unsigned int tofBin, float frac) :
+      _amp(amp), _frac(1, frac), _hitInfo(new SimHitInfoForLinks(hitp, hitIndex, tofBin) ) {
 
     //in case of digi from noisypixels
       //the MC information are removed 
@@ -130,6 +135,12 @@ class SiPixelDigitizerAlgorithm  {
    }
    const EncodedEventId& eventId() const {
      return _hitInfo->eventId_;
+   }
+   const unsigned int hitIndex() const {
+     return _hitInfo->hitIndex_;
+   }
+   const unsigned int tofBin() const {
+     return _hitInfo->tofBin_;
    }
     void operator+=( const float& amp) {
       _amp += amp;
@@ -229,13 +240,33 @@ class SiPixelDigitizerAlgorithm  {
    */
    struct PixelEfficiencies {
      PixelEfficiencies(const edm::ParameterSet& conf, bool AddPixelInefficiency, int NumberOfBarrelLayers, int NumberOfEndcapDisks);
-     float thePixelEfficiency[20];     // Single pixel effciency
-     float thePixelColEfficiency[20];  // Column effciency
-     float thePixelChipEfficiency[20]; // ROC efficiency
+     double thePixelEfficiency[20];     // Single pixel effciency
+     double thePixelColEfficiency[20];  // Column effciency
+     double thePixelChipEfficiency[20]; // ROC efficiency
+     std::vector<double> theLadderEfficiency_BPix[20]; // Ladder efficiency
+     std::vector<double> theModuleEfficiency_BPix[20]; // Module efficiency
+     std::vector<double> thePUEfficiency[20]; // Instlumi dependent efficiency
+     double theInnerEfficiency_FPix[20]; // Fpix inner module efficiency
+     double theOuterEfficiency_FPix[20]; // Fpix outer module efficiency
+     unsigned int FPixIndex;         // The Efficiency index for FPix Disks
+   };
+
+ //
+   // PixelAging struct
+   //
+   /**
+    * Internal use only.
+    */
+   struct PixelAging {
+     PixelAging(const edm::ParameterSet& conf, bool AddPixelAging, int NumberOfBarrelLayers, int NumberOfEndcapDisks);
+     float thePixelPseudoRadDamage[20];     // PseudoRadiation Damage Values for aging studies
      unsigned int FPixIndex;         // The Efficiency index for FPix Disks
    };
 
  private:
+   // Needed by dynamic inefficiency 
+   // 0-3 BPix, 4-5 FPix (inner, outer)
+   double _pu_scale[20];
 
     // Internal typedefs
     typedef std::map<int, Amplitude, std::less<int> > signal_map_type;  // from Digi.Skel.
@@ -275,6 +306,9 @@ class SiPixelDigitizerAlgorithm  {
     //-- Allow for upgrades
     const int NumberOfBarrelLayers;     // Default = 3
     const int NumberOfEndcapDisks;      // Default = 2
+
+    const double theInstLumiScaleFactor;
+    const double bunchScaleAt25;
 
     //-- make_digis 
     const float theElectronPerADC;     // Gain, number of electrons per adc count.
@@ -326,9 +360,9 @@ class SiPixelDigitizerAlgorithm  {
     const float theGainSmearing;        // The sigma of the gain fluctuation (around 1)
     const float theOffsetSmearing;      // The sigma of the offset fluct. (around 0)
     
-    // pseudoRadDamage
-    const double pseudoRadDamage;       // Decrease the amount off freed charge that reaches the collector
-    const double pseudoRadDamageRadius; // Only apply pseudoRadDamage to pixels with radius<=pseudoRadDamageRadius
+    // pixel aging
+    const bool AddPixelAging;
+
     // The PDTable
     //HepPDTable *particleTable;
     //ParticleDataTable *particleTable;
@@ -348,20 +382,25 @@ class SiPixelDigitizerAlgorithm  {
     //-- additional member functions    
     // Private methods
     std::map<int,CalParameters,std::less<int> > initCal() const;
-    void primary_ionization( const PSimHit& hit, std::vector<EnergyDepositUnit>& ionization_points) const;
+    void primary_ionization( const PSimHit& hit, std::vector<EnergyDepositUnit>& ionization_points, CLHEP::HepRandomEngine*) const;
     void drift(const PSimHit& hit,
                const PixelGeomDetUnit *pixdet,
                const GlobalVector& bfield,
+	       const TrackerTopology *tTopo,
                const std::vector<EnergyDepositUnit>& ionization_points,
                std::vector<SignalPoint>& collection_points) const;
     void induce_signal(const PSimHit& hit,
+		       const size_t hitIndex,
+		       const unsigned int tofBin,
                        const PixelGeomDetUnit *pixdet,
                        const std::vector<SignalPoint>& collection_points);
     void fluctuateEloss(int particleId, float momentum, float eloss, 
 			float length, int NumberOfSegments,
-			float elossVector[]) const;
+			float elossVector[],
+                        CLHEP::HepRandomEngine*) const;
     void add_noise(const PixelGeomDetUnit *pixdet,
-                   float thePixelThreshold);
+                   float thePixelThreshold,
+                   CLHEP::HepRandomEngine*);
     void make_digis(float thePixelThresholdInE,
                     uint32_t detID,
                     std::vector<PixelDigi>& digis,
@@ -369,10 +408,15 @@ class SiPixelDigitizerAlgorithm  {
 		    const TrackerTopology *tTopo) const;
     void pixel_inefficiency(const PixelEfficiencies& eff,
 			    const PixelGeomDetUnit* pixdet,
-			    const TrackerTopology *tTopo);
+			    const TrackerTopology *tTopo,
+                            CLHEP::HepRandomEngine*);
 
     void pixel_inefficiency_db(uint32_t detID);
 
+    float pixel_aging(const PixelAging& aging,
+		      const PixelGeomDetUnit* pixdet,
+		      const TrackerTopology *tTopo) const;
+    
     // access to the gain calibration payloads in the db. Only gets initialized if check_dead_pixels_ is set to true.
     const std::unique_ptr<SiPixelGainCalibrationOfflineSimService> theSiPixelGainCalibrationService_;    
     float missCalibrate(uint32_t detID, int col, int row, float amp) const;  
@@ -384,16 +428,7 @@ class SiPixelDigitizerAlgorithm  {
     void module_killing_DB(uint32_t detID);  // remove dead modules uisng the list in the DB
 
     const PixelEfficiencies pixelEfficiencies_;
-
-   // For random numbers
-    const std::unique_ptr<CLHEP::RandFlat> flatDistribution_;
-    const std::unique_ptr<CLHEP::RandGaussQ> gaussDistribution_;
-    const std::unique_ptr<CLHEP::RandGaussQ> gaussDistributionVCALNoise_;
-
-    // Threshold gaussian smearing:
-    const std::unique_ptr<CLHEP::RandGaussQ> smearedThreshold_FPix_;
-    const std::unique_ptr<CLHEP::RandGaussQ> smearedThreshold_BPix_;
-    const std::unique_ptr<CLHEP::RandGaussQ> smearedThreshold_BPix_L1_;
+    const PixelAging pixelAging_;
 
     double calcQ(float x) const {
       // need erf(x/sqrt2)

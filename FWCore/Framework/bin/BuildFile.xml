@@ -1,3 +1,9 @@
+<architecture name="slc[6-9]_amd64">
+  <flags LDFLAGS="-Wl,-dynamic-linker,$(GLIBC_BASE)/lib64/ld.so"/>
+</architecture>
+<release name=".*_ASAN_.*">
+  <flags LDFLAGS="-fsanitize=address -static-libasan"/>
+</release>
 <bin   name="cmsRunGlibC" file="cmsRun.cpp">
   <use   name="roothistmatrix"/>
   <use   name="tbb"/>
@@ -27,6 +33,21 @@
   <use   name="FWCore/PythonParameterSet"/>
 </bin>
 <bin   name="cmsRun" file="cmsRun.cpp">
+  <use   name="tbb"/>
+  <use   name="boost"/>
+  <use   name="boost_program_options"/>
+  <use   name="boost_python"/>
+  <use   name="jemalloc"/>
+  <use   name="FWCore/Framework"/>
+  <use   name="FWCore/MessageLogger"/>
+  <use   name="FWCore/PluginManager"/>
+  <use   name="FWCore/ServiceRegistry"/>
+  <use   name="FWCore/Utilities"/>
+  <use   name="FWCore/ParameterSet"/>
+  <use   name="FWCore/PythonParameterSet"/>
+</bin>
+<bin   name="cmsRunVDT" file="cmsRun.cpp">
+  <use   name="vdt"/>
   <use   name="tbb"/>
   <use   name="boost"/>
   <use   name="boost_program_options"/>

@@ -3,55 +3,19 @@ import FWCore.ParameterSet.Config as cms
 hltTauValidationProcess_IDEAL = "HLT"
 
 hltTauValIdealMonitorMC = cms.EDAnalyzer("HLTTauDQMOfflineSource",
-    ModuleName = cms.untracked.string("hltTauValIdealMonitorMC"),
-    DQMBaseFolder = cms.untracked.string("HLT/TauRelVal/MC/"),
     HLTProcessName = cms.untracked.string(hltTauValidationProcess_IDEAL),
-    MonitorSetup = cms.VPSet(
-        cms.PSet(
-            ConfigType            = cms.untracked.string("Path"),
-            TriggerEventObject    = cms.untracked.InputTag("hltTriggerSummaryRAW","",hltTauValidationProcess_IDEAL),
-            DQMFolder             = cms.untracked.string('DoubleTau'),                        
-        ),
-        cms.PSet(
-            ConfigType            = cms.untracked.string("Path"),
-            TriggerEventObject    = cms.untracked.InputTag("hltTriggerSummaryRAW","",hltTauValidationProcess_IDEAL),
-            DQMFolder             = cms.untracked.string('Ele.+?Tau'),                        
-            Alias                 = cms.untracked.string('EleTau'),                        
-        ),
-        cms.PSet(
-            ConfigType            = cms.untracked.string("Path"),
-            TriggerEventObject    = cms.untracked.InputTag("hltTriggerSummaryRAW","",hltTauValidationProcess_IDEAL),
-            DQMFolder             = cms.untracked.string('MuLooseTau'),                           
-        ),
-        cms.PSet(
-            ConfigType            = cms.untracked.string("Path"),
-            TriggerEventObject    = cms.untracked.InputTag("hltTriggerSummaryRAW","",hltTauValidationProcess_IDEAL),
-            DQMFolder             = cms.untracked.string('MuMediumTau'),                          
-        ),
-        cms.PSet(
-            ConfigType            = cms.untracked.string("Path"),
-            TriggerEventObject    = cms.untracked.InputTag("hltTriggerSummaryRAW","",hltTauValidationProcess_IDEAL),
-            DQMFolder             = cms.untracked.string('MuTightTau'),                         
-        ),
-        cms.PSet(
-            ConfigType            = cms.untracked.string("Path"),
-            TriggerEventObject    = cms.untracked.InputTag("hltTriggerSummaryRAW","",hltTauValidationProcess_IDEAL),
-            DQMFolder             = cms.untracked.string('Single.+?Tau_MET'),
-            Alias                 = cms.untracked.string('SingleTau'),                        
-        ),
-        cms.PSet(
-            ConfigType            = cms.untracked.string("LitePath"),
-            TriggerEventObject    = cms.untracked.InputTag("hltTriggerSummaryAOD","",hltTauValidationProcess_IDEAL),
-            DQMFolder             = cms.untracked.string('Summary'),
-        ),
-        cms.PSet(
-            ConfigType            = cms.untracked.string("L1"),
-            DQMFolder             = cms.untracked.string('L1'),
-            L1Taus                = cms.InputTag("hltL1extraParticles","Tau"),
-            L1Jets                = cms.InputTag("hltL1extraParticles","Central"),
-            L1Electrons           = cms.InputTag("hltL1extraParticles","NonIsolated"),
-            L1Muons               = cms.InputTag("hltL1extraParticles"),
-        ),
+    DQMBaseFolder = cms.untracked.string("HLT/TauRelVal/MC"),
+    TriggerResultsSrc = cms.untracked.InputTag("TriggerResults", "", hltTauValidationProcess_IDEAL),
+    TriggerEventSrc = cms.untracked.InputTag("hltTriggerSummaryAOD", "", hltTauValidationProcess_IDEAL),
+    L1Plotter = cms.untracked.PSet(
+        DQMFolder             = cms.untracked.string('L1'),
+        L1Taus                = cms.untracked.InputTag("l1extraParticles", "Tau"),
+        L1Jets                = cms.untracked.InputTag("l1extraParticles", "Central"),
+        L1JetMinEt            = cms.untracked.double(40), # this value is arbitrary at the moment
+    ),
+    Paths = cms.untracked.string("PFTau"),
+    PathSummaryPlotter = cms.untracked.PSet(
+        DQMFolder             = cms.untracked.string('Summary'),
     ),
     Matching = cms.PSet(
         doMatching            = cms.untracked.bool(True),
@@ -72,11 +36,8 @@ hltTauValIdealMonitorMC = cms.EDAnalyzer("HLTTauDQMOfflineSource",
     ),
 )
 
-hltTauValIdealMonitorPF = cms.EDAnalyzer("HLTTauDQMOfflineSource",
-    ModuleName = cms.untracked.string("hltTauValIdealMonitorPF"),
-    DQMBaseFolder = cms.untracked.string("HLT/TauRelVal/PF/"),
-    HLTProcessName = cms.untracked.string(hltTauValidationProcess_IDEAL),
-    MonitorSetup = hltTauValIdealMonitorMC.MonitorSetup,
+hltTauValIdealMonitorPF = hltTauValIdealMonitorMC.clone(
+    DQMBaseFolder = cms.untracked.string("HLT/TauRelVal/PF"),
     Matching = cms.PSet(
         doMatching            = cms.untracked.bool(True),
         matchFilters          = cms.untracked.VPSet(

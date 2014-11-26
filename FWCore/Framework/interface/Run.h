@@ -17,7 +17,7 @@ For its usage, see "FWCore/Framework/interface/PrincipalGetAdapter.h"
 
 ----------------------------------------------------------------------*/
 
-#include "DataFormats/Common/interface/WrapperOwningHolder.h"
+#include "DataFormats/Common/interface/Wrapper.h"
 #include "FWCore/Framework/interface/PrincipalGetAdapter.h"
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/Common/interface/RunBase.h"
@@ -63,6 +63,17 @@ namespace edm {
      */
     RunIndex index() const;
 
+    /**If you are caching data from the Run, you should also keep
+     this number.  If this number changes then you know that
+     the data you have cached is invalid.
+     The value of '0' will never be returned so you can use that to
+     denote that you have not yet checked the value.
+     */
+    typedef unsigned long CacheIdentifier_t;
+    CacheIdentifier_t
+    cacheIdentifier() const;
+
+    
     template <typename PROD>
     bool
     getByLabel(std::string const& label, Handle<PROD>& result) const;
@@ -95,10 +106,18 @@ namespace edm {
     void
     put(std::auto_ptr<PROD> product) {put<PROD>(product, std::string());}
 
+    template <typename PROD>
+    void
+    put(std::unique_ptr<PROD> product) {put<PROD>(std::move(product), std::string());}
+
     ///Put a new product with a 'product instance name'
     template <typename PROD>
     void
     put(std::auto_ptr<PROD> product, std::string const& productInstanceName);
+
+    template <typename PROD>
+    void
+    put(std::unique_ptr<PROD> product, std::string const& productInstanceName);
 
     Provenance
     getProvenance(BranchID const& theID) const;
@@ -133,7 +152,7 @@ namespace edm {
     // Override version from RunBase class
     virtual BasicHandle getByLabelImpl(std::type_info const& iWrapperType, std::type_info const& iProductType, InputTag const& iTag) const;
 
-    typedef std::vector<std::pair<WrapperOwningHolder, BranchDescription const*> > ProductPtrVec;
+    typedef std::vector<std::pair<std::unique_ptr<WrapperBase>, BranchDescription const*> > ProductPtrVec;
     ProductPtrVec& putProducts() {return putProducts_;}
     ProductPtrVec const& putProducts() const {return putProducts_;}
 
@@ -141,7 +160,6 @@ namespace edm {
     // this PrincipalGetAdapter. The friendships required seems gross, but any
     // alternative is not great either.  Putting it into the
     // public interface is asking for trouble
-    friend class DaqSource;
     friend class InputSource;
     friend class RawInputSource;
     friend class ProducerBase;
@@ -163,6 +181,12 @@ namespace edm {
   template <typename PROD>
   void
   Run::put(std::auto_ptr<PROD> product, std::string const& productInstanceName) {
+    put(std::unique_ptr<PROD>(product.release()),productInstanceName);
+  }
+  
+  template <typename PROD>
+  void
+  Run::put(std::unique_ptr<PROD> product, std::string const& productInstanceName) {
     if (product.get() == 0) {                // null pointer is illegal
       TypeID typeID(typeid(PROD));
       principal_get_adapter_detail::throwOnPutOfNullProduct("Run", typeID, productInstanceName);
@@ -178,8 +202,8 @@ namespace edm {
     BranchDescription const& desc =
       provRecorder_.getBranchDescription(TypeID(*product), productInstanceName);
 
-    WrapperOwningHolder edp(new Wrapper<PROD>(product), Wrapper<PROD>::getInterface());
-    putProducts().emplace_back(edp, &desc);
+    std::unique_ptr<Wrapper<PROD> > wp(new Wrapper<PROD>(std::move(product)));
+    putProducts().emplace_back(std::move(wp), &desc);
 
     // product.release(); // The object has been copied into the Wrapper.
     // The old copy must be deleted, so we cannot release ownership.
@@ -201,8 +225,8 @@ namespace edm {
     }
     result.clear();
     BasicHandle bh = provRecorder_.getByLabel_(TypeID(typeid(PROD)), label, productInstanceName, emptyString_, moduleCallingContext_);
-    convert_handle(bh, result);  // throws on conversion error
-    if (bh.failedToGet()) {
+    convert_handle(std::move(bh), result);  // throws on conversion error
+    if (result.failedToGet()) {
       return false;
     }
     return true;
@@ -217,8 +241,8 @@ namespace edm {
     }
     result.clear();
     BasicHandle bh = provRecorder_.getByLabel_(TypeID(typeid(PROD)), tag, moduleCallingContext_);
-    convert_handle(bh, result);  // throws on conversion error
-    if (bh.failedToGet()) {
+    convert_handle(std::move(bh), result);  // throws on conversion error
+    if (result.failedToGet()) {
       return false;
     }
     return true;
@@ -232,8 +256,8 @@ namespace edm {
     }
     result.clear();
     BasicHandle bh = provRecorder_.getByToken_(TypeID(typeid(PROD)),PRODUCT_TYPE, token, moduleCallingContext_);
-    convert_handle(bh, result);  // throws on conversion error
-    if (bh.failedToGet()) {
+    convert_handle(std::move(bh), result);  // throws on conversion error
+    if (result.failedToGet()) {
       return false;
     }
     return true;
@@ -247,8 +271,8 @@ namespace edm {
     }
     result.clear();
     BasicHandle bh = provRecorder_.getByToken_(TypeID(typeid(PROD)),PRODUCT_TYPE, token, moduleCallingContext_);
-    convert_handle(bh, result);  // throws on conversion error
-    if (bh.failedToGet()) {
+    convert_handle(std::move(bh), result);  // throws on conversion error
+    if (result.failedToGet()) {
       return false;
     }
     return true;

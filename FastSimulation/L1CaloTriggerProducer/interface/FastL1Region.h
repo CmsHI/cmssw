@@ -113,7 +113,7 @@ class FastL1Region {
   FastL1Region();
   ~FastL1Region();
 
-  void SetParameters(L1Config);
+  void SetParameters(const L1Config&);
   void FillTower(const CaloTower& t,int& tid,edm::ESHandle<CaloGeometry> &cGeom); 
   void FillTowerZero(const CaloTower& t,int& tid); 
   void FillTower_Scaled(const CaloTower& t,int& tid,bool doRCTTrunc,edm::ESHandle<CaloGeometry> &cGeom); 
@@ -196,7 +196,6 @@ class FastL1Region {
   FastL1BitInfo BitInfo;
 
   void SetFGBit(int twrid,bool FGBIT);
-  void SetHCFGBit(int twrid,bool FGBIT);
   void SetHOEBit(int twrid,bool FGBIT);
 
  private:
@@ -205,7 +204,6 @@ class FastL1Region {
   void SetHOEBit();
   void SetQuietBit();
   void SetMIPBit();
-  void SetHCFGBit();
 
   // Save Tower info
   // 4x4 matrices (rows,columns):

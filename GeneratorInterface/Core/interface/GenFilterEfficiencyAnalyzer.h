@@ -2,7 +2,6 @@
 #define GENFILTEREFFICIENCYANALYZER_H
 
 // F. Cossutti
-// $Date: 2012/08/23 21:51:20 $
 // $Revision://
 
 // analyzer of a summary information product on filter efficiency for a user specified path
@@ -39,9 +38,8 @@ private:
   virtual void endLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&) override;
   virtual void endJob() override;
 
-  int nTota_;
-  int nPass_;
   edm::InputTag genFilterInfoTag_;
+  GenFilterInfo totalGenFilterInfo_;
 
   // ----------member data ---------------------------
   

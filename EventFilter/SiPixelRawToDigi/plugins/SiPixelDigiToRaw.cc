@@ -16,18 +16,18 @@
 #include "EventFilter/SiPixelRawToDigi/interface/PixelDataFormatter.h"
 #include "CondFormats/SiPixelObjects/interface/PixelFEDCabling.h"
 
-#include "EventFilter/SiPixelRawToDigi/interface/R2DTimerObserver.h"
 #include "TH1D.h"
 #include "TFile.h"
 
 using namespace std;
 
 SiPixelDigiToRaw::SiPixelDigiToRaw( const edm::ParameterSet& pset ) :
-  cablingTree_(0),
-  frameReverter_(0),
+  frameReverter_(nullptr),
   config_(pset),
-  hCPU(0), hDigi(0), theTimer(0)
+  hCPU(0), hDigi(0)
 {
+
+  tPixelDigi = consumes<edm::DetSetVector<PixelDigi> >(config_.getParameter<edm::InputTag>("InputLabel")); 
 
   // Define EDProduct type
   produces<FEDRawDataCollection>();
@@ -40,22 +40,29 @@ SiPixelDigiToRaw::SiPixelDigiToRaw( const edm::ParameterSet& pset ) :
   // Timing
   bool timing = config_.getUntrackedParameter<bool>("Timing",false);
   if (timing) {
-    theTimer = new R2DTimerObserver("**** MY TIMING REPORT ***");
+    theTimer.reset(new edm::CPUTimer); 
     hCPU = new TH1D ("hCPU","hCPU",100,0.,0.050);
     hDigi = new TH1D("hDigi","hDigi",50,0.,15000.);
   }
+
+  // Control the usage of phase1
+  usePhase1 = false;
+  if (config_.exists("UsePhase1")) {
+    usePhase1 = config_.getParameter<bool> ("UsePhase1");
+    if(usePhase1) edm::LogInfo("SiPixelRawToDigi")  << " Use pilot blade data (FED 40)";
+  }
+
+  usePilotBlade=false; // I am not yet sure we need it here?
 }
 
 // -----------------------------------------------------------------------------
 SiPixelDigiToRaw::~SiPixelDigiToRaw() {
-  delete cablingTree_;
   delete frameReverter_;
 
   if (theTimer) {
     TFile rootFile("analysis.root", "RECREATE", "my histograms");
     hCPU->Write();
     hDigi->Write();
-    delete theTimer;
   }
 }
 
@@ -72,7 +79,7 @@ void SiPixelDigiToRaw::produce( edm::Event& ev,
 
   edm::Handle< edm::DetSetVector<PixelDigi> > digiCollection;
   label = config_.getParameter<edm::InputTag>("InputLabel");
-  ev.getByLabel( label, digiCollection);
+  ev.getByToken( tPixelDigi, digiCollection);
 
   PixelDataFormatter::RawData rawdata;
   PixelDataFormatter::Digis digis;
@@ -89,14 +96,16 @@ void SiPixelDigiToRaw::produce( edm::Event& ev,
     edm::ESHandle<SiPixelFedCablingMap> cablingMap;
     es.get<SiPixelFedCablingMapRcd>().get( cablingMap );
     fedIds = cablingMap->fedIds();
-    if (cablingTree_) delete cablingTree_; cablingTree_= cablingMap->cablingTree();
+    cablingTree_= cablingMap->cablingTree();
     if (frameReverter_) delete frameReverter_; frameReverter_ = new SiPixelFrameReverter( es, cablingMap.product() );
   }
 
   debug = edm::MessageDrop::instance()->debugEnabled;
   if (debug) LogDebug("SiPixelDigiToRaw") << cablingTree_->version();
 
-  PixelDataFormatter formatter(cablingTree_);
+  //PixelDataFormatter formatter(cablingTree_.get());
+  PixelDataFormatter formatter(cablingTree_.get(), usePhase1);
+
   formatter.passFrameReverter(frameReverter_);
   if (theTimer) theTimer->start();
 
@@ -126,10 +135,10 @@ void SiPixelDigiToRaw::produce( edm::Event& ev,
 
   if (theTimer) {
     theTimer->stop();
-    LogDebug("SiPixelDigiToRaw") << "TIMING IS: (real)" << theTimer->lastMeasurement().real() ;
+    LogDebug("SiPixelDigiToRaw") << "TIMING IS: (real)" << theTimer->realTime() ;
     LogDebug("SiPixelDigiToRaw") << " (Words/Digis) this ev: "
          <<formatter.nWords()<<"/"<<formatter.nDigis() << "--- all :"<<allWordCounter<<"/"<<allDigiCounter;
-    hCPU->Fill( theTimer->lastMeasurement().real() ); 
+    hCPU->Fill( theTimer->realTime() ); 
     hDigi->Fill(formatter.nDigis());
   }
   

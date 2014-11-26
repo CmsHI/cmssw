@@ -3,14 +3,15 @@
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 
 #include "G4LossTableManager.hh"
+#include "G4SystemOfUnits.hh"
 
 PhysicsList::PhysicsList(G4LogicalVolumeToDDLogicalPartMap & map,
 			 const HepPDT::ParticleDataTable * table_,
-			 sim::FieldBuilder *fieldBuilder_,
+			 sim::ChordFinderSetter *chordFinderSetter_,
 			 const edm::ParameterSet & p) 
   : G4VModularPhysicsList(), m_pPhysics(p),  prodCuts(0) {
   m_Verbosity = m_pPhysics.getUntrackedParameter<int>("Verbosity",0);
-  prodCuts = new DDG4ProductionCuts(map, m_Verbosity);	
+  prodCuts = new DDG4ProductionCuts(map, m_Verbosity, m_pPhysics);	
 }
  
 PhysicsList::~PhysicsList() {

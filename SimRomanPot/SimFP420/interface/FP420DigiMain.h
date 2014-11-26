@@ -46,7 +46,7 @@ public:
 
   // Runs the algorithm
   //  void run(const std::vector<PSimHit*> &input, DigiCollectionFP420 &output,StripGeomDetUnit *det,GlobalVector);
-  std::vector <HDigiFP420>  run(const std::vector<PSimHit> &input, G4ThreeVector, unsigned int);
+  std::vector <HDigiFP420>  run(const std::vector<PSimHit> &input, const G4ThreeVector&, unsigned int);
   //vector <HDigiFP420>  run(const std::vector<PSimHit> &input, G4ThreeVector, unsigned int, int);
 
  private:
@@ -168,8 +168,6 @@ public:
 
   //  int numStripsMax;    // max number of strips in the module
   float moduleThickness; // plate thickness 
-
-  FP420NumberingScheme * theFP420NumberingScheme;
 
   void push_digis(const DigitalMapType&,
                   const HitToDigisMapType&,

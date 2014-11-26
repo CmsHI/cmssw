@@ -1,7 +1,5 @@
 /** \class CSCTMBData
  *
- *  $Date: 2011/11/01 16:31:54 $
- *  $Revision: 1.31 $
  *  \author A. Tumanov - Rice
  */
 
@@ -14,7 +12,11 @@
 #include "EventFilter/CSCRawToDigi/src/bitset_append.h"
 #include "EventFilter/CSCRawToDigi/src/cscPackerCompare.h"
 
+#ifdef LOCAL_UNPACK
 bool CSCTMBData::debug =false;
+#else
+std::atomic<bool> CSCTMBData::debug{false};
+#endif
 
 CSCTMBData::CSCTMBData() 
   : theOriginalBuffer(0), 
@@ -37,6 +39,30 @@ CSCTMBData::CSCTMBData()
 
 }
 
+CSCTMBData::CSCTMBData(int firmwareVersion, int firmwareRevision, int cfebs)
+  : theOriginalBuffer(0),
+    theB0CLine( 0 ),
+    theE0FLine( 0 ),
+    theTMBHeader(firmwareVersion, firmwareRevision),
+    theCLCTData(&theTMBHeader),
+    theTMBScopeIsPresent(false),
+    theTMBScope(0),
+    theTMBMiniScopeIsPresent(false),
+    theTMBMiniScope(0),
+    theBlockedCFEBIsPresent(false),
+    theTMBBlockedCFEB(0),
+    theTMBTrailer(theTMBHeader.sizeInWords()+theCLCTData.sizeInWords(), firmwareVersion),
+    size_( 0 ),
+    cWordCnt( 0 ),
+    theRPCDataIsPresent(false)
+{
+
+   theTMBHeader.setNCFEBs(cfebs);
+   theCLCTData = CSCCLCTData(&theTMBHeader);
+   theTMBTrailer = CSCTMBTrailer(theTMBHeader.sizeInWords()+theCLCTData.sizeInWords(), firmwareVersion);
+
+
+}
 
 CSCTMBData::CSCTMBData(unsigned short *buf) 
   : theOriginalBuffer(buf), 
@@ -192,8 +218,9 @@ int CSCTMBData::UnpackTMB(unsigned short *buf) {
   }
 
   int currentPosition = theTMBHeader.sizeInWords();
+  int theFirmwareVersion = theTMBHeader.FirmwareVersion();
 
-  theCLCTData = CSCCLCTData(theTMBHeader.NCFEBs(), theTMBHeader.NTBins(), buf+e0bLine+1);
+  theCLCTData = CSCCLCTData(theTMBHeader.NCFEBs(), theTMBHeader.NTBins(), buf+e0bLine+1, theFirmwareVersion);
 
   if(!theCLCTData.check())   {
     LogTrace("CSCTMBData|CSCRawToDigi") << "+++ CSCTMBData warning: Bad CLCT data";

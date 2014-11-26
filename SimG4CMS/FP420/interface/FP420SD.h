@@ -59,7 +59,7 @@ class FP420SD : public SensitiveTkDetector,
 
 public:
   
-  FP420SD(std::string, const DDCompactView &, SensitiveDetectorCatalog &, 
+  FP420SD(std::string, const DDCompactView &, const SensitiveDetectorCatalog &,
   	  edm::ParameterSet const &, const SimTrackManager* );
 
 //-------------------------------------------------------------------
@@ -105,8 +105,8 @@ public:
   //  int eventno;
  private:
   
-  G4ThreeVector SetToLocal(G4ThreeVector global);
-  G4ThreeVector SetToLocalExit(G4ThreeVector globalPoint);
+  G4ThreeVector SetToLocal(const G4ThreeVector& global);
+  G4ThreeVector SetToLocalExit(const G4ThreeVector& globalPoint);
   void          GetStepInfo(G4Step* aStep);
   G4bool        HitExists();
   void          CreateNewHit();

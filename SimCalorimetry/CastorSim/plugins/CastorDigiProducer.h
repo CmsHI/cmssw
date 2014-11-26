@@ -1,7 +1,7 @@
 #ifndef CastorDigiProducer_h
 #define CastorDigiProducer_h
 
-#include "FWCore/Framework/interface/EDProducer.h"
+#include "FWCore/Framework/interface/one/EDProducer.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
@@ -20,22 +20,30 @@
 
 #include <vector>
 
+namespace edm {
+  class StreamID;
+}
+
+namespace CLHEP {
+  class HepRandomEngine;
+}
+
 class PCaloHit;
 class PileUpEventPrincipal;
 
 class CastorDigiProducer : public DigiAccumulatorMixMod {
 public:
 
-  explicit CastorDigiProducer(const edm::ParameterSet& ps, edm::EDProducer& mixMod);
+  explicit CastorDigiProducer(const edm::ParameterSet& ps, edm::one::EDProducerBase& mixMod, edm::ConsumesCollector& iC);
   virtual ~CastorDigiProducer();
 
   virtual void initializeEvent(edm::Event const& e, edm::EventSetup const& c) override;
   virtual void accumulate(edm::Event const& e, edm::EventSetup const& c) override;
-  virtual void accumulate(PileUpEventPrincipal const& e, edm::EventSetup const& c) override;
+  virtual void accumulate(PileUpEventPrincipal const& e, edm::EventSetup const& c, edm::StreamID const&) override;
   virtual void finalizeEvent(edm::Event& e, edm::EventSetup const& c) override;
 
 private:
-  void accumulateCaloHits(std::vector<PCaloHit> const&, int bunchCrossing);
+  void accumulateCaloHits(std::vector<PCaloHit> const&, int bunchCrossing, CLHEP::HepRandomEngine*);
 
   /// fills the vectors for each subdetector
   void sortHits(const edm::PCaloHitContainer & hits);
@@ -44,6 +52,8 @@ private:
   /// make sure the digitizer has the correct list of all cells that
   /// exist in the geometry
   void checkGeometry(const edm::EventSetup& eventSetup);
+
+  CLHEP::HepRandomEngine* randomEngine(edm::StreamID const& streamID);
 
   /** Reconstruction algorithm*/
   typedef CaloTDigitizer<CastorDigitizerTraits> CastorDigitizer;
@@ -66,6 +76,7 @@ private:
 
   std::vector<PCaloHit> theCastorHits;
 
+  std::vector<CLHEP::HepRandomEngine*> randomEngines_;
 };
 
 #endif

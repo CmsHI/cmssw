@@ -25,6 +25,9 @@
 #include "G4ParticleTable.hh"
 #include "G4VProcess.hh"
 
+#include "G4SystemOfUnits.hh"
+#include "G4PhysicalConstants.hh"
+
 #include <iostream>
 #include <fstream>
 #include <iomanip>
@@ -33,7 +36,7 @@
 //#define plotDebug
 
 HCalSD::HCalSD(G4String name, const DDCompactView & cpv,
-               SensitiveDetectorCatalog & clg, 
+               const SensitiveDetectorCatalog & clg,
                edm::ParameterSet const & p, const SimTrackManager* manager) : 
   CaloSD(name, cpv, clg, p, manager,
          p.getParameter<edm::ParameterSet>("HCalSD").getParameter<int>("TimeSliceUnit"),
@@ -309,7 +312,7 @@ HCalSD::HCalSD(G4String name, const DDCompactView & cpv,
       if (notIn) {
         namx = log.material().name().name();
         matNames.push_back(namx);
-        G4Material* mat;
+        G4Material* mat = nullptr;
         for (matite = matTab->begin(); matite != matTab->end(); ++matite) {
           if ((*matite)->GetName() == namx) {
             mat = (*matite);
@@ -341,25 +344,25 @@ HCalSD::HCalSD(G4String name, const DDCompactView & cpv,
   edm::Service<TFileService> tfile;
 
   if ( tfile.isAvailable() ) {
-    static std::string labels[9] = {"HB", "HE", "HO", "HF Absorber", "HF PMT",
-                                    "HF Absorber Long", "HF Absorber Short",
-                                    "HF PMT Long", "HF PMT Short"};
+    static const char * const labels[] = {"HB", "HE", "HO", "HF Absorber", "HF PMT",
+                                          "HF Absorber Long", "HF Absorber Short",
+                                          "HF PMT Long", "HF PMT Short"};
     TFileDirectory hcDir = tfile->mkdir("ProfileFromHCalSD");
     char name[20], title[60];
     for (int i=0; i<9; ++i) {
-      sprintf (title, "Hit energy in %s", labels[i].c_str());
+      sprintf (title, "Hit energy in %s", labels[i]);
       sprintf (name, "HCalSDHit%d", i);
       hit_[i] = hcDir.make<TH1F>(name, title, 2000, 0., 2000.);
       sprintf (title, "Energy (MeV)");
       hit_[i]->GetXaxis()->SetTitle(title);
       hit_[i]->GetYaxis()->SetTitle("Hits");
-      sprintf (title, "Time of the hit in %s", labels[i].c_str());
+      sprintf (title, "Time of the hit in %s", labels[i]);
       sprintf (name, "HCalSDTime%d", i);
       time_[i] = hcDir.make<TH1F>(name, title, 2000, 0., 2000.);
       sprintf (title, "Time (ns)");
       time_[i]->GetXaxis()->SetTitle(title);
       time_[i]->GetYaxis()->SetTitle("Hits");
-      sprintf (title, "Longitudinal profile in %s", labels[i].c_str());
+      sprintf (title, "Longitudinal profile in %s", labels[i]);
       sprintf (name, "HCalSDDist%d", i);
       dist_[i] = hcDir.make<TH1F>(name, title, 2000, 0., 2000.);
       sprintf (title, "Distance (mm)");
@@ -637,7 +640,7 @@ bool HCalSD::filterHit(CaloG4Hit* aHit, double time) {
 }
 
 
-uint32_t HCalSD::setDetUnitId (int det, G4ThreeVector pos, int depth, int lay=1) { 
+uint32_t HCalSD::setDetUnitId (int det, const G4ThreeVector& pos, int depth, int lay=1) { 
   uint32_t id = 0;
   if (numberingFromDDD) {
     //get the ID's as eta, phi, depth, ... indices
@@ -1094,7 +1097,7 @@ void HCalSD::readWeightFromFile(std::string fName) {
   if (entry <= 0) useLayerWt = false;
 }
 
-double HCalSD::layerWeight(int det, G4ThreeVector pos, int depth, int lay) { 
+double HCalSD::layerWeight(int det, const G4ThreeVector& pos, int depth, int lay) { 
 
   double wt = 1.;
   if (numberingFromDDD) {
@@ -1115,7 +1118,7 @@ double HCalSD::layerWeight(int det, G4ThreeVector pos, int depth, int lay) {
   return wt;
 }
 
-void HCalSD::plotProfile(G4Step* aStep, G4ThreeVector global, double edep,
+void HCalSD::plotProfile(G4Step* aStep,const G4ThreeVector& global, double edep,
                          double time, int id) { 
 
   const G4VTouchable* touch = aStep->GetPreStepPoint()->GetTouchable();

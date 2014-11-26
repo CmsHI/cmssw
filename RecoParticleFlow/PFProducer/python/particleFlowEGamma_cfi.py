@@ -6,7 +6,7 @@ particleFlowEGamma = cms.EDProducer("PFEGammaProducer",
     blocks = cms.InputTag("particleFlowBlock"),
 
     #EE to PS association
-    EEtoPS_source = cms.InputTag("particleFlowSuperClusterECAL","eetops"),
+    EEtoPS_source = cms.InputTag("particleFlowClusterECAL"),
 
     #allow building of candidates with no input or output supercluster?
     produceEGCandsWithNoSuperCluster = cms.bool(False),
@@ -167,8 +167,7 @@ particleFlowEGamma = cms.EDProducer("PFEGammaProducer",
     # Check HF cleaning
     cleanedHF = cms.VInputTag(
                 cms.InputTag("particleFlowRecHitHCAL","Cleaned"),
-                cms.InputTag("particleFlowClusterHFHAD","Cleaned"),
-                cms.InputTag("particleFlowClusterHFEM","Cleaned")
+                cms.InputTag("particleFlowClusterHF","Cleaned")
                 ),
     
     # number of sigmas for neutral energy detection

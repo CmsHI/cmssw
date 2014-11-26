@@ -13,7 +13,6 @@ Implementation:
 //
 // Original Author:  Giovanni FRANZONI
 //         Created:  Tue Jan 22 13:55:00 CET 2008
-// $Id: HcalCalibTypeFilter.cc,v 1.4 2009/07/08 15:30:53 mansj Exp $
 //
 //
 
@@ -54,8 +53,8 @@ private:
   virtual void endJob() override ;
   
   // ----------member data ---------------------------
-  
-  std::string DataLabel_ ;
+ 
+  edm::EDGetTokenT<FEDRawDataCollection> tok_data_; 
   bool        Summary_ ;
   std::vector<int> CalibTypes_ ;   
   std::vector<int> eventsByType ; 
@@ -70,7 +69,7 @@ HcalCalibTypeFilter::HcalCalibTypeFilter(const edm::ParameterSet& iConfig)
 {
   //now do what ever initialization is needed
 
-  DataLabel_  = iConfig.getParameter<std::string>("InputLabel") ;
+  tok_data_  = consumes<FEDRawDataCollection>(edm::InputTag(iConfig.getParameter<std::string>("InputLabel") ));
   Summary_    = iConfig.getUntrackedParameter<bool>("FilterSummary",false) ;
   CalibTypes_ = iConfig.getParameter< std::vector<int> >("CalibTypes") ; 
 }
@@ -96,7 +95,7 @@ HcalCalibTypeFilter::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
   using namespace edm;
   
   edm::Handle<FEDRawDataCollection> rawdata;  
-  iEvent.getByLabel(DataLabel_,rawdata);
+  iEvent.getByToken(tok_data_,rawdata);
   
   // checking FEDs for calibration information
   int calibType = -1 ; int numEmptyFEDs = 0 ; 

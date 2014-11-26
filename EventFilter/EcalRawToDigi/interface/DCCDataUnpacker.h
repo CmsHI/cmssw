@@ -11,8 +11,6 @@
  *
  * \file DCCDataUnpacker.h
  *
- * $Date: 2010/10/04 07:44:38 $
- * $Revision: 1.5 $
  * \author N. Almeida
  * \author G. Franzoni
  *
@@ -25,6 +23,7 @@
 #include <map>
 #include <stdio.h>                     
 #include <stdint.h>
+#include <atomic>
 
 //DATA DECODER
 
@@ -225,7 +224,7 @@ public :
   */
   DCCEventBlock * currentEvent(){ return currentEvent_;}
 
-  static bool silentMode_; 
+  static std::atomic<bool> silentMode_; 
  
 protected :
 

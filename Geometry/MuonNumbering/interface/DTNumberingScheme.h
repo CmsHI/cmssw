@@ -1,13 +1,11 @@
-#ifndef MuonNumbering_DTNumberingScheme_h
-#define MuonNumbering_DTNumberingScheme_h
+#ifndef Geometry_MuonNumbering_DTNumberingScheme_h
+#define Geometry_MuonNumbering_DTNumberingScheme_h
 
 /** \class DTNumberingScheme
  *
  * implementation of MuonNumberingScheme for muon barrel,
  * converts the MuonBaseNumber to a unit id
  *  
- *  $Date: 2007/09/13 12:33:10 $
- *  $Revision: 1.6 $
  * \author Arno Straessner, CERN <arno.straessner@cern.ch>
  *
  */

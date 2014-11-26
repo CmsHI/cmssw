@@ -27,31 +27,32 @@ DEFINE_EDM_PLUGIN(MTVHistoProducerAlgoFactory, MTVHistoProducerAlgoForTracker,  
 // #include "CommonTools/UtilAlgos/interface/ObjectSelector.h"
 // #include "CommonTools/UtilAlgos/interface/SingleElementCollectionSelector.h"
 
-// typedef 
-// ObjectSelector<SingleElementCollectionSelector<reco::TrackCollection,RecoTrackSelector> > 
+// typedef
+// ObjectSelector<SingleElementCollectionSelector<reco::TrackCollection,RecoTrackSelector> >
 // TrackSelector ;
 // DEFINE_FWK_MODULE( TrackSelector );
 
-// typedef 
-// ObjectSelector<SingleElementCollectionSelector<reco::TrackCollection,TrackEfficiencySelector> > 
+// typedef
+// ObjectSelector<SingleElementCollectionSelector<reco::TrackCollection,TrackEfficiencySelector> >
 // TrackSelectorForEfficiency ;
 // DEFINE_FWK_MODULE( TrackSelectorForEfficiency );
 
-// typedef 
-// ObjectSelector<SingleElementCollectionSelector<reco::TrackCollection,TrackFakeRateSelector> > 
+// typedef
+// ObjectSelector<SingleElementCollectionSelector<reco::TrackCollection,TrackFakeRateSelector> >
 // TrackSelectorForFakeRate ;
 // DEFINE_FWK_MODULE( TrackSelectorForFakeRate );
 
-// typedef 
-// ObjectSelector<SingleElementCollectionSelector<TrackingParticleCollection,TPEfficiencySelector> > 
+// typedef
+// ObjectSelector<SingleElementCollectionSelector<TrackingParticleCollection,TPEfficiencySelector> >
 // TPSelectorForEfficiency ;
 // DEFINE_FWK_MODULE( TPSelectorForEfficiency );
 
-// typedef 
-// ObjectSelector<SingleElementCollectionSelector<TrackingParticleCollection,TPFakeRateSelector> > 
+// typedef
+// ObjectSelector<SingleElementCollectionSelector<TrackingParticleCollection,TPFakeRateSelector> >
 // TPSelectorForFakeRate ;
 // DEFINE_FWK_MODULE( TPSelectorForFakeRate );
 
+/*
 #include "CommonTools/UtilAlgos/interface/StringCutObjectSelector.h"
 #include "CommonTools/UtilAlgos/interface/SingleObjectSelector.h"
 #include "DataFormats/TrackReco/interface/Track.h"
@@ -63,3 +64,4 @@ typedef SingleObjectSelector<
         > TrackSelectorForValidation;
 
 DEFINE_FWK_MODULE(TrackSelectorForValidation);
+*/

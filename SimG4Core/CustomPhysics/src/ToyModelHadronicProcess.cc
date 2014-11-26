@@ -2,7 +2,6 @@
 #include "G4ProcessManager.hh"
 #include "G4ParticleTable.hh"
 #include "G4Track.hh"
-#include "G4InelasticInteraction.hh"
 #include "Randomize.hh"
 //Our includes
 #include "SimG4Core/CustomPhysics/interface/ToyModelHadronicProcess.hh"
@@ -10,6 +9,8 @@
 #include "SimG4Core/CustomPhysics/interface/CustomParticle.h"
 #include "SimG4Core/CustomPhysics/interface/HadronicProcessHelper.hh"
 #include "SimG4Core/CustomPhysics/interface/Decay3Body.h"
+
+using namespace CLHEP;
 
 ToyModelHadronicProcess::ToyModelHadronicProcess(HadronicProcessHelper * aHelper, const G4String& processName) :
   G4VDiscreteProcess(processName), m_verboseLevel(0),  m_helper(aHelper),  m_detachCloud(true)
@@ -341,14 +342,6 @@ G4VParticleChange* ToyModelHadronicProcess::PostStepDoIt(const G4Track& track,
 	  m_particleChange.AddSecondary(productTrack);
 	}
     } 
-
-
-
-
-
-
-
-
 
   //clear interaction length      
   ClearNumberOfInteractionLengthLeft();

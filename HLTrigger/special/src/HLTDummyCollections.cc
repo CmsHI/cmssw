@@ -13,7 +13,6 @@ Implementation:
 //
 // Original Author:  Emmanuelle Perez
 //         Created:  Tue May 19 09:54:19 CEST 2009
-// $Id: HLTDummyCollections.cc,v 1.3 2009/08/06 11:23:34 fwyzard Exp $
 //
 //
 
@@ -33,7 +32,9 @@ Implementation:
 #include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
 
 // -- Ecal
-#include "EventFilter/EcalRawToDigi/plugins/EcalRawToRecHitFacility.h"
+#include "DataFormats/Common/interface/LazyGetter.h"
+#include "DataFormats/EcalRecHit/interface/EcalRecHitCollections.h"
+#include "DataFormats/EcalRecHit/interface/EcalRecHitComparison.h"
 // -- Hcal
 #include "EventFilter/HcalRawToDigi/plugins/HcalRawToDigi.h"
 // -- Ecal Preshower

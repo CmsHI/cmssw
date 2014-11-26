@@ -26,12 +26,11 @@ public:
   virtual ~CollectionFromZLegProducer();
   
   void produce(edm::Event& iEvent,const edm::EventSetup& iSetup) override;
-  void endJob() override;
 
 private:  
   // member data
-  edm::InputTag      		  srcTheZ_	    ;
-  std::string        		  OutputCollection_ ;
+  edm::EDGetTokenT< std::vector<reco::CompositeCandidate> >   v_RecoCompositeCandidateToken_;
+  std::string                                                 OutputCollection_ ;
   
 };
 
@@ -43,7 +42,7 @@ private:
 
 //______________________________________________________________________________
 CollectionFromZLegProducer::CollectionFromZLegProducer(const edm::ParameterSet& iConfig)
-  : srcTheZ_(iConfig.getParameter<edm::InputTag>("ZCandidateCollection"))
+  : v_RecoCompositeCandidateToken_( consumes< std::vector<reco::CompositeCandidate> >( iConfig.getParameter<edm::InputTag>( "ZCandidateCollection" ) ) )
 {
   produces<std::vector<reco::CompositeCandidate> >("theTagLeg"  );
   produces<std::vector<reco::CompositeCandidate> >("theProbeLeg");
@@ -66,7 +65,7 @@ void CollectionFromZLegProducer::produce(edm::Event& iEvent,const edm::EventSetu
   std::auto_ptr<std::vector<reco::CompositeCandidate> > theProbeLeg(new std::vector<reco::CompositeCandidate>) ;	     
   
   edm::Handle< std::vector<reco::CompositeCandidate> > theZHandle;
-  iEvent.getByLabel(srcTheZ_,theZHandle);
+  iEvent.getByToken( v_RecoCompositeCandidateToken_,theZHandle );
   
   // this is specific for our 'tag and probe'
   
@@ -93,10 +92,6 @@ void CollectionFromZLegProducer::produce(edm::Event& iEvent,const edm::EventSetu
   } 
   iEvent.put(theTagLeg  , "theTagLeg"   ) ;
   iEvent.put(theProbeLeg, "theProbeLeg" ) ;
-}
-
-void CollectionFromZLegProducer::endJob()
-{
 }
 
 #include "FWCore/Framework/interface/MakerMacros.h"

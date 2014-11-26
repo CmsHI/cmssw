@@ -13,7 +13,7 @@
 #include "TrackingTools/PatternTools/interface/TrajMeasLessEstim.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
-#include "FWCore/Services/interface/UpdaterService.h"
+
 
 
 typedef MuonTransientTrackingRecHit::MuonRecHitPointer MuonRecHitPointer;
@@ -21,33 +21,38 @@ typedef MuonTransientTrackingRecHit::MuonRecHitContainer MuonRecHitContainer;
 
 
 
-MuonDetLayerMeasurements::MuonDetLayerMeasurements(const edm::InputTag& dtlabel, 
-						   const edm::InputTag& csclabel, 
-						   const edm::InputTag& rpclabel,
+MuonDetLayerMeasurements::MuonDetLayerMeasurements(edm::InputTag dtlabel, 
+						   edm::InputTag csclabel, 
+						   edm::InputTag rpclabel,
+						   edm::ConsumesCollector& iC,
 						   bool enableDT, bool enableCSC, bool enableRPC): 
-  theDTRecHitLabel(dtlabel),
-  theCSCRecHitLabel(csclabel),
-  theRPCRecHitLabel(rpclabel),
   enableDTMeasurement(enableDT),
   enableCSCMeasurement(enableCSC),
   enableRPCMeasurement(enableRPC),
   theDTRecHits(),
   theCSCRecHits(),
   theRPCRecHits(),
-  theDTEventID(),
-  theCSCEventID(),
-  theRPCEventID(),
-  theEvent(0){
+  theDTEventCacheID(0),
+  theCSCEventCacheID(0),
+  theRPCEventCacheID(0),
+  theEvent(0)
+{
+
+  dtToken_ = iC.consumes<DTRecSegment4DCollection>(dtlabel);
+  cscToken_ = iC.consumes<CSCSegmentCollection>(csclabel);
+  rpcToken_ = iC.consumes<RPCRecHitCollection>(rpclabel);
+
+
   static int procInstance(0);
   std::ostringstream sDT;
   sDT<<"MuonDetLayerMeasurements::checkDTRecHits::" << procInstance;
-  theDTCheckName = sDT.str();
+  //  theDTCheckName = sDT.str();
   std::ostringstream sRPC;
   sRPC<<"MuonDetLayerMeasurements::checkRPCRecHits::" << procInstance;
-  theRPCCheckName = sRPC.str();
+  //theRPCCheckName = sRPC.str();
   std::ostringstream sCSC;
   sCSC<<"MuonDetLayerMeasurements::checkCSCRecHits::" << procInstance;
-  theCSCCheckName = sCSC.str();
+  //theCSCCheckName = sCSC.str();
   procInstance++;
 }
 
@@ -127,11 +132,11 @@ MuonRecHitContainer MuonDetLayerMeasurements::recHits(const GeomDet* geomDet,
 void MuonDetLayerMeasurements::checkDTRecHits()
 {
   checkEvent();
-  if (!edm::Service<UpdaterService>()->checkOnce(theDTCheckName)) return;
+  auto const cacheID = theEvent->cacheIdentifier();
+  if (cacheID == theDTEventCacheID) return;
 
   {
-    theDTEventID = theEvent->id();
-    theEvent->getByLabel(theDTRecHitLabel, theDTRecHits);
+    theEvent->getByToken(dtToken_, theDTRecHits);
   }
   if(!theDTRecHits.isValid())
   {
@@ -143,11 +148,12 @@ void MuonDetLayerMeasurements::checkDTRecHits()
 void MuonDetLayerMeasurements::checkCSCRecHits()
 {
   checkEvent();
-  if (!edm::Service<UpdaterService>()->checkOnce(theCSCCheckName)) return;
+  auto cacheID = theEvent->cacheIdentifier();
+  if (cacheID == theCSCEventCacheID) return;
 
   {
-    theCSCEventID = theEvent->id();
-    theEvent->getByLabel(theCSCRecHitLabel, theCSCRecHits);
+    theEvent->getByToken(cscToken_, theCSCRecHits);
+    theCSCEventCacheID = cacheID;
   }
   if(!theCSCRecHits.isValid())
   {
@@ -159,11 +165,12 @@ void MuonDetLayerMeasurements::checkCSCRecHits()
 void MuonDetLayerMeasurements::checkRPCRecHits()
 {
   checkEvent();
-  if (!edm::Service<UpdaterService>()->checkOnce(theRPCCheckName)) return;
+  auto cacheID = theEvent->cacheIdentifier();
+  if (cacheID == theRPCEventCacheID) return;
 
   {
-    theRPCEventID = theEvent->id();
-    theEvent->getByLabel(theRPCRecHitLabel, theRPCRecHits);
+    theEvent->getByToken(rpcToken_, theRPCRecHits);
+    theRPCEventCacheID = cacheID;
   }
   if(!theRPCRecHits.isValid())
   {
@@ -229,7 +236,7 @@ MuonDetLayerMeasurements::measurements( const DetLayer* layer,
     LogTrace("RecoMuon")<<"Dimension: "<<(*rechit)->dimension()
 			<<" Chi2: "<<estimate.second<<std::endl;
     if (estimate.first) {
-      result.push_back(TrajectoryMeasurement(stateOnDet, rechit->get(),
+      result.push_back(TrajectoryMeasurement(stateOnDet, *rechit,
 					     estimate.second,layer));
     }
   }
@@ -254,7 +261,7 @@ MuonDetLayerMeasurements::fastMeasurements( const DetLayer* layer,
     MeasurementEstimator::HitReturnType estimate = est.estimate(theStateOnDet, (**irh));
     if (estimate.first)
     {
-      result.push_back(TrajectoryMeasurement(theStateOnDet,(*irh).get(),
+      result.push_back(TrajectoryMeasurement(theStateOnDet,(*irh),
                                              estimate.second,layer));
     }
   }

@@ -6,8 +6,6 @@
  *  pixel and matched strip hits, and Chi2Strip1DEstimator for
  *  simple strip hits. Ported from ORCA.
  *
- *  $Date: 2012/05/29 08:23:57 $
- *  $Revision: 1.5 $
  *  \author todorov, cerati
  */
 
@@ -27,7 +25,7 @@ public:
 
   /// implementation of MeasurementEstimator::estimate
   virtual std::pair<bool, double> estimate(const TrajectoryStateOnSurface& aTsos,
-				      const TransientTrackingRecHit& aHit) const;
+				      const TrackingRecHit& aHit) const;
 
   virtual Chi2Switching1DEstimator* clone() const 
   {

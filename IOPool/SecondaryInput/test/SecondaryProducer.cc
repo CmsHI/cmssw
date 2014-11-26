@@ -10,6 +10,7 @@
 #include "DataFormats/Provenance/interface/BranchIDListHelper.h"
 #include "DataFormats/Provenance/interface/LuminosityBlockID.h"
 #include "DataFormats/Provenance/interface/ProcessConfiguration.h"
+#include "DataFormats/Provenance/interface/ThinnedAssociationsHelper.h"
 #include "DataFormats/TestObjects/interface/OtherThingCollection.h"
 #include "DataFormats/TestObjects/interface/ThingCollection.h"
 #include "DataFormats/TestObjects/interface/ToyProducts.h"
@@ -31,10 +32,16 @@
 #include "FWCore/Utilities/interface/TypeID.h"
 #include "FWCore/Version/interface/GetReleaseVersion.h"
 
-#include "boost/bind.hpp"
+#include "FWCore/ServiceRegistry/interface/Service.h"
+#include "FWCore/Utilities/interface/RandomNumberGenerator.h"
+#include "FWCore/Utilities/interface/Exception.h"
 
 #include <memory>
 #include <string>
+
+namespace CLHEP {
+  class HepRandomEngine;
+}
 
 namespace edm {
 
@@ -58,15 +65,15 @@ namespace edm {
 
     produces<edmtest::ThingCollection>();
     produces<edmtest::OtherThingCollection>("testUserTag");
-    consumes<edmtest::IntProduct>(edm::InputTag{"EventNumber"});
+    consumes<edmtest::UInt64Product>(edm::InputTag{"EventNumber"});
   }
 
   void SecondaryProducer::beginJob() {
     eventPrincipal_.reset(new EventPrincipal(secInput_->productRegistry(),
                                              secInput_->branchIDListHelper(),
+                                             secInput_->thinnedAssociationsHelper(),
                                              *processConfiguration_,
-                                             nullptr,
-                                             StreamID::invalidStreamID()));
+                                             nullptr));
 
   }
 
@@ -75,23 +82,37 @@ namespace edm {
 
   // Functions that get called by framework every event
   void SecondaryProducer::produce(Event& e, EventSetup const&) {
+    using std::placeholders::_1;
+
     if(sequential_) {
       if(lumiSpecified_) {
         // Just for simplicity, we use the luminosity block ID from the primary to read the secondary.
-        secInput_->loopSequentialWithID(*eventPrincipal_, LuminosityBlockID(e.id().run(), e.id().luminosityBlock()), 1, boost::bind(&SecondaryProducer::processOneEvent, this, _1, boost::ref(e)));
+        secInput_->loopSequentialWithID(*eventPrincipal_, LuminosityBlockID(e.id().run(), e.id().luminosityBlock()), 1, std::bind(&SecondaryProducer::processOneEvent, this, _1, std::ref(e)));
       } else {
-        secInput_->loopSequential(*eventPrincipal_, 1, boost::bind(&SecondaryProducer::processOneEvent, this, _1, boost::ref(e)));
+        secInput_->loopSequential(*eventPrincipal_, 1, std::bind(&SecondaryProducer::processOneEvent, this, _1, std::ref(e)));
       }
     } else if(specified_) {
       // Just for simplicity, we use the event ID from the primary to read the secondary.
       std::vector<EventID> events(1, e.id());
-      secInput_->loopSpecified(*eventPrincipal_, events, boost::bind(&SecondaryProducer::processOneEvent, this, _1, boost::ref(e)));
+      secInput_->loopSpecified(*eventPrincipal_, events, std::bind(&SecondaryProducer::processOneEvent, this, _1, std::ref(e)));
     } else {
+
+      edm::Service<edm::RandomNumberGenerator> rng;
+      if ( ! rng.isAvailable()) {
+        throw cms::Exception("Configuration")
+          << "SecondaryProducer in its random mode requires the RandomNumberGeneratorService\n"
+             "which is not present in the configuration file.  You must add the service\n"
+             "in the configuration file or remove the modules that require it.";
+      }
+      CLHEP::HepRandomEngine* engine = &rng->getEngine(e.streamID());
+
       if(lumiSpecified_) {
         // Just for simplicity, we use the luminosity block ID from the primary to read the secondary.
-        secInput_->loopRandomWithID(*eventPrincipal_, LuminosityBlockID(e.id().run(), e.id().luminosityBlock()), 1, boost::bind(&SecondaryProducer::processOneEvent, this, _1, boost::ref(e)));
+        secInput_->loopRandomWithID(*eventPrincipal_, LuminosityBlockID(e.id().run(), e.id().luminosityBlock()), 1,
+                                    std::bind(&SecondaryProducer::processOneEvent, this, _1, std::ref(e)),
+                                    engine);
       } else {
-        secInput_->loopRandom(*eventPrincipal_, 1, boost::bind(&SecondaryProducer::processOneEvent, this, _1, boost::ref(e)));
+        secInput_->loopRandom(*eventPrincipal_, 1, std::bind(&SecondaryProducer::processOneEvent, this, _1, std::ref(e)), engine);
       }
     }
   }
@@ -102,39 +123,35 @@ namespace edm {
 
     EventNumber_t en = eventPrincipal.id().event();
     // Check that secondary source products are retrieved from the same event as the EventAuxiliary
-    BasicHandle bhandle = eventPrincipal.getByLabel(PRODUCT_TYPE, TypeID(typeid(edmtest::IntProduct)),
+    BasicHandle bhandle = eventPrincipal.getByLabel(PRODUCT_TYPE, TypeID(typeid(edmtest::UInt64Product)),
                                                     "EventNumber",
                                                     "",
                                                     "",
                                                     nullptr,
                                                     nullptr);
     assert(bhandle.isValid());
-    Handle<edmtest::IntProduct> handle;
-    convert_handle<edmtest::IntProduct>(bhandle, handle);
+    Handle<edmtest::UInt64Product> handle;
+    convert_handle<edmtest::UInt64Product>(std::move(bhandle), handle);
     assert(static_cast<EventNumber_t>(handle->value) == en);
 
     // Check that primary source products are retrieved from the same event as the EventAuxiliary
-    e.getByLabel<edmtest::IntProduct>("EventNumber", handle);
+    e.getByLabel<edmtest::UInt64Product>("EventNumber", handle);
     assert(static_cast<EventNumber_t>(handle->value) == e.id().event());
 
-    BasicHandle bh = eventPrincipal.getByLabel(PRODUCT_TYPE, TypeID(typeid(TC)),
+    WrapperBase const* ep = eventPrincipal.getByLabel(PRODUCT_TYPE, TypeID(typeid(TC)),
                                                "Thing",
                                                "",
                                                "",
                                                nullptr,
-                                               nullptr);
-    assert(bh.isValid());
-    if(!(bh.interface()->dynamicTypeInfo() == typeid(TC))) {
-      handleimpl::throwConvertTypeError(typeid(TC), bh.interface()->dynamicTypeInfo());
-    }
-    WTC const* wtp = static_cast<WTC const*>(bh.wrapper());
-
+                                               nullptr).wrapper();
+    assert(ep != nullptr);
+    WTC const* wtp = static_cast<WTC const*>(ep);
     assert(wtp);
     TC const* tp = wtp->product();
-    std::auto_ptr<TC> thing(new TC(*tp));
+    std::unique_ptr<TC> thing(new TC(*tp));
 
     // Put output into event
-    e.put(thing);
+    e.put(std::move(thing));
 
     if(!sequential_ && !specified_ && firstLoop_ && en == 1) {
       expectedEventNumber_ = 1;
@@ -150,14 +167,16 @@ namespace edm {
     ++expectedEventNumber_;
   }
 
-  boost::shared_ptr<VectorInputSource> SecondaryProducer::makeSecInput(ParameterSet const& ps) {
+  std::shared_ptr<VectorInputSource> SecondaryProducer::makeSecInput(ParameterSet const& ps) {
     ParameterSet const& sec_input = ps.getParameterSet("input");
+    PreallocationConfiguration dummy;
     InputSourceDescription desc(ModuleDescription(),
                                 *productRegistry_,
-				boost::shared_ptr<BranchIDListHelper>(new BranchIDListHelper),
-				boost::shared_ptr<ActivityRegistry>(new ActivityRegistry),
-				-1, -1);
-    boost::shared_ptr<VectorInputSource> input_(static_cast<VectorInputSource *>
+				std::make_shared<BranchIDListHelper>(),
+                                std::make_shared<ThinnedAssociationsHelper>(),
+				std::make_shared<ActivityRegistry>(),
+				-1, -1, -1, dummy);
+    std::shared_ptr<VectorInputSource> input_(static_cast<VectorInputSource *>
       (VectorInputSourceFactory::get()->makeVectorInputSource(sec_input,
       desc).release()));
     return input_;

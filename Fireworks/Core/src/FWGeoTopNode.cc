@@ -8,7 +8,6 @@
 //
 // Original Author:  Matevz Tadel, Alja Mrak Tadel  
 //         Created:  Thu Jun 23 01:24:51 CEST 2011
-// $Id: FWGeoTopNode.cc,v 1.24 2012/05/04 00:22:05 amraktad Exp $
 //
 
 // system include files
@@ -255,6 +254,7 @@ void FWGeoTopNode::paintShape( Int_t tableIndex, const TGeoHMatrix& nm, bool vol
    // printf("trans %d \n", transparency );
    if (transparency >= 100) return;
    
+   if (data.m_node->GetVolume()->IsAssembly()) return;
    TGeoShape* shape = data.m_node->GetVolume()->GetShape();
    
    TGeoCompositeShape* compositeShape = dynamic_cast<TGeoCompositeShape*>(shape);
@@ -378,13 +378,15 @@ FWPopupMenu* FWGeoTopNode::setPopupMenu(int iX, int iY, TGLViewer* v, bool overl
    FWPopupMenu* nodePopup = new FWPopupMenu();
    
    nodePopup->AddEntry("Set As Top Node", kSetTopNode);
-   nodePopup->AddEntry("Set As Top Node And Reset Camera", kSetTopNodeCam);
+   nodePopup->AddEntry("Set As Top Node and Reset Camera", kSetTopNodeCam);
    nodePopup->AddSeparator();
    if (v) { 
        nodePopup->AddEntry("Rnr Off", kVisSelfOff);
    }
-   nodePopup->AddEntry("Rnr Off For All Children", kVisChldOff);
-   nodePopup->AddEntry("Rnr On For All Children", kVisChldOn);      
+   nodePopup->AddEntry("Turn Render On For Children", kVisChldOn);      
+   nodePopup->AddEntry("Turn Render Off For Children", kVisChldOff);
+   nodePopup->AddEntry("Apply Color To Children", kApplyChldCol);      
+   nodePopup->AddEntry("Apply Color Recursively", kApplyChldColRec);      
    nodePopup->AddSeparator();
    
    if (overlap)

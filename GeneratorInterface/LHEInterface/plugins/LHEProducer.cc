@@ -13,6 +13,7 @@
 #include "FWCore/Framework/interface/Run.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
+#include "FWCore/ServiceRegistry/interface/RandomEngineSentry.h"
 
 #include "SimDataFormats/GeneratorProducts/interface/HepMCProduct.h"
 #include "SimDataFormats/GeneratorProducts/interface/GenEventInfoProduct.h"
@@ -163,8 +164,8 @@ void LHEProducer::endRunProduce(edm::Run &run, const edm::EventSetup &es)
 	std::auto_ptr<GenRunInfoProduct> runInfo(new GenRunInfoProduct);
 
 	runInfo->setInternalXSec(
-			GenRunInfoProduct::XSec(crossSection.value,
-			                        crossSection.error));
+				 GenRunInfoProduct::XSec(crossSection.value(),
+							 crossSection.error()));
 	runInfo->setExternalXSecLO(extCrossSect);
 	runInfo->setFilterEfficiency(extFilterEff);
 
@@ -175,6 +176,8 @@ void LHEProducer::endRunProduce(edm::Run &run, const edm::EventSetup &es)
 
 bool LHEProducer::filter(edm::Event &event, const edm::EventSetup &es)
 {
+        edm::RandomEngineSentry<Hadronisation> randomEngineSentry(hadronisation.get(), event.streamID());
+
 	std::auto_ptr<edm::HepMCProduct> result(new edm::HepMCProduct);
 
 	edm::Handle<LHEEventProduct> product;

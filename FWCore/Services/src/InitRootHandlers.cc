@@ -1,7 +1,6 @@
 #include "FWCore/Services/src/InitRootHandlers.h"
 
 #include "DataFormats/Common/interface/RefCoreStreamer.h"
-#include "DataFormats/Streamer/interface/StreamedProductStreamer.h"
 #include "FWCore/MessageLogger/interface/ELseverityLevel.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
@@ -26,25 +25,46 @@
 #include "TSystem.h"
 #include "TUnixSystem.h"
 #include "TTree.h"
+#include "TVirtualStreamerInfo.h"
+
+#include "TThread.h"
+#include "TClassTable.h"
+#include "Reflex/Type.h"
+
 
 namespace {
+  enum class SeverityLevel {
+    kInfo,
+    kWarning,
+    kError,
+    kSysError,
+    kFatal
+  };
+  
+  static thread_local bool s_ignoreWarnings = false;
 
-  void RootErrorHandlerImpl(int level, char const* location, char const* message, bool ignoreWarnings) {
+  static bool s_ignoreEverything = false;
+
+  void RootErrorHandlerImpl(int level, char const* location, char const* message) {
 
   bool die = false;
 
   // Translate ROOT severity level to MessageLogger severity level
 
-    edm::ELseverityLevel el_severity = edm::ELseverityLevel::ELsev_info;
+    SeverityLevel el_severity = SeverityLevel::kInfo;
 
     if (level >= kFatal) {
-      el_severity = edm::ELseverityLevel::ELsev_fatal;
+      el_severity = SeverityLevel::kFatal;
     } else if (level >= kSysError) {
-      el_severity = edm::ELseverityLevel::ELsev_severe;
+      el_severity = SeverityLevel::kSysError;
     } else if (level >= kError) {
-      el_severity = edm::ELseverityLevel::ELsev_error;
+      el_severity = SeverityLevel::kError;
     } else if (level >= kWarning) {
-      el_severity = ignoreWarnings ? edm::ELseverityLevel::ELsev_info : edm::ELseverityLevel::ELsev_warning;
+      el_severity = s_ignoreWarnings ? SeverityLevel::kInfo : SeverityLevel::kWarning;
+    }
+
+    if(s_ignoreEverything) {
+      el_severity = SeverityLevel::kInfo;
     }
 
   // Adapt C-strings to std::strings
@@ -88,12 +108,12 @@ namespace {
        && (el_message.find("fill branch") != std::string::npos)
        && (el_message.find("address") != std::string::npos)
        && (el_message.find("not set") != std::string::npos)) {
-        el_severity = edm::ELseverityLevel::ELsev_fatal;
+        el_severity = SeverityLevel::kFatal;
       }
 
       if ((el_message.find("Tree branches") != std::string::npos)
        && (el_message.find("different numbers of entries") != std::string::npos)) {
-        el_severity = edm::ELseverityLevel::ELsev_fatal;
+        el_severity = SeverityLevel::kFatal;
       }
 
 
@@ -103,15 +123,23 @@ namespace {
           (el_message.find("already in TClassTable") != std::string::npos) ||
           (el_message.find("matrix not positive definite") != std::string::npos) ||
           (el_message.find("not a TStreamerInfo object") != std::string::npos) ||
+	  //This deals with a missing dictionary problem
+	  ( (el_message.find("Collection proxy for") !=std::string::npos && 
+	     el_message.find("was not properly initialized!") != std::string::npos)) ||
           (el_location.find("Fit") != std::string::npos) ||
           (el_location.find("TDecompChol::Solve") != std::string::npos) ||
           (el_location.find("THistPainter::PaintInit") != std::string::npos) ||
           (el_location.find("TUnixSystem::SetDisplay") != std::string::npos) ||
-          (el_location.find("TGClient::GetFontByName") != std::string::npos)) {
-        el_severity = edm::ELseverityLevel::ELsev_info;
+          (el_location.find("TGClient::GetFontByName") != std::string::npos) ||
+	        (el_message.find("nbins is <=0 - set to nbins = 1") != std::string::npos) ||
+	        (el_message.find("nbinsy is <=0 - set to nbinsy = 1") != std::string::npos) ||
+          (level < kError and
+           (el_location.find("CINTTypedefBuilder::Setup")!= std::string::npos) and
+           (el_message.find("possible entries are in use!") != std::string::npos))) {
+        el_severity = SeverityLevel::kInfo;
       }
 
-    if (el_severity == edm::ELseverityLevel::ELsev_info) {
+    if (el_severity == SeverityLevel::kInfo) {
       // Don't throw if the message is just informational.
       die = false;
     } else {
@@ -136,25 +164,21 @@ namespace {
     // Typically, we get here only for informational messages,
     // but we leave the other code in just in case we change
     // the criteria for throwing.
-    if (el_severity == edm::ELseverityLevel::ELsev_fatal) {
+    if (el_severity == SeverityLevel::kFatal) {
       edm::LogError("Root_Fatal") << el_location << el_message;
-    } else if (el_severity == edm::ELseverityLevel::ELsev_severe) {
+    } else if (el_severity == SeverityLevel::kSysError) {
       edm::LogError("Root_Severe") << el_location << el_message;
-    } else if (el_severity == edm::ELseverityLevel::ELsev_error) {
+    } else if (el_severity == SeverityLevel::kError) {
       edm::LogError("Root_Error") << el_location << el_message;
-    } else if (el_severity == edm::ELseverityLevel::ELsev_warning) {
+    } else if (el_severity == SeverityLevel::kWarning) {
       edm::LogWarning("Root_Warning") << el_location << el_message ;
-    } else if (el_severity == edm::ELseverityLevel::ELsev_info) {
+    } else if (el_severity == SeverityLevel::kInfo) {
       edm::LogInfo("Root_Information") << el_location << el_message ;
     }
   }
 
   void RootErrorHandler(int level, bool, char const* location, char const* message) {
-    RootErrorHandlerImpl(level, location, message, false);
-  }
-
-  void RootErrorHandlerWithoutWarnings(int level, bool, char const* location, char const* message) {
-    RootErrorHandlerImpl(level, location, message, true);
+    RootErrorHandlerImpl(level, location, message);
   }
 
   extern "C" {
@@ -183,6 +207,10 @@ namespace {
       }
       ::abort();
     }
+    
+    void sig_abort(int sig, siginfo_t*, void*) {
+      ::abort();
+    }
   }
 }  // end of unnamed namespace
 
@@ -192,8 +220,10 @@ namespace edm {
       : RootHandlers(),
         unloadSigHandler_(pset.getUntrackedParameter<bool> ("UnloadRootSigHandler")),
         resetErrHandler_(pset.getUntrackedParameter<bool> ("ResetRootErrHandler")),
-        autoLibraryLoader_(pset.getUntrackedParameter<bool> ("AutoLibraryLoader")) {
-
+        loadAllDictionaries_(pset.getUntrackedParameter<bool>("LoadAllDictionaries")),
+        autoLibraryLoader_(loadAllDictionaries_ or pset.getUntrackedParameter<bool> ("AutoLibraryLoader"))
+    {
+      
       if(unloadSigHandler_) {
       // Deactivate all the Root signal handlers and restore the system defaults
         gSystem->ResetSignal(kSigChild);
@@ -213,8 +243,17 @@ namespace edm {
         gSystem->ResetSignal(kSigSegmentationViolation);
         gSystem->ResetSignal(kSigIllegalInstruction);
         installCustomHandler(SIGBUS,sig_dostack_then_abort);
+        sigBusHandler_ = std::shared_ptr<const void>(nullptr,[](void*) {
+          installCustomHandler(SIGBUS,sig_abort);
+        });
         installCustomHandler(SIGSEGV,sig_dostack_then_abort);
+        sigSegvHandler_ = std::shared_ptr<const void>(nullptr,[](void*) {
+          installCustomHandler(SIGSEGV,sig_abort);
+        });
         installCustomHandler(SIGILL,sig_dostack_then_abort);
+        sigIllHandler_ = std::shared_ptr<const void>(nullptr,[](void*) {
+          installCustomHandler(SIGILL,sig_abort);
+        });
       }
 
       if(resetErrHandler_) {
@@ -226,6 +265,9 @@ namespace edm {
       // Enable automatic Root library loading.
       if(autoLibraryLoader_) {
         RootAutoLibraryLoader::enable();
+        if(loadAllDictionaries_) {
+          RootAutoLibraryLoader::loadAll();
+        }
       }
 
       // Enable Cintex.
@@ -238,23 +280,45 @@ namespace edm {
 
       // Set custom streamers
       setRefCoreStreamer();
-      setStreamedProductStreamer();
 
       // Load the library containing dictionaries for std:: classes, if not already loaded.
       if (!TypeWithDict(typeid(std::vector<std::vector<unsigned int> >)).hasDictionary()) {
          edmplugin::PluginCapabilities::get()->load(dictionaryPlugInPrefix() + "std::vector<std::vector<unsigned int> >");
       }
+
+      int debugLevel = pset.getUntrackedParameter<int>("DebugLevel");
+      if(debugLevel >0) {
+	gDebug = debugLevel;
+      }
     }
 
     InitRootHandlers::~InitRootHandlers () {
       // close all open ROOT files
-      // We get a new iterator each time,
-      // because closing a file can invalidate the iterator
-      while(gROOT->GetListOfFiles()->GetSize()) {
-        TIter iter(gROOT->GetListOfFiles());
-        TFile* f = dynamic_cast<TFile*>(iter.Next());
-        if(f) f->Close();
+      TIter iter(gROOT->GetListOfFiles());
+      TObject *obj = nullptr;
+      while(nullptr != (obj = iter.Next())) {
+        TFile* f = dynamic_cast<TFile*>(obj);
+        if(f) {
+          // We get a new iterator each time,
+          // because closing a file can invalidate the iterator
+          f->Close();
+          iter = TIter(gROOT->GetListOfFiles());
+        }
       }
+    }
+    
+    void InitRootHandlers::willBeUsingThreads() {
+      //Tell Root we want to be multi-threaded
+      TThread::Initialize();
+      //When threading, also have to keep ROOT from logging all TObjects into a list
+      TObject::SetObjectStat(false);
+      
+      //Have to avoid having Streamers modify themselves after they have been used
+      TVirtualStreamerInfo::Optimize(false);
+    }
+    
+    void InitRootHandlers::initializeThisThreadForUse() {
+      static thread_local TThread guard;
     }
 
     void InitRootHandlers::fillDescriptions(ConfigurationDescriptions& descriptions) {
@@ -266,24 +330,23 @@ namespace edm {
           ->setComment("If True, ROOT messages (e.g. errors, warnings) are handled by this service, rather than by ROOT.");
       desc.addUntracked<bool>("AutoLibraryLoader", true)
           ->setComment("If True, enables automatic loading of data dictionaries.");
+      desc.addUntracked<bool>("LoadAllDictionaries",false)
+          ->setComment("If True, loads all ROOT dictionaries.");
       desc.addUntracked<bool>("AbortOnSignal",true)
       ->setComment("If True, do an abort when a signal occurs that causes a crash. If False, ROOT will do an exit which attempts to do a clean shutdown.");
+      desc.addUntracked<int>("DebugLevel",0)
+ 	  ->setComment("Sets ROOT's gDebug value.");
       descriptions.add("InitRootHandlers", desc);
     }
 
     void
-    InitRootHandlers::disableErrorHandler_() {
-        SetErrorHandler(DefaultErrorHandler);
+    InitRootHandlers::enableWarnings_() {
+      s_ignoreWarnings =false;
     }
 
     void
-    InitRootHandlers::enableErrorHandler_() {
-        SetErrorHandler(RootErrorHandler);
-    }
-
-    void
-    InitRootHandlers::enableErrorHandlerWithoutWarnings_() {
-        SetErrorHandler(RootErrorHandlerWithoutWarnings);
+    InitRootHandlers::ignoreWarnings_() {
+      s_ignoreWarnings = true;
     }
 
   }  // end of namespace service

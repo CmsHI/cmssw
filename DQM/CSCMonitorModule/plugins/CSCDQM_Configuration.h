@@ -106,6 +106,7 @@
   (( double, EFF_NODATA_SIGFAIL,   5.0 , "statistical significance for not reportingelements in HW (EventProcessor)" )) \
   (( unsigned int, EVENTS_ECHO, 1000, "frequency in events to print echo message (EventProcessor)" )) \
   (( std::string, FOLDER_FED, "" , "root file folder name to be used for FED histograms (EventProcessor)" )) \
+  (( bool, PREBOOK_ALL_HISTOS, true, "pre-book all FED, DDU, CSC histogragrams before run begins" )) \
   \
   \
 
@@ -310,7 +311,7 @@ namespace cscdqm {
        * @return 
        */
       void load(const std::string& configFile) {
-        XMLPlatformUtils::Initialize();
+        cms::concurrency::xercesInitialize();
 
         {
           XercesDOMParser parser;
@@ -347,7 +348,7 @@ namespace cscdqm {
           }
         }
 
-        XMLPlatformUtils::Terminate();
+        cms::concurrency::xercesTerminate();
 
       }
 
@@ -357,7 +358,7 @@ namespace cscdqm {
        * @return 
        */
       static void printXML(const Configuration& config) {
-        XMLPlatformUtils::Initialize();
+        cms::concurrency::xercesInitialize();
 
         DOMImplementation* domImpl = DOMImplementationRegistry::getDOMImplementation(XERCES_TRANSCODE("core"));
         DOMDocument *doc = domImpl->createDocument(0, XERCES_TRANSCODE("processor_configuration"), 0);
@@ -374,7 +375,7 @@ namespace cscdqm {
         ser->writeNode(new StdOutFormatTarget(), *doc);
 
         doc->release();
-        XMLPlatformUtils::Terminate();
+        cms::concurrency::xercesTerminate();
       }
 
 #endif

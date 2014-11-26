@@ -5,21 +5,27 @@
 #include "FWCore/Framework/interface/OutputModule.h"
 
 #include "DataFormats/Common/interface/Handle.h"
+#include "DataFormats/Common/interface/ThinnedAssociation.h"
 #include "DataFormats/Provenance/interface/BranchDescription.h"
 #include "DataFormats/Provenance/interface/BranchKey.h"
 #include "DataFormats/Provenance/interface/ParentageRegistry.h"
 #include "DataFormats/Provenance/interface/ProductRegistry.h"
+#include "DataFormats/Provenance/interface/ThinnedAssociationsHelper.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventPrincipal.h"
 #include "FWCore/Framework/interface/OutputModuleDescription.h"
 #include "FWCore/Framework/interface/TriggerNamesService.h"
+#include "FWCore/Framework/src/EventSignalsSentry.h"
 #include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
 #include "FWCore/Utilities/interface/DebugMacros.h"
 
+#include "SharedResourcesRegistry.h"
+
 #include <cassert>
+#include <iostream>
 
 namespace edm {
 
@@ -37,9 +43,9 @@ namespace edm {
     selectors_(),
     selector_config_id_(),
     droppedBranchIDToKeptBranchID_(),
-    keptBranchIDToDroppedBranchID_(),
     branchIDLists_(new BranchIDLists),
     origBranchIDLists_(nullptr),
+    thinnedAssociationsHelper_(new ThinnedAssociationsHelper),
     branchParents_(),
     branchChildren_() {
 
@@ -58,6 +64,9 @@ namespace edm {
                                                     process_name_,
                                                     getAllTriggerNames(),
                                                     selectors_);
+    SharedResourcesRegistry::instance()->registerSharedResource(
+                                                                SharedResourcesRegistry::kLegacyModuleResourceName);
+
   }
 
   void OutputModule::configure(OutputModuleDescription const& desc) {
@@ -65,7 +74,8 @@ namespace edm {
     origBranchIDLists_ = desc.branchIDLists_;
   }
 
-  void OutputModule::selectProducts(ProductRegistry const& preg) {
+  void OutputModule::selectProducts(ProductRegistry const& preg,
+                                    ThinnedAssociationsHelper const& thinnedAssociationsHelper) {
     if(productSelector_.initialized()) return;
     productSelector_.initialize(productSelectorRules_, preg.allBranchDescriptions());
 
@@ -74,6 +84,8 @@ namespace edm {
     // for more information.
 
     std::map<BranchID, BranchDescription const*> trueBranchIDToKeptBranchDesc;
+    std::vector<BranchDescription const*> associationDescriptions;
+    std::set<BranchID> keptProductsInEvent;
 
     for(auto const& it : preg.productList()) {
       BranchDescription const& desc = it.second;
@@ -82,80 +94,86 @@ namespace edm {
       } else if(!desc.present() && !desc.produced()) {
         // else if the branch containing the product has been previously dropped,
         // output nothing
+      } else if(desc.unwrappedType().typeInfo() == typeid(ThinnedAssociation)) {
+        associationDescriptions.push_back(&desc);
       } else if(selected(desc)) {
-        // else if the branch has been selected, put it in the list of selected branches.
-        if(desc.produced()) {
-          // First we check if an equivalent branch has already been selected due to an EDAlias.
-          // We only need the check for products produced in this process.
-          BranchID const& trueBranchID = desc.originalBranchID();
-          std::map<BranchID, BranchDescription const*>::const_iterator iter = trueBranchIDToKeptBranchDesc.find(trueBranchID);
-          if(iter != trueBranchIDToKeptBranchDesc.end()) {
-             throw edm::Exception(errors::Configuration, "Duplicate Output Selection")
-               << "Two (or more) equivalent branches have been selected for output.\n"
-               << "#1: " << BranchKey(desc) << "\n" 
-               << "#2: " << BranchKey(*iter->second) << "\n" 
-               << "Please drop at least one of them.\n";
-          }
-          trueBranchIDToKeptBranchDesc.insert(std::make_pair(trueBranchID, &desc));
-        }
-        switch (desc.branchType()) {
-          case InEvent:
-          {
-            consumes(TypeToGet{desc.unwrappedTypeID(),PRODUCT_TYPE},
-                     InputTag{desc.moduleLabel(),
-                              desc.productInstanceName(),
-                       desc.processName()});
-            break;
-          }
-          case InLumi:
-          {
-            consumes<InLumi>(TypeToGet{desc.unwrappedTypeID(),PRODUCT_TYPE},
-                             InputTag(desc.moduleLabel(),
-                                      desc.productInstanceName(),
-                                      desc.processName()));
-            break;
-          }
-          case InRun:
-          {
-            consumes<InRun>(TypeToGet{desc.unwrappedTypeID(),PRODUCT_TYPE},
-                            InputTag(desc.moduleLabel(),
-                                     desc.productInstanceName(),
-                                     desc.processName()));
-            break;
-          }
-          default:
-            assert(false);
-            break;
-        }
-        // Now put it in the list of selected branches.
-        keptProducts_[desc.branchType()].push_back(&desc);
+        keepThisBranch(desc, trueBranchIDToKeptBranchDesc, keptProductsInEvent);
       } else {
         // otherwise, output nothing,
         // and mark the fact that there is a newly dropped branch of this type.
         hasNewlyDroppedBranch_[desc.branchType()] = true;
       }
     }
-    // Now fill in a mapping needed in the case that a branch was dropped while its EDAlias was kept.
-    for(auto const& it : preg.productList()) {
-      BranchDescription const& desc = it.second;
-      if(!desc.produced() || desc.isAlias()) continue;
-      BranchID const& branchID = desc.branchID();
-      std::map<BranchID, BranchDescription const*>::const_iterator iter = trueBranchIDToKeptBranchDesc.find(branchID);
-      if(iter != trueBranchIDToKeptBranchDesc.end()) {
-        // This branch, produced in this process, or an alias of it, was persisted.
-        BranchID const& keptBranchID = iter->second->branchID();
-        if(keptBranchID != branchID) {
-          // An EDAlias branch was persisted.
-          droppedBranchIDToKeptBranchID_.insert(std::make_pair(branchID.id(), keptBranchID.id()));
-          keptBranchIDToDroppedBranchID_.insert(std::make_pair(keptBranchID.id(), branchID.id()));
-        }
+
+    thinnedAssociationsHelper.selectAssociationProducts(associationDescriptions,
+                                                        keptProductsInEvent,
+                                                        keepAssociation_);
+
+    for(auto association : associationDescriptions) {
+      if(keepAssociation_[association->branchID()]) {
+        keepThisBranch(*association, trueBranchIDToKeptBranchDesc, keptProductsInEvent);
+      } else {
+        hasNewlyDroppedBranch_[association->branchType()] = true;
       }
     }
+
+    // Now fill in a mapping needed in the case that a branch was dropped while its EDAlias was kept.
+    ProductSelector::fillDroppedToKept(preg, trueBranchIDToKeptBranchDesc, droppedBranchIDToKeptBranchID_);
+
+    thinnedAssociationsHelper_->updateFromParentProcess(thinnedAssociationsHelper, keepAssociation_, droppedBranchIDToKeptBranchID_);
+  }
+
+  void OutputModule::keepThisBranch(BranchDescription const& desc,
+                                    std::map<BranchID, BranchDescription const*>& trueBranchIDToKeptBranchDesc,
+                                    std::set<BranchID>& keptProductsInEvent) {
+
+    ProductSelector::checkForDuplicateKeptBranch(desc,
+                                                 trueBranchIDToKeptBranchDesc);
+
+    switch (desc.branchType()) {
+    case InEvent:
+      {
+        if(desc.produced()) {
+          keptProductsInEvent.insert(desc.originalBranchID());
+        } else {
+          keptProductsInEvent.insert(desc.branchID());
+        }
+        consumes(TypeToGet{desc.unwrappedTypeID(),PRODUCT_TYPE},
+                 InputTag{desc.moduleLabel(),
+                     desc.productInstanceName(),
+                     desc.processName()});
+        break;
+      }
+    case InLumi:
+      {
+        consumes<InLumi>(TypeToGet{desc.unwrappedTypeID(),PRODUCT_TYPE},
+                         InputTag(desc.moduleLabel(),
+                                  desc.productInstanceName(),
+                                  desc.processName()));
+        break;
+      }
+    case InRun:
+      {
+        consumes<InRun>(TypeToGet{desc.unwrappedTypeID(),PRODUCT_TYPE},
+                        InputTag(desc.moduleLabel(),
+                                 desc.productInstanceName(),
+                                 desc.processName()));
+        break;
+      }
+    default:
+      assert(false);
+      break;
+    }
+    // Now put it in the list of selected branches.
+    keptProducts_[desc.branchType()].push_back(&desc);
   }
 
   OutputModule::~OutputModule() { }
 
   void OutputModule::doBeginJob() {
+    std::vector<std::string> res = {SharedResourcesRegistry::kLegacyModuleResourceName};
+    resourceAcquirer_ = SharedResourcesRegistry::instance()->createAcquirer(res);
+
     this->beginJob();
   }
 
@@ -173,18 +191,27 @@ namespace edm {
   bool
   OutputModule::doEvent(EventPrincipal const& ep,
                         EventSetup const&,
+                        ActivityRegistry* act,
                         ModuleCallingContext const* mcc) {
-    detail::TRBESSentry products_sentry(selectors_);
 
     FDEBUG(2) << "writeEvent called\n";
 
-    if(!wantAllEvents_) {
-      if(!selectors_.wantEvent(ep, mcc)) {
-        return true;
+    {
+      std::lock_guard<std::mutex> guard(mutex_);
+      detail::TRBESSentry products_sentry(selectors_);
+      if(!wantAllEvents_) {
+        if(!selectors_.wantEvent(ep, mcc)) {
+          return true;
+        }
       }
+      
+      {
+        std::lock_guard<SharedResourcesAcquirer> guardAcq(resourceAcquirer_);
+        EventSignalsSentry signals(act,mcc);
+        write(ep, mcc);
+      }
+      updateBranchParents(ep);
     }
-    write(ep, mcc);
-    updateBranchParents(ep);
     if(remainingEvents_ > 0) {
       --remainingEvents_;
     }
@@ -302,11 +329,6 @@ namespace edm {
       // Check for branches dropped while an EDAlias was kept.
       for(BranchIDList& branchIDList : *branchIDLists_) {
         for(BranchID::value_type& branchID : branchIDList) {
-          // Replace BranchID of each kept alias branch with zero, so only the product ID of the original branch will be accessible.
-          std::map<BranchID::value_type, BranchID::value_type>::const_iterator kiter = keptBranchIDToDroppedBranchID_.find(branchID);
-          if(kiter != keptBranchIDToDroppedBranchID_.end()) {
-            branchID = 0;
-          }
           // Replace BranchID of each dropped branch with that of the kept alias, so the alias branch will have the product ID of the original branch.
           std::map<BranchID::value_type, BranchID::value_type>::const_iterator iter = droppedBranchIDToKeptBranchID_.find(branchID);
           if(iter != droppedBranchIDToKeptBranchID_.end()) {
@@ -317,6 +339,11 @@ namespace edm {
       return branchIDLists_.get();
     }
     return origBranchIDLists_;
+  }
+
+  ThinnedAssociationsHelper const*
+  OutputModule::thinnedAssociationsHelper() const {
+    return thinnedAssociationsHelper_.get();
   }
 
   ModuleDescription const&

@@ -17,7 +17,7 @@
 //
 
 // user include files
-#include "FWCore/Framework/interface/EDFilter.h"
+#include "FWCore/Framework/interface/stream/EDFilter.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/MessageLogger/interface/ErrorSummaryEntry.h"
@@ -32,7 +32,7 @@
 // class declaration
 //
 
-class LogErrorFilter : public edm::EDFilter {
+class LogErrorFilter : public edm::stream::EDFilter<> {
 public:
   explicit LogErrorFilter(edm::ParameterSet const&);
   ~LogErrorFilter();
@@ -44,7 +44,7 @@ private:
   virtual void beginLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&) override ;
 
   // ----------member data ---------------------------
-  edm::InputTag harvesterTag_;
+  edm::EDGetTokenT<std::vector<edm::ErrorSummaryEntry>> harvesterToken_;
   bool atLeastOneError_;
   bool atLeastOneWarning_;
   bool atLeastOneEntry_;
@@ -71,7 +71,6 @@ private:
 // constructors and destructor
 //
 LogErrorFilter::LogErrorFilter(edm::ParameterSet const& iConfig) :
-  harvesterTag_(iConfig.getParameter<edm::InputTag>("harvesterTag")),
   atLeastOneError_(iConfig.getParameter<bool>("atLeastOneError")),
   atLeastOneWarning_(iConfig.getParameter<bool>("atLeastOneWarning")),
   atLeastOneEntry_(atLeastOneError_ && atLeastOneWarning_),
@@ -81,6 +80,7 @@ LogErrorFilter::LogErrorFilter(edm::ParameterSet const& iConfig) :
     throw edm::Exception(edm::errors::Configuration) <<
       "Useless configuration of the error/warning filter. Need to select on an error or a warning or both.\n";
   }
+  harvesterToken_ = consumes<std::vector<edm::ErrorSummaryEntry>>(iConfig.getParameter<edm::InputTag>("harvesterTag"));
   maxErrorKindsPerLumi_ = 999999;
   maxWarningKindsPerLumi_ = 999999;
   if (useThresholdsPerKind_){
@@ -102,7 +102,7 @@ LogErrorFilter::~LogErrorFilter() {
 bool
 LogErrorFilter::filter(edm::Event& iEvent, edm::EventSetup const&) {
   edm::Handle<std::vector<edm::ErrorSummaryEntry> > errorsAndWarnings;
-  iEvent.getByLabel(harvesterTag_,errorsAndWarnings);
+  iEvent.getByToken(harvesterToken_,errorsAndWarnings);
 
   if(errorsAndWarnings.failedToGet()) {
     return false;
@@ -117,12 +117,12 @@ LogErrorFilter::filter(edm::Event& iEvent, edm::EventSetup const&) {
 	  continue;
 	std::string kind= iSummary.category + ":" + iSummary.module;
 	int iSeverity = iSummary.severity.getLevel();
-	if (iSeverity == edm::ELseverityLevel::ELsev_error || iSeverity == edm::ELseverityLevel::ELsev_error2 ){
+	if (iSeverity == edm::ELseverityLevel::ELsev_error){
 	  unsigned int& iCount = errorCounts_[kind];
 	  iCount++;
 	  if (iCount <= maxErrorKindsPerLumi_) errorsBelowThreshold++;
 	}
-	if (iSeverity == edm::ELseverityLevel::ELsev_warning || iSeverity == edm::ELseverityLevel::ELsev_warning2 ){
+	if (iSeverity == edm::ELseverityLevel::ELsev_warning){
 	  unsigned int& iCount = warningCounts_[kind];
 	  iCount++;
 	  if (iCount <= maxWarningKindsPerLumi_) warningsBelowThreshold++;
@@ -160,11 +160,11 @@ LogErrorFilter::filter(edm::Event& iEvent, edm::EventSetup const&) {
 	    }
 	    edm::ELseverityLevel const& severity = ((*errorsAndWarnings)[iE]).severity;
 	    //count errors
-	    if(severity.getLevel() == edm::ELseverityLevel::ELsev_error || severity.getLevel() == edm::ELseverityLevel::ELsev_error2) {
+	    if(severity.getLevel() == edm::ELseverityLevel::ELsev_error) {
 	      ++nError;
 	    }
 	    //count warnings
-	    if(severity.getLevel() == edm::ELseverityLevel::ELsev_warning || severity.getLevel() == edm::ELseverityLevel::ELsev_warning2) {
+	    if(severity.getLevel() == edm::ELseverityLevel::ELsev_warning) {
 	      ++nWarning;
 	    }
 	  }

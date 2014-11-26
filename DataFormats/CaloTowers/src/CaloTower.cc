@@ -12,8 +12,8 @@ CaloTower::CaloTower() {
 CaloTower::CaloTower(const CaloTowerDetId& id,
 		     double emE, double hadE, double outerE,
 		     int ecal_tp, int hcal_tp,
-		     const PolarLorentzVector p4,
-		     GlobalPoint emPos, GlobalPoint hadPos) : 
+		     const PolarLorentzVector& p4,
+		     const GlobalPoint& emPos, const GlobalPoint& hadPos) : 
   LeafCandidate(0, p4, Point(0,0,0)),  
   id_(id),
   emPosition_(emPos), hadPosition_(hadPos), 
@@ -21,12 +21,36 @@ CaloTower::CaloTower(const CaloTowerDetId& id,
   emLvl1_(ecal_tp), hadLvl1_(hcal_tp) {}
 
 
+
 CaloTower::CaloTower(const CaloTowerDetId& id,
 		     double emE, double hadE, double outerE,
 		     int ecal_tp, int hcal_tp,
-		     const LorentzVector p4,
-		     GlobalPoint emPos, GlobalPoint hadPos) : 
+		     const LorentzVector& p4,
+		     const GlobalPoint& emPos, const GlobalPoint& hadPos) : 
   LeafCandidate(0, p4, Point(0,0,0)),  
+  id_(id),
+  emPosition_(emPos), hadPosition_(hadPos),
+  emE_(emE), hadE_(hadE), outerE_(outerE),
+  emLvl1_(ecal_tp), hadLvl1_(hcal_tp) {}
+
+
+CaloTower::CaloTower(CaloTowerDetId id,
+		     float emE, float hadE, float outerE,
+		     int ecal_tp, int hcal_tp,
+		     GlobalVector p3, float iEnergy, bool massless,
+		     GlobalPoint emPos, GlobalPoint hadPos) : 
+  LeafCandidate(0, p3, iEnergy, massless, Point(0,0,0)),  
+  id_(id),
+  emPosition_(emPos), hadPosition_(hadPos),
+  emE_(emE), hadE_(hadE), outerE_(outerE),
+  emLvl1_(ecal_tp), hadLvl1_(hcal_tp) {}
+
+CaloTower::CaloTower(CaloTowerDetId id,
+                     float emE, float hadE, float outerE,
+                     int ecal_tp, int hcal_tp,
+                     GlobalVector p3, float iEnergy, float imass,
+                     GlobalPoint emPos, GlobalPoint hadPos) :
+  LeafCandidate(0, p3, iEnergy, imass, Point(0,0,0)),
   id_(id),
   emPosition_(emPos), hadPosition_(hadPos),
   emE_(emE), hadE_(hadE), outerE_(outerE),
@@ -73,7 +97,7 @@ math::PtEtaPhiMLorentzVector CaloTower::emP4(double vtxZ) const {
 // recalculated momentum-related quantities wrt user provided 3D vertex 
 
 
-math::PtEtaPhiMLorentzVector CaloTower::hadP4(Point v) const {
+math::PtEtaPhiMLorentzVector CaloTower::hadP4(const Point& v) const {
 
   // note: for now we use the same position for HO as for the other detectors
 
@@ -90,7 +114,7 @@ math::PtEtaPhiMLorentzVector CaloTower::hadP4(Point v) const {
   return   math::PtEtaPhiMLorentzVector(0,0,0,0);
 }
 
-math::PtEtaPhiMLorentzVector CaloTower::emP4(Point v) const {
+math::PtEtaPhiMLorentzVector CaloTower::emP4(const Point& v) const {
 
   if (emE_>0) {
     GlobalPoint p(v.x(), v.y(), v.z());
@@ -115,7 +139,7 @@ math::PtEtaPhiMLorentzVector CaloTower::p4(double vtxZ) const {
 }
 
 
-math::PtEtaPhiMLorentzVector CaloTower::p4(Point v) const {
+math::PtEtaPhiMLorentzVector CaloTower::p4(const Point& v) const {
 
   if (abs(ieta())<=29) {
     return emP4(v)+hadP4(v);
@@ -129,7 +153,7 @@ math::PtEtaPhiMLorentzVector CaloTower::p4(Point v) const {
 
 // p4 contribution from HO alone (note: direction is always taken to be the same as used for HB.)
 
-math::PtEtaPhiMLorentzVector CaloTower::p4_HO(Point v) const {
+math::PtEtaPhiMLorentzVector CaloTower::p4_HO(const Point& v) const {
 
   if (ietaAbs()>15 || outerE_<0) return   math::PtEtaPhiMLorentzVector(0,0,0,0);
   

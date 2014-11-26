@@ -5,16 +5,14 @@
  * 
  *  ESProducer for GlobalTrackingGeometry in MuonGeometryRecord
  *
- *  $Date: 2006/05/09 14:08:52 $
- *  $Revision: 1.2 $
  *  \author Matteo Sani
  */
 
-#include <FWCore/Framework/interface/ESProducer.h>
-#include <FWCore/ParameterSet/interface/ParameterSet.h>
-#include <Geometry/Records/interface/GlobalTrackingGeometryRecord.h>
-#include <boost/shared_ptr.hpp>
+#include "FWCore/Framework/interface/ESProducer.h"
+#include "FWCore/ParameterSet/interface/ParameterSet.h"
+#include "Geometry/Records/interface/GlobalTrackingGeometryRecord.h"
 
+#include <boost/shared_ptr.hpp>
 #include <string>
 
 class GlobalTrackingGeometry;

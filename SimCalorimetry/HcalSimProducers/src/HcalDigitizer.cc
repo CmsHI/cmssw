@@ -17,6 +17,7 @@
 #include "FWCore/Framework/interface/ESHandle.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "SimGeneral/MixingModule/interface/PileUpEventPrincipal.h"
+#include "FWCore/Framework/interface/ConsumesCollector.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
@@ -27,14 +28,14 @@
 #include "CalibFormats/HcalObjects/interface/HcalDbRecord.h"
 #include "SimDataFormats/CrossingFrame/interface/CrossingFrame.h"
 #include "SimDataFormats/CrossingFrame/interface/MixCollection.h"
-#include "FWCore/Utilities/interface/RandomNumberGenerator.h"
-#include "FWCore/ServiceRegistry/interface/Service.h"
 #include "DataFormats/HcalDetId/interface/HcalZDCDetId.h"
 #include "SimCalorimetry/HcalSimAlgos/interface/HPDNoiseGenerator.h"
 #include "CondFormats/HcalObjects/interface/HcalCholeskyMatrix.h"
 #include "CondFormats/HcalObjects/interface/HcalCholeskyMatrices.h"
 #include <boost/foreach.hpp>
 #include "Geometry/CaloTopology/interface/HcalTopology.h"
+#include "SimDataFormats/CaloTest/interface/HcalTestNumbering.h"
+#include "DataFormats/HcalDetId/interface/HcalSubdetector.h"
 
 namespace HcalDigitizerImpl {
 
@@ -80,7 +81,7 @@ namespace HcalDigitizerImpl {
 } // namespace HcaiDigitizerImpl
 
 
-HcalDigitizer::HcalDigitizer(const edm::ParameterSet& ps) :
+HcalDigitizer::HcalDigitizer(const edm::ParameterSet& ps, edm::ConsumesCollector& iC) :
   theGeometry(0),
   theParameterMap(new HcalSimParameterMap(ps)),
   theShapes(new HcalShapes()),
@@ -126,9 +127,18 @@ HcalDigitizer::HcalDigitizer(const edm::ParameterSet& ps) :
   hbhegeo(true),
   hogeo(true),
   hfgeo(true),
-  theHOSiPMCode(ps.getParameter<edm::ParameterSet>("ho").getParameter<int>("siPMCode"))
+  hitsProducer_(ps.getParameter<std::string>("hitsProducer")),
+  theHOSiPMCode(ps.getParameter<edm::ParameterSet>("ho").getParameter<int>("siPMCode")),
+  deliveredLumi(0.),
+  m_HEDarkening(0),
+  m_HFRecalibration(0)
 {
+  iC.consumes<std::vector<PCaloHit> >(edm::InputTag(hitsProducer_, "ZDCHITS"));
+  iC.consumes<std::vector<PCaloHit> >(edm::InputTag(hitsProducer_, "HcalHits"));
+
   bool doNoise = ps.getParameter<bool>("doNoise");
+  bool PreMix1 = ps.getParameter<bool>("HcalPreMixStage1");  // special threshold/pedestal treatment
+  bool PreMix2 = ps.getParameter<bool>("HcalPreMixStage2");  // special threshold/pedestal treatment
   bool useOldNoiseHB = ps.getParameter<bool>("useOldHB");
   bool useOldNoiseHE = ps.getParameter<bool>("useOldHE");
   bool useOldNoiseHF = ps.getParameter<bool>("useOldHF");
@@ -140,12 +150,24 @@ HcalDigitizer::HcalDigitizer(const edm::ParameterSet& ps) :
   double HOtp = ps.getParameter<double>("HOTuningParameter");
   bool doHBHEUpgrade = ps.getParameter<bool>("HBHEUpgradeQIE");
   bool doHFUpgrade   = ps.getParameter<bool>("HFUpgradeQIE");
+  deliveredLumi     = ps.getParameter<double>("DelivLuminosity");
+  bool agingFlagHE = ps.getParameter<bool>("HEDarkening");
+  bool agingFlagHF = ps.getParameter<bool>("HFDarkening");
+
+
+  if(PreMix1 && PreMix2) {
+     throw cms::Exception("Configuration")
+      << "HcalDigitizer cannot operate in PreMixing digitization and PreMixing\n"
+         "digi combination modes at the same time.  Please set one mode to False\n"
+         "in the configuration file.";
+  }
+
 
   // need to make copies, because they might get different noise generators
-  theHBHEAmplifier = new HcalAmplifier(theParameterMap, doNoise);
-  theHFAmplifier = new HcalAmplifier(theParameterMap, doNoise);
-  theHOAmplifier = new HcalAmplifier(theParameterMap, doNoise);
-  theZDCAmplifier = new HcalAmplifier(theParameterMap, doNoise);
+  theHBHEAmplifier = new HcalAmplifier(theParameterMap, doNoise, PreMix1, PreMix2);
+  theHFAmplifier = new HcalAmplifier(theParameterMap, doNoise, PreMix1, PreMix2);
+  theHOAmplifier = new HcalAmplifier(theParameterMap, doNoise, PreMix1, PreMix2);
+  theZDCAmplifier = new HcalAmplifier(theParameterMap, doNoise, PreMix1, PreMix2);
   theHBHEAmplifier->setHBtuningParameter(HBtp);
   theHBHEAmplifier->setHEtuningParameter(HEtp);
   theHFAmplifier->setHFtuningParameter(HFtp);
@@ -160,12 +182,12 @@ HcalDigitizer::HcalDigitizer(const edm::ParameterSet& ps) :
 
   //  std::cout << "HcalDigitizer: theUpgradeCoderFactory created" << std::endl;
 
-  theHBHEElectronicsSim = new HcalElectronicsSim(theHBHEAmplifier, theCoderFactory);
-  theHFElectronicsSim = new HcalElectronicsSim(theHFAmplifier, theCoderFactory);
-  theHOElectronicsSim = new HcalElectronicsSim(theHOAmplifier, theCoderFactory);
-  theZDCElectronicsSim = new HcalElectronicsSim(theZDCAmplifier, theCoderFactory);
-  theUpgradeHBHEElectronicsSim = new HcalElectronicsSim(theHBHEAmplifier, theUpgradeCoderFactory);
-  theUpgradeHFElectronicsSim = new HcalElectronicsSim(theHFAmplifier, theUpgradeCoderFactory);
+  theHBHEElectronicsSim = new HcalElectronicsSim(theHBHEAmplifier, theCoderFactory, PreMix1);
+  theHFElectronicsSim = new HcalElectronicsSim(theHFAmplifier, theCoderFactory, PreMix1);
+  theHOElectronicsSim = new HcalElectronicsSim(theHOAmplifier, theCoderFactory, PreMix1);
+  theZDCElectronicsSim = new HcalElectronicsSim(theZDCAmplifier, theCoderFactory, PreMix1);
+  theUpgradeHBHEElectronicsSim = new HcalElectronicsSim(theHBHEAmplifier, theUpgradeCoderFactory, PreMix1);
+  theUpgradeHFElectronicsSim = new HcalElectronicsSim(theHFAmplifier, theUpgradeCoderFactory, PreMix1);
 
   //  std::cout << "HcalDigitizer: theUpgradeElectronicsSim created" <<  std::endl; 
 
@@ -231,6 +253,8 @@ HcalDigitizer::HcalDigitizer(const edm::ParameterSet& ps) :
   theZDCResponse->setHitFilter(&theZDCHitFilter);
 
   bool doTimeSlew = ps.getParameter<bool>("doTimeSlew");
+  //initialize: they won't be called later if flag is set
+  theTimeSlewSim = 0;
   if(doTimeSlew) {
     // no time slewing for HF
     theTimeSlewSim = new HcalTimeSlewSim(theParameterMap);
@@ -293,29 +317,8 @@ HcalDigitizer::HcalDigitizer(const edm::ParameterSet& ps) :
     theZDCDigitizer->setNoiseHitGenerator(theNoiseHitGenerator);
   }
 
-  edm::Service<edm::RandomNumberGenerator> rng;
-  if ( ! rng.isAvailable()) {
-    throw cms::Exception("Configuration")
-      << "HcalDigitizer requires the RandomNumberGeneratorService\n"
-         "which is not present in the configuration file.  You must add the service\n"
-         "in the configuration file or remove the modules that require it.";
-  }
-
-  CLHEP::HepRandomEngine& engine = rng->getEngine();
-  if(theHBHEDigitizer) theHBHEDigitizer->setRandomEngine(engine);
-  if(theHBHESiPMDigitizer) theHBHESiPMDigitizer->setRandomEngine(engine);
-  if(theHODigitizer) theHODigitizer->setRandomEngine(engine);
-  if(theHOSiPMDigitizer) theHOSiPMDigitizer->setRandomEngine(engine);
-  if(theHBHEUpgradeDigitizer) theHBHEUpgradeDigitizer->setRandomEngine(engine);
-  if(theIonFeedback) theIonFeedback->setRandomEngine(engine);
-  if(theTimeSlewSim) theTimeSlewSim->setRandomEngine(engine);
-  if(theHFUpgradeDigitizer) theHFUpgradeDigitizer->setRandomEngine(engine);
-  if(theHFDigitizer) theHFDigitizer->setRandomEngine(engine);
-  theZDCDigitizer->setRandomEngine(engine);
-
-  if (theHitCorrection!=0) theHitCorrection->setRandomEngine(engine);
-
-  hitsProducer_ = ps.getParameter<std::string>("hitsProducer");
+  if(agingFlagHE) m_HEDarkening = new HEDarkening();
+  if(agingFlagHF) m_HFRecalibration = new HFRecalibration();
 }
 
 
@@ -398,17 +401,17 @@ void HcalDigitizer::initializeEvent(edm::Event const& e, edm::EventSetup const& 
   theParameterMap->setDbService(conditions.product());
 
   edm::ESHandle<HcalCholeskyMatrices> refCholesky;
-  eventSetup.get<HcalCholeskyMatricesRcd>().get(refCholesky);
-  const HcalCholeskyMatrices * myCholesky = refCholesky.product();
-
+  if (eventSetup.find(edm::eventsetup::EventSetupRecordKey::makeKey<HcalCholeskyMatricesRcd>())) {
+    eventSetup.get<HcalCholeskyMatricesRcd>().get(refCholesky);
+    const HcalCholeskyMatrices * myCholesky = refCholesky.product();
+    theHBHEAmplifier->setCholesky(myCholesky);
+    theHFAmplifier->setCholesky(myCholesky);
+    theHOAmplifier->setCholesky(myCholesky);
+  }
   edm::ESHandle<HcalPedestals> pedshandle;
   eventSetup.get<HcalPedestalsRcd>().get(pedshandle);
   const HcalPedestals *  myADCPedestals = pedshandle.product();
 
-  theHBHEAmplifier->setCholesky(myCholesky);
-  theHFAmplifier->setCholesky(myCholesky);
-  theHOAmplifier->setCholesky(myCholesky);
-  
   theHBHEAmplifier->setADCPeds(myADCPedestals);
   theHFAmplifier->setADCPeds(myADCPedestals);
   theHOAmplifier->setADCPeds(myADCPedestals);
@@ -429,35 +432,39 @@ void HcalDigitizer::initializeEvent(edm::Event const& e, edm::EventSetup const& 
 
 }
 
-void HcalDigitizer::accumulateCaloHits(edm::Handle<std::vector<PCaloHit> > const& hcalHandle, edm::Handle<std::vector<PCaloHit> > const& zdcHandle, int bunchCrossing) {
+void HcalDigitizer::accumulateCaloHits(edm::Handle<std::vector<PCaloHit> > const& hcalHandle, edm::Handle<std::vector<PCaloHit> > const& zdcHandle, int bunchCrossing, CLHEP::HepRandomEngine* engine) {
   // Step A: pass in inputs, and accumulate digirs
   if(isHCAL) {
     std::vector<PCaloHit> hcalHits = *hcalHandle.product();
+    //evaluate darkening before relabeling
+    if(m_HEDarkening || m_HFRecalibration){
+      darkening(hcalHits);
+    }
     if (relabel_) {
       // Relabel PCaloHits
-      edm::LogInfo("HcalDigitizer") << "Calling Relabller";
+      edm::LogInfo("HcalDigitizer") << "Calling Relabeller";
       theRelabeller->process(hcalHits);
     }
     if(theHitCorrection != 0) {
       theHitCorrection->fillChargeSums(hcalHits);
     }
     if(hbhegeo) {
-      if(theHBHEDigitizer) theHBHEDigitizer->add(hcalHits, bunchCrossing);
-      if(theHBHESiPMDigitizer) theHBHESiPMDigitizer->add(hcalHits, bunchCrossing);
+      if(theHBHEDigitizer) theHBHEDigitizer->add(hcalHits, bunchCrossing, engine);
+      if(theHBHESiPMDigitizer) theHBHESiPMDigitizer->add(hcalHits, bunchCrossing, engine);
       if(theHBHEUpgradeDigitizer) {
 	//	std::cout << "HcalDigitizer::accumulateCaloHits  theHBHEUpgradeDigitizer->add" << std::endl;     
-      theHBHEUpgradeDigitizer->add(hcalHits, bunchCrossing);
+        theHBHEUpgradeDigitizer->add(hcalHits, bunchCrossing, engine);
       }
     }
 
     if(hogeo) {
-      if(theHODigitizer) theHODigitizer->add(hcalHits, bunchCrossing);
-      if(theHOSiPMDigitizer) theHOSiPMDigitizer->add(hcalHits, bunchCrossing);
+      if(theHODigitizer) theHODigitizer->add(hcalHits, bunchCrossing, engine);
+      if(theHOSiPMDigitizer) theHOSiPMDigitizer->add(hcalHits, bunchCrossing, engine);
     }
 
     if(hfgeo) {
-      if(theHFDigitizer) theHFDigitizer->add(hcalHits, bunchCrossing);
-      if(theHFUpgradeDigitizer) theHFUpgradeDigitizer->add(hcalHits, bunchCrossing);
+      if(theHFDigitizer) theHFDigitizer->add(hcalHits, bunchCrossing, engine);
+      if(theHFUpgradeDigitizer) theHFUpgradeDigitizer->add(hcalHits, bunchCrossing, engine);
     } 
   } else {
     edm::LogInfo("HcalDigitizer") << "We don't have HCAL hit collection available ";
@@ -465,14 +472,14 @@ void HcalDigitizer::accumulateCaloHits(edm::Handle<std::vector<PCaloHit> > const
 
   if(isZDC) {
     if(zdcgeo) {
-      theZDCDigitizer->add(*zdcHandle.product(), bunchCrossing);
+      theZDCDigitizer->add(*zdcHandle.product(), bunchCrossing, engine);
     } 
   } else {
     edm::LogInfo("HcalDigitizer") << "We don't have ZDC hit collection available ";
   }
 }
 
-void HcalDigitizer::accumulate(edm::Event const& e, edm::EventSetup const& eventSetup) {
+void HcalDigitizer::accumulate(edm::Event const& e, edm::EventSetup const& eventSetup, CLHEP::HepRandomEngine* engine) {
   // Step A: Get Inputs
   edm::InputTag zdcTag(hitsProducer_, "ZDCHITS");
   edm::Handle<std::vector<PCaloHit> > zdcHandle;
@@ -484,10 +491,10 @@ void HcalDigitizer::accumulate(edm::Event const& e, edm::EventSetup const& event
   e.getByLabel(hcalTag, hcalHandle);
   isHCAL = hcalHandle.isValid();
 
-  accumulateCaloHits(hcalHandle, zdcHandle, 0);
+  accumulateCaloHits(hcalHandle, zdcHandle, 0, engine);
 }
 
-void HcalDigitizer::accumulate(PileUpEventPrincipal const& e, edm::EventSetup const& eventSetup) {
+void HcalDigitizer::accumulate(PileUpEventPrincipal const& e, edm::EventSetup const& eventSetup, CLHEP::HepRandomEngine* engine) {
   // Step A: Get Inputs
   edm::InputTag zdcTag(hitsProducer_, "ZDCHITS");
   edm::Handle<std::vector<PCaloHit> > zdcHandle;
@@ -499,10 +506,10 @@ void HcalDigitizer::accumulate(PileUpEventPrincipal const& e, edm::EventSetup co
   e.getByLabel(hcalTag, hcalHandle);
   isHCAL = hcalHandle.isValid();
 
-  accumulateCaloHits(hcalHandle, zdcHandle, e.bunchCrossing());
+  accumulateCaloHits(hcalHandle, zdcHandle, e.bunchCrossing(), engine);
 }
 
-void HcalDigitizer::finalizeEvent(edm::Event& e, const edm::EventSetup& eventSetup) {
+void HcalDigitizer::finalizeEvent(edm::Event& e, const edm::EventSetup& eventSetup, CLHEP::HepRandomEngine* engine) {
 
   // Step B: Create empty output
   std::auto_ptr<HBHEDigiCollection> hbheResult(new HBHEDigiCollection());
@@ -514,24 +521,24 @@ void HcalDigitizer::finalizeEvent(edm::Event& e, const edm::EventSetup& eventSet
 
   // Step C: Invoke the algorithm, getting back outputs.
   if(isHCAL&&hbhegeo){
-    if(theHBHEDigitizer)        theHBHEDigitizer->run(*hbheResult);
-    if(theHBHESiPMDigitizer)    theHBHESiPMDigitizer->run(*hbheResult);
+    if(theHBHEDigitizer)        theHBHEDigitizer->run(*hbheResult, engine);
+    if(theHBHESiPMDigitizer)    theHBHESiPMDigitizer->run(*hbheResult, engine);
     if(theHBHEUpgradeDigitizer) {
-      theHBHEUpgradeDigitizer->run(*hbheupgradeResult);
+      theHBHEUpgradeDigitizer->run(*hbheupgradeResult, engine);
 
       //      std::cout << "HcalDigitizer::finalizeEvent  theHBHEUpgradeDigitizer->run" << std::endl;     
     }
   }
   if(isHCAL&&hogeo) {
-    if(theHODigitizer) theHODigitizer->run(*hoResult);
-    if(theHOSiPMDigitizer) theHOSiPMDigitizer->run(*hoResult);
+    if(theHODigitizer) theHODigitizer->run(*hoResult, engine);
+    if(theHOSiPMDigitizer) theHOSiPMDigitizer->run(*hoResult, engine);
   }
   if(isHCAL&&hfgeo) {
-    if(theHFDigitizer) theHFDigitizer->run(*hfResult);
-    if(theHFUpgradeDigitizer) theHFUpgradeDigitizer->run(*hfupgradeResult);
+    if(theHFDigitizer) theHFDigitizer->run(*hfResult, engine);
+    if(theHFUpgradeDigitizer) theHFUpgradeDigitizer->run(*hfupgradeResult, engine);
   }
   if(isZDC&&zdcgeo) {
-    theZDCDigitizer->run(*zdcResult);
+    theZDCDigitizer->run(*zdcResult, engine);
   }
   
   edm::LogInfo("HcalDigitizer") << "HCAL HBHE digis : " << hbheResult->size();
@@ -682,6 +689,35 @@ void HcalDigitizer::buildHOSiPMCells(const std::vector<DetId>& allCells, const e
   }
 }
 
-      
+void HcalDigitizer::darkening(std::vector<PCaloHit>& hcalHits){
+
+  for (unsigned int ii=0; ii<hcalHits.size(); ++ii) {
+    uint32_t tmpId = hcalHits[ii].id();
+    int det, z, depth, ieta, phi, lay;
+    HcalTestNumbering::unpackHcalIndex(tmpId,det,z,depth,ieta,phi,lay);
+	
+	bool darkened = false;
+	float dweight = 1.;
+	
+	//HE darkening
+	if(det==int(HcalEndcap) && m_HEDarkening){
+	  dweight = m_HEDarkening->degradation(deliveredLumi,ieta,lay-2);//NB:diff. layer count
+	  darkened = true;
+    }
+	
+	//HF darkening - approximate: invert recalibration factor
+	else if(det==int(HcalForward) && m_HFRecalibration){
+	  dweight = 1.0/m_HFRecalibration->getCorr(ieta,depth,deliveredLumi);
+	  darkened = true;
+    }
+	
+    //create new hit with darkened energy
+	//if(darkened) hcalHits[ii] = PCaloHit(hcalHits[ii].energyEM()*dweight,hcalHits[ii].energyHad()*dweight,hcalHits[ii].time(),hcalHits[ii].geantTrackId(),hcalHits[ii].id());
+	
+	//reset hit energy
+	if(darkened) hcalHits[ii].setEnergy(hcalHits[ii].energy()*dweight);	
+  }
+  
+}
     
 

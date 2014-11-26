@@ -23,7 +23,7 @@ namespace edm {
   class ProductID;
   template <typename T, typename P = ClonePolicy<T> >
   class OwnVector {
-  private:
+  public:
 #if defined(CMS_USE_DEBUGGING_ALLOCATOR)
     typedef std::vector<T*, debugging_allocator<T> > base;
 #else
@@ -124,6 +124,12 @@ namespace edm {
     OwnVector<T, P>& operator=(OwnVector<T, P>&&) noexcept;
 #endif
 
+    void shrink_to_fit() {
+#ifndef CMS_NOCXX11
+      data_.shrink_to_fit();
+#endif
+    }
+
 
     void reserve(size_t);
     template <typename D> void push_back(D*& d);
@@ -140,6 +146,7 @@ namespace edm {
     void clear();
     iterator erase(iterator pos);
     iterator erase(iterator first, iterator last);
+    void reverse() { std::reverse(data_.begin(),data_.end());}
     template<typename S>
     void sort(S s);
     void sort();

@@ -7,15 +7,13 @@
  * Attention: Units are assumed to be cm and radian!
  * \author Sunanda Banerjee
  *
- * $Id: BeamProfileVtxGenerator.h,v 1.7 2009/08/06 20:42:29 heltsley Exp $
  */
 
 #include "IOMC/EventVertexGenerators/interface/BaseEvtVtxGenerator.h"
 #include <vector>
 
-namespace CLHEP
-{
-   class HepRandom;
+namespace CLHEP {
+  class HepRandomEngine;
 }
 
 class BeamProfileVtxGenerator : public BaseEvtVtxGenerator
@@ -26,7 +24,7 @@ public:
 
   /// return a new event vertex
   //virtual CLHEP::Hep3Vector * newVertex();
-  virtual HepMC::FourVector* newVertex() ;
+  virtual HepMC::FourVector* newVertex(CLHEP::HepRandomEngine*) ;
 
   virtual TMatrixD* GetInvLorentzBoost() {
 	  return 0;
@@ -69,7 +67,6 @@ private:
   bool        fType,   ffile;
   int         nBinx,   nBiny;
   std::vector<double> fdistn;
-  CLHEP::HepRandom*   fRandom;
   double fTimeOffset;
 };
 

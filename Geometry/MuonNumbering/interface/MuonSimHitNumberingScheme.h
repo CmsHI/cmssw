@@ -1,13 +1,11 @@
-#ifndef MuonNumbering_MuonSimHitNumberingScheme_h
-#define MuonNumbering_MuonSimHitNumberingScheme_h
+#ifndef Geometry_MuonNumbering_MuonSimHitNumberingScheme_h
+#define Geometry_MuonNumbering_MuonSimHitNumberingScheme_h
 
 /** \class MuonSimHitNumberingScheme
  *
  * wrapper class to handle numbering schemes for the different
  * MuonSubDetector's
  *  
- *  $Date: 2006/02/15 13:21:24 $
- *  $Revision: 1.1 $
  * \author Arno Straessner, CERN <arno.straessner@cern.ch>
  *
  */

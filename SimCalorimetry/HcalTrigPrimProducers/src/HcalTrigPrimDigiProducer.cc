@@ -4,7 +4,6 @@
 #include "DataFormats/Common/interface/Handle.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Framework/interface/ESHandle.h"
-#include "DataFormats/HcalDigi/interface/HcalDigiCollections.h"
 #include "DataFormats/HcalDigi/interface/HBHEDataFrame.h"
 #include "DataFormats/HcalDigi/interface/HFDataFrame.h"
 #include "DataFormats/HcalDigi/interface/HcalTriggerPrimitiveDigi.h"
@@ -17,7 +16,6 @@
 #include "CalibFormats/CaloTPG/interface/CaloTPGTranscoder.h"
 #include "CalibFormats/HcalObjects/interface/HcalDbService.h"
 #include "CalibFormats/HcalObjects/interface/HcalDbRecord.h"
-#include "DataFormats/FEDRawData/interface/FEDRawDataCollection.h"
 #include "CondFormats/HcalObjects/interface/HcalElectronicsMap.h"
 #include "CondFormats/HcalObjects/interface/HcalLutMetadata.h"
 #include "Geometry/Records/interface/CaloGeometryRecord.h"
@@ -41,6 +39,11 @@ HcalTrigPrimDigiProducer::HcalTrigPrimDigiProducer(const edm::ParameterSet& ps)
   runZS_(ps.getParameter<bool>("RunZS")),
   runFrontEndFormatError_(ps.getParameter<bool>("FrontEndFormatError"))
 {
+  // register for data access
+  tok_raw_ = consumes<FEDRawDataCollection>(inputTagFEDRaw_);
+  tok_hbhe_ = consumes<HBHEDigiCollection>(inputLabel_[0]);
+  tok_hf_ = consumes<HFDigiCollection>(inputLabel_[1]);
+
    produces<HcalTrigPrimDigiCollection>();
    theAlgo_.setPeakFinderAlgorithm(ps.getParameter<int>("PeakFinderAlgorithm"));
 }
@@ -54,7 +57,6 @@ void HcalTrigPrimDigiProducer::produce(edm::Event& iEvent, const edm::EventSetup
 
   edm::ESHandle<CaloTPGTranscoder> outTranscoder;
   eventSetup.get<CaloTPGRecord>().get(outTranscoder);
-  outTranscoder->setup(eventSetup,CaloTPGTranscoder::HcalTPG);
 
   edm::ESHandle<HcalLutMetadata> lutMetadata;
   eventSetup.get<HcalLutMetadataRcd>().get(lutMetadata);
@@ -69,8 +71,8 @@ void HcalTrigPrimDigiProducer::produce(edm::Event& iEvent, const edm::EventSetup
   edm::Handle<HBHEDigiCollection> hbheDigis;
   edm::Handle<HFDigiCollection>   hfDigis;
 
-  iEvent.getByLabel(inputLabel_[0],hbheDigis);
-  iEvent.getByLabel(inputLabel_[1],hfDigis);
+  iEvent.getByToken(tok_hbhe_,hbheDigis);
+  iEvent.getByToken(tok_hf_,hfDigis);
 
   // protect here against missing input collections
   // there is no protection in HcalTriggerPrimitiveAlgo
@@ -85,8 +87,6 @@ void HcalTrigPrimDigiProducer::produce(edm::Event& iEvent, const edm::EventSetup
       // put empty HcalTrigPrimDigiCollection in the event
       iEvent.put(result);
 
-      outTranscoder->releaseSetup();
-
       return;
   }
 
@@ -99,8 +99,6 @@ void HcalTrigPrimDigiProducer::produce(edm::Event& iEvent, const edm::EventSetup
 
       // put empty HcalTrigPrimDigiCollection in the event
       iEvent.put(result);
-
-      outTranscoder->releaseSetup();
 
       return;
   }
@@ -118,7 +116,7 @@ void HcalTrigPrimDigiProducer::produce(edm::Event& iEvent, const edm::EventSetup
         const HcalElectronicsMap *emap = pSetup->getHcalMapping();
 
         edm::Handle < FEDRawDataCollection > fedHandle;
-        iEvent.getByLabel(inputTagFEDRaw_, fedHandle);
+        iEvent.getByToken(tok_raw_, fedHandle);
 
         if (fedHandle.isValid() && emap != 0) {
             theAlgo_.runFEFormatError(fedHandle.product(), emap, *result);
@@ -135,8 +133,6 @@ void HcalTrigPrimDigiProducer::produce(edm::Event& iEvent, const edm::EventSetup
 
             iEvent.put(emptyResult);
 
-            outTranscoder->releaseSetup();
-
             return;
         }
 
@@ -148,8 +144,6 @@ void HcalTrigPrimDigiProducer::produce(edm::Event& iEvent, const edm::EventSetup
 
   // Step D: Put outputs into event
   iEvent.put(result);
-
-  outTranscoder->releaseSetup();
 }
 
 

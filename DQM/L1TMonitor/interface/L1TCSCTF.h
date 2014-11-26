@@ -39,6 +39,12 @@
 #include "CondFormats/L1TObjects/interface/L1MuTriggerPtScale.h"
 #include "CondFormats/DataRecord/interface/L1MuTriggerPtScaleRcd.h"
 
+#include "DataFormats/L1CSCTrackFinder/interface/L1CSCStatusDigiCollection.h"
+#include "DataFormats/CSCDigi/interface/CSCCorrelatedLCTDigiCollection.h"
+#include "DataFormats/L1CSCTrackFinder/interface/L1CSCTrackCollection.h"
+#include "DataFormats/L1CSCTrackFinder/interface/CSCTriggerContainer.h"
+#include "DataFormats/L1CSCTrackFinder/interface/TrackStub.h"
+ 
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -96,6 +102,23 @@ class L1TCSCTF : public edm::EDAnalyzer {
   MonitorElement* trackModeVsQ;
   MonitorElement* csctfAFerror;
 
+  // NEW: CSC EVENT LCT PLOTS, Renjie Wang
+  MonitorElement* csctflcts;
+  
+  // PLOTS SPECIFICALLY FOR ME1/1
+  MonitorElement* me11_lctStrip;
+  MonitorElement* me11_lctWire;
+  MonitorElement* me11_lctLocalPhi;
+  MonitorElement* me11_lctPackedPhi;
+  MonitorElement* me11_lctGblPhi;
+  MonitorElement* me11_lctGblEta;
+ 
+  // PLOTS SPECIFICALLY FOR ME4/2
+  MonitorElement* me42_lctGblPhi;
+  MonitorElement* me42_lctGblEta;  
+
+
+
   // 1-> 6 plus endcap
   // 7->12 minus endcap
   MonitorElement* DTstubsTimeTrackMenTimeArrival[12];
@@ -108,8 +131,9 @@ class L1TCSCTF : public edm::EDAnalyzer {
   std::string outputFile_; //file name for ROOT ouput
   bool verbose_;
   bool monitorDaemon_;
-  ofstream logFile_;
+  std::ofstream logFile_;
   edm::InputTag gmtProducer, lctProducer, trackProducer, statusProducer, mbProducer;
+  bool gangedME11a_;
 
   CSCSectorReceiverLUT *srLUTs_[5];
 
@@ -118,6 +142,13 @@ class L1TCSCTF : public edm::EDAnalyzer {
   unsigned long long m_scalesCacheID ;
   unsigned long long m_ptScaleCacheID ;
 
+  //define Token(-s)
+  edm::EDGetTokenT<L1MuGMTReadoutCollection> gmtProducerToken_;
+  edm::EDGetTokenT<L1CSCStatusDigiCollection> statusToken_;
+  edm::EDGetTokenT<CSCCorrelatedLCTDigiCollection> corrlctsToken_;
+  edm::EDGetTokenT<L1CSCTrackCollection> tracksToken_;
+  edm::EDGetTokenT<CSCTriggerContainer<csctf::TrackStub> > dtStubsToken_;
+  edm::EDGetTokenT<L1CSCTrackCollection> mbtracksToken_;
 };
 
 #endif

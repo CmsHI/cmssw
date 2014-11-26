@@ -3,7 +3,6 @@
 #include "FWCore/Framework/interface/MakerMacros.h"
 
 #include "Validation/HcalDigis/interface/HcalDigiTester.h"
-#include "DataFormats/HcalDigi/interface/HcalDigiCollections.h"
 #include "DataFormats/HcalDetId/interface/HcalSubdetector.h"
 #include "DataFormats/HcalDetId/interface/HcalElectronicsId.h"
 #include "DataFormats/HcalDetId/interface/HcalDetId.h"
@@ -13,17 +12,11 @@
 #include "Geometry/Records/interface/CaloGeometryRecord.h"
 #include "Geometry/CaloGeometry/interface/CaloSubdetectorGeometry.h"
 #include "Geometry/CaloGeometry/interface/CaloCellGeometry.h"
-#include "SimDataFormats/CaloHit/interface/PCaloHitContainer.h"
 
 #include "CalibFormats/HcalObjects/interface/HcalDbRecord.h"
 #include "CalibFormats/HcalObjects/interface/HcalCoderDb.h"
 #include "CalibFormats/HcalObjects/interface/HcalCalibrations.h"
 
-#include "DQMServices/Core/interface/DQMStore.h"
-
-#include "DataFormats/HcalDigi/interface/HBHEDataFrame.h"
-#include "DataFormats/HcalDigi/interface/HFDataFrame.h"
-#include "DataFormats/HcalDigi/interface/HODataFrame.h"
 #include <vector>
 #include <utility>
 #include <ostream>
@@ -36,9 +29,9 @@
 #include "CondFormats/HcalObjects/interface/HcalPedestal.h"
 #include "CondFormats/HcalObjects/interface/HcalPedestalWidth.h"
 
-template<class Digi>
+template<class Digi >
 
-void HcalDigiTester::reco(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
+void HcalDigiTester::reco(const edm::Event& iEvent, const edm::EventSetup& iSetup, const edm::EDGetTokenT<edm::SortedCollection<Digi> > &tok) {
   
   
   typename   edm::Handle<edm::SortedCollection<Digi> > digiCollection;
@@ -49,7 +42,7 @@ void HcalDigiTester::reco(const edm::Event& iEvent, const edm::EventSetup& iSetu
   CaloSamples tool;
 
 
-  iEvent.getByLabel (inputTag_, digiCollection);
+  iEvent.getByToken (tok, digiCollection);
 
   int subdet = 0;
   if (hcalselector_ == "HB"  ) subdet = 1;
@@ -88,7 +81,7 @@ void HcalDigiTester::reco(const edm::Event& iEvent, const edm::EventSetup& iSetu
   // SimHits MC only
   if( mc_ == "yes") {
     edm::Handle<edm::PCaloHitContainer> hcalHits ;
-    iEvent.getByLabel("g4SimHits","HcalHits",hcalHits); 
+    iEvent.getByToken(tok_mc_,hcalHits); 
     const edm::PCaloHitContainer * simhitResult = hcalHits.product () ;
     
     
@@ -476,7 +469,7 @@ void HcalDigiTester::reco(const edm::Event& iEvent, const edm::EventSetup& iSetu
  
     if(mc_ == "yes") {
       edm::Handle<edm::PCaloHitContainer> hcalHits ;
-      iEvent.getByLabel("g4SimHits","HcalHits",hcalHits); 
+      iEvent.getByToken(tok_mc_,hcalHits); 
       const edm::PCaloHitContainer * simhitResult = hcalHits.product () ;
       for (std::vector<PCaloHit>::const_iterator simhits = simhitResult->begin ();         simhits != simhitResult->end () ;  ++simhits) {
 	
@@ -520,13 +513,12 @@ void HcalDigiTester::reco(const edm::Event& iEvent, const edm::EventSetup& iSetu
    
     monitor()->fillmeNdigis(double(Ndig));
     
-  } //  end of if( subdet != 0 && noise_ == 0) { // signal only 
+  } //  end of if( subdet != 0 && noise_ == 0)  // signal only 
 
-}
+} // end reco method
 
 
-HcalDigiTester::HcalDigiTester(const edm::ParameterSet& iConfig)
-  : dbe_(edm::Service<DQMStore>().operator->()),
+HcalDigiTester::HcalDigiTester(const edm::ParameterSet& iConfig):
     inputTag_(iConfig.getParameter<edm::InputTag>("digiLabel")),
     outputFile_(iConfig.getUntrackedParameter<std::string>("outputFile", "")),
     hcalselector_(iConfig.getUntrackedParameter<std::string>("hcalselector", "all")),
@@ -535,6 +527,20 @@ HcalDigiTester::HcalDigiTester(const edm::ParameterSet& iConfig)
     mc_(iConfig.getUntrackedParameter<std::string>("mc", "no")),
     monitors_()
 {
+
+  // register for data access
+  tok_mc_ = consumes<edm::PCaloHitContainer>(edm::InputTag("g4SimHits","HcalHits"));
+  tok_hbhe_ = consumes<edm::SortedCollection<HBHEDataFrame> >(edm::InputTag(inputTag_));
+  tok_ho_ = consumes<edm::SortedCollection<HODataFrame> >(edm::InputTag(inputTag_));
+  tok_hf_ = consumes<edm::SortedCollection<HFDataFrame> >(edm::InputTag(inputTag_));
+
+  nevent1 = 0;
+  nevent2 = 0;
+  nevent3 = 0;
+  nevent4 = 0;
+
+  nevtot  = 0;
+
   if ( outputFile_.size() != 0 ) {
     edm::LogInfo("OutputInfo") << " Hcal Digi Task histograms will be saved to '" << outputFile_.c_str() << "'";
   } else {
@@ -545,7 +551,59 @@ HcalDigiTester::HcalDigiTester(const edm::ParameterSet& iConfig)
 }
    
 
-HcalDigiTester::~HcalDigiTester() { }
+HcalDigiTester::~HcalDigiTester() 
+{
+  std::map<std::string, HcalSubdetDigiMonitor*>::iterator itr =  monitors_.begin();
+  std::map<std::string, HcalSubdetDigiMonitor*>::iterator itrEnd =  monitors_.end();
+
+  while ( itr != itrEnd ) {
+    delete (*itr).second;
+    itr++;
+  }
+
+
+}
+
+void HcalDigiTester::bookHistograms(DQMStore::IBooker &ibooker, edm::Run const &run, edm::EventSetup const &es )
+{
+
+  // This is the only opportunity to call the constructors for HcalSubdetDigiMonitor
+  //
+  if( hcalselector_ != "all") {
+    noise_ = 0;
+    if (hcalselector_ == "noise") {
+      noise_ = 1;
+      
+      hcalselector_ = "HB";
+      constructMonitor(ibooker);
+      hcalselector_ = "HE";
+      constructMonitor(ibooker);
+      hcalselector_ = "HO";
+      constructMonitor(ibooker);
+      hcalselector_ = "HF";
+      constructMonitor(ibooker);
+      hcalselector_ = "noise";
+    } else {
+      noise_ = 0;
+      constructMonitor(ibooker);
+    }
+  }    
+    // all subdetectors
+  else {
+    noise_ = 0;
+    
+    hcalselector_ = "HB";
+    constructMonitor(ibooker); 
+    hcalselector_ = "HE";
+    constructMonitor(ibooker); 
+    hcalselector_ = "HO";
+    constructMonitor(ibooker); 
+    hcalselector_ = "HF";
+    constructMonitor(ibooker); 
+    hcalselector_ = "all";    
+  }
+
+}
 
 
 void HcalDigiTester::endRun() {
@@ -569,12 +627,6 @@ void HcalDigiTester::endRun() {
 }
 
 
-
-void HcalDigiTester::endJob() {
-
-  if ( outputFile_.size() != 0 && dbe_ ) dbe_->save(outputFile_);
-
-}
 
 
   //occupancies evaluation
@@ -643,31 +695,37 @@ void HcalDigiTester::eval_occupancy() {
   
 }
 
-void HcalDigiTester::beginJob() {
-
-  nevent1 = 0;
-  nevent2 = 0;
-  nevent3 = 0;
-  nevent4 = 0;
-
-  nevtot  = 0;
-
-}
-
 
 HcalSubdetDigiMonitor * HcalDigiTester::monitor()
 {
   std::map<std::string, HcalSubdetDigiMonitor*>::iterator monitorItr
     = monitors_.find(hcalselector_);
 
-  if(monitorItr == monitors_.end())
+  /*if(monitorItr == monitors_.end())
     {
       HcalSubdetDigiMonitor* m = new HcalSubdetDigiMonitor(dbe_, hcalselector_, noise_);
       std::pair<std::string, HcalSubdetDigiMonitor*> mapElement(
 								hcalselector_, m);
       monitorItr = monitors_.insert(mapElement).first;
-    }
+    }*/
+
   return monitorItr->second;
+}
+
+void HcalDigiTester::constructMonitor(DQMStore::IBooker &ibooker)
+{
+  
+  std::map<std::string, HcalSubdetDigiMonitor*>::iterator monitorItr
+    = monitors_.find(hcalselector_);
+
+  if(monitorItr == monitors_.end())
+    {
+      HcalSubdetDigiMonitor* m = new HcalSubdetDigiMonitor(ibooker, hcalselector_, noise_);
+      std::pair<std::string, HcalSubdetDigiMonitor*> mapElement(
+								hcalselector_, m);
+      monitorItr = monitors_.insert(mapElement).first;
+    }
+
 }
 
 void 
@@ -687,10 +745,10 @@ HcalDigiTester::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     
     
 
-    if (hcalselector_ == "HB" ) reco<HBHEDataFrame>(iEvent,iSetup);
-    if (hcalselector_ == "HE" ) reco<HBHEDataFrame>(iEvent,iSetup);
-    if (hcalselector_ == "HO" ) reco<HODataFrame>(iEvent,iSetup);
-    if (hcalselector_ == "HF" ) reco<HFDataFrame>(iEvent,iSetup);  
+    if (hcalselector_ == "HB" ) reco<HBHEDataFrame>(iEvent,iSetup,tok_hbhe_);
+    if (hcalselector_ == "HE" ) reco<HBHEDataFrame>(iEvent,iSetup,tok_hbhe_);
+    if (hcalselector_ == "HO" ) reco<HODataFrame>(iEvent,iSetup,tok_ho_);
+    if (hcalselector_ == "HF" ) reco<HFDataFrame>(iEvent,iSetup,tok_hf_);  
 
     if (hcalselector_ == "noise") {
       noise_ = 1;
@@ -700,13 +758,13 @@ HcalDigiTester::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
       
       hcalselector_ = "HB";
-      reco<HBHEDataFrame>(iEvent,iSetup);
+      reco<HBHEDataFrame>(iEvent,iSetup,tok_hbhe_);
       hcalselector_ = "HE";
-      reco<HBHEDataFrame>(iEvent,iSetup);
+      reco<HBHEDataFrame>(iEvent,iSetup,tok_hbhe_);
       hcalselector_ = "HO";
-      reco<HODataFrame>(iEvent,iSetup);
+      reco<HODataFrame>(iEvent,iSetup,tok_ho_);
       hcalselector_ = "HF";
-      reco<HFDataFrame>(iEvent,iSetup);
+      reco<HFDataFrame>(iEvent,iSetup,tok_hf_);
       hcalselector_ = "noise";
     }
   }    
@@ -715,13 +773,13 @@ HcalDigiTester::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     noise_ = 0;
     
     hcalselector_ = "HB";
-    reco<HBHEDataFrame>(iEvent,iSetup);
+    reco<HBHEDataFrame>(iEvent,iSetup,tok_hbhe_);
     hcalselector_ = "HE";
-    reco<HBHEDataFrame>(iEvent,iSetup);
+    reco<HBHEDataFrame>(iEvent,iSetup,tok_hbhe_);
     hcalselector_ = "HO";
-    reco<HODataFrame>(iEvent,iSetup);
+    reco<HODataFrame>(iEvent,iSetup,tok_ho_);
     hcalselector_ = "HF";
-    reco<HFDataFrame>(iEvent,iSetup);
+    reco<HFDataFrame>(iEvent,iSetup,tok_hf_);
     hcalselector_ = "all";    
   }
 

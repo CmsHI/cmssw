@@ -9,18 +9,15 @@
 #include "FWCore/Framework/interface/ESHandle.h"
 
 #include "DQMServices/Core/interface/MonitorElement.h"
-#include "DQMServices/Core/interface/DQMStore.h"
 #include "DQM/EcalPreshowerMonitorModule/interface/ESFEDIntegrityTask.h"
 
 #include "DataFormats/FEDRawData/interface/FEDRawData.h"
-#include "DataFormats/FEDRawData/interface/FEDRawDataCollection.h"
 #include "DataFormats/FEDRawData/interface/FEDHeader.h"
 #include "DataFormats/FEDRawData/interface/FEDTrailer.h"
 #include "DataFormats/FEDRawData/interface/FEDNumbering.h"
 #include "DataFormats/FEDRawData/src/fed_header.h"
 #include "DataFormats/EcalRawData/interface/ESDCCHeaderBlock.h"
 #include "DataFormats/EcalRawData/interface/ESKCHIPBlock.h"
-#include "DataFormats/EcalRawData/interface/EcalRawDataCollections.h"
 
 using namespace cms;
 using namespace edm;
@@ -28,113 +25,45 @@ using namespace std;
 
 ESFEDIntegrityTask::ESFEDIntegrityTask(const ParameterSet& ps) {
 
-  init_ = false;
-
-  dqmStore_ = Service<DQMStore>().operator->();
-
   prefixME_      = ps.getUntrackedParameter<string>("prefixME", "");
   fedDirName_    = ps.getUntrackedParameter<string>("FEDDirName", "FEDIntegrity");
-  enableCleanup_ = ps.getUntrackedParameter<bool>("enableCleanup", false);
-  mergeRuns_     = ps.getUntrackedParameter<bool>("mergeRuns", false);
   debug_         = ps.getUntrackedParameter<bool>("debug", false);
 
-  dccCollections_       = ps.getParameter<InputTag>("ESDCCCollections");
-  kchipCollections_     = ps.getParameter<InputTag>("ESKChipCollections");
-  FEDRawDataCollection_ = ps.getParameter<edm::InputTag>("FEDRawDataCollection");
+  dccCollections_       = consumes<ESRawDataCollection>(ps.getParameter<InputTag>("ESDCCCollections"));
+  FEDRawDataCollection_ = consumes<FEDRawDataCollection>(ps.getParameter<edm::InputTag>("FEDRawDataCollection"));
 
   meESFedsEntries_  = 0;
   meESFedsFatal_    = 0;
   meESFedsNonFatal_ = 0;
+
+  ievt_ = 0;
   
 }
 
-ESFEDIntegrityTask::~ESFEDIntegrityTask() {
-
-}
-
-void ESFEDIntegrityTask::beginJob(void) {
-
-  ievt_ = 0;
-
-  if ( dqmStore_ ) {
-    dqmStore_->setCurrentFolder(prefixME_ + "/" + fedDirName_);
-    dqmStore_->rmdir(prefixME_ + "/" + fedDirName_);
-  }
-
-}
-
-void ESFEDIntegrityTask::beginRun(const Run& r, const EventSetup& c) {
-
-  if ( ! mergeRuns_ ) this->reset();
-
-}
-
-void ESFEDIntegrityTask::endRun(const Run& r, const EventSetup& c) {
-
-}
-
-void ESFEDIntegrityTask::reset(void) {
-
-  if ( meESFedsEntries_ )  meESFedsEntries_->Reset();
-  if ( meESFedsFatal_ )    meESFedsFatal_->Reset();
-  if ( meESFedsNonFatal_ ) meESFedsNonFatal_->Reset();
-
-}
-
-void ESFEDIntegrityTask::setup(void){
-
-  init_ = true;
-
+void
+ESFEDIntegrityTask::bookHistograms(DQMStore::IBooker& iBooker, Run const&, EventSetup const&)
+{
   char histo[200];
 
-  if ( dqmStore_ ) {
-    dqmStore_->setCurrentFolder(prefixME_ + "/" + fedDirName_);
+  iBooker.setCurrentFolder(prefixME_ + "/" + fedDirName_);
 
-    sprintf(histo, "FEDEntries");
-    meESFedsEntries_ = dqmStore_->book1D(histo, histo, 56, 520, 576);
+  sprintf(histo, "FEDEntries");
+  meESFedsEntries_ = iBooker.book1D(histo, histo, 56, 520, 576);
 
-    sprintf(histo, "FEDFatal");
-    meESFedsFatal_ = dqmStore_->book1D(histo, histo, 56, 520, 576);
+  sprintf(histo, "FEDFatal");
+  meESFedsFatal_ = iBooker.book1D(histo, histo, 56, 520, 576);
 
-    sprintf(histo, "FEDNonFatal");
-    meESFedsNonFatal_ = dqmStore_->book1D(histo, histo, 56, 520, 576);
-  }
-
-}
-
-void ESFEDIntegrityTask::cleanup(void){
-
-  if ( ! init_ ) return;
-
-  if ( dqmStore_ ) {
-    dqmStore_->setCurrentFolder(prefixME_ + "/" + fedDirName_);
-
-    if ( meESFedsEntries_ ) dqmStore_->removeElement( meESFedsEntries_->getName() );
-    meESFedsEntries_ = 0;
-
-    if ( meESFedsFatal_ ) dqmStore_->removeElement( meESFedsFatal_->getName() );
-    meESFedsFatal_ = 0;
-
-    if ( meESFedsNonFatal_ ) dqmStore_->removeElement( meESFedsNonFatal_->getName() );
-    meESFedsNonFatal_ = 0;
-
-  }
-
-  init_ = false;
-
+  sprintf(histo, "FEDNonFatal");
+  meESFedsNonFatal_ = iBooker.book1D(histo, histo, 56, 520, 576);
 }
 
 void ESFEDIntegrityTask::endJob(void){
 
   LogInfo("ESFEDIntegrityTask") << "analyzed " << ievt_ << " events";
 
-  if ( enableCleanup_ ) this->cleanup();
-
 }
 
 void ESFEDIntegrityTask::analyze(const Event& e, const EventSetup& c){
-
-  if ( ! init_ ) this->setup();
 
   ievt_++;
 
@@ -148,7 +77,7 @@ void ESFEDIntegrityTask::analyze(const Event& e, const EventSetup& c){
   Handle<ESRawDataCollection> dccs;
   Handle<FEDRawDataCollection> allFedRawData;
 
-  if ( e.getByLabel(FEDRawDataCollection_, allFedRawData) ) {
+  if ( e.getByToken(FEDRawDataCollection_, allFedRawData) ) {
 
     // ES FEDs
     for (int esFED=520; esFED<=575; ++esFED) { 
@@ -178,7 +107,7 @@ void ESFEDIntegrityTask::analyze(const Event& e, const EventSetup& c){
       map<int, int> esDCC_BX_FreqMap;
       map<int, int> esDCC_OrbitNumber_FreqMap;
 
-      if ( e.getByLabel(dccCollections_, dccs) ) {
+      if ( e.getByToken(dccCollections_, dccs) ) {
 	
 	for (ESRawDataCollection::const_iterator dccItr = dccs->begin(); dccItr != dccs->end(); ++dccItr) {
 	  ESDCCHeaderBlock esdcc = (*dccItr);
@@ -204,17 +133,17 @@ void ESFEDIntegrityTask::analyze(const Event& e, const EventSetup& c){
 	  
 	}
       } else {
-	LogWarning("ESFEDIntegrityTask") << dccCollections_ << " not available";
+	LogWarning("ESFEDIntegrityTask") << "dccCollections not available";
       }
 
     }
 
   } else {
-    LogWarning("ESFEDIntegrityTask") << FEDRawDataCollection_ << " not available";
+    LogWarning("ESFEDIntegrityTask") << "FEDRawDataCollection not available";
   }
 
   vector<int> fiberStatus;
-  if ( e.getByLabel(dccCollections_, dccs) ) {
+  if ( e.getByToken(dccCollections_, dccs) ) {
     for (ESRawDataCollection::const_iterator dccItr = dccs->begin(); dccItr != dccs->end(); ++dccItr) {
       ESDCCHeaderBlock dcc = (*dccItr);
       

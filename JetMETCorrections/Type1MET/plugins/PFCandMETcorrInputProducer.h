@@ -10,9 +10,7 @@
  *          Florent Lacroix, University of Illinois at Chicago
  *          Christian Veelken, LLR
  *
- * \version $Revision: 1.1 $
  *
- * $Id: PFCandMETcorrInputProducer.h,v 1.1 2011/09/13 14:35:34 veelken Exp $
  *
  */
 
@@ -42,7 +40,7 @@ class PFCandMETcorrInputProducer : public edm::EDProducer
 
   std::string moduleLabel_;
 
-  edm::InputTag src_; // PFCandidate input collection
+  edm::EDGetTokenT<edm::View<reco::Candidate> > token_;
 
   struct binningEntryType
   {

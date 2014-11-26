@@ -48,6 +48,29 @@ GlobalRecHitsAnalyzer::GlobalRecHitsAnalyzer(const edm::ParameterSet& iPSet) :
 
   conf_ = iPSet;
 
+  // fix for consumes
+  ECalUncalEBSrc_Token_ = consumes<EBUncalibratedRecHitCollection>(iPSet.getParameter<edm::InputTag>("ECalUncalEBSrc"));
+  ECalUncalEESrc_Token_ = consumes<EEUncalibratedRecHitCollection>(iPSet.getParameter<edm::InputTag>("ECalUncalEESrc"));
+  ECalEBSrc_Token_ = consumes<EBRecHitCollection>(iPSet.getParameter<edm::InputTag>("ECalEBSrc"));
+  ECalEESrc_Token_ = consumes<EERecHitCollection>(iPSet.getParameter<edm::InputTag>("ECalEESrc"));
+  ECalESSrc_Token_ = consumes<ESRecHitCollection>(iPSet.getParameter<edm::InputTag>("ECalESSrc"));
+  HCalSrc_Token_ = consumes<edm::PCaloHitContainer>(iPSet.getParameter<edm::InputTag>("HCalSrc"));
+  SiStripSrc_Token_ = consumes<SiStripMatchedRecHit2DCollection>(iPSet.getParameter<edm::InputTag>("SiStripSrc"));
+  SiPxlSrc_Token_ = consumes<SiPixelRecHitCollection>(iPSet.getParameter<edm::InputTag>("SiPxlSrc"));
+
+  MuDTSrc_Token_ = consumes<DTRecHitCollection>(iPSet.getParameter<edm::InputTag>("MuDTSrc"));
+  MuDTSimSrc_Token_ = consumes<edm::PSimHitContainer>(iPSet.getParameter<edm::InputTag>("MuDTSimSrc"));
+
+  MuCSCSrc_Token_ = consumes<CSCRecHit2DCollection>(iPSet.getParameter<edm::InputTag>("MuCSCSrc"));
+  MuCSCHits_Token_ = consumes<CrossingFrame<PSimHit>>(edm::InputTag(std::string("mix"), iPSet.getParameter<std::string>("hitsProducer") + std::string("MuonCSCHits")));
+
+  MuRPCSrc_Token_ = consumes<RPCRecHitCollection>(iPSet.getParameter<edm::InputTag>("MuRPCSrc"));
+  MuRPCSimSrc_Token_ = consumes<edm::PSimHitContainer>(iPSet.getParameter<edm::InputTag>("MuRPCSimSrc"));
+
+  EBHits_Token_ = consumes<CrossingFrame<PCaloHit> >(edm::InputTag(std::string("mix"), iPSet.getParameter<std::string>("hitsProducer") + std::string("EcalHitsEB")));
+  EEHits_Token_ = consumes<CrossingFrame<PCaloHit> >(edm::InputTag(std::string("mix"), iPSet.getParameter<std::string>("hitsProducer") + std::string("EcalHitsEE")));
+  ESHits_Token_ = consumes<CrossingFrame<PCaloHit> >(edm::InputTag(std::string("mix"), iPSet.getParameter<std::string>("hitsProducer") + std::string("EcalHitsES")));
+
   // use value of first digit to determine default output level (inclusive)
   // 0 is none, 1 is basic, 2 is fill output, 3 is gather output
   verbosity %= 10;
@@ -93,206 +116,177 @@ GlobalRecHitsAnalyzer::GlobalRecHitsAnalyzer(const edm::ParameterSet& iPSet) :
       << ":" << MuRPCSimSrc_.instance() << "\n"
       << "===============================\n";
   }
-  //Put in analyzer stuff here....
-
-  dbe = 0;
-  dbe = edm::Service<DQMStore>().operator->();
-  if (dbe) {
-    if (verbosity > 0 ) {
-      dbe->setVerbose(1);
-    } else {
-      dbe->setVerbose(0);
-    }
-  }
-  if (dbe) {
-    if (verbosity > 0 ) dbe->showDirStructure();
-  }
-
-  //monitor elements 
-  
-  //Si Strip
-  if(dbe) {
-    string SiStripString[19] = {"TECW1", "TECW2", "TECW3", "TECW4", "TECW5", 
-				"TECW6", "TECW7", "TECW8", "TIBL1", "TIBL2", 
-				"TIBL3", "TIBL4", "TIDW1", "TIDW2", "TIDW3", 
-				"TOBL1", "TOBL2", "TOBL3", "TOBL4"};
-    for(int i = 0; i<19; ++i) {
-      mehSiStripn[i]=0;
-      mehSiStripResX[i]=0;
-      mehSiStripResY[i]=0;
-    }
-    string hcharname, hchartitle;
-    dbe->setCurrentFolder("GlobalRecHitsV/SiStrips");
-    for(int amend = 0; amend < 19; ++amend) { 
-      hcharname = "hSiStripn_"+SiStripString[amend];
-      hchartitle= SiStripString[amend]+"  rechits";
-      mehSiStripn[amend] = dbe->book1D(hcharname,hchartitle,200,0.,200.);
-      mehSiStripn[amend]->setAxisTitle("Number of hits in "+
-				       SiStripString[amend],1);
-      mehSiStripn[amend]->setAxisTitle("Count",2);
-      hcharname = "hSiStripResX_"+SiStripString[amend];
-      hchartitle= SiStripString[amend]+" rechit x resolution";
-      mehSiStripResX[amend] = dbe->book1D(hcharname,hchartitle,200,-0.02,.02);
-      mehSiStripResX[amend]->setAxisTitle("X-resolution in "
-					  +SiStripString[amend],1);
-      mehSiStripResX[amend]->setAxisTitle("Count",2);
-      hcharname = "hSiStripResY_"+SiStripString[amend];
-      hchartitle= SiStripString[amend]+" rechit y resolution";
-      mehSiStripResY[amend] = dbe->book1D(hcharname,hchartitle,200,-0.02,.02);
-      mehSiStripResY[amend]->setAxisTitle("Y-resolution in "+
-					  SiStripString[amend],1);
-      mehSiStripResY[amend]->setAxisTitle("Count",2);
-    }
-    
-    
-    //HCal
-    //string hcharname, hchartitle;
-    string HCalString[4]={"HB", "HE", "HF", "HO"};
-    float HCalnUpper[4]={3000.,3000.,3000.,3000.}; 
-    float HCalnLower[4]={0.,0.,0.,0.};
-    for(int j =0; j <4; ++j) {
-      mehHcaln[j]=0;
-      mehHcalRes[j]=0;
-    }
-    
-    dbe->setCurrentFolder("GlobalRecHitsV/HCals");
-    for(int amend = 0; amend < 4; ++amend) {
-      hcharname = "hHcaln_"+HCalString[amend];
-      hchartitle= HCalString[amend]+"  rechits";
-      mehHcaln[amend] = dbe->book1D(hcharname,hchartitle, 1000, HCalnLower[amend], 
-				    HCalnUpper[amend]);
-      mehHcaln[amend]->setAxisTitle("Number of RecHits",1);
-      mehHcaln[amend]->setAxisTitle("Count",2);
-      hcharname = "hHcalRes_"+HCalString[amend];
-      hchartitle= HCalString[amend]+"  rechit resolution";
-      mehHcalRes[amend] = dbe->book1D(hcharname,hchartitle, 25, -2., 2.);
-      mehHcalRes[amend]->setAxisTitle("RecHit E - SimHit E",1);
-      mehHcalRes[amend]->setAxisTitle("Count",2);
-    }
-    
-    
-    //Ecal
-    string ECalString[3] = {"EB","EE", "ES"}; 
-    int ECalnBins[3] = {1000,3000,150};
-    float ECalnUpper[3] = {20000., 62000., 3000.};
-    float ECalnLower[3] = {0., 0., 0.};
-    int ECalResBins[3] = {200,200,200};
-    float ECalResUpper[3] = {1., 0.3, .0002};
-    float ECalResLower[3] = {-1., -0.3, -.0002};
-    for(int i =0; i<3; ++i) {
-      mehEcaln[i]=0;
-      mehEcalRes[i]=0;
-    }
-    dbe->setCurrentFolder("GlobalRecHitsV/ECals");
-    
-    for(int amend = 0; amend < 3; ++amend) {
-      hcharname = "hEcaln_"+ECalString[amend];
-      hchartitle= ECalString[amend]+"  rechits";
-      mehEcaln[amend] = dbe->book1D(hcharname,hchartitle, ECalnBins[amend], 
-				    ECalnLower[amend], ECalnUpper[amend]);
-      mehEcaln[amend]->setAxisTitle("Number of RecHits",1);
-      mehEcaln[amend]->setAxisTitle("Count",2);
-      hcharname = "hEcalRes_"+ECalString[amend];
-      hchartitle= ECalString[amend]+"  rechit resolution";
-      mehEcalRes[amend] = dbe->book1D(hcharname,hchartitle,ECalResBins[amend], 
-				      ECalResLower[amend], 
-				      ECalResUpper[amend]);
-      mehEcalRes[amend]->setAxisTitle("RecHit E - SimHit E",1);
-      mehEcalRes[amend]->setAxisTitle("Count",2);
-    }
-    
-    //Si Pixels
-    string SiPixelString[7] = {"BRL1", "BRL2", "BRL3", "FWD1n", "FWD1p", 
-			       "FWD2n", "FWD2p"};
-    for(int j =0; j<7; ++j) {
-      mehSiPixeln[j]=0;
-      mehSiPixelResX[j]=0;
-      mehSiPixelResY[j]=0;
-    }
-    
-    dbe->setCurrentFolder("GlobalRecHitsV/SiPixels");
-    for(int amend = 0; amend < 7; ++amend) {
-      hcharname = "hSiPixeln_"+SiPixelString[amend];
-      hchartitle= SiPixelString[amend]+" rechits";
-      mehSiPixeln[amend] = dbe->book1D(hcharname,hchartitle,200,0.,200.);
-      mehSiPixeln[amend]->setAxisTitle("Number of hits in "+
-				       SiPixelString[amend],1);
-      mehSiPixeln[amend]->setAxisTitle("Count",2);
-      hcharname = "hSiPixelResX_"+SiPixelString[amend];
-      hchartitle= SiPixelString[amend]+" rechit x resolution";
-      mehSiPixelResX[amend] = dbe->book1D(hcharname,hchartitle,200,-0.02,.02);
-      mehSiPixelResX[amend]->setAxisTitle("X-resolution in "+
-					  SiPixelString[amend],1);
-      mehSiPixelResX[amend]->setAxisTitle("Count",2);
-      hcharname = "hSiPixelResY_"+SiPixelString[amend];
-      hchartitle= SiPixelString[amend]+" rechit y resolution";
-      
-      mehSiPixelResY[amend] = dbe->book1D(hcharname,hchartitle,200,-0.02,.02);
-      mehSiPixelResY[amend]->setAxisTitle("Y-resolution in "+
-					  SiPixelString[amend],1);
-      mehSiPixelResY[amend]->setAxisTitle("Count",2);
-    }
- 
-    //Muons 
-    dbe->setCurrentFolder("GlobalRecHitsV/Muons");
-    
-    mehDtMuonn = 0;
-    mehCSCn = 0;
-    mehRPCn = 0;
-    
-    string n_List[3] = {"hDtMuonn", "hCSCn", "hRPCn"};
-    string hist_string[3] = {"Dt", "CSC", "RPC"};
-    
-    for(int amend=0; amend<3; ++amend) {
-      hchartitle = hist_string[amend]+" rechits";
-      if(amend==0) {
-	mehDtMuonn=dbe->book1D(n_List[amend],hchartitle,50, 0., 500.);
-	mehDtMuonn->setAxisTitle("Number of Rechits",1);
-	mehDtMuonn->setAxisTitle("Count",2);
-      }
-      if(amend==1) {
-	mehCSCn=dbe->book1D(n_List[amend],hchartitle,50, 0., 500.);
-	mehCSCn->setAxisTitle("Number of Rechits",1);
-	mehCSCn->setAxisTitle("Count",2);
-      }
-      if(amend==2){
-	mehRPCn=dbe->book1D(n_List[amend],hchartitle,50, 0., 500.);
-	mehRPCn->setAxisTitle("Number of Rechits",1);
-	mehRPCn->setAxisTitle("Count",2);
-      }
-    }
-    
-    mehDtMuonRes=0;
-    mehCSCResRDPhi=0;
-    mehRPCResX=0;
-    
-    hcharname = "hDtMuonRes";
-    hchartitle = "DT wire distance resolution";
-    mehDtMuonRes = dbe->book1D(hcharname, hchartitle, 200, -0.2, 0.2);
-    hcharname = "CSCResRDPhi";
-    hchartitle = "CSC perp*dphi resolution";
-    mehCSCResRDPhi = dbe->book1D(hcharname, hchartitle, 200, -0.2, 0.2);
-    hcharname = "hRPCResX";
-    hchartitle = "RPC rechits x resolution";
-    mehRPCResX = dbe->book1D(hcharname, hchartitle, 50, -5., 5.);
-  } 
 }
 
 GlobalRecHitsAnalyzer::~GlobalRecHitsAnalyzer() {}
 
-void GlobalRecHitsAnalyzer::beginJob()
-{
-  return;
+void GlobalRecHitsAnalyzer::bookHistograms(DQMStore::IBooker &iBooker, edm::Run const &, edm::EventSetup const &) {
+  // Si Strip
+  string SiStripString[19] = {"TECW1", "TECW2", "TECW3", "TECW4", "TECW5", 
+                              "TECW6", "TECW7", "TECW8", "TIBL1", "TIBL2", 
+                              "TIBL3", "TIBL4", "TIDW1", "TIDW2", "TIDW3", 
+                              "TOBL1", "TOBL2", "TOBL3", "TOBL4"};
+  for(int i = 0; i<19; ++i) {
+    mehSiStripn[i]=0;
+    mehSiStripResX[i]=0;
+    mehSiStripResY[i]=0;
+  }
+  string hcharname, hchartitle;
+  iBooker.setCurrentFolder("GlobalRecHitsV/SiStrips");
+  for(int amend = 0; amend < 19; ++amend) { 
+    hcharname = "hSiStripn_"+SiStripString[amend];
+    hchartitle= SiStripString[amend]+"  rechits";
+    mehSiStripn[amend] = iBooker.book1D(hcharname,hchartitle,200,0.,200.);
+    mehSiStripn[amend]->setAxisTitle("Number of hits in "+
+                                     SiStripString[amend],1);
+    mehSiStripn[amend]->setAxisTitle("Count",2);
+    hcharname = "hSiStripResX_"+SiStripString[amend];
+    hchartitle= SiStripString[amend]+" rechit x resolution";
+    mehSiStripResX[amend] = iBooker.book1D(hcharname,hchartitle,200,-0.02,.02);
+    mehSiStripResX[amend]->setAxisTitle("X-resolution in "
+                                        +SiStripString[amend],1);
+    mehSiStripResX[amend]->setAxisTitle("Count",2);
+    hcharname = "hSiStripResY_"+SiStripString[amend];
+    hchartitle= SiStripString[amend]+" rechit y resolution";
+    mehSiStripResY[amend] = iBooker.book1D(hcharname,hchartitle,200,-0.02,.02);
+    mehSiStripResY[amend]->setAxisTitle("Y-resolution in "+
+                                        SiStripString[amend],1);
+    mehSiStripResY[amend]->setAxisTitle("Count",2);
+  }
+  
+  
+  //HCal
+  //string hcharname, hchartitle;
+  string HCalString[4]={"HB", "HE", "HF", "HO"};
+  float HCalnUpper[4]={3000.,3000.,3000.,3000.}; 
+  float HCalnLower[4]={0.,0.,0.,0.};
+  for(int j =0; j <4; ++j) {
+    mehHcaln[j]=0;
+    mehHcalRes[j]=0;
+  }
+  
+  iBooker.setCurrentFolder("GlobalRecHitsV/HCals");
+  for(int amend = 0; amend < 4; ++amend) {
+    hcharname = "hHcaln_"+HCalString[amend];
+    hchartitle= HCalString[amend]+"  rechits";
+    mehHcaln[amend] = iBooker.book1D(hcharname,hchartitle, 1000, HCalnLower[amend], 
+                                  HCalnUpper[amend]);
+    mehHcaln[amend]->setAxisTitle("Number of RecHits",1);
+    mehHcaln[amend]->setAxisTitle("Count",2);
+    hcharname = "hHcalRes_"+HCalString[amend];
+    hchartitle= HCalString[amend]+"  rechit resolution";
+    mehHcalRes[amend] = iBooker.book1D(hcharname,hchartitle, 25, -2., 2.);
+    mehHcalRes[amend]->setAxisTitle("RecHit E - SimHit E",1);
+    mehHcalRes[amend]->setAxisTitle("Count",2);
+  }
+  
+  
+  //Ecal
+  string ECalString[3] = {"EB","EE", "ES"}; 
+  int ECalnBins[3] = {1000,3000,150};
+  float ECalnUpper[3] = {20000., 62000., 3000.};
+  float ECalnLower[3] = {0., 0., 0.};
+  int ECalResBins[3] = {200,200,200};
+  float ECalResUpper[3] = {1., 0.3, .0002};
+  float ECalResLower[3] = {-1., -0.3, -.0002};
+  for(int i =0; i<3; ++i) {
+    mehEcaln[i]=0;
+    mehEcalRes[i]=0;
+  }
+  iBooker.setCurrentFolder("GlobalRecHitsV/ECals");
+  
+  for(int amend = 0; amend < 3; ++amend) {
+    hcharname = "hEcaln_"+ECalString[amend];
+    hchartitle= ECalString[amend]+"  rechits";
+    mehEcaln[amend] = iBooker.book1D(hcharname,hchartitle, ECalnBins[amend], 
+                                  ECalnLower[amend], ECalnUpper[amend]);
+    mehEcaln[amend]->setAxisTitle("Number of RecHits",1);
+    mehEcaln[amend]->setAxisTitle("Count",2);
+    hcharname = "hEcalRes_"+ECalString[amend];
+    hchartitle= ECalString[amend]+"  rechit resolution";
+    mehEcalRes[amend] = iBooker.book1D(hcharname,hchartitle,ECalResBins[amend], 
+                                    ECalResLower[amend], 
+                                    ECalResUpper[amend]);
+    mehEcalRes[amend]->setAxisTitle("RecHit E - SimHit E",1);
+    mehEcalRes[amend]->setAxisTitle("Count",2);
+  }
+  
+  //Si Pixels
+  string SiPixelString[7] = {"BRL1", "BRL2", "BRL3", "FWD1n", "FWD1p", 
+                             "FWD2n", "FWD2p"};
+  for(int j =0; j<7; ++j) {
+    mehSiPixeln[j]=0;
+    mehSiPixelResX[j]=0;
+    mehSiPixelResY[j]=0;
+  }
+  
+  iBooker.setCurrentFolder("GlobalRecHitsV/SiPixels");
+  for(int amend = 0; amend < 7; ++amend) {
+    hcharname = "hSiPixeln_"+SiPixelString[amend];
+    hchartitle= SiPixelString[amend]+" rechits";
+    mehSiPixeln[amend] = iBooker.book1D(hcharname,hchartitle,200,0.,200.);
+    mehSiPixeln[amend]->setAxisTitle("Number of hits in "+
+                                     SiPixelString[amend],1);
+    mehSiPixeln[amend]->setAxisTitle("Count",2);
+    hcharname = "hSiPixelResX_"+SiPixelString[amend];
+    hchartitle= SiPixelString[amend]+" rechit x resolution";
+    mehSiPixelResX[amend] = iBooker.book1D(hcharname,hchartitle,200,-0.02,.02);
+    mehSiPixelResX[amend]->setAxisTitle("X-resolution in "+
+                                        SiPixelString[amend],1);
+    mehSiPixelResX[amend]->setAxisTitle("Count",2);
+    hcharname = "hSiPixelResY_"+SiPixelString[amend];
+    hchartitle= SiPixelString[amend]+" rechit y resolution";
+    
+    mehSiPixelResY[amend] = iBooker.book1D(hcharname,hchartitle,200,-0.02,.02);
+    mehSiPixelResY[amend]->setAxisTitle("Y-resolution in "+
+                                        SiPixelString[amend],1);
+    mehSiPixelResY[amend]->setAxisTitle("Count",2);
+  }
+ 
+  //Muons 
+  iBooker.setCurrentFolder("GlobalRecHitsV/Muons");
+  
+  mehDtMuonn = 0;
+  mehCSCn = 0;
+  mehRPCn = 0;
+  
+  string n_List[3] = {"hDtMuonn", "hCSCn", "hRPCn"};
+  string hist_string[3] = {"Dt", "CSC", "RPC"};
+  
+  for(int amend=0; amend<3; ++amend) {
+    hchartitle = hist_string[amend]+" rechits";
+    if(amend==0) {
+      mehDtMuonn=iBooker.book1D(n_List[amend],hchartitle,50, 0., 500.);
+      mehDtMuonn->setAxisTitle("Number of Rechits",1);
+      mehDtMuonn->setAxisTitle("Count",2);
+    }
+    if(amend==1) {
+      mehCSCn=iBooker.book1D(n_List[amend],hchartitle,50, 0., 500.);
+      mehCSCn->setAxisTitle("Number of Rechits",1);
+      mehCSCn->setAxisTitle("Count",2);
+    }
+    if(amend==2){
+      mehRPCn=iBooker.book1D(n_List[amend],hchartitle,50, 0., 500.);
+      mehRPCn->setAxisTitle("Number of Rechits",1);
+      mehRPCn->setAxisTitle("Count",2);
+    }
+  }
+  
+  mehDtMuonRes=0;
+  mehCSCResRDPhi=0;
+  mehRPCResX=0;
+  
+  hcharname = "hDtMuonRes";
+  hchartitle = "DT wire distance resolution";
+  mehDtMuonRes = iBooker.book1D(hcharname, hchartitle, 200, -0.2, 0.2);
+  hcharname = "CSCResRDPhi";
+  hchartitle = "CSC perp*dphi resolution";
+  mehCSCResRDPhi = iBooker.book1D(hcharname, hchartitle, 200, -0.2, 0.2);
+  hcharname = "hRPCResX";
+  hchartitle = "RPC rechits x resolution";
+  mehRPCResX = iBooker.book1D(hcharname, hchartitle, 50, -5., 5.);
 }
 
-void GlobalRecHitsAnalyzer::endJob()
-{
-  std::string MsgLoggerCat = "GlobalRecHitsAnalyzer_endJob";
-  if (verbosity >= 0)
-    edm::LogInfo(MsgLoggerCat) 
-      << "Terminating having processed " << count << " events.";
-  return;
-}
 
 void GlobalRecHitsAnalyzer::analyze(const edm::Event& iEvent, 
 				    const edm::EventSetup& iSetup)
@@ -303,8 +297,8 @@ void GlobalRecHitsAnalyzer::analyze(const edm::Event& iEvent,
   ++count;
   
   // get event id information
-  int nrun = iEvent.id().run();
-  int nevt = iEvent.id().event();
+  edm::RunNumber_t nrun = iEvent.id().run();
+  edm::EventNumber_t nevt = iEvent.id().event();
   
   if (verbosity > 0) {
     edm::LogInfo(MsgLoggerCat)
@@ -384,7 +378,7 @@ void GlobalRecHitsAnalyzer::fillECal(const edm::Event& iEvent,
   //extract EB information
   ////////////////////////
   edm::Handle<EBUncalibratedRecHitCollection> EcalUncalibRecHitEB;
-  iEvent.getByLabel(ECalUncalEBSrc_, EcalUncalibRecHitEB);
+  iEvent.getByToken(ECalUncalEBSrc_Token_, EcalUncalibRecHitEB);
   bool validUncalibRecHitEB = true;
   if (!EcalUncalibRecHitEB.isValid()) {
     LogDebug(MsgLoggerCat)
@@ -393,7 +387,7 @@ void GlobalRecHitsAnalyzer::fillECal(const edm::Event& iEvent,
   }  
   
   edm::Handle<EBRecHitCollection> EcalRecHitEB;
-  iEvent.getByLabel(ECalEBSrc_, EcalRecHitEB);
+  iEvent.getByToken(ECalEBSrc_Token_, EcalRecHitEB);
   bool validRecHitEB = true;
   if (!EcalRecHitEB.isValid()) {
     LogDebug(MsgLoggerCat)
@@ -402,8 +396,7 @@ void GlobalRecHitsAnalyzer::fillECal(const edm::Event& iEvent,
   }  
 
   // loop over simhits
-  const std::string barrelHitsName(hitsProducer+"EcalHitsEB");
-  iEvent.getByLabel("mix",barrelHitsName,crossingFrame);
+  iEvent.getByToken(EBHits_Token_,crossingFrame);
   bool validXFrame = true;
   if (!crossingFrame.isValid()) {
     LogDebug(MsgLoggerCat)
@@ -462,7 +455,7 @@ void GlobalRecHitsAnalyzer::fillECal(const edm::Event& iEvent,
   //extract EE information
   ////////////////////////
   edm::Handle<EEUncalibratedRecHitCollection> EcalUncalibRecHitEE;
-  iEvent.getByLabel(ECalUncalEESrc_, EcalUncalibRecHitEE);
+  iEvent.getByToken(ECalUncalEESrc_Token_, EcalUncalibRecHitEE);
   bool validuncalibRecHitEE = true;
   if (!EcalUncalibRecHitEE.isValid()) {
     LogDebug(MsgLoggerCat)
@@ -471,7 +464,7 @@ void GlobalRecHitsAnalyzer::fillECal(const edm::Event& iEvent,
   }  
   
   edm::Handle<EERecHitCollection> EcalRecHitEE;
-  iEvent.getByLabel(ECalEESrc_, EcalRecHitEE);
+  iEvent.getByToken(ECalEESrc_Token_, EcalRecHitEE);
   bool validRecHitEE = true;
   if (!EcalRecHitEE.isValid()) {
     LogDebug(MsgLoggerCat)
@@ -480,8 +473,7 @@ void GlobalRecHitsAnalyzer::fillECal(const edm::Event& iEvent,
   }  
   
   // loop over simhits
-  const std::string endcapHitsName(hitsProducer+"EcalHitsEE");
-  iEvent.getByLabel("mix",endcapHitsName,crossingFrame);
+  iEvent.getByToken(EEHits_Token_,crossingFrame);
   validXFrame = true;
   if (!crossingFrame.isValid()) {
     LogDebug(MsgLoggerCat)
@@ -540,7 +532,7 @@ void GlobalRecHitsAnalyzer::fillECal(const edm::Event& iEvent,
   //extract ES information
   ////////////////////////
   edm::Handle<ESRecHitCollection> EcalRecHitES;
-  iEvent.getByLabel(ECalESSrc_, EcalRecHitES);
+  iEvent.getByToken(ECalESSrc_Token_, EcalRecHitES);
   bool validRecHitES = true;
   if (!EcalRecHitES.isValid()) {
     LogDebug(MsgLoggerCat)
@@ -549,8 +541,7 @@ void GlobalRecHitsAnalyzer::fillECal(const edm::Event& iEvent,
   }  
 
   // loop over simhits
-  const std::string preshowerHitsName(hitsProducer+"EcalHitsES");
-  iEvent.getByLabel("mix",preshowerHitsName,crossingFrame);
+  iEvent.getByToken(ESHits_Token_,crossingFrame);
   validXFrame = true;
   if (!crossingFrame.isValid()) {
     LogDebug(MsgLoggerCat)
@@ -629,7 +620,7 @@ void GlobalRecHitsAnalyzer::fillHCal(const edm::Event& iEvent,
   // extract simhit info
   //////////////////////
   edm::Handle<edm::PCaloHitContainer> hcalHits;
-  iEvent.getByLabel(HCalSrc_,hcalHits);
+  iEvent.getByToken(HCalSrc_Token_,hcalHits);
   bool validhcalHits = true;
   if (!hcalHits.isValid()) {
     LogDebug(MsgLoggerCat)
@@ -913,7 +904,7 @@ void GlobalRecHitsAnalyzer::fillTrk(const edm::Event& iEvent,
   
   // get strip information
   edm::Handle<SiStripMatchedRecHit2DCollection> rechitsmatched;
-  iEvent.getByLabel(SiStripSrc_, rechitsmatched);
+  iEvent.getByToken(SiStripSrc_Token_, rechitsmatched);
   bool validstrip = true;
   if (!rechitsmatched.isValid()) {
     LogDebug(MsgLoggerCat)
@@ -1131,7 +1122,7 @@ void GlobalRecHitsAnalyzer::fillTrk(const edm::Event& iEvent,
   // get pixel information
   //Get RecHits
   edm::Handle<SiPixelRecHitCollection> recHitColl;
-  iEvent.getByLabel(SiPxlSrc_, recHitColl);
+  iEvent.getByToken(SiPxlSrc_Token_, recHitColl);
   bool validpixel = true;
   if (!recHitColl.isValid()) {
     LogDebug(MsgLoggerCat)
@@ -1305,7 +1296,7 @@ void GlobalRecHitsAnalyzer::fillMuon(const edm::Event& iEvent,
   }  
 
   edm::Handle<edm::PSimHitContainer> dtsimHits;
-  iEvent.getByLabel(MuDTSimSrc_, dtsimHits);
+  iEvent.getByToken(MuDTSimSrc_Token_, dtsimHits);
   bool validdtsim = true;
   if (!dtsimHits.isValid()) {
     LogDebug(MsgLoggerCat)
@@ -1314,7 +1305,7 @@ void GlobalRecHitsAnalyzer::fillMuon(const edm::Event& iEvent,
   } 
 
   edm::Handle<DTRecHitCollection> dtRecHits;
-  iEvent.getByLabel(MuDTSrc_, dtRecHits);
+  iEvent.getByToken(MuDTSrc_Token_, dtRecHits);
   bool validdtrec = true;
   if (!dtRecHits.isValid()) {
     LogDebug(MsgLoggerCat)
@@ -1344,7 +1335,7 @@ void GlobalRecHitsAnalyzer::fillMuon(const edm::Event& iEvent,
   theMap.clear();
   edm::Handle<CrossingFrame<PSimHit> > cf;
 
-  iEvent.getByLabel("mix",hitsProducer+"MuonCSCHits",cf);
+  iEvent.getByToken(MuCSCHits_Token_,cf);
   bool validXFrame = true;
   if (!cf.isValid()) {
     LogDebug(MsgLoggerCat)
@@ -1373,7 +1364,7 @@ void GlobalRecHitsAnalyzer::fillMuon(const edm::Event& iEvent,
 
   // get rechits
   edm::Handle<CSCRecHit2DCollection> hRecHits;
-  iEvent.getByLabel(MuCSCSrc_, hRecHits);
+  iEvent.getByToken(MuCSCSrc_Token_, hRecHits);
   bool validCSC = true;
   if (!hRecHits.isValid()) {
     LogDebug(MsgLoggerCat)
@@ -1429,7 +1420,7 @@ void GlobalRecHitsAnalyzer::fillMuon(const edm::Event& iEvent,
   }  
 
   edm::Handle<edm::PSimHitContainer> simHit;
-  iEvent.getByLabel(MuRPCSimSrc_, simHit);
+  iEvent.getByToken(MuRPCSimSrc_Token_, simHit);
   bool validrpcsim = true;
   if (!simHit.isValid()) {
     LogDebug(MsgLoggerCat)
@@ -1438,7 +1429,7 @@ void GlobalRecHitsAnalyzer::fillMuon(const edm::Event& iEvent,
   }    
 
   edm::Handle<RPCRecHitCollection> recHit;
-  iEvent.getByLabel(MuRPCSrc_, recHit);
+  iEvent.getByToken(MuRPCSrc_Token_, recHit);
   bool validrpc = true;
   if (!simHit.isValid()) {
     LogDebug(MsgLoggerCat)

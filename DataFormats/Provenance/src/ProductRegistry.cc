@@ -54,7 +54,6 @@ namespace edm {
       runNextIndexValue_(0),
 
       branchIDToIndex_(),
-      producedBranchListIndex_(std::numeric_limits<BranchListIndex>::max()),
       missingDictionaries_() {
     for(bool& isProduced : productProduced_) isProduced = false;
   }
@@ -73,7 +72,6 @@ namespace edm {
     runNextIndexValue_ = 0;
 
     branchIDToIndex_.clear();
-    producedBranchListIndex_ = std::numeric_limits<BranchListIndex>::max();
     missingDictionaries_.clear();
   }
 
@@ -139,7 +137,7 @@ namespace edm {
     return false;
   }
 
-  boost::shared_ptr<ProductHolderIndexHelper> const&
+  std::shared_ptr<ProductHolderIndexHelper> const&
   ProductRegistry::productLookup(BranchType branchType) const {
     if (branchType == InEvent) return transient_.eventProductLookup_;
     if (branchType == InLumi) return transient_.lumiProductLookup_;
@@ -268,7 +266,7 @@ namespace edm {
   }
 
   void ProductRegistry::initializeLookupTables() {
-
+    std::map<TypeID, TypeID> containedTypeMap;
     StringSet missingDicts;
     transient_.branchIDToIndex_.clear();
     constProductList().clear();
@@ -285,16 +283,25 @@ namespace edm {
 
       //only do the following if the data is supposed to be available in the event
       if(desc.present()) {
-        TypeWithDict type(TypeWithDict::byName(desc.className()));
-        TypeWithDict wrappedType(TypeWithDict::byName(wrappedClassName(desc.className())));
-        if(!bool(type) || !bool(wrappedType)) {
+        if(!bool(desc.unwrappedType()) || !bool(desc.wrappedType())) {
           missingDicts.insert(desc.className());
         } else {
+          TypeID wrappedTypeID(desc.wrappedType().typeInfo());
+          TypeID typeID(desc.unwrappedType().typeInfo());
+          TypeID containedTypeID;
+          auto const& iter = containedTypeMap.find(typeID);
+          if(iter != containedTypeMap.end()) {
+             containedTypeID = iter->second;
+          } else {
+             containedTypeID = productholderindexhelper::getContainedTypeFromWrapper(wrappedTypeID, typeID.className());
+             containedTypeMap.emplace(typeID, containedTypeID);
+          }
           ProductHolderIndex index =
-            productLookup(desc.branchType())->insert(type,
+            productLookup(desc.branchType())->insert(typeID,
                                                      desc.moduleLabel().c_str(),
                                                      desc.productInstanceName().c_str(),
-                                                     desc.processName().c_str());
+                                                     desc.processName().c_str(),
+                                                     containedTypeID);
 
           transient_.branchIDToIndex_[desc.branchID()] = index;
         }

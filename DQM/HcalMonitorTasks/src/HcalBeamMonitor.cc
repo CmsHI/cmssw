@@ -54,9 +54,16 @@ HcalBeamMonitor::HcalBeamMonitor(const edm::ParameterSet& ps):
 
   // Collection type info
   digiLabel_             =ps.getUntrackedParameter<edm::InputTag>("digiLabel");
+  tok_hfdigi_ = consumes<HFDigiCollection>(digiLabel_);
   hbheRechitLabel_       = ps.getUntrackedParameter<edm::InputTag>("hbheRechitLabel");
+
+  tok_hbhe_ = consumes<HBHERecHitCollection>(hbheRechitLabel_);
+
   hoRechitLabel_         = ps.getUntrackedParameter<edm::InputTag>("hoRechitLabel");
+  tok_ho_ = consumes<HORecHitCollection>(hoRechitLabel_);
+
   hfRechitLabel_         = ps.getUntrackedParameter<edm::InputTag>("hfRechitLabel");
+  tok_hf_ = consumes<HFRecHitCollection>(hfRechitLabel_);
 
   // minimum events required in lumi block for tests to be processed
   minEvents_       = ps.getUntrackedParameter<int>("minEvents",500); 
@@ -425,8 +432,8 @@ void HcalBeamMonitor::beginRun(const edm::Run& run, const edm::EventSetup& c)
   // Get Channel quality info for the run
   // Exclude bad channels from overall calculation
   edm::ESHandle<HcalChannelQuality> p;
-  c.get<HcalChannelQualityRcd>().get(p);
-  HcalChannelQuality* chanquality = new HcalChannelQuality(*p.product());
+  c.get<HcalChannelQualityRcd>().get("withTopo",p);
+  const HcalChannelQuality* chanquality = p.product();
   std::vector<DetId> mydetids = chanquality->getAllChannels();
   
   for (unsigned int i=0;i<mydetids.size();++i)
@@ -439,20 +446,19 @@ void HcalBeamMonitor::beginRun(const edm::Run& run, const edm::EventSetup& c)
 	  (id.depth()==2 && (abs(id.ieta())==35 || abs(id.ieta())==36)))
 	{
 	  const HcalChannelStatus* origstatus=chanquality->getValues(id);
-	  HcalChannelStatus* mystatus=new HcalChannelStatus(origstatus->rawId(),origstatus->getValue());
-	  if (mystatus->isBitSet(HcalChannelStatus::HcalCellHot)) 
+	  HcalChannelStatus mystatus(origstatus->rawId(),origstatus->getValue());
+	  if (mystatus.isBitSet(HcalChannelStatus::HcalCellHot)) 
 	    BadCells_[id]=HcalChannelStatus::HcalCellHot;
 	  
-	  else if (mystatus->isBitSet(HcalChannelStatus::HcalCellDead))
+	  else if (mystatus.isBitSet(HcalChannelStatus::HcalCellDead))
 	    BadCells_[id]=HcalChannelStatus::HcalCellDead;
 	  
-	  if (mystatus->isBitSet(HcalChannelStatus::HcalCellHot) || 
-	      mystatus->isBitSet(HcalChannelStatus::HcalCellDead))
+	  if (mystatus.isBitSet(HcalChannelStatus::HcalCellHot) || 
+	      mystatus.isBitSet(HcalChannelStatus::HcalCellDead))
 	    {
 	      if (id.depth()==1) --ring1totalchannels_;
 	      else if (id.depth()==2) --ring2totalchannels_;
 	    }
-	  delete mystatus;
 	} // if ((id.depth()==1) ...
     } // for (unsigned int i=0;...)
     
@@ -476,24 +482,24 @@ void HcalBeamMonitor::analyze(const edm::Event& e, const edm::EventSetup& c)
   edm::Handle<HORecHitCollection> ho_rechit;
   edm::Handle<HFRecHitCollection> hf_rechit;
   
-  if (!(e.getByLabel(digiLabel_,hf_digi)))
+  if (!(e.getByToken(tok_hfdigi_,hf_digi)))
     {
       edm::LogWarning("HcalBeamMonitor")<< digiLabel_<<" hf_digi not available";
       return;
     }
 
-  if (!(e.getByLabel(hbheRechitLabel_,hbhe_rechit)))
+  if (!(e.getByToken(tok_hbhe_,hbhe_rechit)))
     {
       edm::LogWarning("HcalBeamMonitor")<< hbheRechitLabel_<<" hbhe_rechit not available";
       return;
     }
 
-  if (!(e.getByLabel(hfRechitLabel_,hf_rechit)))
+  if (!(e.getByToken(tok_hf_,hf_rechit)))
     {
       edm::LogWarning("HcalBeamMonitor")<< hfRechitLabel_<<" hf_rechit not available";
       return;
     }
-  if (!(e.getByLabel(hoRechitLabel_,ho_rechit)))
+  if (!(e.getByToken(tok_ho_,ho_rechit)))
     {
       edm::LogWarning("HcalBeamMonitor")<< hoRechitLabel_<<" ho_rechit not available";
       return;

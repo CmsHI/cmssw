@@ -4,7 +4,9 @@
 #include <iostream>
 #include <fstream>
 #include <TMath.h>
-#include "CalibTracker/SiPixelLorentzAngle/interface/SiPixelLorentzAngle.h"
+
+#include "FWCore/PluginManager/interface/ModuleDef.h"
+#include "FWCore/Framework/interface/MakerMacros.h"
 
 #include "DataFormats/TrajectorySeed/interface/TrajectorySeedCollection.h"
 #include "FWCore/Framework/interface/ESHandle.h"
@@ -27,11 +29,13 @@
 #include "TrackingTools/TrackFitters/interface/TrajectoryStateCombiner.h"
 #include "TrackingTools/PatternTools/interface/TrajTrackAssociation.h"
 #include "TrackingTools/TransientTrack/interface/TransientTrack.h"
+#include "SiPixelLorentzAngle.h"
 int lower_bin_;
 
 using namespace std;
 using namespace edm;
 using namespace reco;
+using namespace analyzer;
 
 SiPixelLorentzAngle::SiPixelLorentzAngle(edm::ParameterSet const& conf) : 
   conf_(conf), filename_(conf.getParameter<std::string>("fileName")), filenameFit_(conf.getParameter<std::string>("fileNameFit")), ptmin_(conf.getParameter<double>("ptMin")), simData_(conf.getParameter<bool>("simData")),	normChi2Max_(conf.getParameter<double>("normChi2Max")), clustSizeYMin_(conf.getParameter<int>("clustSizeYMin")), residualMax_(conf.getParameter<double>("residualMax")), clustChargeMax_(conf.getParameter<double>("clustChargeMax")),hist_depth_(conf.getParameter<int>("binsDepth")), hist_drift_(conf.getParameter<int>("binsDrift"))
@@ -48,6 +52,8 @@ SiPixelLorentzAngle::SiPixelLorentzAngle(edm::ParameterSet const& conf) :
   max_depth_ = 400.;
   min_drift_ = -1000.; //-200.;(conf.getParameter<double>("residualMax"))
   max_drift_ = 1000.; //400.;
+
+  t_trajTrack = consumes<TrajTrackAssociationCollection> (conf.getParameter<edm::InputTag>("src"));
 
 }
 
@@ -179,7 +185,7 @@ void SiPixelLorentzAngle::analyze(const edm::Event& e, const edm::EventSetup& es
 	
   // get the association map between tracks and trajectories
   edm::Handle<TrajTrackAssociationCollection> trajTrackCollectionHandle;
-  e.getByLabel(conf_.getParameter<std::string>("src"),trajTrackCollectionHandle);
+  e.getByToken(t_trajTrack,trajTrackCollectionHandle);
   if(trajTrackCollectionHandle->size() >0){
     trackEventsCounter_++;
     for(TrajTrackAssociationCollection::const_iterator it = trajTrackCollectionHandle->begin(); it!=trajTrackCollectionHandle->end();++it){
@@ -539,3 +545,5 @@ void SiPixelLorentzAngle::findMean(int i, int i_ring)
   _h_mean_[i_ring]->SetBinError(i, error);
 
 }
+
+DEFINE_FWK_MODULE(SiPixelLorentzAngle);

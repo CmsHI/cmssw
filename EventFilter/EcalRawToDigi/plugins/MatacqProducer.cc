@@ -13,6 +13,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/format.hpp>
 
+#include <iostream>
 #include <memory>
 
 #include <stdio.h>
@@ -43,9 +44,9 @@ using namespace edm;
 //static const bool searchDbg = false;
 
 //laser freq is 1 every 112 orbit => >80 orbit
-int MatacqProducer::orbitTolerance_ = 80; 
+const int MatacqProducer::orbitTolerance_ = 80; 
 
-MatacqProducer::stats_t MatacqProducer::stats_init = {0,0,0};
+const MatacqProducer::stats_t MatacqProducer::stats_init = {0,0,0};
 
 static std::string now(){
   struct timeval t;
@@ -775,7 +776,7 @@ MatacqProducer::~MatacqProducer(){
 }
 
 void MatacqProducer::loadOrbitOffset(){
-  ifstream f(orbitOffsetFile_.c_str());
+  std::ifstream f(orbitOffsetFile_.c_str());
   if(f.bad()){
     throw cms::Exception("Matacq")
       << "Failed to open orbit ID correction file '"

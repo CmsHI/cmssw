@@ -1,7 +1,7 @@
 #ifndef RPCDigiProducer_h
 #define RPCDigiProducer_h
 
-#include "FWCore/Framework/interface/EDProducer.h"
+#include "FWCore/Framework/interface/stream/EDProducer.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
@@ -16,7 +16,7 @@ class RPCGeometry;
 class RPCSimSetUp;
 class RPCSynchronizer;
 
-class RPCDigiProducer : public edm::EDProducer
+class RPCDigiProducer : public edm::stream::EDProducer<>
 {
 public:
 
@@ -40,6 +40,10 @@ private:
   //Name of Collection used for create the XF 
   std::string mix_;
   std::string collection_for_XF;
+
+  //Token for accessing data
+  edm::EDGetTokenT<CrossingFrame<PSimHit>> crossingFrameToken;
+
 };
 
 #endif

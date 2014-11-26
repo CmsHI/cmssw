@@ -63,7 +63,13 @@ class Reco(Scenario):
         Proton collision data taking express processing
 
         """
-        step = stepALCAPRODUCER(args['skims'])
+        skims = args['skims']
+        # the AlCaReco skims for PCL should only run during AlCaSkimming step which uses the same configuration on the Tier0 side, for this reason we drop them here
+        pclWkflws = [x for x in skims if "PromptCalibProd" in x]
+        for wfl in pclWkflws:
+            skims.remove(wfl)
+        
+        step = stepALCAPRODUCER(skims)
         dqmStep= dqmSeq(args,'')
         options = Options()
         options.__dict__.update(defaultOptions.__dict__)
@@ -71,19 +77,64 @@ class Reco(Scenario):
         options.step = 'RAW2DIGI,L1Reco,RECO'+step+',DQM'+dqmStep+',ENDJOB'
         dictIO(options,args)
         options.conditions = globalTag
-        
+        options.filein = 'tobeoverwritten.xyz'
+        if 'inputSource' in args:
+            options.filetype = args['inputSource']
         process = cms.Process('RECO')
-        cb = ConfigBuilder(options, process = process, with_output = True)
+        cb = ConfigBuilder(options, process = process, with_output = True, with_input = True)
 
-        # Input source
-        process.source = cms.Source("NewEventStreamFileReader",
-            fileNames = cms.untracked.vstring()
-        )
         cb.prepare()
 
         addMonitoring(process)
                 
         return process
+
+
+    def visualizationProcessing(self, globalTag, **args):
+        """
+        _visualizationProcessing_
+
+        """
+
+        options = Options()
+        options.__dict__.update(defaultOptions.__dict__)
+        options.scenario = self.cbSc
+        # FIXME: do we need L1Reco here?
+        options.step =''
+        if 'preFilter' in args:
+            options.step +='FILTER:'+args['preFilter']+','
+
+        options.step += 'RAW2DIGI,L1Reco,RECO,ENDJOB'
+
+
+        dictIO(options,args)
+        options.conditions = globalTag
+        options.timeoutOutput = True
+        # FIXME: maybe can go...maybe not
+        options.filein = 'tobeoverwritten.xyz'
+
+        if 'inputSource' in args:
+            options.filetype = args['inputSource']
+        else:
+            # this is the default as this is what is needed on the OnlineCluster
+            options.filetype = 'DQMDAQ'
+
+        print "Using %s source"%options.filetype            
+
+        process = cms.Process('RECO')
+        cb = ConfigBuilder(options, process = process, with_output = True, with_input = True)
+
+        cb.prepare()
+
+
+        
+
+        # FIXME: not sure abou this one...drop for the moment
+        # addMonitoring(process)
+                
+        return process
+
+
 
 
     def alcaSkim(self, skims, **args):
@@ -95,15 +146,18 @@ class Reco(Scenario):
         """
 
         step = ""
-        if 'PromptCalibProd' in skims:
-            step = "ALCA:PromptCalibProd" 
-            skims.remove('PromptCalibProd')
+        pclWflws = [x for x in skims if "PromptCalibProd" in x]
+        if len(pclWflws):
+            step = 'ALCA:'
+        for wfl in pclWflws:
+            step += wfl
+            skims.remove(wfl)
         
         if len( skims ) > 0:
             if step != "":
                 step += ","
             step += "ALCAOUTPUT:"+('+'.join(skims))
-                
+
         options = Options()
         options.__dict__.update(defaultOptions.__dict__)
         options.scenario = self.cbSc
@@ -124,8 +178,9 @@ class Reco(Scenario):
 
         # FIXME: dirty hack..any way around this?
         # Tier0 needs the dataset used for ALCAHARVEST step to be a different data-tier
-        if 'PromptCalibProd' in step:
-            process.ALCARECOStreamPromptCalibProd.dataset.dataTier = cms.untracked.string('ALCAPROMPT')
+        for wfl in pclWflws:
+            methodToCall = getattr(process, 'ALCARECOStream'+wfl)
+            methodToCall.dataset.dataTier = cms.untracked.string('ALCAPROMPT')
 
         return process
 

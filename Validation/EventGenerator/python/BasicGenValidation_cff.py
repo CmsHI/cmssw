@@ -28,7 +28,7 @@ from Validation.EventGenerator.TTbar_Validation_cfi import *
 from Validation.EventGenerator.HiggsValidation_cfi  import *
 
 # define sequences...
-basicGenTest_seq = cms.Sequence(basicHepMCValidation+basicHepMCHeavyIonValidation+basicGenParticleValidation)
+basicGenTest_seq = cms.Sequence(basicHepMCValidation+basicGenParticleValidation)
 duplicationChecker_seq = cms.Sequence(duplicationChecker)
 mbueAndqcdValidation_seq = cms.Sequence(mbueAndqcd_seq)
 drellYanValidation_seq = cms.Sequence(drellYanEleValidation+drellYanMuoValidation)
@@ -36,7 +36,7 @@ wValidation_seq = cms.Sequence(wEleValidation+wMuoValidation)
 tauValidation_seq = cms.Sequence(tauValidation)
 genLeptons_seq = cms.Sequence(genParticlesShortList*genParticlesMuons*genParticlesElectrons*genParticlesNeutrinos)
 analyzeGenLeptons_seq = cms.Sequence(analyzeGenMuons*analyzeGenElecs*analyzeGenNtrns)
-TTbarfull_seq = cms.Sequence(TTbarAnalyzeSpinCorr*makeGenEvt*analyzeTopKinematics*genLeptons_seq*analyzeGenLeptons_seq*analyzeGenJets)
+TTbarfull_seq = cms.Sequence(TTbarAnalyzeSpinCorr*analyzeTopKinematics*genLeptons_seq*analyzeGenLeptons_seq*analyzeGenJets)
 
 # master sequences for different processes/topologies validation
 

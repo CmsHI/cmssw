@@ -2,9 +2,9 @@
 #define TrackReco_TrackExtraBase_h
 /** \class reco::TrackExtraBase TrackExtraBase.h DataFormats/TrackReco/interface/TrackExtraBase.h
  *
- * Basic extension of a reconstructed Track. 
+ * Basic extension of a reconstructed Track.
  * Contains references to the hits assigned to the track.
- * 
+ *
  * If you access the hits, check if they are valid or not. (Invalid hits are dummy hits
  * created in layers crossed by the track, where no physical hit was found).
  *
@@ -12,30 +12,79 @@
  *
  *
  */
+
 #include "DataFormats/TrackingRecHit/interface/TrackingRecHitFwd.h"
 
-namespace reco {
-  class TrackExtraBase {
-  public:
+namespace reco
+{
+
+class TrackExtraBase
+{
+
+public:
     /// default constructor
-    TrackExtraBase() { }
+    TrackExtraBase() : m_firstHit(-1), m_nHits(0) { }
+
+    void setHits(TrackingRecHitRefProd const & prod, unsigned firstH, unsigned int nH) {
+        m_hitCollection.pushBackItem(prod.refCore(),true);
+        m_firstHit =firstH;  m_nHits=nH;
+    }
+
     /// add a reference to a RecHit
-    void add( const TrackingRecHitRef & r ) { recHits_.push_back( r ); }
-    /// first iterator over RecHits
-    trackingRecHit_iterator recHitsBegin() const { return recHits_.begin(); }
-    /// last iterator over RecHits
-    trackingRecHit_iterator recHitsEnd() const { return recHits_.end(); }
+    void add(const TrackingRecHitRef &ref) {
+      m_hitCollection.pushBackItem(ref.refCore(), true);
+      if (m_nHits==0) {
+        m_firstHit = ref.key();
+      }
+      assert(m_nHits== ref.key()-m_firstHit);
+      ++m_nHits;   
+    }
+
+
+    unsigned int firstRecHit() const {
+      return m_firstHit;
+    }
+
     /// number of RecHits
-    size_t recHitsSize() const { return recHits_.size(); }
+    unsigned int recHitsSize() const {
+        return m_nHits;
+    }
+
+
+    /// first iterator over RecHits
+    trackingRecHit_iterator recHitsBegin() const {
+        return recHitsProduct().data().begin()+firstRecHit();
+    }
+
+    /// last iterator over RecHits
+    trackingRecHit_iterator recHitsEnd() const {
+        return recHitsBegin()+recHitsSize();
+    }
+
+    /// get a ref to i-th recHit
+    TrackingRecHitRef recHitRef(unsigned int i) const {                                                               
+        return TrackingRecHitRef(m_hitCollection,m_firstHit+i);
+    }
+
     /// get i-th recHit
-    TrackingRecHitRef recHit( size_t i ) const { return recHits_[ i ]; }
-    TrackingRecHitRefVector recHits() const {return recHits_;}
+    TrackingRecHitRef recHit(unsigned int i) const {
+        return recHitRef(i);
+    }
 
-  private:
-    /// references to the hit assigned to the track.
-    TrackingRecHitRefVector recHits_;
-  };
+    TrackingRecHitCollection const & recHitsProduct() const {
+      return *edm::getProduct<TrackingRecHitCollection>(m_hitCollection);
 
-}
+    }
+
+private:
+
+    edm::RefCore m_hitCollection;
+    unsigned int m_firstHit;
+    unsigned int m_nHits;
+
+};
+
+}// namespace reco
 
 #endif
+

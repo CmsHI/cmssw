@@ -1,5 +1,4 @@
 //
-// $Id: PATConversionProducer.h,v 1.1 2012/04/14 02:12:39 tjkim Exp $
 //
 
 #ifndef PhysicsTools_PatAlgos_PATConversionProducer_h
@@ -47,7 +46,9 @@ namespace pat {
     private:
 
       // configurables
-      edm::InputTag electronSrc_;
+      edm::EDGetTokenT<edm::View<reco::GsfElectron> > electronToken_;
+      edm::EDGetTokenT<reco::BeamSpot>                bsToken_;
+      edm::EDGetTokenT<reco::ConversionCollection>    conversionsToken_;
 
   };
 

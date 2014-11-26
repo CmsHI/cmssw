@@ -14,6 +14,11 @@
 #include "CalibFormats/HcalObjects/interface/HcalDbService.h"
 #include "CalibFormats/HcalObjects/interface/HcalDbRecord.h"
 
+#include "DataFormats/FEDRawData/interface/FEDRawDataCollection.h"
+#include "DataFormats/L1GlobalMuonTrigger/interface/L1MuGMTReadoutCollection.h"
+#include "DataFormats/L1GlobalTrigger/interface/L1GlobalTriggerReadoutRecord.h"
+// this is to retrieve HCAL digi's
+#include "DataFormats/HcalDigi/interface/HcalDigiCollections.h"
 
 /** \class HcalDetDiagTimingMonitor
   *  
@@ -68,10 +73,10 @@ public:
       return 9999; 
   }   
   double get_ped_ho(int eta,int phi,int depth,int cup){
-      if(nHO[eta+50][phi][depth][cup]<10) return 2.5; 
+      if(nHO[eta+50][phi][depth][cup]<10) return 8.5; 
       if(nHO[eta+50][phi][depth][cup]!=0){
          double ped=HO[eta+50][phi][depth][cup]/nHO[eta+50][phi][depth][cup];
-         if(ped>1.5 && ped<4.5) return ped;
+         if(ped>5 && ped<15) return ped;
       }
       return 9999; 
   }   
@@ -108,7 +113,13 @@ public:
 private:
   edm::InputTag inputLabelDigi_;
   edm::InputTag L1ADataLabel_;
-  edm::InputTag FEDRawDataCollection_;
+  
+  edm::EDGetTokenT<FEDRawDataCollection> tok_raw_;
+  edm::EDGetTokenT<L1GlobalTriggerReadoutRecord> tok_l1_;
+  edm::EDGetTokenT<L1MuGMTReadoutCollection> tok_l1mu_;
+  edm::EDGetTokenT<HBHEDigiCollection> tok_hbhe_;
+  edm::EDGetTokenT<HODigiCollection> tok_ho_;
+  edm::EDGetTokenT<HFDigiCollection> tok_hf_;
   
   int  GCTTriggerBit1_;
   int  GCTTriggerBit2_;
@@ -117,6 +128,8 @@ private:
   int  GCTTriggerBit5_; 
   bool CosmicsCorr_; 
   
+  MonitorElement *HBHEShape;
+  MonitorElement *HOShape;
   MonitorElement *HBTimeDT; 
   MonitorElement *HBTimeRPC; 
   MonitorElement *HBTimeGCT; 

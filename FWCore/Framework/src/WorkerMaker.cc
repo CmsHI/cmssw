@@ -41,12 +41,10 @@ namespace edm {
   
   void
   Maker::throwConfigurationException(ModuleDescription const& md,
-                                     signalslot::Signal<void(ModuleDescription const&)>& post,
                                      cms::Exception & iException) const {
     std::ostringstream ost;
     ost << "Constructing module: class=" << md.moduleName() << " label='" << md.moduleLabel() << "'";
     iException.addContext(ost.str());
-    post(md);
     throw;
   }
   
@@ -69,16 +67,10 @@ namespace edm {
     ConfigurationDescriptions descriptions(baseType());
     fillDescriptions(descriptions);
     try {
-      try {
+      convertException::wrap([&]() {
         descriptions.validate(*p.pset_, p.pset_->getParameter<std::string>("@module_label"));
         validateEDMType(baseType(), p);
-      }
-      catch (cms::Exception& e) { throw; }
-      catch(std::bad_alloc& bda) { convertException::badAllocToEDM(); }
-      catch (std::exception& e) { convertException::stdToEDM(e); }
-      catch(std::string& s) { convertException::stringToEDM(s); }
-      catch(char const* c) { convertException::charPtrToEDM(c); }
-      catch (...) { convertException::unknownToEDM(); }
+      });
     }
     catch (cms::Exception & iException) {
       throwValidationException(p, iException);
@@ -87,24 +79,29 @@ namespace edm {
     
     ModuleDescription md = createModuleDescription(p);
     std::shared_ptr<maker::ModuleHolder> module;
+    bool postCalled = false;
     try {
-      try {
+      convertException::wrap([&]() {
         pre(md);
         module = makeModule(*(p.pset_));
         module->setModuleDescription(md);
         module->preallocate(*(p.preallocate_));
         module->registerProductsAndCallbacks(p.reg_);
+        // if exception then post will be called in the catch block
+        postCalled = true;
         post(md);
-      }
-      catch (cms::Exception& e) { throw; }
-      catch(std::bad_alloc& bda) { convertException::badAllocToEDM(); }
-      catch (std::exception& e) { convertException::stdToEDM(e); }
-      catch(std::string& s) { convertException::stringToEDM(s); }
-      catch(char const* c) { convertException::charPtrToEDM(c); }
-      catch (...) { convertException::unknownToEDM(); }
+      });
     }
     catch(cms::Exception & iException){
-      throwConfigurationException(md, post, iException);
+      if(!postCalled) {
+        try {
+          post(md);
+        }
+        catch (...) {
+          // If post throws an exception ignore it because we are already handling another exception
+        }
+      }
+      throwConfigurationException(md, iException);
     }
     return module;
   }

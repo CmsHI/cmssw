@@ -4,6 +4,14 @@
 <use   name="DataFormats/TrackReco"/>
 <use   name="root"/>
 <lib   name="MathMore"/>
+<use   name="SimTracker/TrackAssociation"/>
+<use   name="SimTracker/TrackerHitAssociation"/>
+<use   name="DQM/SiStripCommon"/>
+<use   name="CalibTracker/Records"/>
+<use   name="CommonTools/TriggerUtils"/>
+<use   name="RecoLocalTracker/ClusterParameterEstimator"/>
+<use   name="SimTracker/Records"/>
+
 <export>
   <lib name="ValidationRecoTrack"/>
 </export>

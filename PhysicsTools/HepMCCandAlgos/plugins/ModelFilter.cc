@@ -1,7 +1,7 @@
 #include "PhysicsTools/HepMCCandAlgos/interface/ModelFilter.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
-#include "SimDataFormats/GeneratorProducts/interface/LHEEventProduct.h"
 
+#include <iostream>
 #include <memory>
 #include <sstream>
 #include <stdlib.h>
@@ -11,7 +11,7 @@ using namespace edm;
 
 ModelFilter::ModelFilter(const edm::ParameterSet& iConfig)
 {
-   inputTagSource_  = iConfig.getParameter<InputTag>("source");
+   tokenSource_  = consumes<LHEEventProduct>(iConfig.getParameter<InputTag>("source"));
    modelTag_ = iConfig.getParameter<string>("modelTag");
    parameterMins_ = iConfig.getParameter<vector<double> >("parameterMins");
    parameterMaxs_ = iConfig.getParameter<vector<double> >("parameterMaxs");
@@ -25,7 +25,7 @@ ModelFilter::~ModelFilter()
 bool ModelFilter::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
    Handle<LHEEventProduct> product;
-   iEvent.getByLabel(inputTagSource_, product);
+   iEvent.getByToken(tokenSource_, product);
    comments_const_iterator comment;
 
    string tempString;
@@ -43,12 +43,12 @@ bool ModelFilter::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
 
          if(parameters.size() - 1 != parameterMins_.size())
          {
-            cout<<"Error: number of modeParameters does not match number of parameters in file"<<endl;
+            std::cout<<"Error: number of modeParameters does not match number of parameters in file"<<std::endl;
             return false;
          }
          else if(parameterMins_.size() != parameterMaxs_.size())
          {
-            cout<<"Error: umber of parameter mins != number parameter maxes"<<endl;
+            std::cout<<"Error: umber of parameter mins != number parameter maxes"<<std::endl;
          }
          else
          {
@@ -65,7 +65,7 @@ bool ModelFilter::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
 
       }
    }
-   cout<<"FAILED: "<<*comment<<endl; 
+   std::cout<<"FAILED: "<<*comment<<std::endl;
    return false;
 
 }
@@ -89,8 +89,8 @@ vector<string> ModelFilter::split(string fstring, string splitter)
    string afterSplitter = fstring;
    if(fstring.find(splitter) == string::npos)
    {
-      cout<<"No "<<splitter<<" found"<<endl;
-      returnVector.push_back(fstring);      
+      std::cout<<"No "<<splitter<<" found"<<std::endl;
+      returnVector.push_back(fstring);
       return returnVector;
    }
    else
@@ -101,9 +101,9 @@ vector<string> ModelFilter::split(string fstring, string splitter)
 
          beforeSplitter = afterSplitter.substr(0, cursor);
          afterSplitter = afterSplitter.substr(cursor +1, afterSplitter.size());
-         
+
          returnVector.push_back(beforeSplitter);
-         
+
          if(afterSplitter.find(splitter) == string::npos)
             returnVector.push_back(afterSplitter);
       }

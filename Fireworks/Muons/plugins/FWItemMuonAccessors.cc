@@ -8,7 +8,6 @@
 //
 // Original Author:  Giulio Eulisse
 //         Created:  Thu Feb 18 15:19:44 EDT 2008
-// $Id: FWItemMuonAccessors.cc,v 1.6 2010/06/11 08:21:07 mccauley Exp $
 //
 
 // system include files
@@ -53,5 +52,15 @@ REGISTER_TEMPLATE_FWITEMACCESSOR(CSCStripDigiAccessor, CSCStripDigiCollection, "
 typedef FWItemMuonDigiAccessor<RPCDigiCollection, RPCDigi> RPCDigiAccessor;
 REGISTER_TEMPLATE_FWITEMACCESSOR(RPCDigiAccessor, RPCDigiCollection, "RPCDigiCollectionAccessor");
 
+
 typedef FWItemMuonDigiAccessor<CSCRPCDigiCollection, CSCRPCDigi> CSCRPCDigiAccessor;
 REGISTER_TEMPLATE_FWITEMACCESSOR(CSCRPCDigiAccessor, CSCRPCDigiCollection, "CSCRPCDigiCollectionAccessor");
+
+//==============================================================================
+
+#include "DataFormats/GEMDigi/interface/GEMDigiCollection.h"
+#include "DataFormats/GEMRecHit/interface/GEMRecHitCollection.h"
+REGISTER_TEMPLATE_FWITEMACCESSOR(FWItemRandomAccessor<GEMRecHitCollection>,GEMRecHitCollection,"GEMRecHitCollectionAccessor");
+
+typedef FWItemMuonDigiAccessor<GEMDigiCollection, GEMDigi> GEMDigiAccessor;
+REGISTER_TEMPLATE_FWITEMACCESSOR(GEMDigiAccessor, GEMDigiCollection, "GEMDigiCollectionAccessor");

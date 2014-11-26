@@ -58,7 +58,7 @@ class BscSD : public SensitiveTkDetector,
 
 public:
   
-  BscSD(std::string, const DDCompactView &, SensitiveDetectorCatalog &, 
+  BscSD(std::string, const DDCompactView &, const SensitiveDetectorCatalog &,
   	  edm::ParameterSet const &, const SimTrackManager* );
 
 
@@ -93,8 +93,8 @@ public:
   //  int eventno;
  private:
   
-  G4ThreeVector SetToLocal(G4ThreeVector global);
-  G4ThreeVector SetToLocalExit(G4ThreeVector globalPoint);
+  G4ThreeVector SetToLocal(const G4ThreeVector& global);
+  G4ThreeVector SetToLocalExit(const G4ThreeVector& globalPoint);
   void          GetStepInfo(G4Step* aStep);
   G4bool        HitExists();
   void          CreateNewHit();

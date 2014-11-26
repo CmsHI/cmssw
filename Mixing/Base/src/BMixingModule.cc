@@ -16,10 +16,7 @@
 
 #include "TFile.h"
 #include "TH1F.h"
-
-using namespace std;
-
-int edm::BMixingModule::vertexoffset = 0;
+#include <iostream>
 const unsigned int edm::BMixingModule::maxNbSources_ =4;
 
 namespace
@@ -37,8 +34,8 @@ namespace
         std::string histoFileName=" ";
 	std::string histoName =" ";
 	TH1F * h = new TH1F("h","h",10,0,10);
-	vector<int> dataProbFunctionVar;
-	vector<double> dataProb;
+	std::vector<int> dataProbFunctionVar;
+	std::vector<double> dataProb;
 	
 	
 	const edm::ParameterSet & psin=ps.getParameter<edm::ParameterSet>(sourceName);
@@ -46,7 +43,7 @@ namespace
 	if (ps.exists("readDB") && ps.getParameter<bool>("readDB")){
 	  //in case of DB access, do not try to load anything from the PSet, but wait for beginRun.
  	  edm::LogError("BMixingModule")<<"Will read from DB: reset to a dummy PileUp object.";
-	  pileup.reset(new edm::PileUp(psin,0,0,playback));
+	  pileup.reset(new edm::PileUp(psin,sourceName,0,0,playback));
 	  return pileup;
 	}
 	if (type_!="none"){
@@ -55,7 +52,7 @@ namespace
 	    if (psin_average.exists("averageNumber"))
 	      {
 		averageNumber=psin_average.getParameter<double>("averageNumber");
-		pileup.reset(new edm::PileUp(psin,averageNumber,h,playback));
+		pileup.reset(new edm::PileUp(psin,sourceName,averageNumber,h,playback));
 		edm::LogInfo("MixingModule") <<" Created source "<<sourceName<<" with averageNumber "<<averageNumber;
 	      }
 	    else if (psin_average.exists("fileName") && psin_average.exists("histoName")) {
@@ -80,7 +77,7 @@ namespace
 		// Get the averageNumber from the histo 
 		averageNumber = h->GetMean();
 		
-		pileup.reset(new edm::PileUp(psin,averageNumber,h,playback));
+		pileup.reset(new edm::PileUp(psin,sourceName,averageNumber,h,playback));
 		edm::LogInfo("MixingModule") <<" Created source "<<sourceName<<" with averageNumber "<<averageNumber;
 	      
 	      }
@@ -91,15 +88,15 @@ namespace
 		  type_="probFunction";
 		}
 
-	        dataProbFunctionVar = psin_average.getParameter<vector<int> >("probFunctionVariable");
-  		dataProb = psin_average.getParameter<vector<double> >("probValue");
+	        dataProbFunctionVar = psin_average.getParameter<std::vector<int> >("probFunctionVariable");
+  		dataProb = psin_average.getParameter<std::vector<double> >("probValue");
 	        histoFileName = psin_average.getUntrackedParameter<std::string>("histoFileName"); 
 							
 		int varSize = (int) dataProbFunctionVar.size();
 		int probSize = (int) dataProb.size();
 		
 		if ((dataProbFunctionVar[0] != 0) || (dataProbFunctionVar[varSize - 1] != (varSize - 1))) 
-		  throw cms::Exception("BadProbFunction") << "Please, check the variables of the probability function! The first variable should be 0 and the difference between two variables should be 1." << endl;
+		  throw cms::Exception("BadProbFunction") << "Please, check the variables of the probability function! The first variable should be 0 and the difference between two variables should be 1." << std::endl;
 		
 		// Complete the vector containing the probability  function data
 		// with the values "0"
@@ -130,7 +127,7 @@ namespace
 				
 		// Check if the histogram is normalized
 		if ( ((hprob->Integral() - 1) > 1.0e-02) && ((hprob->Integral() - 1) < -1.0e-02)){ 
-		  throw cms::Exception("BadProbFunction") << "The probability function should be normalized!!! " << endl;
+		  throw cms::Exception("BadProbFunction") << "The probability function should be normalized!!! " << std::endl;
 		}
 		
 		averageNumber = hprob->GetMean();
@@ -144,7 +141,7 @@ namespace
 		outfile->Close();
 		outfile->Delete();		
 		
-		pileup.reset(new edm::PileUp(psin,averageNumber,hprob,playback));
+		pileup.reset(new edm::PileUp(psin,sourceName,averageNumber,hprob,playback));
 		edm::LogInfo("MixingModule") <<" Created source "<<sourceName<<" with averageNumber "<<averageNumber;
 		
 	      } 
@@ -152,7 +149,7 @@ namespace
 	    else if (sourceName=="input" && psin_average.exists("Lumi") && psin_average.exists("sigmaInel")) {
 	      averageNumber=psin_average.getParameter<double>("Lumi")*psin_average.getParameter<double>("sigmaInel")*ps.getParameter<int>("bunchspace")/1000*3564./2808.;  //FIXME
 	      pileup.reset(new
- 	      edm::PileUp(psin,averageNumber,h,playback));
+			   edm::PileUp(psin,sourceName,averageNumber,h,playback));
 	      edm::LogInfo("MixingModule") <<" Created source "<<sourceName<<" with minBunch,maxBunch "<<minb<<" "<<maxb;
 	      edm::LogInfo("MixingModule")<<" Luminosity configuration, average number used is "<<averageNumber;
 	    }
@@ -168,6 +165,7 @@ namespace edm {
   // Constructor 
   BMixingModule::BMixingModule(const edm::ParameterSet& pset) :
     bunchSpace_(pset.getParameter<int>("bunchspace")),
+    vertexOffset_(0),
     minBunch_((pset.getParameter<int>("minBunch")*25)/pset.getParameter<int>("bunchspace")),
     maxBunch_((pset.getParameter<int>("maxBunch")*25)/pset.getParameter<int>("bunchspace")),
     mixProdStep1_(pset.getParameter<bool>("mixProdStep1")),
@@ -284,5 +282,15 @@ namespace edm {
       if(inputSources_[endIdx]) inputSources_[endIdx]->endJob();
     }
   }
+
+  void BMixingModule::createnewEDProduct() {std::cout << "BMixingModule::createnewEDProduct must be overwritten!" << std::endl;}
+
+  void BMixingModule::checkSignal(const edm::Event &e) {std::cout << "BMixingModule::checkSignal must be overwritten!" << std::endl;}
+
+  void BMixingModule::setBcrOffset () {std::cout << "BMixingModule::setBcrOffset must be overwritten!" << std::endl;} //FIXME: LogWarning
+
+  void BMixingModule::setSourceOffset (const unsigned int s) {std::cout << "BMixingModule::setSourceOffset must be overwritten!" << std::endl;}
+
+  void BMixingModule::doPileUp(edm::Event &e, const edm::EventSetup& c) {std::cout << "BMixingModule::doPileUp must be overwritten!" << std::endl;}
 
 } //edm

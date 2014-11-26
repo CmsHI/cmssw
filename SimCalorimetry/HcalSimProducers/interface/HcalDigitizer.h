@@ -13,6 +13,8 @@
 #include "Geometry/CaloGeometry/interface/CaloGeometry.h"
 #include "DataFormats/DetId/interface/DetId.h"
 #include "FWCore/Framework/interface/Frameworkfwd.h"
+#include "DataFormats/HcalCalibObjects/interface/HEDarkening.h"
+#include "DataFormats/HcalCalibObjects/interface/HFRecalibration.h"
 
 #include <vector>
 
@@ -29,18 +31,26 @@ class HcalShapes;
 class PCaloHit;
 class PileUpEventPrincipal;
 
+namespace edm {
+  class ConsumesCollector;
+}
+
+namespace CLHEP {
+  class HepRandomEngine;
+}
+
 class HcalDigitizer
 {
 public:
 
-  explicit HcalDigitizer(const edm::ParameterSet& ps);
+  explicit HcalDigitizer(const edm::ParameterSet& ps, edm::ConsumesCollector& iC);
   virtual ~HcalDigitizer();
 
   /**Produces the EDM products,*/
   void initializeEvent(edm::Event const& e, edm::EventSetup const& c);
-  void accumulate(edm::Event const& e, edm::EventSetup const& c);
-  void accumulate(PileUpEventPrincipal const& e, edm::EventSetup const& c);
-  void finalizeEvent(edm::Event& e, edm::EventSetup const& c);
+  void accumulate(edm::Event const& e, edm::EventSetup const& c, CLHEP::HepRandomEngine*);
+  void accumulate(PileUpEventPrincipal const& e, edm::EventSetup const& c, CLHEP::HepRandomEngine*);
+  void finalizeEvent(edm::Event& e, edm::EventSetup const& c, CLHEP::HepRandomEngine*);
   void beginRun(const edm::EventSetup & es);
   void endRun();
   
@@ -50,7 +60,7 @@ public:
   void setZDCNoiseSignalGenerator(HcalBaseSignalGenerator * noiseGenerator);
 
 private:
-  void accumulateCaloHits(edm::Handle<std::vector<PCaloHit> > const& hcalHits, edm::Handle<std::vector<PCaloHit> > const& zdcHits, int bunchCrossing);
+  void accumulateCaloHits(edm::Handle<std::vector<PCaloHit> > const& hcalHits, edm::Handle<std::vector<PCaloHit> > const& zdcHits, int bunchCrossing, CLHEP::HepRandomEngine*);
 
   /// some hits in each subdetector, just for testing purposes
   void fillFakeHits();
@@ -62,6 +72,9 @@ private:
 
   void buildHOSiPMCells(const std::vector<DetId>& allCells, const edm::EventSetup& eventSetup);
 
+  //function to evaluate aging at the digi level
+  void darkening(std::vector<PCaloHit>& hcalHits);
+  
   /** Reconstruction algorithm*/
   typedef CaloTDigitizer<HBHEDigitizerTraits> HBHEDigitizer;
   typedef CaloTDigitizer<HODigitizerTraits>   HODigitizer;
@@ -130,6 +143,10 @@ private:
   std::string hitsProducer_;
 
   int theHOSiPMCode;
+  
+  double deliveredLumi;
+  HEDarkening* m_HEDarkening;
+  HFRecalibration* m_HFRecalibration;
 };
 
 #endif

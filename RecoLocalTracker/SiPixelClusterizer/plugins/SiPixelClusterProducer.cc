@@ -12,8 +12,8 @@
  */
 
 // Our own stuff
-#include "RecoLocalTracker/SiPixelClusterizer/interface/SiPixelClusterProducer.h"
-#include "RecoLocalTracker/SiPixelClusterizer/interface/PixelThresholdClusterizer.h"
+#include "SiPixelClusterProducer.h"
+#include "PixelThresholdClusterizer.h"
 
 // Geometry
 #include "Geometry/Records/interface/TrackerDigiGeometryRecord.h"
@@ -42,8 +42,6 @@
 // MessageLogger
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 
-namespace cms
-{
 
   //---------------------------------------------------------------------------
   //!  Constructor: set the ParameterSet and defer all thinking to setupClusterizer().
@@ -58,6 +56,7 @@ namespace cms
     src_( conf.getParameter<edm::InputTag>( "src" ) ),
     maxTotalClusters_( conf.getParameter<int32_t>( "maxNumberOfClusters" ) )
   {
+    tPixelDigi = consumes<edm::DetSetVector<PixelDigi>>(src_);
     //--- Declare to the EDM what kind of collections we will be making.
     produces<SiPixelClusterCollectionNew>(); 
 
@@ -82,12 +81,6 @@ namespace cms
     delete theSiPixelGainCalibration_;
   }  
 
-  //void SiPixelClusterProducer::beginJob( const edm::EventSetup& es ) 
-  void SiPixelClusterProducer::beginJob( ) 
-  {
-    edm::LogInfo("SiPixelClusterizer") << "[SiPixelClusterizer::beginJob]";
-    clusterizer_->setSiPixelGainCalibrationService(theSiPixelGainCalibration_);
-  }
   
   //---------------------------------------------------------------------------
   //! The "Event" entrypoint: gets called by framework for every event
@@ -101,7 +94,7 @@ namespace cms
    // Step A.1: get input data
     //edm::Handle<PixelDigiCollection> pixDigis;
     edm::Handle< edm::DetSetVector<PixelDigi> >  input;
-    e.getByLabel( src_, input);
+    e.getByToken(tPixelDigi, input);
 
     // Step A.2: get event setup
     edm::ESHandle<TrackerGeometry> geom;
@@ -116,6 +109,7 @@ namespace cms
     run(*input, geom, *output );
 
     // Step D: write output to file
+    output->shrink_to_fit();
     e.put( output );
 
   }
@@ -131,6 +125,7 @@ namespace cms
 
     if ( clusterMode_ == "PixelThresholdClusterizer" ) {
       clusterizer_ = new PixelThresholdClusterizer(conf_);
+      clusterizer_->setSiPixelGainCalibrationService(theSiPixelGainCalibration_);
       readyToCluster_ = true;
     } 
     else {
@@ -203,4 +198,11 @@ namespace cms
     //				    << " SiPixelClusters in " << numberOfDetUnits << " DetUnits."; 
   }
 
-}  // end of namespace cms
+
+
+
+#include "FWCore/PluginManager/interface/ModuleDef.h"
+#include "FWCore/Framework/interface/MakerMacros.h"
+
+DEFINE_FWK_MODULE(SiPixelClusterProducer);
+

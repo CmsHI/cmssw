@@ -19,11 +19,16 @@
 namespace clangcms {
 
 class ClassDumper : public clang::ento::Checker<clang::ento::check::ASTDecl<clang::CXXRecordDecl> > {
- mutable clang::OwningPtr< clang::ento::BugType> BT;
 
 public:
   void checkASTDecl(const clang::CXXRecordDecl *CRD, clang::ento::AnalysisManager& mgr,
-                    clang::ento::BugReporter &BR ) const ;
+                    clang::ento::BugReporter &BR, std::string tname ) const ;
+
+  void checkASTDecl(const clang::CXXRecordDecl *RD,clang::ento::AnalysisManager& mgr,
+                    clang::ento::BugReporter &BR) const {
+	std::string pname = "classes.txt.dumperall.unsorted";
+	checkASTDecl(RD,mgr,BR,pname);
+}
 
 private:
   CmsException m_exception;
@@ -31,7 +36,6 @@ private:
 };
 
 class ClassDumperCT : public clang::ento::Checker<clang::ento::check::ASTDecl<clang::ClassTemplateDecl> > {
- mutable clang::OwningPtr< clang::ento::BugType> BT;
 
 public:
 
@@ -44,7 +48,6 @@ private:
 };
 
 class ClassDumperFT : public clang::ento::Checker<clang::ento::check::ASTDecl<clang::FunctionTemplateDecl> > {
- mutable clang::OwningPtr< clang::ento::BugType> BT;
 
 public:
 
@@ -57,7 +60,6 @@ private:
 };
 
 class ClassDumperInherit : public clang::ento::Checker<clang::ento::check::ASTDecl<clang::CXXRecordDecl> > {
- mutable clang::OwningPtr< clang::ento::BugType> BT;
 
 public:
   void checkASTDecl(const clang::CXXRecordDecl *CRD, clang::ento::AnalysisManager& mgr,

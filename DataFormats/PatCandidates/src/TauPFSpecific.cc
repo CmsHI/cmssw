@@ -17,14 +17,16 @@ pat::tau::TauPFSpecific::TauPFSpecific(const reco::PFTau& tau) :
     selectedSignalPFChargedHadrCands_(tau.signalPFChargedHadrCands()), 
     selectedSignalPFNeutrHadrCands_(tau.signalPFNeutrHadrCands()), 
     selectedSignalPFGammaCands_(tau.signalPFGammaCands()),
+    signalTauChargedHadronCandidates_(tau.signalTauChargedHadronCandidates()),
     signalPiZeroCandidates_(tau.signalPiZeroCandidates()),
     // Isolation cone
     selectedIsolationPFCands_(tau.isolationPFCands()), 
     selectedIsolationPFChargedHadrCands_(tau.isolationPFChargedHadrCands()), 
     selectedIsolationPFNeutrHadrCands_(tau.isolationPFNeutrHadrCands()), 
     selectedIsolationPFGammaCands_(tau.isolationPFGammaCands()),
+    isolationTauChargedHadronCandidates_(tau.isolationTauChargedHadronCandidates()),
     isolationPiZeroCandidates_(tau.isolationPiZeroCandidates()),
-    isolationPFChargedHadrCandsPtSum_(tau.isolationPFChargedHadrCandsPtSum()),
+    isolationPFChargedHadrCandsPtSum_(tau.isolationPFChargedHadrCandsPtSum()),    
     isolationPFGammaCandsEtSum_(tau.isolationPFGammaCandsEtSum()),
     // Other useful variables 
     maximumHCALPFClusterEt_(tau.maximumHCALPFClusterEt()),
@@ -44,7 +46,6 @@ pat::tau::TauPFSpecific::TauPFSpecific(const reco::PFTau& tau) :
     muonDecision_(tau.muonDecision())
 {
   if ( tau.jetRef().isAvailable() && tau.jetRef().isNonnull() ) { // CV: add protection to ease transition to new CMSSW 4_2_x RecoTauTags
-    p4Jet_ = tau.jetRef()->p4();
     reco::Jet::EtaPhiMoments etaPhiStatistics = tau.jetRef()->etaPhiStatistics();
     etaetaMoment_ = etaPhiStatistics.etaEtaMoment;
     phiphiMoment_ = etaPhiStatistics.phiPhiMoment;

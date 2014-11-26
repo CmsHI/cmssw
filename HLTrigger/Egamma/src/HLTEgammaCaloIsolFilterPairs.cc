@@ -1,7 +1,6 @@
 /** \class EgammaHLTCaloIsolFilterPairs
  *
- * $Id: HLTEgammaCaloIsolFilterPairs.cc,v 1.1 2008/10/14 14:52:57 ghezzi Exp $
- * 
+ *
  *  \author Alessio Ghezzi
  *
  */
@@ -10,14 +9,14 @@
 
 #include "DataFormats/Common/interface/Handle.h"
 
-#include "DataFormats/HLTReco/interface/TriggerFilterObjectWithRefs.h"
-
+#include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
+#include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 
 //
 // constructors and destructor
 //
-HLTEgammaCaloIsolFilterPairs::HLTEgammaCaloIsolFilterPairs(const edm::ParameterSet& iConfig) : HLTFilter(iConfig) 
+HLTEgammaCaloIsolFilterPairs::HLTEgammaCaloIsolFilterPairs(const edm::ParameterSet& iConfig) : HLTFilter(iConfig)
 {
   candTag_ = iConfig.getParameter< edm::InputTag > ("candTag");
   isoTag_ = iConfig.getParameter< edm::InputTag > ("isoTag");
@@ -37,34 +36,61 @@ HLTEgammaCaloIsolFilterPairs::HLTEgammaCaloIsolFilterPairs(const edm::ParameterS
   FracCut_EE2 = iConfig.getParameter<double> ("IsoOverEtCutEE2");
   IsoloEt2_EE2 = iConfig.getParameter<double> ("IsoOverEt2CutEE2");
 
-
   AlsoNonIso_1 = iConfig.getParameter<bool> ("AlsoNonIso1");
   AlsoNonIso_2 = iConfig.getParameter<bool> ("AlsoNonIso2");
+
+  candToken_ = consumes<trigger::TriggerFilterObjectWithRefs>(candTag_);
+  isoToken_ = consumes<reco::RecoEcalCandidateIsolationMap>(isoTag_);
+  if(AlsoNonIso_1 || AlsoNonIso_2) nonIsoToken_ = consumes<reco::RecoEcalCandidateIsolationMap>(nonIsoTag_);
 }
 
 HLTEgammaCaloIsolFilterPairs::~HLTEgammaCaloIsolFilterPairs(){}
 
+void
+HLTEgammaCaloIsolFilterPairs::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+   edm::ParameterSetDescription desc;
+   makeHLTFilterDescription(desc);
+   desc.add<edm::InputTag>("candTag",edm::InputTag(""));
+   desc.add<edm::InputTag>("isoTag",edm::InputTag(""));
+   desc.add<edm::InputTag>("nonIsoTag",edm::InputTag(""));
+   desc.add<double>("isolcutEB1",0.0);
+   desc.add<double>("IsoOverEtCutEB1",0.0);
+   desc.add<double>("IsoOverEt2CutEB1",0.0);
+   desc.add<double>("isolcutEE1",0.0);
+   desc.add<double>("IsoOverEtCutEE1",0.0);
+   desc.add<double>("IsoOverEt2CutEE1",0.0);
+   desc.add<double>("isolcutEB2",0.0);
+   desc.add<double>("IsoOverEtCutEB2",0.0);
+   desc.add<double>("IsoOverEt2CutEB2",0.0);
+   desc.add<double>("isolcutEE2",0.0);
+   desc.add<double>("IsoOverEtCutEE2",0.0);
+   desc.add<double>("IsoOverEt2CutEE2",0.0);
+   desc.add<bool>("AlsoNonIso1",false);
+   desc.add<bool>("AlsoNonIso2",false);
+   descriptions.add("hltEgammaCaloIsolFilterPairs",desc);
+}
 
 // ------------ method called to produce the data  ------------
 bool
-HLTEgammaCaloIsolFilterPairs::hltFilter(edm::Event& iEvent, const edm::EventSetup& iSetup, trigger::TriggerFilterObjectWithRefs & filterproduct)
+HLTEgammaCaloIsolFilterPairs::hltFilter(edm::Event& iEvent, const edm::EventSetup& iSetup, trigger::TriggerFilterObjectWithRefs & filterproduct) const
 {
   using namespace trigger;
 
   edm::Handle<trigger::TriggerFilterObjectWithRefs> PrevFilterOutput;
-  iEvent.getByLabel (candTag_,PrevFilterOutput);
+  iEvent.getByToken (candToken_,PrevFilterOutput);
 
   std::vector<edm::Ref<reco::RecoEcalCandidateCollection> > recoecalcands;
   PrevFilterOutput->getObjects(TriggerCluster, recoecalcands);
+  if(recoecalcands.empty()) PrevFilterOutput->getObjects(TriggerPhoton, recoecalcands);
 
   //get hold of ecal isolation association map
   edm::Handle<reco::RecoEcalCandidateIsolationMap> depMap;
-  iEvent.getByLabel (isoTag_,depMap);
-  
+  iEvent.getByToken (isoToken_,depMap);
+
   //get hold of ecal isolation association map
   edm::Handle<reco::RecoEcalCandidateIsolationMap> depNonIsoMap;
-  if(AlsoNonIso_1 || AlsoNonIso_2) iEvent.getByLabel (nonIsoTag_,depNonIsoMap);
-  
+  if(AlsoNonIso_1 || AlsoNonIso_2) iEvent.getByToken (nonIsoToken_,depNonIsoMap);
+
 
   int n = 0;
    // the list should be interpreted as pairs:
@@ -75,7 +101,7 @@ HLTEgammaCaloIsolFilterPairs::hltFilter(edm::Event& iEvent, const edm::EventSetu
 
   // Should I check that the size of recoecalcands is even ?
   for (unsigned int i=0; i<recoecalcands.size(); i=i+2) {
-    
+
     edm::Ref<reco::RecoEcalCandidateCollection> r1 = recoecalcands[i];
     edm::Ref<reco::RecoEcalCandidateCollection> r2 = recoecalcands[i+1];
     // std::cout<<"CaloIsol 1) Et Eta phi: "<<r1->et()<<" "<<r1->eta()<<" "<<r1->phi()<<" 2) Et eta phi: "<<r2->et()<<" "<<r2->eta()<<" "<<r2->phi()<<std::endl;
@@ -87,20 +113,20 @@ HLTEgammaCaloIsolFilterPairs::hltFilter(edm::Event& iEvent, const edm::EventSetu
 	filterproduct.addObject(TriggerCluster, r2);
       }
   }
-  
+
   // filter decision
   bool accept(n>=1);
-  
+
   return accept;
 }
 
-bool HLTEgammaCaloIsolFilterPairs::PassCaloIsolation(edm::Ref<reco::RecoEcalCandidateCollection> ref,const reco::RecoEcalCandidateIsolationMap& IsoMap,const reco::RecoEcalCandidateIsolationMap& NonIsoMap, int which, bool ChekAlsoNonIso){
+bool HLTEgammaCaloIsolFilterPairs::PassCaloIsolation(edm::Ref<reco::RecoEcalCandidateCollection> ref,const reco::RecoEcalCandidateIsolationMap& IsoMap,const reco::RecoEcalCandidateIsolationMap& NonIsoMap, int which, bool ChekAlsoNonIso) const {
 
-  
+
   reco::RecoEcalCandidateIsolationMap::const_iterator mapi = IsoMap.find( ref );
 
   if(mapi==IsoMap.end()) {
-    if(ChekAlsoNonIso) mapi = NonIsoMap.find( ref ); 
+    if(ChekAlsoNonIso) mapi = NonIsoMap.find( ref );
   }
 
   float vali = mapi->val;
@@ -116,7 +142,7 @@ bool HLTEgammaCaloIsolFilterPairs::PassCaloIsolation(edm::Ref<reco::RecoEcalCand
     else if(which==2){
       isolcut = isolcut_EB2;
       FracCut =  FracCut_EB2;
-      IsoloEt2  =  IsoloEt2_EB2;    
+      IsoloEt2  =  IsoloEt2_EB2;
     }
     else {return false;}
   }
@@ -129,11 +155,11 @@ bool HLTEgammaCaloIsolFilterPairs::PassCaloIsolation(edm::Ref<reco::RecoEcalCand
     else if(which==2){
       isolcut = isolcut_EE2;
       FracCut =  FracCut_EE2;
-      IsoloEt2 = IsoloEt2_EE2;    
+      IsoloEt2 = IsoloEt2_EE2;
     }
-    else {return false;}   
+    else {return false;}
   }
-  
+
   if ( vali < isolcut || IsoOE < FracCut || IsoOE2 < IsoloEt2 ) { return true;}
   return false;
 }

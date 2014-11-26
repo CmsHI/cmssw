@@ -30,9 +30,12 @@
  * The PixelDataFormatter interpret/format ONLY detector data words
  * (not FED headers or trailer, which are treated elsewhere).
  */
-
+//
+// Add the phase1 format
+//
 #include "CondFormats/SiPixelObjects/interface/SiPixelFrameReverter.h"
 #include "DataFormats/SiPixelDigi/interface/PixelDigi.h"
+#include "DataFormats/Common/interface/DetSetVector.h"
 #include "DataFormats/SiPixelRawData/interface/SiPixelRawDataError.h"
 #include "DataFormats/Common/interface/DetSetVector.h"
 #include "EventFilter/SiPixelRawToDigi/interface/ErrorChecker.h"
@@ -47,10 +50,13 @@ class SiPixelFedCabling;
 class SiPixelQuality;
 class SiPixelFrameConverter;
 class SiPixelFrameReverter;
+class SiPixelFedCablingTree;
 
 class PixelDataFormatter {
 
 public:
+
+  typedef edm::DetSetVector<PixelDigi> Collection;
 
   typedef std::map<int, FEDRawData> RawData;
   typedef std::vector<PixelDigi> DetDigis;
@@ -62,7 +68,7 @@ public:
   typedef cms_uint32_t Word32;
   typedef cms_uint64_t Word64;
 
-  PixelDataFormatter(const SiPixelFedCabling* map);
+  PixelDataFormatter(const SiPixelFedCabling* map, bool phase1=false);
 
   void setErrorStatus(bool ErrorStatus);
   void setQualityStatus(bool QualityStatus, const SiPixelQuality* QualityInfo);
@@ -72,7 +78,7 @@ public:
   int nDigis() const { return theDigiCounter; }
   int nWords() const { return theWordCounter; }
 
-  void interpretRawData(bool& errorsInEvent, int fedId,  const FEDRawData & data, Digis & digis, Errors & errors);
+  void interpretRawData(bool& errorsInEvent, int fedId,  const FEDRawData & data, Collection & digis, Errors & errors);
 
   void formatRawData( unsigned int lvl1_ID, RawData & fedRawData, const Digis & digis);
 
@@ -80,7 +86,7 @@ private:
   mutable int theDigiCounter;
   mutable int theWordCounter;
 
-  const SiPixelFedCabling* theCablingTree;
+  SiPixelFedCabling const * theCablingTree;
   const SiPixelFrameReverter* theFrameReverter;
   const SiPixelQuality* badPixelInfo;
   const std::set<unsigned int> * modulesToUnpack;
@@ -91,6 +97,11 @@ private:
   int allDetDigis;
   int hasDetDigis;
   ErrorChecker errorcheck;
+
+  // For the 32bit data format (moved from *.cc namespace, keep uppercase for compatibility)
+  int ADC_shift, PXID_shift, DCOL_shift, ROC_shift, LINK_shift;
+  Word32 LINK_mask, ROC_mask, DCOL_mask, PXID_mask, ADC_mask;
+  int maxROCIndex;
 
   int checkError(const Word32& data) const;
 

@@ -16,16 +16,15 @@
 #include "DataFormats/GeometryVector/interface/GlobalPoint.h" 
 #include "DataFormats/CaloTowers/interface/CaloTowerCollection.h" 
 #include "DataFormats/CaloTowers/interface/CaloTowerDetId.h" 
-#include "DataFormats/HcalRecHit/interface/HcalRecHitCollections.h" 
-#include "DataFormats/EcalRecHit/interface/EcalRecHitCollections.h" 
+// #include "DataFormats/HcalRecHit/interface/HcalRecHitCollections.h" 
+// #include "DataFormats/EcalRecHit/interface/EcalRecHitCollections.h" 
 #include "DataFormats/JetReco/interface/CaloJetCollection.h" 
 #include "DataFormats/JetReco/interface/CaloJet.h" 
 #include "DataFormats/JetReco/interface/GenJetCollection.h"
 //#include "DataFormats/JetReco/interface/GenJetfwd.h"
-#include "DataFormats/EgammaReco/interface/SuperClusterFwd.h"
 #include "DataFormats/JetReco/interface/GenJet.h"
 
-#include "DataFormats/JetReco/interface/CaloJetCollection.h"
+//#include "DataFormats/JetReco/interface/CaloJetCollection.h"
 #include "DataFormats/EgammaReco/interface/BasicCluster.h"
 #include "DataFormats/EgammaReco/interface/SuperCluster.h"
 #include "DataFormats/EgammaReco/interface/ClusterShape.h"
@@ -47,11 +46,31 @@ GammaJetAnalysis::GammaJetAnalysis(const edm::ParameterSet& iConfig)
 
   nameProd_ = iConfig.getUntrackedParameter<std::string>("nameProd");
   jetCalo_ = iConfig.getUntrackedParameter<std::string>("jetCalo","GammaJetJetBackToBackCollection");
+
+  tok_jets_ = consumes<reco::CaloJetCollection>( edm::InputTag(nameProd_,
+	jetCalo_) );
+
   gammaClus_ = iConfig.getUntrackedParameter<std::string>("gammaClus","GammaJetGammaBackToBackCollection");
+
+  tok_egamma_ = consumes<reco::SuperClusterCollection>( edm::InputTag(nameProd_,
+	gammaClus_) );
+
   ecalInput_=iConfig.getUntrackedParameter<std::string>("ecalInput","GammaJetEcalRecHitCollection");
+
+  tok_ecal_ = consumes<EcalRecHitCollection>( edm::InputTag(nameProd_, ecalInput_) );
+
   hbheInput_ = iConfig.getUntrackedParameter<std::string>("hbheInput");
+
+  tok_hbhe_ = consumes<HBHERecHitCollection>(edm::InputTag(nameProd_,hbheInput_));
+
   hoInput_ = iConfig.getUntrackedParameter<std::string>("hoInput");
+
+  tok_ho_ = consumes<HORecHitCollection>(edm::InputTag(nameProd_,hoInput_));
+
   hfInput_ = iConfig.getUntrackedParameter<std::string>("hfInput");
+
+  tok_hf_ = consumes<HFRecHitCollection>(edm::InputTag(nameProd_,hfInput_));
+
   Tracks_ = iConfig.getUntrackedParameter<std::string>("Tracks","GammaJetTracksCollection");
   CutOnEgammaEnergy_  = iConfig.getParameter<double>("CutOnEgammaEnergy");
 
@@ -125,16 +144,16 @@ void GammaJetAnalysis::beginJob()
 //   iSetup.get<CaloGeometryRecord>().get(pG);
 //   geo = pG.product();
 
-  myout_part = new ofstream((myName+"_part.dat").c_str()); 
+  myout_part = new std::ofstream((myName+"_part.dat").c_str()); 
   if(!myout_part) cout << " Output file not open!!! "<<endl;
-  myout_hcal = new ofstream((myName+"_hcal.dat").c_str()); 
+  myout_hcal = new std::ofstream((myName+"_hcal.dat").c_str()); 
   if(!myout_hcal) cout << " Output file not open!!! "<<endl;
-  myout_ecal = new ofstream((myName+"_ecal.dat").c_str()); 
+  myout_ecal = new std::ofstream((myName+"_ecal.dat").c_str()); 
   if(!myout_ecal) cout << " Output file not open!!! "<<endl;
   
-  myout_jet = new ofstream((myName+"_jet.dat").c_str()); 
+  myout_jet = new std::ofstream((myName+"_jet.dat").c_str()); 
   if(!myout_jet) cout << " Output file not open!!! "<<endl;
-  myout_photon = new ofstream((myName+"_photon.dat").c_str()); 
+  myout_photon = new std::ofstream((myName+"_photon.dat").c_str()); 
   if(!myout_photon) cout << " Output file not open!!! "<<endl;
    
    
@@ -197,7 +216,7 @@ GammaJetAnalysis::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
      try {
        
        edm::Handle<reco::CaloJetCollection> jets;
-       iEvent.getByLabel(nameProd_, jetCalo_, jets);
+       iEvent.getByToken(tok_jets_, jets);
        reco::CaloJetCollection::const_iterator jet = jets->begin ();
        cout<<" Size of Calo jets "<<jets->size()<<endl;
        jettype++;
@@ -237,12 +256,12 @@ GammaJetAnalysis::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
 // Load EcalRecHits
   
     std::vector<edm::InputTag>::const_iterator i;
-    vector<CaloRecHit> theRecHits;
+    vector<std::pair<DetId, double> > theRecHits;
       
     try {
       
       edm::Handle<EcalRecHitCollection> ec;
-      iEvent.getByLabel(nameProd_, ecalInput_,ec);
+      iEvent.getByToken(tok_ecal_,ec);
       
        for(EcalRecHitCollection::const_iterator recHit = (*ec).begin();
                                                 recHit != (*ec).end(); ++recHit)
@@ -250,7 +269,7 @@ GammaJetAnalysis::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
 // EcalBarrel = 1, EcalEndcap = 2
 
 	 GlobalPoint pos = geo->getPosition(recHit->detid());
-         theRecHits.push_back(*recHit);
+         theRecHits.push_back(std::pair<DetId, double>(recHit->detid(), recHit->energy()));
 
 	 if( (*recHit).energy()> ecut[recHit->detid().subdetId()-1][0] )
                     (*myout_ecal)<<recHit->detid().subdetId()<<" "<<(*recHit).energy()<<" "<<pos.phi()<<" "<<pos.eta()
@@ -270,7 +289,7 @@ GammaJetAnalysis::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
 // Hcal Barrel and endcap for isolation
     try {
       edm::Handle<HBHERecHitCollection> hbhe;
-      iEvent.getByLabel(nameProd_,hbheInput_,hbhe);
+      iEvent.getByToken(tok_hbhe_,hbhe);
 
 //      (*myout_hcal)<<(*hbhe).size()<<endl;
   for(HBHERecHitCollection::const_iterator hbheItr = (*hbhe).begin();
@@ -281,7 +300,7 @@ GammaJetAnalysis::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
         GlobalPoint pos = geo->getPosition(hbheItr->detid());
         (*myout_hcal)<<id.subdetId()<<" "<<(*hbheItr).energy()<<" "<<pos.phi()<<
                                       " "<<pos.eta()<<" "<<iEvent.id().event()<<endl;
-        theRecHits.push_back(*hbheItr);
+        theRecHits.push_back(std::pair<DetId, double>(hbheItr->detid(), hbheItr->energy()));
 
       }
     } catch (cms::Exception& e) { // can't find it!
@@ -306,7 +325,7 @@ GammaJetAnalysis::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
  int ij = 0;
   // Get island super clusters after energy correction
   Handle<reco::SuperClusterCollection> eclus;
-  iEvent.getByLabel(nameProd_,gammaClus_, eclus);
+  iEvent.getByToken(tok_egamma_, eclus);
   const reco::SuperClusterCollection* correctedSuperClusters=eclus.product();
   // loop over the super clusters and fill the histogram
   for(reco::SuperClusterCollection::const_iterator aClus = correctedSuperClusters->begin();
@@ -317,9 +336,9 @@ GammaJetAnalysis::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
     if(vet>CutOnEgammaEnergy_) {
       ij++;
       float gammaiso_ecal[9] = {0.,0.,0.,0.,0.,0.,0.,0.,0.};
-     for(vector<CaloRecHit>::iterator it = theRecHits.begin(); it != theRecHits.end(); it++)
+     for(vector<std::pair<DetId, double> >::const_iterator it = theRecHits.begin(); it != theRecHits.end(); it++)
       {
-           GlobalPoint pos = geo->getPosition(it->detid());
+           GlobalPoint pos = geo->getPosition(it->first);
            double eta = pos.eta();
 	   double phi = pos.phi();
 	   double deta = fabs(eta-aClus->eta());
@@ -338,24 +357,24 @@ GammaJetAnalysis::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
 	     for (int j = 0; j<3; j++)
 	     {
 	     
-	        if(it->detid().det() == DetId::Ecal ) 
+	        if(it->first.det() == DetId::Ecal ) 
 		{
-		  if(it->detid().subdetId() == 1) ecutn = ecut[0][j];
-		  if(it->detid().subdetId() == 2) ecutn = ecut[1][j];
+		  if(it->first.subdetId() == 1) ecutn = ecut[0][j];
+		  if(it->first.subdetId() == 2) ecutn = ecut[1][j];
 		  if( dr>rmin && dr<risol[i])
 		  {
-		   if((*it).energy() > ecutn) gammaiso_ecal[itype_ecal] = gammaiso_ecal[itype_ecal]+(*it).energy()/cosh(eta);
+		   if((*it).second > ecutn) gammaiso_ecal[itype_ecal] = gammaiso_ecal[itype_ecal]+(*it).second/cosh(eta);
 		  } 
 		}
 		
-		if(it->detid().det() == DetId::Hcal ) 
+		if(it->first.det() == DetId::Hcal ) 
 		{
 		   ecutn = ecut[2][j];
 		   if( dr>rmin && dr<risol[i])
 		   {
-		     if((*it).energy() > ecutn) 
+		     if((*it).first > ecutn) 
 		     {
-		        gammaiso_ecal[itype_ecal] = gammaiso_ecal[itype_ecal]+(*it).energy()/cosh(eta);
+		        gammaiso_ecal[itype_ecal] = gammaiso_ecal[itype_ecal]+(*it).second/cosh(eta);
 		     }
 		   }
 		} 

@@ -62,7 +62,7 @@ void ArgSizeChecker::checkPreStmt(const CXXConstructExpr *E, CheckerContext &ctx
 					|| PQT->isMemberFunctionPointerType() || PQT->isArrayType()
 					|| PQT->isBuiltinType() || PQT->isUnionType() || PQT->isVectorType() ) continue;
 				uint64_t size_param = ctx.getASTContext().getTypeSize(PQT);
-				int64_t max_bits=128;
+				uint64_t max_bits=128;
 				if ( size_param <= max_bits ) continue;
 				std::string qname = QT.getAsString();
 				std::string pname = PQT.getAsString();
@@ -98,7 +98,7 @@ void ArgSizeChecker::checkPreStmt(const CXXConstructExpr *E, CheckerContext &ctx
 				const clang::ento::PathDiagnosticLocation DLoc =
 			   		clang::ento::PathDiagnosticLocation::createBegin(PVD, ctx.getSourceManager());
 
-				BugType * BT = new BugType("Function parameter copied by value with size > max","ArgSize");
+				BugType * BT = new BugType(this,"Function parameter copied by value with size > max","ArgSize");
 				BugReport *report = new BugReport(*BT, os.str() , DLoc);
 				report->addRange(PVD->getSourceRange());
 	 			ctx.emitReport(report);
@@ -128,7 +128,7 @@ void ArgSizeChecker::checkASTDecl(const CXXMethodDecl *MD, AnalysisManager& mgr,
 		if (PQT->isReferenceType() || PQT->isPointerType() || PQT->isMemberFunctionPointerType() 
 			|| PQT->isArrayType()|| PQT->isBuiltinType() || PQT->isUnionType() || PQT->isVectorType()  ) continue;
 		uint64_t size_param = mgr.getASTContext().getTypeSize(PQT);
-		int64_t max_bits=128;
+		uint64_t max_bits=128;
 		if ( size_param <= max_bits ) continue;
 				std::string qname = QT.getAsString();
 		std::string pname = PQT.getAsString();
@@ -163,7 +163,7 @@ void ArgSizeChecker::checkASTDecl(const CXXMethodDecl *MD, AnalysisManager& mgr,
 		std::string oname = "operator"; 
 //		if ( fname.substr(0,oname.length()) == oname ) continue;
 
-		BugType * BT = new BugType("Function parameter with size > max", "ArgSize");
+		BugType * BT = new BugType(this,"Function parameter with size > max", "ArgSize");
 	  	BugReport *report = new BugReport(*BT, os.str() , DLoc);
 	  	BR.emitReport(report);
 	}

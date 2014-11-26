@@ -37,7 +37,7 @@ public:
 
   void setGlobalTime(double globalTime) { theGlobalTime = globalTime; }
   void setPathLength(double pathLength) { thePathLength = pathLength; }
-  void setPosition(Gflash3Vector position) { thePosition = position; }
+  void setPosition(const Gflash3Vector& position) { thePosition = position; }
   void addEnergyDeposited(double energy ) { theEnergyDeposited += energy; }
 
 private:
@@ -63,6 +63,7 @@ private:
   double theEnergyDeposited;
 
   GflashTrajectory* theHelix;
+  GflashTrajectoryPoint theTrajectoryPoint;
 };
 
 #endif

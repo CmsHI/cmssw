@@ -24,13 +24,15 @@
 #include "DataFormats/Common/interface/RefCore.h"
 #include "DataFormats/Common/interface/RefCoreWithIndex.h"
 #include "DataFormats/Common/interface/IntValues.h"
+#include "DataFormats/Common/interface/ThinnedAssociation.h"
 #include "DataFormats/Provenance/interface/EventAuxiliary.h"
 #include "FWCore/MessageLogger/interface/ErrorSummaryEntry.h"
 
 #include <vector>
 
-namespace {
+namespace DataFormats_Common {
   struct dictionary {
+    edm::Wrapper<edm::ThinnedAssociation> dummyThinnedAssociation;
     edm::Wrapper<edm::DataFrameContainer> dummywdfc;
     edm::Wrapper<edm::HLTPathStatus> dummyx16;
     edm::Wrapper<std::vector<edm::HLTPathStatus> > dummyx17;

@@ -8,7 +8,6 @@
 //
 // Original Author:
 //         Created:  Sun Jan  6 22:01:27 EST 2008
-// $Id: FWTableViewManager.cc,v 1.26 2013/01/25 19:44:03 wmtan Exp $
 //
 
 // system include files
@@ -126,6 +125,32 @@ FWTableViewManager::FWTableViewManager(FWGUIManager* iGUIMgr)
    column("strip hits", TableEntry::INT, "hitPattern().numberOfValidStripHits()").
    column("chi2", 3).
    column("ndof", TableEntry::INT);
+
+   table("DTRecSegment4D").
+   column("wheel", 0, "chamberId.wheel").
+   column("station", 0, "chamberId.station").
+   column("sector", 0, "chamberId.sector").
+   column("t0phi", 2, "phiSegment.t0").
+   column("t0theta", 2, "zSegment.t0").
+   column("hasPhi", -2, "hasPhi").
+   column("hasZed", -2, "hasZed").
+   column("chi2", 2, "chi2").
+   column("dof", 0, "degreesOfFreedom"); 
+
+   table("DTRecHit1DPair").
+   column("wheel", 0, "wireId.wheel").
+   column("station", 0, "wireId.station").
+   column("sector", 0, "wireId.sector").
+   column("SL", 0, "wireId.superlayer").
+   column("layer", 0, "wireId.layer").
+   column("wire", 0, "wireId.wire").
+   column("digiTime", 2, "digiTime");
+
+   table("CSCSegment").
+   column("endcap", 0, "cscDetId.endcap").
+   column("station", 0, "cscDetId.station").
+   column("ring", 0, "cscDetId.ring").
+   column("chamber", 0, "cscDetId.chamber");
 
    table("reco::Vertex").
    column("x", 5).

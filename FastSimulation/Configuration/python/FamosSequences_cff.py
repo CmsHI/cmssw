@@ -2,7 +2,7 @@ import FWCore.ParameterSet.Config as cms
 
 from FastSimulation.Configuration.CommonInputs_cff import *
 
-# Conversion to GenParticleCandidates 
+# Conversion to GenParticleCandidates
 from PhysicsTools.HepMCCandAlgos.genParticleCandidatesFast_cfi import *
 
 # Pile-up options: FAMOS-style or with the Mixing Module
@@ -22,7 +22,7 @@ from FastSimulation.TrackingRecHitProducer.TrackingRecHitTranslator_cfi import *
 # CTF and Iterative tracking (contains pixelTracks and pixelVertices)
 
 # 1) Common algorithms and configuration taken from full reconstruction
-# Note: The runge-kutta propagator is not used here 
+# Note: The runge-kutta propagator is not used here
 # (because no magnetic field inhomogeneities are simulated between layers)
 from FastSimulation.Tracking.GSTrackFinalFitCommon_cff import *
 
@@ -65,13 +65,24 @@ from RecoJets.Configuration.RecoJetsGlobal_cff import *
 from RecoMET.Configuration.RecoMET_cff import *
 metreco.remove(BeamHaloId)
 
-caloJetMet = cms.Sequence(
+
+caloJets = cms.Sequence(
     recoJets+
     recoJetIds+
-    recoTrackJets+
-    recoJetAssociations+recoJPTJets+
-    metreco
+    recoTrackJets
 )
+
+jetTrackAssoc = cms.Sequence (
+    recoJetAssociations
+    )
+
+jetPlusTracks = cms.Sequence(
+    recoJPTJets
+    )
+
+metReco = cms.Sequence(
+    metreco
+    )
 
 
 
@@ -90,7 +101,7 @@ caloJetMetGen = cms.Sequence(
 )
 
 
-# Muon simHit sequence 
+# Muon simHit sequence
 from FastSimulation.MuonSimHitProducer.MuonSimHitProducer_cfi import *
 
 # Muon Digi sequence
@@ -98,14 +109,9 @@ from SimMuon.Configuration.SimMuon_cff import *
 simMuonCSCDigis.strips.doCorrelatedNoise = False ## Saves a little bit of time
 
 
-if (MixingMode==2):
-    simMuonCSCDigis.mixLabel = 'mixSimCaloHits'
-    simMuonDTDigis.mixLabel = 'mixSimCaloHits'
-    simMuonRPCDigis.mixLabel = 'mixSimCaloHits'
-else:
-    simMuonCSCDigis.InputCollection = 'MuonSimHitsMuonCSCHits'
-    simMuonDTDigis.InputCollection = 'MuonSimHitsMuonDTHits'
-    simMuonRPCDigis.InputCollection = 'MuonSimHitsMuonRPCHits'
+simMuonCSCDigis.InputCollection = 'MuonSimHitsMuonCSCHits'
+simMuonDTDigis.InputCollection = 'MuonSimHitsMuonDTHits'
+simMuonRPCDigis.InputCollection = 'MuonSimHitsMuonRPCHits'
 
 # Muon RecHit sequence
 from RecoLocalMuon.Configuration.RecoLocalMuon_cff import *
@@ -144,17 +150,17 @@ if (CaloMode==3):
         muonlocalreco+
         ancientMuonSeed+
         standAloneMuons+
-        refittedStandAloneMuons+    
+        refittedStandAloneMuons+
         globalMuons+
         tevMuons
         )
 else:
     famosMuonSequence = cms.Sequence(
-        muonDigi+ 
+        muonDigi+
         muonlocalreco+
         ancientMuonSeed+
         standAloneMuons+
-        refittedStandAloneMuons+    
+        refittedStandAloneMuons+
         globalMuons+
         tevMuons
         )
@@ -166,7 +172,7 @@ from RecoMuon.MuonIdentification.muonIdProducerSequence_cff import *
 from RecoMuon.MuonIsolationProducers.muIsolation_cff import *
 
 famosMuonIdAndIsolationSequence = cms.Sequence(
-    ak5CaloJets+
+    ak4CaloJets+
     muonIdProducerSequence+
     muIsolation
 )
@@ -190,9 +196,13 @@ from TrackingTools.GsfTracking.GsfElectronFit_cff import *
 from RecoEgamma.EgammaPhotonProducers.conversionTrackSequence_cff import *
 from RecoEgamma.EgammaPhotonProducers.allConversionSequence_cff import *
 from RecoEgamma.EgammaPhotonProducers.gedPhotonSequence_cff import *
+from RecoEgamma.EgammaIsolationAlgos.egmIsolationDefinitions_cff import *
 from RecoEgamma.Configuration.RecoEgamma_cff import egammaHighLevelRecoPostPF
 allConversions.src = 'gsfGeneralConversionTrackMerger'
 famosConversionSequence = cms.Sequence(conversionTrackSequenceNoEcalSeeded*allConversionSequence)
+
+if (MixingMode=='DigiRecoMixing'):
+    generalConversionTrackProducer.TrackProducer = 'generalTracksBeforeMixing'
 
 from TrackingTools.GsfTracking.CkfElectronCandidateMaker_cff import *
 from TrackingTools.GsfTracking.FwdElectronPropagator_cfi import *
@@ -216,9 +226,9 @@ iterativeTrackingBeginning = cms.Sequence(
     )
 
 famosGsfTrackSequence = cms.Sequence(
-    iterativeTrackingBeginning+ 
+    iterativeTrackingBeginning+
     newCombinedSeeds+
-    particleFlowCluster+ 
+    particleFlowCluster+
     ecalDrivenElectronSeeds+
     trackerDrivenElectronSeeds+
     electronMergedSeeds+
@@ -249,8 +259,8 @@ from RecoEgamma.EgammaIsolationAlgos.interestingEgammaIsoDetIdsSequence_cff impo
 
 
 # B tagging
-from RecoJets.JetAssociationProducers.ak5JTA_cff import *
-ak5JetTracksAssociatorAtVertex.tracks = 'generalTracks'
+from RecoJets.JetAssociationProducers.ak4JTA_cff import *
+ak4JetTracksAssociatorAtVertex.tracks = 'generalTracks'
 from RecoVertex.Configuration.RecoVertex_cff import *
 from RecoVertex.BeamSpotProducer.BeamSpot_cff import *
 from RecoBTag.Configuration.RecoBTag_cff import *
@@ -298,7 +308,7 @@ elif(CaloMode==1):
     lowLevelRecoSequence = cms.Sequence(
         siTrackerGaussianSmearingRecHits+
         caloDigis+
-        caloRecHits 
+        caloRecHits
         )
     famosSimulationSequence = cms.Sequence(
         simulationSequence+
@@ -324,7 +334,7 @@ elif(CaloMode==2):
         siTrackerGaussianSmearingRecHits+
         iterativeTracking+ # because tracks are used for noise cleaning in HCAL low-level reco
         caloDigis+
-        caloRecHits 
+        caloRecHits
         )
     famosSimulationSequence = cms.Sequence(
         simulationSequence+
@@ -339,7 +349,7 @@ elif(CaloMode==2):
         caloTowersRec
         )
 elif(CaloMode==3):
-    if(MixingMode==1):
+    if(MixingMode=='GenMixing'):
         simulationSequence = cms.Sequence(
             offlineBeamSpot+
             cms.SequencePlaceholder("famosMixing")+
@@ -353,73 +363,119 @@ elif(CaloMode==3):
             )
         trackVertexReco = cms.Sequence(
             siTrackerGaussianSmearingRecHits+
-            iterativeTracking+ 
+            iterativeTracking+
             vertexreco
             )
-    else:
+    elif(MixingMode=='DigiRecoMixing'):
+        #dump = cms.EDAnalyzer("EventContentAnalyzer") #TEMP
         simulationSequence = cms.Sequence(
             offlineBeamSpot+
             famosSimHits+
             MuonSimHits
             )
+        trackReco = cms.Sequence(
+            siTrackerGaussianSmearingRecHits+
+            iterativeTracking
+            )
         digitizationSequence = cms.Sequence(
-            cms.SequencePlaceholder("mixHits")+
+            cms.SequencePlaceholder("mixHitsAndTracks")+
             muonDigi+
             caloDigis
             )
-        trackVertexReco = cms.Sequence(
-            siTrackerGaussianSmearingRecHits+
-            iterativeTracking+ 
-            cms.SequencePlaceholder("mixTracks")+ 
+        trackDigiVertexSequence = cms.Sequence(
+            trackReco+
+            #dump+ #TEMP
+            digitizationSequence+
             vertexreco
             )
+        trackVertexReco = cms.Sequence( # for backward compatibility
+            trackDigiVertexSequence
+            )
+    else:
+        print 'unsupported MixingMode label'
 # out of the 'if':
     caloTowersSequence = cms.Sequence(
         caloRecHits+
         caloTowersRec
         )
-    famosSimulationSequence = cms.Sequence( # valid for both MixingMode values
-        simulationSequence+
-        digitizationSequence#+ # temporary; eventually it will be a block of its own, but it requires intervention on ConfigBuilder
-        # Note: of course it is a bit odd that the next two sequences are made part of the SIM step, but this is a temporary solution needed because currently HLT is run before reconstructionWithFamos, and HLT needs to access the caloRecHits, which in turn depend on tracks because HCAL hits use the TrackExtrapolator
-#        trackVertexReco+
-#        caloTowersSequence
-        )
-
+    if(MixingMode=='GenMixing'):
+        famosSimulationSequence = cms.Sequence( 
+            simulationSequence+
+            digitizationSequence#+ # temporary; eventually it will be a block of its own, but it requires intervention on ConfigBuilder
+            )
+    elif(MixingMode=='DigiRecoMixing'):
+        famosSimulationSequence = cms.Sequence( 
+            simulationSequence+
+            trackDigiVertexSequence
+        )        
+    else:
+        print 'unsupported MixingMode label'
 
 famosEcalDrivenElectronSequence = cms.Sequence(
     famosGsfTrackSequence+
     egammaEcalDrivenReco
 )
 
+simulationSequence.insert(0,genParticles)
+
 # The reconstruction sequence
 if(CaloMode==3):
-    reconstructionWithFamos = cms.Sequence(
-        digitizationSequence+ # temporary; repetition!
-        trackVertexReco+
-        caloTowersSequence+
-        particleFlowCluster+
-        ecalClusters+
-        famosGsfTrackSequence+
-        famosMuonSequence+
-        famosMuonIdAndIsolationSequence+
-        famosConversionSequence+
-        particleFlowTrackWithDisplacedVertex+
-        famosEcalDrivenElectronSequence+
-        famosPhotonSequence+
-        famosParticleFlowSequence+
-        egammaHighLevelRecoPostPF+
-        muonshighlevelreco+
-        particleFlowLinks+
-        caloJetMetGen+
-        caloJetMet+
-        PFJetMet+
-        ic5JetTracksAssociatorAtVertex+
-        ak5JetTracksAssociatorAtVertex+
-        reducedRecHits+
-        famosBTaggingSequence+
-        famosPFTauTaggingSequence
-        )
+    if(MixingMode=='GenMixing'):
+        reconstructionWithFamos = cms.Sequence(
+            digitizationSequence+ # temporary; repetition!
+            trackVertexReco+
+            caloTowersSequence+
+            particleFlowCluster+
+            ecalClusters+
+            famosGsfTrackSequence+
+            famosMuonSequence+
+            famosMuonIdAndIsolationSequence+
+            famosConversionSequence+
+            particleFlowTrackWithDisplacedVertex+
+            famosEcalDrivenElectronSequence+
+            famosPhotonSequence+
+            famosParticleFlowSequence+
+            egammaHighLevelRecoPostPF+
+            muonshighlevelreco+
+            particleFlowLinks+
+            caloJetMetGen+
+            caloJets+
+            PFJetMet+
+            jetTrackAssoc+
+            recoJPTJets+
+            metreco+
+            reducedRecHits+
+            famosBTaggingSequence+
+            famosPFTauTaggingSequence
+            )
+    elif(MixingMode=='DigiRecoMixing'):
+        reconstructionWithFamos = cms.Sequence(
+            caloTowersSequence+
+            particleFlowCluster+
+            ecalClusters+
+            famosGsfTrackSequence+
+            famosMuonSequence+
+            famosMuonIdAndIsolationSequence+
+            famosConversionSequence+
+            particleFlowTrackWithDisplacedVertex+
+            famosEcalDrivenElectronSequence+
+            famosPhotonSequence+
+            famosParticleFlowSequence+
+            egammaHighLevelRecoPostPF+
+            muonshighlevelreco+
+            particleFlowLinks+
+            caloJetMetGen+
+            caloJets+
+            PFJetMet+
+            jetTrackAssoc+
+            recoJPTJets+
+            metreco+
+            reducedRecHits+
+            famosBTaggingSequence+
+            famosPFTauTaggingSequence
+            )
+    else:
+        print 'unsupported MixingMode label'
 else:
     reconstructionWithFamos = cms.Sequence(
         trackVertexReco+
@@ -438,14 +494,16 @@ else:
         muonshighlevelreco+
         particleFlowLinks+
         caloJetMetGen+
-        caloJetMet+
+        caloJets+
         PFJetMet+
-        ic5JetTracksAssociatorAtVertex+
-        ak5JetTracksAssociatorAtVertex+
+        jetTrackAssoc+
+        recoJPTJets+
+        metreco+
         reducedRecHits+
         famosBTaggingSequence+
         famosPFTauTaggingSequence
         )
+
 
 
 
@@ -475,10 +533,11 @@ reconstructionHighLevel = cms.Sequence(
     muonshighlevelreco+
     particleFlowLinks+
     caloJetMetGen+
-    caloJetMet+
+    caloJets+
     PFJetMet+
-    ic5JetTracksAssociatorAtVertex+
-    ak5JetTracksAssociatorAtVertex+
+    jetTrackAssoc+
+    recoJPTJets+
+    metreco+
     reducedRecHits+
     famosBTaggingSequence+
     famosPFTauTaggingSequence
@@ -536,13 +595,13 @@ famosWithTracksAndEcalClusters = cms.Sequence(
     ecalClusters
 )
 
-    
+
 famosWithParticleFlow = cms.Sequence(
     famosWithTracksAndEcalClusters+
     vertexreco+
     famosGsfTrackSequence+
     famosConversionSequence+
-    caloTowersSequence+ 
+    caloTowersSequence+
     famosParticleFlowSequence+
     PFJetMet
 )
@@ -570,7 +629,11 @@ famosWithTracksAndJets = cms.Sequence(
     famosWithTracksAndCaloTowers+
     vertexreco+
     caloJetMetGen+
-    caloJetMet
+    caloJets+
+    PFJetMet+
+    jetTrackAssoc+
+    recoJPTJets+
+    metreco
 )
 
 ### Standard Jets _cannot_ be done without many other things...
@@ -584,9 +647,13 @@ famosWithJets = cms.Sequence(
     famosMuonSequence+
     famosMuonIdAndIsolationSequence+
     famosParticleFlowSequence+
-    gsfElectronSequence+	
+    gsfElectronSequence+
     caloJetMetGen+
-    caloJetMet
+    caloJets+
+    PFJetMet+
+    jetTrackAssoc+
+    recoJPTJets+
+    metreco
 )
 
 famosWithCaloTowersAndParticleFlow = cms.Sequence(
@@ -601,8 +668,8 @@ famosWithElectrons = cms.Sequence(
     famosGsfTrackSequence+
     famosParticleFlowSequence+
     famosElectronSequence+
-    interestingEleIsoDetIdEB+
-    interestingEleIsoDetIdEE+
+    interestingGedEleIsoDetIdEB+
+    interestingGedEleIsoDetIdEE+
     egammaIsolationSequence
 )
 
@@ -612,6 +679,8 @@ famosWithPhotons = cms.Sequence(
     caloRecHits+
     ecalClustersNoPFBox+
     famosPhotonSequence+
+    interestingGedGamIsoDetIdEB+
+    interestingGedGamIsoDetIdEE+
     interestingGamIsoDetIdEB+
     interestingGamIsoDetIdEE
 )
@@ -630,11 +699,11 @@ famosWithElectronsAndPhotons = cms.Sequence(
 famosWithBTagging = cms.Sequence(
     famosWithTracksAndCaloTowers+
     vertexreco+
-    ak5CaloJets+
-    ak5JetTracksAssociatorAtVertex+
+    ak4PFJetsCHS+
+    ak4JetTracksAssociatorAtVertexPF+
     ecalClustersNoPFBox+
     famosMuonSequence+
-    reducedRecHits+ 
+    reducedRecHits+
     famosBTaggingSequence
     )
 
@@ -675,10 +744,11 @@ reconstructionWithFamosNoTk = cms.Sequence(
     egammaHighLevelRecoPostPF+
     muonshighlevelreco+
     caloJetMetGen+
-    caloJetMet+
+    caloJets+
     PFJetMet+
-    ic5JetTracksAssociatorAtVertex+
-    ak5JetTracksAssociatorAtVertex+
+    jetTrackAssoc+
+    recoJPTJets+
+    metreco+
     reducedRecHits+
     famosBTaggingSequence+
     famosPFTauTaggingSequence
@@ -689,4 +759,3 @@ famosWithEverything = cms.Sequence(
     simulationWithFamos+
     reconstructionWithFamos
 )
-

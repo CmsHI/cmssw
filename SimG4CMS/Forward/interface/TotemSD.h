@@ -45,7 +45,7 @@ class TotemSD : public SensitiveTkDetector,
 
 public:
 
-  TotemSD(std::string, const DDCompactView &, SensitiveDetectorCatalog &, 
+  TotemSD(std::string, const DDCompactView &, const SensitiveDetectorCatalog &,
 	  edm::ParameterSet const &, const SimTrackManager*);
   virtual ~TotemSD();
 
@@ -68,12 +68,12 @@ private:
 
 private:
 
-  G4ThreeVector  SetToLocal(G4ThreeVector globalPoint);
+  G4ThreeVector  SetToLocal(const G4ThreeVector& globalPoint);
   void           GetStepInfo(G4Step* aStep);
   bool           HitExists();
   void           CreateNewHit();
   void           CreateNewHitEvo();
-  G4ThreeVector  PosizioEvo(G4ThreeVector,double ,double ,double, double,int&);
+  G4ThreeVector  PosizioEvo(const G4ThreeVector&,double ,double ,double, double,int&);
   void           UpdateHit();
   void           StoreHit(TotemG4Hit*);
   void           ResetForNewPrimary();

@@ -19,6 +19,7 @@
 #include "FWCore/Framework/interface/Run.h"
 #include "FWCore/Framework/src/edmodule_mightGet_config.h"
 #include "FWCore/Framework/src/PreallocationConfiguration.h"
+#include "FWCore/Framework/src/EventSignalsSentry.h"
 
 
 #include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
@@ -51,9 +52,11 @@ namespace edm {
     
     bool
     EDAnalyzerBase::doEvent(EventPrincipal& ep, EventSetup const& c,
+                            ActivityRegistry* act,
                             ModuleCallingContext const* mcc) {
       Event e(ep, moduleDescription_, mcc);
       e.setConsumer(this);
+      EventSignalsSentry sentry(act,mcc);
       this->analyze(e.streamID(), e, c);
       return true;
     }
@@ -177,12 +180,12 @@ namespace edm {
     
     void
     EDAnalyzerBase::doPreForkReleaseResources() {
-      //preForkReleaseResources();
+      preForkReleaseResources();
     }
     
     void
     EDAnalyzerBase::doPostForkReacquireResources(unsigned int iChildIndex, unsigned int iNumberOfChildren) {
-      //postForkReacquireResources(iChildIndex, iNumberOfChildren);
+      postForkReacquireResources(iChildIndex, iNumberOfChildren);
     }
     
     void EDAnalyzerBase::preallocStreams(unsigned int) {}

@@ -32,7 +32,10 @@ namespace edm {
   class ModuleCallingContext;
   class PreallocationConfiguration;
   class StreamID;
-  
+  class ActivityRegistry;
+  class ProductRegistry;
+  class ThinnedAssociationsHelper;
+
   namespace maker {
     template<typename T> class ModuleHolderT;
   }
@@ -59,6 +62,7 @@ namespace edm {
 
     private:
       bool doEvent(EventPrincipal& ep, EventSetup const& c,
+                   ActivityRegistry*,
                    ModuleCallingContext const*);
       void doPreallocate(PreallocationConfiguration const&);
       void doBeginJob();
@@ -93,19 +97,25 @@ namespace edm {
       void doEndLuminosityBlock(LuminosityBlockPrincipal& lbp, EventSetup const& c,
                                 ModuleCallingContext const*);
       
+      void doPreForkReleaseResources();
+      void doPostForkReacquireResources(unsigned int iChildIndex, unsigned int iNumberOfChildren);
+
       //For now, the following are just dummy implemenations with no ability for users to override
       void doRespondToOpenInputFile(FileBlock const& fb);
       void doRespondToCloseInputFile(FileBlock const& fb);
-      void doPreForkReleaseResources();
-      void doPostForkReacquireResources(unsigned int iChildIndex, unsigned int iNumberOfChildren);
-      
-      
+      void doRegisterThinnedAssociations(ProductRegistry const&,
+                                         ThinnedAssociationsHelper&) { }
+
       void registerProductsAndCallbacks(EDAnalyzerBase* module, ProductRegistry* reg);
       std::string workerType() const {return "WorkerT<EDAnalyzer>";}
       
       virtual void analyze(StreamID, Event const& , EventSetup const&) const= 0;
       virtual void beginJob() {}
       virtual void endJob(){}
+      
+      virtual void preForkReleaseResources() {}
+      virtual void postForkReacquireResources(unsigned int /*iChildIndex*/, unsigned int /*iNumberOfChildren*/) {}
+
 
       virtual void preallocStreams(unsigned int);
       virtual void doBeginStream_(StreamID id);

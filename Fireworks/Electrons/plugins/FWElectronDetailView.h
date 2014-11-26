@@ -11,7 +11,6 @@
 //
 // Original Author:
 //         Created:  Sun Jan  6 23:57:00 EST 2008
-// $Id: FWElectronDetailView.h,v 1.21 2011/02/26 00:14:00 dlange Exp $
 //
 
 // user include files
@@ -38,7 +37,10 @@ private:
    FWElectronDetailView(const FWElectronDetailView&); // stop default
    const FWElectronDetailView& operator=(const FWElectronDetailView&); // stop default
 
+   using FWDetailViewGL<reco::GsfElectron>::build;
    virtual void build (const FWModelId &id, const reco::GsfElectron*);
+
+   using FWDetailViewGL<reco::GsfElectron>::setTextInfo;
    virtual void setTextInfo(const FWModelId &id, const reco::GsfElectron*);
 
    double deltaEtaSuperClusterTrackAtVtx (const reco::GsfElectron &);

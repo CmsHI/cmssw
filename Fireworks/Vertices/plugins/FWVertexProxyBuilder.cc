@@ -8,7 +8,6 @@
 //
 // Original Author:  Chris Jones
 //         Created:  Tue Dec  2 14:17:03 EST 2008
-// $Id: FWVertexProxyBuilder.cc,v 1.15 2012/03/13 00:11:48 amraktad Exp $
 //
 // user include files// user include files
 #include "Fireworks/Core/interface/FWSimpleProxyBuilderTemplate.h"
@@ -61,6 +60,7 @@ private:
    FWVertexProxyBuilder(const FWVertexProxyBuilder&); // stop default
    const FWVertexProxyBuilder& operator=(const FWVertexProxyBuilder&); // stop default
 
+   using FWSimpleProxyBuilderTemplate<reco::Vertex> ::build;
    virtual void build(const reco::Vertex& iData, unsigned int iIndex,TEveElement& oItemHolder, const FWViewContext*) override;
 
    virtual void localModelChanges(const FWModelId& iId, TEveElement* iCompound,

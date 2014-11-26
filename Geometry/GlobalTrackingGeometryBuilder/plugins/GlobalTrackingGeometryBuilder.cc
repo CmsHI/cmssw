@@ -1,19 +1,16 @@
 /** \file GlobalTrackingGeometryBuilder.cc
  * 
- *  $Date: 2011/08/16 14:54:34 $
- *  $Revision: 1.1 $
  *  \author Matteo Sani
  */
  
-#include <Geometry/GlobalTrackingGeometryBuilder/plugins/GlobalTrackingGeometryBuilder.h>
-#include <Geometry/CommonDetUnit/interface/GlobalTrackingGeometry.h>
-
-#include <Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h>
-#include <Geometry/CSCGeometry/interface/CSCGeometry.h>
-#include <Geometry/RPCGeometry/interface/RPCGeometry.h>
-#include <Geometry/GEMGeometry/interface/GEMGeometry.h>
-#include <Geometry/DTGeometry/interface/DTGeometry.h>
-
+#include "Geometry/GlobalTrackingGeometryBuilder/plugins/GlobalTrackingGeometryBuilder.h"
+#include "Geometry/CommonDetUnit/interface/GlobalTrackingGeometry.h"
+#include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
+#include "Geometry/CSCGeometry/interface/CSCGeometry.h"
+#include "Geometry/RPCGeometry/interface/RPCGeometry.h"
+#include "Geometry/GEMGeometry/interface/GEMGeometry.h"
+#include "Geometry/GEMGeometry/interface/ME0Geometry.h"
+#include "Geometry/DTGeometry/interface/DTGeometry.h"
 
 #include <iostream>
 #include <iomanip>
@@ -28,7 +25,8 @@ GlobalTrackingGeometry* GlobalTrackingGeometryBuilder::build(const TrackerGeomet
 							     const DTGeometry* dt, 
 							     const CSCGeometry* csc, 
 							     const RPCGeometry* rpc, 
-							     const GEMGeometry* gem){
+							     const GEMGeometry* gem,
+							     const ME0Geometry* me0){
 
     // DO NOT CHANGE THE ORDER OF THE GEOMETRIES !!!!!!!  
     
@@ -39,6 +37,7 @@ GlobalTrackingGeometry* GlobalTrackingGeometryBuilder::build(const TrackerGeomet
     tkGeometries.push_back(csc);
     tkGeometries.push_back(rpc);
     tkGeometries.push_back(gem);
+    tkGeometries.push_back(me0);
     
     
     return new GlobalTrackingGeometry(tkGeometries);

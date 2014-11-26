@@ -10,8 +10,10 @@
 #include "Geometry/EcalCommonData/interface/EcalEndcapNumberingScheme.h"
 #include "Geometry/CaloGeometry/interface/CaloSubdetectorGeometry.h"
 #include "Geometry/Records/interface/PEcalEndcapRcd.h"
+#include "FWCore/Utilities/interface/thread_safety_macros.h"
 #include <vector>
 #include <map>
+#include <atomic>
 
 class TruncatedPyramid;
 
@@ -121,11 +123,12 @@ class EcalEndcapGeometry GCC11_FINAL: public CaloSubdetectorGeometry
 
       EEDetId gId( float x, float y, float z ) const ;
 
-      mutable EZMgrFL<EBDetId>*     m_borderMgr ;
+      mutable std::atomic<EZMgrFL<EBDetId>*>     m_borderMgr ;
 
-      mutable VecOrdListEBDetIdPtr* m_borderPtrVec ;
+      mutable std::atomic<VecOrdListEBDetIdPtr*> m_borderPtrVec ;
 
-      mutable CCGFloat m_avgZ ;
+      CMS_THREAD_GUARD(m_check) mutable CCGFloat m_avgZ ;
+      mutable std::atomic<bool> m_check;
 
       CellVec m_cellVec ;
 } ;

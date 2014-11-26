@@ -1,17 +1,16 @@
 #ifndef HistoProviderDQM_H
 #define HistoProviderDQM_H
 
+#include "DQMServices/Core/interface/DQMStore.h"
 
-class DQMStore;
 class MonitorElement;
 
 #include <string>
 
 class HistoProviderDQM  {
  public:
-  HistoProviderDQM(const std::string& prefix, const std::string& label);
+  HistoProviderDQM(const std::string& prefix, const std::string& label, DQMStore::IBooker & ibook);
   virtual ~HistoProviderDQM(){}
-  void show();
 
   virtual MonitorElement* book1D       (const std::string &name,
                       const std::string &title,
@@ -38,10 +37,8 @@ class HistoProviderDQM  {
 
   void setDir(const std::string&);
 
-  virtual MonitorElement * access(const std::string &name);
-
  private:
-  DQMStore * dqmStore_;
   std::string label_;
+  DQMStore::IBooker & ibook_;
 };                                                                                                                                                                           
 #endif

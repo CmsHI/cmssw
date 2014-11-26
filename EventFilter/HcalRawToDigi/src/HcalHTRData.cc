@@ -1,7 +1,5 @@
 //#include "Utilities/Configuration/interface/Architecture.h"
 /*  
- *  $Date: 2011/11/02 03:47:49 $
- *  $Revision: 1.19 $
  *  \author J. Mans -- UMD
  */
 #ifndef HTBDAQ_DATA_STANDALONE
@@ -250,7 +248,7 @@ void HcalHTRData::pack(unsigned char* daq_lengths, unsigned short* daq_samples,
   for (ichan=0; ichan<24; ichan++) {
     unsigned short chanid=((ichan%3)+((ichan/3)<<2))<<11;
     for (isample=0; isample<daq_lengths[ichan] && isample<MAXIMUM_SAMPLES_PER_CHANNEL; isample++) {
-      unsigned short basedata=daq_samples[ichan*MAXIMUM_SAMPLES_PER_CHANNEL+isample]&0x3FF;
+      unsigned short basedata=daq_samples[ichan*MAXIMUM_SAMPLES_PER_CHANNEL+isample]&0x7FF;
       if (do_capid) basedata=(basedata&0x7F)|(0x200)|((isample%4)<<7);
       ptr[daq_words_total]=chanid|basedata;
       daq_words_total++;
@@ -419,8 +417,8 @@ void HcalHTRData::getHistogramFibers(int& a, int& b) const {
     a=((m_rawConst[2]&0x0F00)>>8);
     b=((m_rawConst[2]&0xF000)>>12);
   } else {
-    a=((m_rawConst[5]&0x0F00)>>8);
-    b=((m_rawConst[5]&0xF000)>>12);
+    a=((m_rawConst[5]&0x0F00)>>8)+1;
+    b=((m_rawConst[5]&0xF000)>>12)+1;
   }
 }
 

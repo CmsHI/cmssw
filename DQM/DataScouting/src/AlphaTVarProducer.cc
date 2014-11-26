@@ -28,6 +28,9 @@ AlphaTVarProducer::AlphaTVarProducer(const edm::ParameterSet& iConfig) :
 
   produces<std::vector<double> >();
 
+  //set Token(-s)
+  inputJetTagToken_ = consumes<reco::CaloJetCollection>(iConfig.getParameter<edm::InputTag>("inputJetTag"));
+
   LogDebug("") << "Inputs: "
 	       << inputJetTag_.encode() << " ";
 }
@@ -47,7 +50,7 @@ AlphaTVarProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
 
    // get hold of collection of objects
    edm::Handle<reco::CaloJetCollection> calojet_handle; 
-   iEvent.getByLabel(inputJetTag_,calojet_handle);
+   iEvent.getByToken(inputJetTagToken_, calojet_handle);
 
    std::auto_ptr<std::vector<double> > result(new std::vector<double>); 
    // check the the input collections are available
@@ -69,9 +72,9 @@ AlphaTVarProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
 }
 
 double 
-AlphaTVarProducer::CalcAlphaT(std::vector<TLorentzVector> jets){
+AlphaTVarProducer::CalcAlphaT(const std::vector<TLorentzVector>& jets){
 	std::vector<double> ETs;
-	TVector3 MHT = CalcMHT(jets);
+	TVector3 MHT{CalcMHT(jets),0.0,0.0};
 	float HT = CalcHT(jets);
 	//float HT = 0;
 	for(unsigned int i = 0; i < jets.size(); i++){
@@ -105,7 +108,7 @@ double AlphaTVarProducer::alphaT(const double HT, const double DHT, const double
 }
 
 double 
-AlphaTVarProducer::CalcHT(std::vector<TLorentzVector> jets){
+AlphaTVarProducer::CalcHT(const std::vector<TLorentzVector>& jets){
 
 	double HT = 0;
 	for(unsigned int i = 0; i < jets.size(); i++){
@@ -116,7 +119,7 @@ AlphaTVarProducer::CalcHT(std::vector<TLorentzVector> jets){
 	
 }
 
-double AlphaTVarProducer::CalcMHT(std::vector<TLorentzVector> jets){
+double AlphaTVarProducer::CalcMHT(const std::vector<TLorentzVector>& jets){
 	TVector3 MHT;
 	for(unsigned int i = 0; i < jets.size(); i++){
 		if(jets[i].Et() > 50. && fabs(jets[i].Eta()) < 2.5) MHT -= jets[i].Vect();

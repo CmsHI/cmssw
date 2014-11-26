@@ -1,7 +1,6 @@
 #ifndef HLTCOMPARATOR_H
 #define HLTCOMPARATOR_H
 // Original Author: James Jackson
-// $Id: HltComparator.h,v 1.6 2010/02/17 17:50:09 wmtan Exp $
 
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/Framework/interface/EDFilter.h"
@@ -20,8 +19,8 @@ class HltComparator : public edm::EDFilter
         ~HltComparator();
 
     private:
-        edm::InputTag hltOnlineResults_;
-        edm::InputTag hltOfflineResults_;
+        edm::EDGetTokenT<edm::TriggerResults> hltOnlineResults_;
+        edm::EDGetTokenT<edm::TriggerResults> hltOfflineResults_;
 
         std::vector<std::string> onlineActualNames_;
         std::vector<std::string> offlineActualNames_;

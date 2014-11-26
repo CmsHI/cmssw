@@ -21,29 +21,36 @@ setenv RUNTYPE Central
 #setenv RUNTYPE Local
 setenv STARTUP True
 setenv FASTSIM False
-setenv UPGRADE False
+setenv UPGRADE True
 ## TYPE options: Photons, GEDPhotons
-setenv TYPE Photons
 ## ANALYZERNAME options: PhotonValidator, oldpfPhotonValidator, pfPhotonValidator
-setenv ANALYZERNAME PhotonValidator
+#setenv TYPE Photons
+#setenv ANALYZERNAME PhotonValidator
+setenv TYPE GEDPhotons
+setenv ANALYZERNAME pfPhotonValidator
 
-setenv CMSSWver1 6_2_0
-setenv CMSSWver2 6_2_0
-setenv OLDRELEASE 6_2_0
-setenv NEWRELEASE 6_2_0
-setenv OLDPRERELEASE pre5
-setenv NEWPRERELEASE pre6_patch1
+
+setenv CMSSWver1 7_1_0
+setenv CMSSWver2 7_1_0
+setenv OLDRELEASE 7_1_0
+setenv NEWRELEASE 7_1_0
+setenv OLDPRERELEASE pre3
+setenv NEWPRERELEASE pre4
 setenv UPGRADEVER  UPG2017
-setenv LHCENERGY   14
+setenv LHCENERGY   13
+setenv PU True
+setenv PUlevel 50ns
 
-
-if ( $STARTUP == True &&  $FASTSIM == False) then
-setenv OLDGLOBALTAG PRE_ST61_V1-v1
-setenv NEWGLOBALTAG PRE_ST62_V6-v1
+if ( $STARTUP == True &&  $FASTSIM == False && $PU == False && $UPGRADE == True ) then
+setenv OLDGLOBALTAG POSTLS171_V1-v1
+setenv NEWGLOBALTAG POSTLS171_V1-v2
+else if ( $UPGRADE == True && $PU == True &&  $FASTSIM == False ) then
+setenv OLDGLOBALTAG PU${PUlevel}_POSTLS171_V2-v6
+setenv NEWGLOBALTAG PU${PUlevel}_POSTLS171_V2-v2
 else if (  $STARTUP == True  && $FASTSIM == True) then
-setenv OLDGLOBALTAG START61_V11_FastSim-v1
-setenv NEWGLOBALTAG PRE_ST61_V1_FastSim-v1
-endif
+setenv OLDGLOBALTAG POSTLS171_V1_FastSim-v1
+setenv NEWGLOBALTAG POSTLS171_V1_FastSim-v2
+ endif
 
 
 
@@ -67,7 +74,7 @@ setenv WorkDir2   /afs/cern.ch/user/n/nancy/scratch0/CMSSW/test/CMSSW_${CMSSWver
 
 #Name of sample (affects output directory name and htmldescription only) 
 
-setenv PU False
+
 #setenv SAMPLE SingleGammaPt10
 #setenv SAMPLE SingleGammaPt35
 ##setenv SAMPLE SingleGammaFlatPt10_100
@@ -103,11 +110,12 @@ if ( $RUNTYPE == Local ) then
 setenv OLDFILE ${WorkDir1}/PhotonValidationRelVal${OLDRELEASE}_SingleGammaPt10.root
 setenv NEWFILE ${WorkDir2}/PhotonValidationRelVal${NEWRELEASE}_SingleGammaPt10.root
 else if ( $RUNTYPE == Central ) then
-setenv OLDFILE ${WorkDir1}/DQM_V0001_R000000001__RelValSingleGammaPt10__CMSSW_${OLDRELEASE}-${OLDGLOBALTAG}__DQM.root
+setenv OLDFILE ${WorkDir1}/DQM_V0001_R000000001__RelValSingleGammaPt10_UP15__CMSSW_${OLDRELEASE}-${OLDGLOBALTAG}__DQM.root
 if ( $UPGRADE == True ) then
-setenv NEWFILE ${WorkDir2}/DQM_V0001_R000000001__RelValSingleGammaPt10_${UPGRADEVER}__CMSSW_${NEWRELEASE}-${NEWGLOBALTAG}__DQM.root
+setenv NEWFILE ${WorkDir2}/DQM_V0001_R000000001__RelValSingleGammaPt10_UP15__CMSSW_${NEWRELEASE}-${NEWGLOBALTAG}__DQM.root
+#setenv NEWFILE ${WorkDir2}/DQM_V0001_R000000001__RelValSingleGammaPt10_${UPGRADEVER}__CMSSW_${NEWRELEASE}-${NEWGLOBALTAG}__DQM.root
 else 
-setenv NEWFILE ${WorkDir2}/DQM_V0001_R000000001__RelValSingleGammaPt10__CMSSW_${NEWRELEASE}-${NEWGLOBALTAG}__DQM.root
+setenv NEWFILE ${WorkDir2}/DQM_V0001_R000000001__RelValSingleGammaPt10_UP15__CMSSW_${NEWRELEASE}-${NEWGLOBALTAG}__DQM.root
 endif
 endif
 
@@ -146,10 +154,13 @@ setenv NEWFILE ${WorkDir2}/PhotonValidationRelVal${NEWRELEASE}_H130GGgluonfusion
 else if ( $RUNTYPE == Central ) then
 
 #setenv OLDFILE ${WorkDir1}/DQM_V0001_R000000001__RelValH130GGgluonfusion__CMSSW_${OLDRELEASE}-${OLDGLOBALTAG}__GEN-SIM-DIGI-RECO.root
-setenv OLDFILE ${WorkDir1}/DQM_V0001_R000000001__RelValH130GGgluonfusion__CMSSW_${OLDRELEASE}-${OLDGLOBALTAG}__DQM.root
-#setenv OLDFILE ${WorkDir1}/DQM_V0001_R000000001__RelValH130GGgluonfusion_${UPGRADEVER}_${LHCENERGY}__CMSSW_${OLDRELEASE}-${OLDGLOBALTAG}__DQM.root
+#setenv OLDFILE ${WorkDir1}/DQM_V0001_R000000001__RelValH130GGgluonfusion__CMSSW_${OLDRELEASE}-${OLDGLOBALTAG}__DQM.root
+setenv OLDFILE ${WorkDir1}/DQM_V0001_R000000001__RelValH130GGgluonfusion_${UPGRADEVER}_${LHCENERGY}__CMSSW_${OLDRELEASE}-${OLDGLOBALTAG}__DQM.root
+
 if ( $UPGRADE == True ) then
-setenv NEWFILE ${WorkDir2}/DQM_V0001_R000000001__RelValH130GGgluonfusion_${UPGRADEVER}_${LHCENERGY}__CMSSW_${NEWRELEASE}-${NEWGLOBALTAG}__DQM.root
+
+setenv OLDFILE ${WorkDir1}/DQM_V0001_R000000001__RelValH130GGgluonfusion_${LHCENERGY}__CMSSW_${OLDRELEASE}-${OLDGLOBALTAG}__DQM.root
+setenv NEWFILE ${WorkDir2}/DQM_V0001_R000000001__RelValH130GGgluonfusion_${LHCENERGY}__CMSSW_${NEWRELEASE}-${NEWGLOBALTAG}__DQM.root
 else
 setenv NEWFILE ${WorkDir2}/DQM_V0001_R000000001__RelValH130GGgluonfusion__CMSSW_${NEWRELEASE}-${NEWGLOBALTAG}__DQM.root
 endif
@@ -191,8 +202,11 @@ endif
 #http://cmsdoc.cern.ch/Physics/egamma/www/validation/
 
 setenv CURRENTDIR $PWD
-setenv OUTPATH /afs/cern.ch/cms/Physics/egamma/www/validation
+setenv OUTPATH /afs/cern.ch/cms/Physics/egamma/www/validation/Photons
 cd $OUTPATH
+setenv NEWRELEASE {$NEWRELEASE}
+setenv OLDRELEASE {$OLDRELEASE}
+
 if (! -d $NEWRELEASE) then
   mkdir $NEWRELEASE
 endif
@@ -213,10 +227,12 @@ setenv OUTPATH $OUTPATH/vs${OLDRELEASE}
 
 if ( $FASTSIM == True) then 
 setenv OUTDIR $OUTPATH/${SAMPLE}FastSim
-else if ( $FASTSIM == False && $PU == True ) then 
+else if ( $FASTSIM == False && $UPGRADE == False && $PU == True ) then 
 setenv OUTDIR $OUTPATH/${SAMPLE}PU
 else if ( $FASTSIM == False && $PU == False && $UPGRADE == False ) then 
 setenv OUTDIR $OUTPATH/${SAMPLE}
+else if ( $SAMPLE == H130GGgluonfusion  && $UPGRADE == True && $PU == True && $FASTSIM == False) then
+setenv OUTDIR $OUTPATH/${SAMPLE}_${LHCENERGY}TeV_PU${PUlevel}
 else if ( $SAMPLE == H130GGgluonfusion  && $UPGRADE == True ) then
 setenv OUTDIR $OUTPATH/${SAMPLE}_${LHCENERGY}TeV
 else if ( $SAMPLE ==  PhotonJets_Pt_10  && $UPGRADE == True ) then
@@ -274,7 +290,7 @@ EOF
 
 
 cat > scaledhistosForPhotons <<EOF
-
+  nOfflineVtx
   scEta
   scPhi
   scEAll
@@ -353,12 +369,6 @@ EOF
 
 
 cat > unscaledhistosForPhotons <<EOF
-pEResVsR9All
-pEResVsR9Barrel
-pEResVsR9Endcap
-scpEResVsR9All
-scpEResVsR9Barrel
-scpEResVsR9Endcap
 pEResVsEtAll
 pEResVsEtBarrel
 pEResVsEtEndcap
@@ -384,22 +394,65 @@ EOF
 
 
 
-cat > 2dhistosForPhotons <<EOF
-  R9VsEtaAll
-  R1VsEtaAll
-  R2VsEtaAll
-  R9VsEtAll
-  R1VsEtAll
-  R2VsEtAll
-  sigmaIetaIetaVsEtAll
-  isoTrkSolidConeDR04VsEtAll
-  nTrkSolidConeDR04VsEtAll
-  eResVsR9All
-  eResVsR9Barrel
-  eResVsR9Endcap
-  sceResVsR9All
-  sceResVsR9Barrel
-  sceResVsR9Endcap
+cat > scaledhistosGEDspecific <<EOF
+  eResRegr1unconvAll
+  eResRegr1unconvBarrel
+  eResRegr1unconvEndcap
+  eResRegr1convAll
+  eResRegr1convBarrel
+  eResRegr1convEndcap
+  eResRegr2unconvAll
+  eResRegr2unconvBarrel
+  eResRegr2unconvEndcap
+  eResRegr2convAll
+  eResRegr2convBarrel
+  eResRegr2convEndcap
+  chargedHadIsoBarrel
+  chargedHadIsoEndcap
+  neutralHadIsoBarrel
+  neutralHadIsoEndcap
+  photonIsoBarrel
+  photonIsoEndcap
+  pfMVABarrel
+  pfMVAEndcap
+  nCluOutMustacheBarrel
+  nCluOutMustacheEndcap
+  dRPhoPFcand_Pho_unCleanedBarrel
+  dRPhoPFcand_Pho_unCleanedEndcap
+  dRPhoPFcand_Pho_CleanedBarrel
+  dRPhoPFcand_Pho_CleanedEndcap
+  dRPhoPFcand_ChHad_unCleanedBarrel
+  dRPhoPFcand_ChHad_unCleanedEndcap
+  dRPhoPFcand_ChHad_CleanedBarrel
+  dRPhoPFcand_ChHad_CleanedEndcap
+  dRPhoPFcand_NeuHad_unCleanedBarrel
+  dRPhoPFcand_NeuHad_unCleanedEndcap
+  dRPhoPFcand_NeuHad_CleanedBarrel
+  dRPhoPFcand_NeuHad_CleanedEndcap
+  SumPtOverPhoPt_Pho_unCleanedBarrel
+  SumPtOverPhoPt_Pho_unCleanedEndcap
+  SumPtOverPhoPt_Pho_CleanedBarrel
+  SumPtOverPhoPt_Pho_CleanedEndcap
+  SumPtOverPhoPt_ChHad_unCleanedBarrel
+  SumPtOverPhoPt_ChHad_unCleanedEndcap
+  SumPtOverPhoPt_ChHad_CleanedBarrel
+  SumPtOverPhoPt_ChHad_CleanedEndcap
+  SumPtOverPhoPt_NeuHad_unCleanedBarrel
+  SumPtOverPhoPt_NeuHad_unCleanedEndcap
+  SumPtOverPhoPt_NeuHad_CleanedBarrel
+  SumPtOverPhoPt_NeuHad_CleanedEndcap
+
+EOF
+
+
+cat > scaledhistosGEDspecificLogScale <<EOF
+  photonIsoBarrel
+  photonIsoEndcap
+  chargedHadIsoBarrel
+  chargedHadIsoEndcap
+  neutralHadIsoBarrel
+  neutralHadIsoEndcap
+
 
 EOF
 
@@ -507,11 +560,6 @@ hTkPtPullBarrel
 hTkPtPullEndcap
 hDPhiTracksAtVtxAll
 hDCotTracksAll
-hDEtaTracksAtEcalAll
-hDPhiTracksAtEcalAll
-eBcOverTkPoutAll
-eBcOverTkPoutBarrel
-eBcOverTkPoutEndcap
 zPVFromTracksAll
 zPVFromTracksBarrel
 zPVFromTracksEndcap
@@ -528,8 +576,6 @@ pChi2VsEtaAll
 pChi2VsRAll
 pDCotTracksVsEtaAll
 pDCotTracksVsRAll
-pDPhiTracksAtEcalVsEtaAll
-pDPhiTracksAtEcalVsRAll
 pdzPVVsR
 
 
@@ -706,6 +752,127 @@ EOF
 end
 
 
+foreach i (`cat scaledhistosGEDspecific`)
+  cat > temp$N.C <<EOF
+TCanvas *c$i = new TCanvas("c$i");
+c$i->SetFillColor(10);
+c$i->Divide(1,2);
+c$i->cd(1);
+//file_new->cd("DQMData/EgammaV/${ANALYZERNAME}/Photons");
+file_new->cd("$HISTOPATHNAME_Photons");
+int nBins = $i->GetNbinsX();
+float xMin=$i->GetBinLowEdge(1);
+float xMax=$i->GetBinLowEdge(nBins)+$i->GetBinWidth(nBins);
+Double_t mnew=$i->GetMaximum();
+Double_t nnew=$i->GetEntries();
+//file_old->cd("DQMData/EgammaV/${ANALYZERNAME}/Photons");
+file_old->cd("$HISTOPATHNAME_Photons");
+
+TH1F* hold=new  TH1F("hold"," ",nBins,xMin,xMax);
+hold=$i;
+Double_t mold=$i->GetMaximum();
+Double_t nold=$i->GetEntries();
+if ( $i==scEAll || $i==phoEAll ) {  
+$i->GetYaxis()->SetRangeUser(0.,2000.);
+}
+if ($i==chargedHadIsoBarrel || $i==chargedHadIsoBarrel ) {
+$i->GetXaxis()->SetRangeUser(0.,12.);
+}
+$i->SetStats(0);
+$i->SetMinimum(0.);
+if ( mnew > mold+sqrt(mold) )  { 
+$i->SetMaximum(mnew+2*sqrt(mnew)); 
+}  else { 
+$i->SetMaximum(mold+2*sqrt(mold)); 
+}
+$i->SetLineColor(kPink+8);
+$i->SetFillColor(kPink+8);
+//$i->SetLineWidth(3);
+$i->Draw();
+//file_new->cd("DQMData/EgammaV/${ANALYZERNAME}/Photons");
+file_new->cd("$HISTOPATHNAME_Photons");
+Double_t nnew=$i->GetEntries();
+$i->SetStats(0);
+$i->SetLineColor(kBlack);
+$i->SetMarkerColor(kBlack);
+$i->SetMarkerStyle(20);
+$i->SetMarkerSize(0.8);
+//$i->SetLineWidth(1);
+$i->Scale(nold/nnew);
+TH1F* hnew=new  TH1F("hnew"," ",nBins,xMin,xMax);
+hnew=$i;
+$i->Draw("e1same");
+c$i->cd(2);
+TH1F* ratio=new  TH1F("ratio"," ",nBins,xMin,xMax);
+ratio->Divide(hnew,hold);
+for ( int i=1; i<=ratio->GetNbinsX(); i++ ) {
+float num=hnew->GetBinContent(i);
+float den=hold->GetBinContent(i);
+float dNum=hnew->GetBinError(i);
+float dDen=hold->GetBinError(i);
+float erro=0;
+if ( num!=0 && den!=0) {
+erro= ((1./den)*(1./den)*dNum*dNum) + ((num*num)/(den*den*den*den) * (dDen*dDen));
+erro=sqrt(erro);
+}
+ratio->SetBinError(i, erro);
+}
+ratio->SetStats(0);
+ratio->SetLineColor(1);
+ratio->SetLineWidth(2);
+ratio->SetMinimum(0.);
+ratio->SetMaximum(4.);
+ratio->Draw("e");
+TLine *l = new TLine(xMin,1.,xMax,1.);
+l->Draw(); 
+c$i->SaveAs("gifs/$i.gif");
+//TString gifName=TString("gifs/$i")+"_ratio.gif";
+//c$i->SaveAs(gifName);
+EOF
+  setenv N `expr $N + 1`
+end
+
+
+
+foreach i (`cat scaledhistosGEDspecificLogScale`)
+  cat > temp$N.C <<EOF
+TCanvas *cc$i = new TCanvas("cc$i");
+cc$i->cd();
+cc$i->SetFillColor(10);
+cc$i->SetLogy();
+//file_new->cd("DQMData/EgammaV/${ANALYZERNAME}/Photons");
+file_new->cd("$HISTOPATHNAME_Photons");
+Double_t nnew=$i->GetEntries();
+//file_old->cd("DQMData/EgammaV/${ANALYZERNAME}/Photons");
+file_old->cd("$HISTOPATHNAME_Photons");
+if ( $i==hcalTowerSumEtConeDR04Barrel ||  $i==hcalTowerSumEtConeDR04Endcap  ) {  
+$i->GetXaxis()->SetRangeUser(0.,10.);
+}
+Double_t nold=$i->GetEntries();
+$i->SetStats(0);
+$i->SetMinimum(1);
+$i->SetLineColor(kPink+8);
+$i->SetFillColor(kPink+8);
+$i->Draw();
+//file_new->cd("DQMData/EgammaV/${ANALYZERNAME}/Photons");
+file_new->cd("$HISTOPATHNAME_Photons");
+Double_t nnew=$i->GetEntries();
+$i->SetStats(0);
+$i->SetLineColor(kBlack);
+$i->SetMarkerColor(kBlack);
+$i->SetMarkerStyle(20);
+$i->SetMarkerSize(1);
+$i->Draw("e1same");
+cc$i->SaveAs("gifs/log$i.gif");
+
+EOF
+  setenv N `expr $N + 1`
+end
+
+
+
+
+
 foreach i (`cat scaledhistosForPhotonsLogScale`)
   cat > temp$N.C <<EOF
 TCanvas *cc$i = new TCanvas("cc$i");
@@ -771,8 +938,8 @@ $i->GetYaxis()->SetRangeUser(0.,5.);
 } else if ( $i==pHoverEVsEtAll ||  $i==pnewHoverEVsEtAll ) 
 { $i->GetYaxis()->SetRangeUser(-0.05,0.05);
 } else  {
-$i->SetMinimum(0.8);
-$i->SetMaximum(1.1);
+$i->SetMinimum(0.94);
+$i->SetMaximum(1.04);
 }
 $i->SetLineColor(kPink+8);
 $i->SetMarkerColor(kPink+8);
@@ -796,33 +963,6 @@ EOF
 end
 
 
-
-
-
-foreach i (`cat 2dhistosForPhotons`)
-  cat > temp$N.C <<EOF
-TCanvas *c$i = new TCanvas("c$i");
-c$i->SetFillColor(10);
-//file_old->cd("DQMData/EgammaV/${ANALYZERNAME}/Photons");
-file_old->cd("$HISTOPATHNAME_Photons");
-$i->SetStats(0);
-$i->SetMinimum(0.);
-$i->SetMarkerColor(kPink+8);
-$i->SetMarkerStyle(2);
-$i->SetMarkerSize(0.2);
-$i->Draw();
-//file_new->cd("DQMData/EgammaV/${ANALYZERNAME}/Photons");
-file_new->cd("$HISTOPATHNAME_Photons");
-$i->SetStats(0);
-$i->SetMarkerColor(kBlack);
-$i->SetMarkerStyle(2);
-$i->SetMarkerSize(0.2);
-$i->Draw("same");
-c$i->SaveAs("gifs/$i.gif");
-
-EOF
-  setenv N `expr $N + 1`
-end
 
 
 
@@ -1103,7 +1243,7 @@ end
 
 
 
-
+###if ($ANALYZERNAME == pfPhotonValidator)  goto skippingHistosForTracks
 foreach i (`cat scaledhistosForTracks`)
   cat > temp$N.C <<EOF
 TCanvas *c$i = new TCanvas("c$i");
@@ -1141,6 +1281,8 @@ c$i->SaveAs("gifs/$i.gif");
 EOF
   setenv N `expr $N + 1`
 end
+
+
 
 foreach i (`cat unscaledhistosForTracks`)
   cat > temp$N.C <<EOF
@@ -1190,7 +1332,8 @@ EOF
   setenv N `expr $N + 1`
 end
 
-
+#skippingHistosForTracks:
+#  echo "Skipping histograms which are not defined for pfPhotons"
 
 
 
@@ -1223,6 +1366,8 @@ else if ( $PU == False && $FASTSIM == True) then
 setenv SAMPLE ${SAMPLE}FastSim
 else if ( $SAMPLE == H130GGgluonfusion && $UPGRADE == True ) then
 setenv SAMPLE ${SAMPLE}_${LHCENERGY}TeV
+else if ( $SAMPLE == H130GGgluonfusion && $UPGRADE == True &&  $PU == True ) then
+setenv SAMPLE ${SAMPLE}_${LHCENERGY}TeV_PU${PUlevel}
 endif
 
 
@@ -1265,8 +1410,9 @@ cat  validationPlotsTemplate.html >>& validation.html
 rm  validationPlotsTemplate.html 
 
 rm scaledhistosForPhotons
+rm scaledhistosGEDspecific
+rm scaledhistosGEDspecificLogScale
 rm unscaledhistosForPhotons
-rm 2dhistosForPhotons
 rm scaledhistosForConvertedPhotons
 rm scaledhistosForConvertedPhotonsLogScale
 rm unscaledhistosForConvertedPhotons

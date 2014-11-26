@@ -14,16 +14,20 @@
  *
  */
 
+#include <FWCore/Framework/interface/ConsumesCollector.h>
 #include <FWCore/Framework/interface/Frameworkfwd.h>
-#include <FWCore/Framework/interface/EDProducer.h>
+#include "FWCore/Framework/interface/stream/EDProducer.h"
 #include <FWCore/Framework/interface/Event.h>
 #include <FWCore/ParameterSet/interface/ParameterSet.h>
 #include <FWCore/Utilities/interface/InputTag.h>
 
+#include <DataFormats/CSCDigi/interface/CSCStripDigiCollection.h>
+#include <DataFormats/CSCDigi/interface/CSCWireDigiCollection.h>
+
 class CSCRecHitDBuilder; 
 class CSCRecoConditions;
 
-class CSCRecHitDProducer : public edm::EDProducer {
+class CSCRecHitDProducer : public edm::stream::EDProducer<> {
 
 public:
   explicit CSCRecHitDProducer( const edm::ParameterSet& ps );
@@ -40,11 +44,11 @@ public:
   bool useTimingCorrections;
   bool useGasGainCorrections;
 
-  edm::InputTag stripDigiTag_;
-  edm::InputTag wireDigiTag_;
-
   CSCRecHitDBuilder* recHitBuilder_;
   CSCRecoConditions* recoConditions_;
+
+  edm::EDGetTokenT<CSCStripDigiCollection> s_token;
+  edm::EDGetTokenT<CSCWireDigiCollection> w_token;
 };
 
 #endif

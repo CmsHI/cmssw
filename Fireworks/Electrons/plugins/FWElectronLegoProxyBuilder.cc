@@ -3,7 +3,6 @@
 // Package:     Muons
 // Class  :     FWElectronLegoProxyBuilder
 //
-// $Id: FWElectronLegoProxyBuilder.cc,v 1.4 2010/06/18 12:42:18 yana Exp $
 //
 
 #include "TEveStraightLineSet.h"
@@ -30,6 +29,7 @@ private:
    FWElectronLegoProxyBuilder(const FWElectronLegoProxyBuilder&);
    const FWElectronLegoProxyBuilder& operator=(const FWElectronLegoProxyBuilder&);
 
+   using FWSimpleProxyBuilderTemplate<reco::GsfElectron>  ::build;
    virtual void build(const reco::GsfElectron& iData, unsigned int iIndex, TEveElement& oItemHolder, const FWViewContext*) override;
 };
 

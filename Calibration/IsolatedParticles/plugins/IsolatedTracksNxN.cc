@@ -45,22 +45,45 @@ IsolatedTracksNxN::IsolatedTracksNxN(const edm::ParameterSet& iConfig) {
   maxTrackEta_           = iConfig.getUntrackedParameter<double>("maxTrackEta", 5.0      );
   debugL1Info_           = iConfig.getUntrackedParameter<bool>  ("DebugL1Info", false    );
   L1TriggerAlgoInfo_     = iConfig.getUntrackedParameter<bool>  ("L1TriggerAlgoInfo");
-  L1extraTauJetSource_   = iConfig.getParameter<edm::InputTag>  ("L1extraTauJetSource"   );
-  L1extraCenJetSource_   = iConfig.getParameter<edm::InputTag>  ("L1extraCenJetSource"   );
-  L1extraFwdJetSource_   = iConfig.getParameter<edm::InputTag>  ("L1extraFwdJetSource"   );
-  L1extraMuonSource_     = iConfig.getParameter<edm::InputTag>  ("L1extraMuonSource"     );
-  L1extraIsoEmSource_    = iConfig.getParameter<edm::InputTag>  ("L1extraIsoEmSource"    );
-  L1extraNonIsoEmSource_ = iConfig.getParameter<edm::InputTag>  ("L1extraNonIsoEmSource" );
-  L1GTReadoutRcdSource_  = iConfig.getParameter<edm::InputTag>  ("L1GTReadoutRcdSource"  );
-  L1GTObjectMapRcdSource_= iConfig.getParameter<edm::InputTag>  ("L1GTObjectMapRcdSource");
-  JetSrc_                = iConfig.getParameter<edm::InputTag>  ("JetSource");
-  JetExtender_           = iConfig.getParameter<edm::InputTag>  ("JetExtender");
-  HBHERecHitSource_      = iConfig.getParameter<edm::InputTag>  ("HBHERecHitSource");
   tMinE_                 = iConfig.getUntrackedParameter<double>("TimeMinCutECAL", -500.);
   tMaxE_                 = iConfig.getUntrackedParameter<double>("TimeMaxCutECAL",  500.);
   tMinH_                 = iConfig.getUntrackedParameter<double>("TimeMinCutHCAL", -500.);
   tMaxH_                 = iConfig.getUntrackedParameter<double>("TimeMaxCutHCAL",  500.);
-  nbad                   = 0;
+
+  edm::InputTag L1extraTauJetSource_   = iConfig.getParameter<edm::InputTag>  ("L1extraTauJetSource"   );
+  edm::InputTag L1extraCenJetSource_   = iConfig.getParameter<edm::InputTag>  ("L1extraCenJetSource"   );
+  edm::InputTag L1extraFwdJetSource_   = iConfig.getParameter<edm::InputTag>  ("L1extraFwdJetSource"   );
+  edm::InputTag L1extraMuonSource_     = iConfig.getParameter<edm::InputTag>  ("L1extraMuonSource"     );
+  edm::InputTag L1extraIsoEmSource_    = iConfig.getParameter<edm::InputTag>  ("L1extraIsoEmSource"    );
+  edm::InputTag L1extraNonIsoEmSource_ = iConfig.getParameter<edm::InputTag>  ("L1extraNonIsoEmSource" );
+  edm::InputTag L1GTReadoutRcdSource_  = iConfig.getParameter<edm::InputTag>  ("L1GTReadoutRcdSource"  );
+  edm::InputTag L1GTObjectMapRcdSource_= iConfig.getParameter<edm::InputTag>  ("L1GTObjectMapRcdSource");
+  edm::InputTag JetSrc_                = iConfig.getParameter<edm::InputTag>  ("JetSource");
+  edm::InputTag JetExtender_           = iConfig.getParameter<edm::InputTag>  ("JetExtender");
+  edm::InputTag HBHERecHitSource_      = iConfig.getParameter<edm::InputTag>  ("HBHERecHitSource");
+
+  // define tokens for access
+  tok_L1extTauJet_  = consumes<l1extra::L1JetParticleCollection>(L1extraTauJetSource_);
+  tok_L1extCenJet_  = consumes<l1extra::L1JetParticleCollection>(L1extraCenJetSource_);
+  tok_L1extFwdJet_  = consumes<l1extra::L1JetParticleCollection>(L1extraFwdJetSource_);
+  tok_L1extMu_      = consumes<l1extra::L1MuonParticleCollection>(L1extraMuonSource_);
+  tok_L1extIsoEm_   = consumes<l1extra::L1EmParticleCollection>(L1extraIsoEmSource_);
+  tok_L1extNoIsoEm_ = consumes<l1extra::L1EmParticleCollection>(L1extraNonIsoEmSource_);
+  tok_jets_         = consumes<reco::CaloJetCollection>(JetSrc_);
+  tok_hbhe_         = consumes<HBHERecHitCollection>(HBHERecHitSource_);
+  
+  tok_genTrack_     = consumes<reco::TrackCollection>(edm::InputTag("generalTracks"));
+  tok_recVtx_       = consumes<reco::VertexCollection>(edm::InputTag("offlinePrimaryVertices"));
+  tok_bs_           = consumes<reco::BeamSpot>(edm::InputTag("offlineBeamSpot"));
+  tok_EB_           = consumes<EcalRecHitCollection>(edm::InputTag("ecalRecHit","EcalRecHitsEB"));
+  tok_EE_           = consumes<EcalRecHitCollection>(edm::InputTag("ecalRecHit","EcalRecHitsEE"));
+
+  tok_simTk_        = consumes<edm::SimTrackContainer>(edm::InputTag("g4SimHits"));
+  tok_simVtx_       = consumes<edm::SimVertexContainer>(edm::InputTag("g4SimHits"));
+  tok_caloEB_       = consumes<edm::PCaloHitContainer>(edm::InputTag("g4SimHits", "EcalHitsEB"));
+  tok_caloEE_       = consumes<edm::PCaloHitContainer>(edm::InputTag("g4SimHits", "EcalHitsEE"));
+  tok_caloHH_       = consumes<edm::PCaloHitContainer>(edm::InputTag("g4SimHits", "HcalHits"));
+  nbad              = 0;
 
   if(myverbose_>=0) {
     std::cout <<"Parameters read from config file \n" 
@@ -74,17 +97,6 @@ IsolatedTracksNxN::IsolatedTracksNxN(const edm::ParameterSet& iConfig) {
 	      << "\t tMaxH_ "                  << tMaxH_
 	      << "\n debugL1Info_ "            << debugL1Info_  
 	      << "\t L1TriggerAlgoInfo_ "      << L1TriggerAlgoInfo_
-	      << "\t L1extraTauJetSource_ "    << L1extraTauJetSource_
-	      << "\t L1extraCenJetSource_ "    << L1extraCenJetSource_
-	      << "\t L1extraFwdJetSource_ "    << L1extraFwdJetSource_
-	      << "\t L1extraMuonSource_ "      << L1extraMuonSource_
-	      << "\t L1extraIsoEmSource_ "     << L1extraIsoEmSource_
-	      << "\t L1extraNonIsoEmSource_ "  << L1extraNonIsoEmSource_
-	      << "\t L1GTReadoutRcdSource_ "   << L1GTReadoutRcdSource_
-	      << "\t L1GTObjectMapRcdSource_ " << L1GTObjectMapRcdSource_
-	      << "\t JetSrc_  "                << JetSrc_
-	      << "\t JetExtender_ "            << JetExtender_
-	      << "\t HBHERecHitSource_ "       << HBHERecHitSource_ 
 	      << "\n" << std::endl;
   }
 
@@ -113,7 +125,7 @@ void IsolatedTracksNxN::analyze(const edm::Event& iEvent, const edm::EventSetup&
   nEventProc++;
 
   edm::Handle<reco::TrackCollection> trkCollection;
-  iEvent.getByLabel("generalTracks", trkCollection);
+  iEvent.getByToken(tok_genTrack_, trkCollection);
   reco::TrackCollection::const_iterator trkItr;
   if(debugTrks_>1){
     std::cout << "Track Collection: " << std::endl;
@@ -163,9 +175,6 @@ void IsolatedTracksNxN::analyze(const edm::Event& iEvent, const edm::EventSetup&
     for (CItAlgo itAlgo        = algorithmMap.begin(); itAlgo != algorithmMap.end(); itAlgo++) {
       std::string algName      = itAlgo->first;
       int algBitNumber         = ( itAlgo->second ).algoBitNumber();
-      //bool algResultBeforeMask = m_l1GtUtils.decisionBeforeMask(iEvent, itAlgo->first, iErrorCode);
-      //bool algResultAfterMask  = m_l1GtUtils.decisionAfterMask (iEvent, itAlgo->first, iErrorCode);
-      //int  triggerMask         = m_l1GtUtils.triggerMask       (iEvent, itAlgo->first, iErrorCode);
       bool decision            = m_l1GtUtils.decision          (iEvent, itAlgo->first, iErrorCode);
       int  preScale            = m_l1GtUtils.prescaleFactor    (iEvent, itAlgo->first, iErrorCode);
     
@@ -193,7 +202,7 @@ void IsolatedTracksNxN::analyze(const edm::Event& iEvent, const edm::EventSetup&
 
     // L1Taus 
     edm::Handle<l1extra::L1JetParticleCollection> l1TauHandle;
-    iEvent.getByLabel(L1extraTauJetSource_,l1TauHandle);
+    iEvent.getByToken(tok_L1extTauJet_,l1TauHandle);
     l1extra::L1JetParticleCollection::const_iterator itr;
     int iL1Obj=0;
     for(itr = l1TauHandle->begin(),iL1Obj=0; itr != l1TauHandle->end(); ++itr,iL1Obj++) {    
@@ -211,7 +220,7 @@ void IsolatedTracksNxN::analyze(const edm::Event& iEvent, const edm::EventSetup&
 
     // L1 Central Jets
     edm::Handle<l1extra::L1JetParticleCollection> l1CenJetHandle;
-    iEvent.getByLabel(L1extraCenJetSource_,l1CenJetHandle);
+    iEvent.getByToken(tok_L1extCenJet_,l1CenJetHandle);
     for( itr = l1CenJetHandle->begin(),iL1Obj=0;  itr != l1CenJetHandle->end(); ++itr,iL1Obj++ ) {
       if(iL1Obj<1) {
 	t_L1CenJetPt    ->push_back( itr->pt() );
@@ -227,7 +236,7 @@ void IsolatedTracksNxN::analyze(const edm::Event& iEvent, const edm::EventSetup&
   
     // L1 Forward Jets
     edm::Handle<l1extra::L1JetParticleCollection> l1FwdJetHandle;
-    iEvent.getByLabel(L1extraFwdJetSource_,l1FwdJetHandle);
+    iEvent.getByToken(tok_L1extFwdJet_,l1FwdJetHandle);
     for( itr = l1FwdJetHandle->begin(),iL1Obj=0;  itr != l1FwdJetHandle->end(); ++itr,iL1Obj++ ) {
       if(iL1Obj<1) {
 	t_L1FwdJetPt    ->push_back( itr->pt() );
@@ -244,7 +253,7 @@ void IsolatedTracksNxN::analyze(const edm::Event& iEvent, const edm::EventSetup&
     // L1 Isolated EM onjects
     l1extra::L1EmParticleCollection::const_iterator itrEm;
     edm::Handle<l1extra::L1EmParticleCollection> l1IsoEmHandle ;
-    iEvent.getByLabel(L1extraIsoEmSource_, l1IsoEmHandle);
+    iEvent.getByToken(tok_L1extIsoEm_, l1IsoEmHandle);
     for( itrEm = l1IsoEmHandle->begin(),iL1Obj=0;  itrEm != l1IsoEmHandle->end(); ++itrEm,iL1Obj++ ) {
       if(iL1Obj<1) {
 	t_L1IsoEMPt     ->push_back(  itrEm->pt() );
@@ -260,7 +269,7 @@ void IsolatedTracksNxN::analyze(const edm::Event& iEvent, const edm::EventSetup&
   
     // L1 Non-Isolated EM onjects
     edm::Handle<l1extra::L1EmParticleCollection> l1NonIsoEmHandle ;
-    iEvent.getByLabel(L1extraNonIsoEmSource_, l1NonIsoEmHandle);
+    iEvent.getByToken(tok_L1extNoIsoEm_, l1NonIsoEmHandle);
     for( itrEm = l1NonIsoEmHandle->begin(),iL1Obj=0;  itrEm != l1NonIsoEmHandle->end(); ++itrEm,iL1Obj++ ) {
       if(iL1Obj<1) {
 	t_L1NonIsoEMPt  ->push_back( itrEm->pt() );
@@ -277,7 +286,7 @@ void IsolatedTracksNxN::analyze(const edm::Event& iEvent, const edm::EventSetup&
     // L1 Muons
     l1extra::L1MuonParticleCollection::const_iterator itrMu;
     edm::Handle<l1extra::L1MuonParticleCollection> l1MuHandle ;
-    iEvent.getByLabel(L1extraMuonSource_, l1MuHandle);
+    iEvent.getByToken(tok_L1extMu_, l1MuHandle);
     for( itrMu = l1MuHandle->begin(),iL1Obj=0;  itrMu != l1MuHandle->end(); ++itrMu,iL1Obj++ ) {
       if(iL1Obj<1) {
 	t_L1MuonPt      ->push_back( itrMu->pt() );
@@ -295,7 +304,7 @@ void IsolatedTracksNxN::analyze(const edm::Event& iEvent, const edm::EventSetup&
   //============== store the information about all the Non-Fake vertices ===============
 
   edm::Handle<reco::VertexCollection> recVtxs;
-  iEvent.getByLabel("offlinePrimaryVertices",recVtxs);
+  iEvent.getByToken(tok_recVtx_,recVtxs);
   
   std::vector<reco::Track> svTracks;
   math::XYZPoint leadPV(0,0,0);
@@ -369,14 +378,14 @@ void IsolatedTracksNxN::analyze(const edm::Event& iEvent, const edm::EventSetup&
 
   // Get the beamspot
   edm::Handle<reco::BeamSpot> beamSpotH;
-  iEvent.getByLabel("offlineBeamSpot", beamSpotH);
+  iEvent.getByToken(tok_bs_, beamSpotH);
   math::XYZPoint bspot;
   bspot = ( beamSpotH.isValid() ) ? beamSpotH->position() : math::XYZPoint(0, 0, 0);
 
   //=====================================================================
 
   edm::Handle<reco::CaloJetCollection> jets;
-  iEvent.getByLabel(JetSrc_,jets);
+  iEvent.getByToken(tok_jets_,jets);
   //  edm::Handle<reco::JetExtendedAssociation::Container> jetExtender;
   //  iEvent.getByLabel(JetExtender_,jetExtender);
 
@@ -405,8 +414,8 @@ void IsolatedTracksNxN::analyze(const edm::Event& iEvent, const edm::EventSetup&
   
   edm::Handle<EcalRecHitCollection> barrelRecHitsHandle;
   edm::Handle<EcalRecHitCollection> endcapRecHitsHandle;
-  iEvent.getByLabel("ecalRecHit","EcalRecHitsEB",barrelRecHitsHandle);
-  iEvent.getByLabel("ecalRecHit","EcalRecHitsEE",endcapRecHitsHandle);
+  iEvent.getByToken(tok_EB_,barrelRecHitsHandle);
+  iEvent.getByToken(tok_EE_,endcapRecHitsHandle);
 
   // Retrieve the good/bad ECAL channels from the DB
   edm::ESHandle<EcalChannelStatus> ecalChStatus;
@@ -419,7 +428,7 @@ void IsolatedTracksNxN::analyze(const edm::Event& iEvent, const edm::EventSetup&
   const EcalTrigTowerConstituentsMap& ttMap = *hTtmap;
 
   edm::Handle<HBHERecHitCollection> hbhe;
-  iEvent.getByLabel(HBHERecHitSource_, hbhe);
+  iEvent.getByToken(tok_hbhe_, hbhe);
   if (!hbhe.isValid()) {
     nbad++;
     if (nbad < 10) std::cout << "No HBHE rechit collection\n";
@@ -429,21 +438,21 @@ void IsolatedTracksNxN::analyze(const edm::Event& iEvent, const edm::EventSetup&
 
   //get Handles to SimTracks and SimHits
   edm::Handle<edm::SimTrackContainer> SimTk;
-  if (doMC) iEvent.getByLabel("g4SimHits",SimTk);
+  if (doMC) iEvent.getByToken(tok_simTk_,SimTk);
   edm::SimTrackContainer::const_iterator simTrkItr;
 
   edm::Handle<edm::SimVertexContainer> SimVtx;
-  if (doMC) iEvent.getByLabel("g4SimHits",SimVtx);
+  if (doMC) iEvent.getByToken(tok_simVtx_,SimVtx);
 
   //get Handles to PCaloHitContainers of eb/ee/hbhe
   edm::Handle<edm::PCaloHitContainer> pcaloeb;
-  if (doMC) iEvent.getByLabel("g4SimHits", "EcalHitsEB", pcaloeb);
+  if (doMC) iEvent.getByToken(tok_caloEB_, pcaloeb);
 
   edm::Handle<edm::PCaloHitContainer> pcaloee;
-  if (doMC) iEvent.getByLabel("g4SimHits", "EcalHitsEE", pcaloee);
+  if (doMC) iEvent.getByToken(tok_caloEE_, pcaloee);
 
   edm::Handle<edm::PCaloHitContainer> pcalohh;
-  if (doMC) iEvent.getByLabel("g4SimHits", "HcalHits", pcalohh);
+  if (doMC) iEvent.getByToken(tok_caloHH_, pcalohh);
   
   //associates tracker rechits/simhits to a track
   TrackerHitAssociator* associate=0;
@@ -506,9 +515,6 @@ void IsolatedTracksNxN::analyze(const edm::Event& iEvent, const edm::EventSetup&
     }
     
     const reco::HitPattern& hitp    = pTrack->hitPattern();
-    const reco::HitPattern& hitpIn  = pTrack->trackerExpectedHitsInner();
-    const reco::HitPattern& hitpOut = pTrack->trackerExpectedHitsOuter();
-
     int nLayersCrossed = hitp.trackerLayersWithMeasurement() ;        
     int nOuterHits     = hitp.stripTOBLayersWithMeasurement()+hitp.stripTECLayersWithMeasurement() ;
     
@@ -801,26 +807,26 @@ void IsolatedTracksNxN::analyze(const edm::Event& iEvent, const edm::EventSetup&
 	
 	t_trackHitsTOB          ->push_back( hitp.stripTOBLayersWithMeasurement()       ); 
 	t_trackHitsTEC          ->push_back( hitp.stripTECLayersWithMeasurement()       );
-	t_trackHitInMissTOB     ->push_back( hitpIn.stripTOBLayersWithoutMeasurement()  ); 
-	t_trackHitInMissTEC     ->push_back( hitpIn.stripTECLayersWithoutMeasurement()  );  
-	t_trackHitInMissTIB     ->push_back( hitpIn.stripTIBLayersWithoutMeasurement()  );  
-	t_trackHitInMissTID     ->push_back( hitpIn.stripTIDLayersWithoutMeasurement()  );
-	t_trackHitInMissTIBTID  ->push_back( hitpIn.stripTIBLayersWithoutMeasurement() + hitpIn.stripTIDLayersWithoutMeasurement() );  
+	t_trackHitInMissTOB     ->push_back( hitp.stripTOBLayersWithoutMeasurement(reco::HitPattern::MISSING_OUTER_HITS)  ); 
+	t_trackHitInMissTEC     ->push_back( hitp.stripTECLayersWithoutMeasurement(reco::HitPattern::MISSING_OUTER_HITS)  );  
+	t_trackHitInMissTIB     ->push_back( hitp.stripTIBLayersWithoutMeasurement(reco::HitPattern::MISSING_INNER_HITS)  );  
+	t_trackHitInMissTID     ->push_back( hitp.stripTIDLayersWithoutMeasurement(reco::HitPattern::MISSING_INNER_HITS)  );
+	t_trackHitInMissTIBTID  ->push_back( hitp.stripTIBLayersWithoutMeasurement(reco::HitPattern::MISSING_INNER_HITS) + hitp.stripTIDLayersWithoutMeasurement(reco::HitPattern::MISSING_INNER_HITS) );  
 
-	t_trackHitOutMissTOB    ->push_back( hitpOut.stripTOBLayersWithoutMeasurement() );
-	t_trackHitOutMissTEC    ->push_back( hitpOut.stripTECLayersWithoutMeasurement() ); 
-	t_trackHitOutMissTIB    ->push_back( hitpOut.stripTIBLayersWithoutMeasurement() );
-	t_trackHitOutMissTID    ->push_back( hitpOut.stripTIDLayersWithoutMeasurement() );
-	t_trackHitOutMissTOBTEC ->push_back( hitpOut.stripTOBLayersWithoutMeasurement() + hitpOut.stripTECLayersWithoutMeasurement() );
+	t_trackHitOutMissTOB    ->push_back( hitp.stripTOBLayersWithoutMeasurement(reco::HitPattern::MISSING_OUTER_HITS) );
+	t_trackHitOutMissTEC    ->push_back( hitp.stripTECLayersWithoutMeasurement(reco::HitPattern::MISSING_OUTER_HITS) ); 
+	t_trackHitOutMissTIB    ->push_back( hitp.stripTIBLayersWithoutMeasurement(reco::HitPattern::MISSING_INNER_HITS) );
+	t_trackHitOutMissTID    ->push_back( hitp.stripTIDLayersWithoutMeasurement(reco::HitPattern::MISSING_INNER_HITS) );
+	t_trackHitOutMissTOBTEC ->push_back( hitp.stripTOBLayersWithoutMeasurement(reco::HitPattern::MISSING_OUTER_HITS) + hitp.stripTECLayersWithoutMeasurement(reco::HitPattern::MISSING_OUTER_HITS) );
 
-	t_trackHitInMeasTOB     ->push_back( hitpIn.stripTOBLayersWithMeasurement()  ); 
-	t_trackHitInMeasTEC     ->push_back( hitpIn.stripTECLayersWithMeasurement()  );  
-	t_trackHitInMeasTIB     ->push_back( hitpIn.stripTIBLayersWithMeasurement()  );  
-	t_trackHitInMeasTID     ->push_back( hitpIn.stripTIDLayersWithMeasurement()  );
-	t_trackHitOutMeasTOB    ->push_back( hitpOut.stripTOBLayersWithMeasurement() );
-	t_trackHitOutMeasTEC    ->push_back( hitpOut.stripTECLayersWithMeasurement() ); 
-	t_trackHitOutMeasTIB    ->push_back( hitpOut.stripTIBLayersWithMeasurement() );
-	t_trackHitOutMeasTID    ->push_back( hitpOut.stripTIDLayersWithMeasurement() );
+	t_trackHitInMeasTOB     ->push_back( hitp.stripTOBLayersWithMeasurement()  ); 
+	t_trackHitInMeasTEC     ->push_back( hitp.stripTECLayersWithMeasurement()  );  
+	t_trackHitInMeasTIB     ->push_back( hitp.stripTIBLayersWithMeasurement()  );  
+	t_trackHitInMeasTID     ->push_back( hitp.stripTIDLayersWithMeasurement()  );
+	t_trackHitOutMeasTOB    ->push_back( hitp.stripTOBLayersWithMeasurement() );
+	t_trackHitOutMeasTEC    ->push_back( hitp.stripTECLayersWithMeasurement() ); 
+	t_trackHitOutMeasTIB    ->push_back( hitp.stripTIBLayersWithMeasurement() );
+	t_trackHitOutMeasTID    ->push_back( hitp.stripTIDLayersWithMeasurement() );
 	t_trackOutPosOutHitDr   ->push_back( trackOutPosOutHitDr                     );
 	t_trackL                ->push_back( trackL                                  );
 
@@ -929,27 +935,6 @@ void IsolatedTracksNxN::analyze(const edm::Event& iEvent, const edm::EventSetup&
 	  t_hsim5x5CharHad        ->push_back( hcalScale*hsimInfo5x5.eChargedHad );
 	  t_hsim7x7CharHad        ->push_back( hcalScale*hsimInfo7x7.eChargedHad );
 	}
-	/*
-	if(hcalScale*hsimInfo3x3["eTotal"] > 50.0) {
-
-	  std::cout << "Loosely Iso Track : eta " << eta1 << " Rec Mom " << p1 << " SimMom " << simTrackP << " h3x3 " << h3x3 << std::endl;
-
-	  std::cout <<"Closest cell Hcal (atHCAL) " << (HcalDetId)ClosestCell << std::endl;
-
-	  std::cout <<"trkHcalEne, etotal, matched, rest " <<hcalScale*trkHcalEne<<std::setw(15)<<hcalScale*hsimInfo3x3["eTotal"]
-		    <<std::setw(15)<<hcalScale*hsimInfo3x3["eMatched"]<<std::setw(15)<<hcalScale*hsimInfo3x3["eRest"]
-		    <<std::endl;
-	  unsigned int nn = t_trkHcalEne->size();
-	  std::cout <<"in Tree                           " << (*t_trkHcalEne)[nn-1] <<std::setw(15)<< (*t_hsim3x3)[nn-1]
-		    <<std::setw(15)<< (*t_hsim3x3Matched)[nn-1] <<std::setw(15)<< (*t_hsim3x3Rest)[nn-1]
-		    << std::endl;
-
-	  std::cout << "debug output \n" << std::endl;
-	  std::map<std::string, double> hsimInfo3x3_debug = spr::eHCALSimInfo(iEvent, theHBHETopology, ClosestCell, geo,pcalohh, SimTk, SimVtx, pTrack, *associate, 1,1, 150.0, true);
-
-	}
-	*/
-
 
       } // if loosely isolated track
     } // check p1/eta
@@ -1728,20 +1713,18 @@ void IsolatedTracksNxN::printTrack(const reco::Track* pTrack) {
   
   if( printTrkHitPattern_ ) {
     const reco::HitPattern& p = pTrack->hitPattern();
-    const reco::HitPattern& p1 = pTrack->trackerExpectedHitsInner();
-    const reco::HitPattern& p2 = pTrack->trackerExpectedHitsOuter();
 
     std::cout<<"default " << std::endl;
-    for (int i=0; i<p.numberOfHits(); i++) {
-      p.printHitPattern(i, std::cout);
+    for (int i=0; i<p.numberOfHits(reco::HitPattern::TRACK_HITS); i++) {
+      p.printHitPattern(reco::HitPattern::TRACK_HITS, i, std::cout);
     }
-    std::cout<<"trackerExpectedHitsInner() " << std::endl;
-    for (int i=0; i<p1.numberOfHits(); i++) {
-      p1.printHitPattern(i, std::cout);
+    std::cout<<"trackerMissingInnerHits() " << std::endl;
+    for (int i=0; i<p.numberOfHits(reco::HitPattern::MISSING_INNER_HITS); i++) {
+      p.printHitPattern(reco::HitPattern::MISSING_INNER_HITS, i, std::cout);
     }
-    std::cout<<"trackerExpectedHitsOuter() " << std::endl;
-    for (int i=0; i<p2.numberOfHits(); i++) {
-      p2.printHitPattern(i, std::cout);
+    std::cout<<"trackerMissingOuterHits() " << std::endl;
+    for (int i=0; i<p.numberOfHits(reco::HitPattern::MISSING_OUTER_HITS); i++) {
+      p.printHitPattern(reco::HitPattern::MISSING_OUTER_HITS, i, std::cout);
     }
 
 

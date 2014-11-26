@@ -19,7 +19,7 @@ ElBestPV = cms.EDProducer(
 
 selectedElectrons = cms.EDFilter(
     "TauValElectronSelector",
-    src = cms.InputTag('gsfElectrons'),
+    src = cms.InputTag('gedGsfElectrons'),
     cut = cms.string("pt > 25.0 && abs(eta) < 2.4 && isElectron"),
     filter = cms.bool(False)
 	)
@@ -43,7 +43,7 @@ trackElectrons = cms.EDFilter(
     "TauValElectronSelector",
     src = cms.InputTag('idElectrons'),
     cut = cms.string('gsfTrack.isNonnull  && 0.7 < eSuperClusterOverP < 1.5'),
-#    cut = cms.string('gsfTrack.isNonnull && gsfTrack.trackerExpectedHitsInner.numberOfHits = 0 && 0.7 < eSuperClusterOverP < 1.5'),
+#    cut = cms.string('gsfTrack.isNonnull && gsfTrack.hitPattern().numberOfHits(\'MISSING_INNER_HITS\') = 0 && 0.7 < eSuperClusterOverP < 1.5'),
     filter = cms.bool(False)
 )
 

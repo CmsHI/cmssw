@@ -12,48 +12,41 @@ ________________________________________________________________**/
 
 #include "RecoVertex/BeamSpotProducer/interface/BeamFitter.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
+#include "FWCore/Framework/interface/ConsumesCollector.h"
 #include "CondCore/DBOutputService/interface/PoolDBOutputService.h"
 #include "CondFormats/BeamSpotObjects/interface/BeamSpotObjects.h"
 
 #include "FWCore/Utilities/interface/InputTag.h"
 #include "DataFormats/Common/interface/View.h"
 
-#include "DataFormats/TrackCandidate/interface/TrackCandidate.h"
-#include "DataFormats/TrackCandidate/interface/TrackCandidateCollection.h"
-#include "DataFormats/TrackReco/interface/Track.h"
-#include "DataFormats/TrackReco/interface/TrackFwd.h"
 #include "DataFormats/TrackReco/interface/HitPattern.h"
 #include "DataFormats/VertexReco/interface/Vertex.h"
 
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 
-// ----------------------------------------------------------------------
-// Useful function:
-// ----------------------------------------------------------------------
-const char * BeamFitter::formatBTime(const std::time_t & t)  {
-  struct std::tm * ptm;
-  ptm = gmtime(&t);
-  static char ts[] = "yyyy.mn.dd hh:mm:ss zzz ";
-  // This value should be taken directly from edm::Event::time(), which
-  // returns GMT (to be confirmed)
-  strftime(ts,sizeof(ts),"%Y.%m.%d %H:%M:%S GMT",ptm);
-  return ts;
-}
 // Update the string representations of the time
 void BeamFitter::updateBTime() {
-  const char* fbeginTime = formatBTime(freftime[0]);
+  char ts[] = "yyyy.mn.dd hh:mm:ss zzz ";
+  char* fbeginTime = ts;
+  strftime(fbeginTime,sizeof(ts),"%Y.%m.%d %H:%M:%S GMT",gmtime(&freftime[0]));
   sprintf(fbeginTimeOfFit,"%s",fbeginTime);
-  const char* fendTime = formatBTime(freftime[1]);
+  char* fendTime = ts;
+  strftime(fendTime,sizeof(ts),"%Y.%m.%d %H:%M:%S GMT",gmtime(&freftime[1]));
   sprintf(fendTimeOfFit,"%s",fendTime);
 }
 
 
-BeamFitter::BeamFitter(const edm::ParameterSet& iConfig): fPVTree_(0)
+BeamFitter::BeamFitter(const edm::ParameterSet& iConfig,
+                       edm::ConsumesCollector &&iColl): fPVTree_(0)
 {
 
   debug_             = iConfig.getParameter<edm::ParameterSet>("BeamFitter").getUntrackedParameter<bool>("Debug");
-  tracksLabel_       = iConfig.getParameter<edm::ParameterSet>("BeamFitter").getUntrackedParameter<edm::InputTag>("TrackCollection");
-  vertexLabel_       = iConfig.getUntrackedParameter<edm::InputTag>("primaryVertex", edm::InputTag("offlinePrimaryVertices"));
+  tracksToken_       = iColl.consumes<reco::TrackCollection>(
+      iConfig.getParameter<edm::ParameterSet>("BeamFitter").getUntrackedParameter<edm::InputTag>("TrackCollection"));
+  vertexToken_       = iColl.consumes<edm::View<reco::Vertex> >(
+      iConfig.getUntrackedParameter<edm::InputTag>("primaryVertex", edm::InputTag("offlinePrimaryVertices")));
+  beamSpotToken_     = iColl.consumes<reco::BeamSpot>(
+      iConfig.getUntrackedParameter<edm::InputTag>("beamSpot", edm::InputTag("offlineBeamSpot")));
   writeTxt_          = iConfig.getParameter<edm::ParameterSet>("BeamFitter").getUntrackedParameter<bool>("WriteAscii");
   outputTxt_         = iConfig.getParameter<edm::ParameterSet>("BeamFitter").getUntrackedParameter<std::string>("AsciiFileName");
   appendRunTxt_      = iConfig.getParameter<edm::ParameterSet>("BeamFitter").getUntrackedParameter<bool>("AppendRunToFileName");
@@ -178,7 +171,7 @@ BeamFitter::BeamFitter(const edm::ParameterSet& iConfig): fPVTree_(0)
   resetCutFlow();
 
   // Primary vertex fitter
-  MyPVFitter = new PVFitter(iConfig);
+  MyPVFitter = new PVFitter(iConfig, iColl);
   MyPVFitter->resetAll();
   if (savePVVertices_){
     fPVTree_ = new TTree("PrimaryVertices","PrimaryVertices");
@@ -239,13 +232,13 @@ void BeamFitter::readEvent(const edm::Event& iEvent)
   if (fendLumiOfFit == -1 || fendLumiOfFit < flumi) fendLumiOfFit = flumi;
 
   edm::Handle<reco::TrackCollection> TrackCollection;
-  iEvent.getByLabel(tracksLabel_, TrackCollection);
+  iEvent.getByToken(tracksToken_, TrackCollection);
 
   //------ Primary Vertices
   edm::Handle< edm::View<reco::Vertex> > PVCollection;
   bool hasPVs = false;
   edm::View<reco::Vertex> pv;
-  if ( iEvent.getByLabel(vertexLabel_, PVCollection ) ) {
+  if ( iEvent.getByToken(vertexToken_, PVCollection ) ) {
       pv = *PVCollection;
       hasPVs = true;
   }
@@ -254,7 +247,7 @@ void BeamFitter::readEvent(const edm::Event& iEvent)
   //------ Beam Spot in current event
   edm::Handle<reco::BeamSpot> recoBeamSpotHandle;
   const reco::BeamSpot *refBS =  0;
-  if ( iEvent.getByLabel("offlineBeamSpot",recoBeamSpotHandle) )
+  if ( iEvent.getByToken(beamSpotToken_, recoBeamSpotHandle) )
       refBS = recoBeamSpotHandle.product();
   //-------
 
@@ -263,13 +256,11 @@ void BeamFitter::readEvent(const edm::Event& iEvent)
   double eventZ = 0;
   double averageZ = 0;
 
-  for ( reco::TrackCollection::const_iterator track = tracks->begin();
-	track != tracks->end();
-	++track ) {
+  for (reco::TrackCollection::const_iterator track = tracks->begin();
+          track != tracks->end(); ++track){
 
-    if ( ! isMuon_) {
-
-      const reco::HitPattern& trkHP = track->hitPattern();
+    if (!isMuon_) {
+      const reco::HitPattern &trkHP = track->hitPattern();
 
       fnPixelLayerMeas = trkHP.pixelLayersWithMeasurement();
       fnStripLayerMeas = trkHP.stripLayersWithMeasurement();
@@ -281,9 +272,7 @@ void BeamFitter::readEvent(const edm::Event& iEvent)
       fnTOBLayerMeas = trkHP.stripTOBLayersWithMeasurement();
       fnTECLayerMeas = trkHP.stripTECLayersWithMeasurement();
     } else {
-
       fnTotLayerMeas = track->numberOfValidHits();
-
     }
 
     fpt = track->pt();

@@ -28,9 +28,6 @@ class KineParticleFilter;
 
 class SimTrack;
 class SimVertex;
-class PrimaryVertexGenerator;
-class RandomEngine;
-//class Histos;
 
 namespace edm {
   class ParameterSet;
@@ -49,10 +46,6 @@ public:
 
   /// Default constructor
   FBaseSimEvent(const edm::ParameterSet& kine);
-
-  FBaseSimEvent(const edm::ParameterSet& vtx,
-		const edm::ParameterSet& kine,
-		const RandomEngine* engine);
 
   ///  usual virtual destructor
   ~FBaseSimEvent();
@@ -145,8 +138,6 @@ public:
 
   const KineParticleFilter& filter() const { return *myFilter; } 
 
-  PrimaryVertexGenerator* thePrimaryVertexGenerator() const { return theVertexGenerator; }
-
   /// Set the beam spot position
   inline void setBeamSpot(const math::XYZPoint& aBeamSpot) { 
     theBeamSpot = aBeamSpot;
@@ -198,11 +189,8 @@ public:
 
   const ParticleDataTable * pdt;
 
-  PrimaryVertexGenerator* theVertexGenerator;
   math::XYZPoint theBeamSpot;
   double lateVertexPosition;
-
-  const RandomEngine* random;
 
   //  Histos* myHistos;
 

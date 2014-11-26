@@ -27,6 +27,10 @@ RazorVarProducer::RazorVarProducer(const edm::ParameterSet& iConfig) :
   inputTag_    (iConfig.getParameter<edm::InputTag>("inputTag")),
   inputMetTag_ (iConfig.getParameter<edm::InputTag>("inputMetTag")){
 
+  //set Token(-s)
+  inputTagToken_ = consumes<std::vector<math::XYZTLorentzVector> >(iConfig.getParameter<edm::InputTag>("inputTag"));
+  inputMetTagToken_ = consumes<reco::CaloMETCollection>(iConfig.getParameter<edm::InputTag>("inputMetTag"));
+
   produces<std::vector<double> >();
 
   LogDebug("") << "Inputs: "
@@ -49,11 +53,11 @@ RazorVarProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
 
    // get hold of collection of objects
    Handle< vector<math::XYZTLorentzVector> > hemispheres;
-   iEvent.getByLabel (inputTag_,hemispheres);
+   iEvent.getByToken (inputTagToken_, hemispheres);
 
    // get hold of the MET Collection
    Handle<CaloMETCollection> inputMet;
-   iEvent.getByLabel(inputMetTag_,inputMet);  
+   iEvent.getByToken(inputMetTagToken_, inputMet);
 
    std::auto_ptr<std::vector<double> > result(new std::vector<double>); 
    // check the the input collections are available
@@ -107,7 +111,7 @@ RazorVarProducer::CalcMR(TLorentzVector ja, TLorentzVector jb){
 }
 
 double 
-RazorVarProducer::CalcR(double MR, TLorentzVector ja, TLorentzVector jb, edm::Handle<reco::CaloMETCollection> inputMet, std::vector<math::XYZTLorentzVector> muons){
+RazorVarProducer::CalcR(double MR, const TLorentzVector& ja, const TLorentzVector& jb, edm::Handle<reco::CaloMETCollection> inputMet, const std::vector<math::XYZTLorentzVector>& muons){
   //now we can calculate MTR
   TVector3 met;
   met.SetPtEtaPhi((inputMet->front()).pt(),0.0,(inputMet->front()).phi());

@@ -110,8 +110,8 @@ void DTFineDelayCorr::runClientDiagnostic() {
   }
 
   //  ** Loop over the chambers ** 
-  vector<DTChamber*>::const_iterator chambIt  = muonGeom->chambers().begin();
-  vector<DTChamber*>::const_iterator chambEnd = muonGeom->chambers().end();
+  vector<const DTChamber*>::const_iterator chambIt  = muonGeom->chambers().begin();
+  vector<const DTChamber*>::const_iterator chambEnd = muonGeom->chambers().end();
   for (; chambIt!=chambEnd; ++chambIt) { 
     DTChamberId chId = (*chambIt)->id();
     uint32_t indexCh = chId.rawId();
@@ -124,7 +124,7 @@ void DTFineDelayCorr::runClientDiagnostic() {
 
     // **  Retrieve Delays Loaded in MiniCrates ** 
     if(readOldFromDb) {    // read from db 
-      DTConfigPedestals *pedestals = dtConfig->getDTConfigPedestals();
+      const DTConfigPedestals *pedestals = dtConfig->getDTConfigPedestals();
       const DTLayer *layer = muonGeom->layer(DTLayerId(chId,1,1));
       float delay = pedestals->getOffset(DTWireId(layer->id(),layer->specificTopology().firstChannel())); 
       coarseDelay = int(delay/25.);

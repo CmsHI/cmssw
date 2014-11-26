@@ -4,3 +4,5 @@
 <library   file="*.cc" name="RecoPixelVertexingPixelTripletsPlugins">
   <flags   EDM_PLUGIN="1"/>
 </library>
+
+<flags   CXXFLAGS="-Ofast -fno-math-errno"/>

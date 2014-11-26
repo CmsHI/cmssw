@@ -3,11 +3,10 @@
 
 /** \class HLTFiltCand
  *
- *  
+ *
  *  This class is an HLTFilter (-> EDFilter) implementing a minimum-bias
  *  HLT trigger acting on candidates, requiring tracks in Pixel det
  *
- *  $Date: 2007/09/11 09:28:19 $
  *
  *  \author Mika Huhtinen
  *
@@ -31,7 +30,7 @@ class HLTPixlMBForAlignmentFilter : public HLTFilter {
    public:
       explicit HLTPixlMBForAlignmentFilter(const edm::ParameterSet&);
       ~HLTPixlMBForAlignmentFilter();
-      virtual bool hltFilter(edm::Event&, const edm::EventSetup&, trigger::TriggerFilterObjectWithRefs & filterproduct);
+      virtual bool hltFilter(edm::Event&, const edm::EventSetup&, trigger::TriggerFilterObjectWithRefs & filterproduct) const override;
       static void fillDescriptions(edm::ConfigurationDescriptions & descriptions);
 
    private:

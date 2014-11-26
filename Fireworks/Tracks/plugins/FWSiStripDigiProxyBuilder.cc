@@ -6,7 +6,6 @@
 //
 // Original Author:
 //         Created:  Thu Dec  6 18:01:21 PST 2007
-// $Id: FWSiStripDigiProxyBuilder.cc,v 1.17 2010/09/06 09:52:45 yana Exp $
 //
 
 #include "TEveStraightLineSet.h"
@@ -30,6 +29,7 @@ public:
   REGISTER_PROXYBUILDER_METHODS();
 
 private:
+  using FWProxyBuilderBase::build;
   virtual void build( const FWEventItem* iItem, TEveElementList* product, const FWViewContext* ) override;
   FWSiStripDigiProxyBuilder( const FWSiStripDigiProxyBuilder& );    
   const FWSiStripDigiProxyBuilder& operator=( const FWSiStripDigiProxyBuilder& );

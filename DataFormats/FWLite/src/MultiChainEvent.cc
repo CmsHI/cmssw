@@ -11,6 +11,7 @@
 //
 
 // system include files
+#include <iostream>
 
 // user include files
 #include "DataFormats/FWLite/interface/MultiChainEvent.h"
@@ -20,6 +21,8 @@
 #include "DataFormats/Provenance/interface/ProcessHistory.h"
 #include "FWCore/Common/interface/TriggerResultsByName.h"
 
+#include <algorithm>
+
 namespace fwlite {
 
   namespace internal {
@@ -28,12 +31,27 @@ namespace fwlite {
 public:
       MultiProductGetter(MultiChainEvent const* iEvent) : event_(iEvent) {}
 
-      virtual edm::WrapperHolder
+      virtual edm::WrapperBase const*
       getIt(edm::ProductID const& iID) const override {
-
-	return event_->getByProductID(iID);
+        return event_->getByProductID(iID);
       }
+
+      virtual edm::WrapperBase const*
+      getThinnedProduct(edm::ProductID const& pid, unsigned int& key) const override {
+        return event_->getThinnedProduct(pid, key);
+      }
+
+      virtual void getThinnedProducts(edm::ProductID const& pid,
+                                      std::vector<edm::WrapperBase const*>& foundContainers,
+                                      std::vector<unsigned int>& keys) const {
+        event_->getThinnedProducts(pid, foundContainers, keys);
+      }
+
 private:
+      virtual unsigned int transitionIndex_() const override {
+        return 0U;
+      }
+
       MultiChainEvent const* event_;
 
     };
@@ -54,10 +72,10 @@ private:
 				   std::vector<std::string> const& iFileNames2,
 				   bool useSecFileMapSorted)
 {
-  event1_ = boost::shared_ptr<ChainEvent> (new ChainEvent(iFileNames1));
-  event2_ = boost::shared_ptr<ChainEvent> (new ChainEvent(iFileNames2));
+  event1_ = std::shared_ptr<ChainEvent> (new ChainEvent(iFileNames1));
+  event2_ = std::shared_ptr<ChainEvent> (new ChainEvent(iFileNames2));
 
-  getter_ = boost::shared_ptr<internal::MultiProductGetter>(new internal::MultiProductGetter(this));
+  getter_ = std::shared_ptr<internal::MultiProductGetter>(new internal::MultiProductGetter(this));
 
   event1_->setGetter(getter_);
   event2_->setGetter(getter_);
@@ -354,37 +372,40 @@ MultiChainEvent::getByLabel(
   return true;
 }
 
-bool
-MultiChainEvent::getByLabel(
-                       std::type_info const& iType,
-                       char const* iModule,
-                       char const* iInstance,
-                       char const* iProcess,
-                       edm::WrapperHolder& holder) const {
-  bool ret1 = event1_->getByLabel(iType, iModule, iInstance, iProcess, holder);
-  if(!ret1) {
-    (const_cast<MultiChainEvent*>(this))->toSec(event1_->id());
-    bool ret2 = event2_->getByLabel(iType, iModule, iInstance, iProcess, holder);
-    if(!ret2) return false;
-  }
-  return true;
-}
-
-edm::WrapperHolder MultiChainEvent::getByProductID(edm::ProductID const&iID) const
+edm::WrapperBase const* MultiChainEvent::getByProductID(edm::ProductID const&iID) const
 {
   // First try the first file
-  edm::WrapperHolder edp = event1_->getByProductID(iID);
+  edm::WrapperBase const* edp = event1_->getByProductID(iID);
   // Did not find the product, try secondary file
-  if (!edp.isValid()) {
+  if (edp == nullptr) {
     (const_cast<MultiChainEvent*>(this))->toSec(event1_->id());
     edp = event2_->getByProductID(iID);
-    if (!edp.isValid()) {
-      throw cms::Exception("ProductNotFound") << "Cannot find product " << iID;
-    }
   }
   return edp;
 }
 
+edm::WrapperBase const* MultiChainEvent::getThinnedProduct(edm::ProductID const& pid, unsigned int& key) const {
+  // First try the first file
+  edm::WrapperBase const* edp = event1_->getThinnedProduct(pid, key);
+  // Did not find the product, try secondary file
+  if (edp == nullptr) {
+    (const_cast<MultiChainEvent*>(this))->toSec(event1_->id());
+    edp = event2_->getThinnedProduct(pid, key);
+  }
+  return edp;
+}
+
+void MultiChainEvent::getThinnedProducts(edm::ProductID const& pid,
+                                         std::vector<edm::WrapperBase const*>& wrappers,
+                                         std::vector<unsigned int>& keys) const {
+  // First try the first file
+  event1_->getThinnedProducts(pid, wrappers, keys);
+  // Did not find all the products, try secondary file
+  if(std::find(wrappers.begin(), wrappers.end(), nullptr) != wrappers.end()) {
+    (const_cast<MultiChainEvent*>(this))->toSec(event1_->id());
+    event2_->getThinnedProducts(pid, wrappers, keys);
+  }
+}
 
 bool
 MultiChainEvent::isValid() const

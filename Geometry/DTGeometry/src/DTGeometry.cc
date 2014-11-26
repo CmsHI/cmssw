@@ -1,7 +1,5 @@
 /** \file
  *
- *  $Date: 2008/01/22 21:10:37 $
- *  $Revision: 1.7 $
  *  \author N. Amapane - CERN
  */
 
@@ -16,7 +14,7 @@ DTGeometry::DTGeometry() {}
 DTGeometry::~DTGeometry(){
   // delete all the chambers (which will delete the SL which will delete the
   // layers)
-  for (std::vector<DTChamber*>::const_iterator ich=theChambers.begin();
+  for (auto ich=theChambers.begin();
        ich!=theChambers.end(); ++ich) delete (*ich);
 }
 
@@ -84,17 +82,17 @@ const GeomDet* DTGeometry::idToDet(DetId id) const{
 }
 
 
-const std::vector<DTChamber*>& DTGeometry::chambers() const{
+const std::vector<const DTChamber*>& DTGeometry::chambers() const{
   return theChambers;
 }
 
 
-const std::vector<DTSuperLayer*>& DTGeometry::superLayers() const{
+const std::vector<const DTSuperLayer*>& DTGeometry::superLayers() const{
   return theSuperLayers;
 }
 
 
-const std::vector<DTLayer*>& DTGeometry::layers() const{
+const std::vector<const DTLayer*>& DTGeometry::layers() const{
   return theLayers;
 }
 

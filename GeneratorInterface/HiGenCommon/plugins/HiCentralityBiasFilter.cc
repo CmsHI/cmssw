@@ -13,7 +13,6 @@
 //
 // Original Author:  Yetkin Yilmaz
 //         Created:  Tue Aug 11 12:42:25 EDT 2009
-// $Id: HiCentralityBiasFilter.cc,v 1.1 2009/10/15 12:23:06 yilmaz Exp $
 //
 //
 
@@ -109,7 +108,7 @@ HiCentralityBiasFilter::filter(edm::Event& iEvent, const edm::EventSetup& iSetup
 
 
 
-   CLHEP::HepRandomEngine& engine = rng_->getEngine();
+   CLHEP::HepRandomEngine& engine = rng_->getEngine(iEvent.streamID());
 
    Handle<HepMCProduct> mc;
    iEvent.getByLabel(hepmcSrc_,mc);

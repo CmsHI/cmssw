@@ -19,120 +19,7 @@
 
 // system include files
 #include <memory>
-
-// user include files
-
-#include "FWCore/Framework/interface/ESHandle.h"
-
-#include "FWCore/Framework/interface/Frameworkfwd.h"
-#include "FWCore/Framework/interface/EDAnalyzer.h"
-
-#include "FWCore/Framework/interface/Event.h"
-#include "FWCore/Framework/interface/MakerMacros.h"
-
-#include "FWCore/ParameterSet/interface/ParameterSet.h"
-
-#include "DataFormats/HLTReco/interface/TriggerEvent.h"
-#include "DataFormats/L1Trigger/interface/L1JetParticle.h"
-#include "DataFormats/L1Trigger/interface/L1JetParticleFwd.h"
-
-#include "CondFormats/L1TObjects/interface/L1GtTriggerMenu.h"
-#include "CondFormats/DataRecord/interface/L1GtTriggerMenuRcd.h"
-#include "DataFormats/L1GlobalTrigger/interface/L1GlobalTriggerReadoutSetupFwd.h"
-#include "DataFormats/L1GlobalTrigger/interface/L1GlobalTriggerReadoutSetup.h"
-#include "DataFormats/L1GlobalTrigger/interface/L1GlobalTriggerReadoutRecord.h"
-
-#include "DataFormats/TrackReco/interface/TrackFwd.h"
-#include "DataFormats/TrackReco/interface/Track.h"
-
-#include "CondFormats/L1TObjects/interface/L1GtPrescaleFactors.h"
-#include "CondFormats/DataRecord/interface/L1GtPrescaleFactorsAlgoTrigRcd.h"
-#include "CondFormats/DataRecord/interface/L1GtPrescaleFactorsTechTrigRcd.h"
-
-#include "DQMServices/Core/interface/DQMStore.h"
-#include "DQMServices/Core/interface/MonitorElement.h"
-#include "FWCore/ServiceRegistry/interface/Service.h"
-
-#include "DataFormats/HcalIsolatedTrack/interface/IsolatedPixelTrackCandidate.h"
-#include "DataFormats/HcalIsolatedTrack/interface/IsolatedPixelTrackCandidateFwd.h"
-
-#include "DataFormats/Math/interface/deltaR.h"
-
-#include <fstream>
-
-#include "TH1F.h"
-
-class DQMHcalIsoTrackAlCaReco : public edm::EDAnalyzer {
-public:
-  explicit DQMHcalIsoTrackAlCaReco(const edm::ParameterSet&);
-  ~DQMHcalIsoTrackAlCaReco();
-  
-  
-private:
-
-  DQMStore* dbe_;  
-
-  virtual void beginJob() override ;
-  virtual void analyze(const edm::Event&, const edm::EventSetup&) override;
-  virtual void endJob() override ;
-
-  std::string folderName_;
-  bool saveToFile_;
-  std::string outRootFileName_;
-  edm::InputTag hltEventTag_;
-  std::string l1FilterTag_;
-  std::vector<std::string> hltFilterTag_;
-  edm::InputTag arITrLabel_;
-  edm::InputTag recoTrLabel_;
-  double pThr_;
-  double heLow_;
-  double heUp_;
-  
-  MonitorElement* hl3Pt;
-  MonitorElement* hl3eta;
-  MonitorElement* hl3AbsEta;
-  MonitorElement* hl3phi;
-  MonitorElement* hOffL3TrackMatch;
-  MonitorElement* hOffL3TrackPtRat;
-
-  MonitorElement* hOffP_0005;
-  MonitorElement* hOffP_0510;
-  MonitorElement* hOffP_1015;
-  MonitorElement* hOffP_1520;
-
-  MonitorElement* hOffP;
-
-  MonitorElement* hTracksSumP;
-  MonitorElement* hTracksMaxP;
-
-  MonitorElement* hDeposEcalInnerEB;
-  MonitorElement* hDeposEcalOuterEB;
-  MonitorElement* hDeposEcalInnerEE;
-  MonitorElement* hDeposEcalOuterEE;
-  
-  MonitorElement* hL1jetMatch;
-
-  MonitorElement* hOffEtaFP;
-  MonitorElement* hOffAbsEta;
-  MonitorElement* hOffPhiFP;
-
-  MonitorElement* hOffEta;
-  MonitorElement* hOffPhi;
-  
-  MonitorElement* hOccupancyFull;
-  MonitorElement* hOccupancyHighEn;
-
-  MonitorElement* hPurityEta;
-  MonitorElement* hPurityPhi;
-
-  int nTotal;
-  int nHLTL3accepts;
-  int nameLength_;
-  int l1nameLength_;
-  
-  std::pair<int, int> towerIndex(double eta, double phi);
-
-};
+#include "DQMHcalIsoTrackAlCaReco.h"
 
 std::pair<int,int> DQMHcalIsoTrackAlCaReco::towerIndex(double eta, double phi) 
 {
@@ -174,12 +61,12 @@ DQMHcalIsoTrackAlCaReco::DQMHcalIsoTrackAlCaReco(const edm::ParameterSet& iConfi
   folderName_ = iConfig.getParameter<std::string>("folderName");
   saveToFile_=iConfig.getParameter<bool>("saveToFile");
   outRootFileName_=iConfig.getParameter<std::string>("outputRootFileName");
-  hltEventTag_=iConfig.getParameter<edm::InputTag>("hltTriggerEventLabel");
+  hltEventTag_= consumes<trigger::TriggerEvent>(iConfig.getParameter<edm::InputTag>("hltTriggerEventLabel"));
   l1FilterTag_=iConfig.getParameter<std::string>("l1FilterLabel");
   hltFilterTag_=iConfig.getParameter<std::vector<std::string> >("hltL3FilterLabels");
   nameLength_=iConfig.getUntrackedParameter<int>("filterNameLength",27);
   l1nameLength_=iConfig.getUntrackedParameter<int>("l1filterNameLength",11);
-  arITrLabel_=iConfig.getParameter<edm::InputTag>("alcarecoIsoTracksLabel");
+  arITrLabel_= consumes<reco::IsolatedPixelTrackCandidateCollection>(iConfig.getParameter<edm::InputTag>("alcarecoIsoTracksLabel"));
   recoTrLabel_=iConfig.getParameter<edm::InputTag>("recoTracksLabel");
   pThr_=iConfig.getUntrackedParameter<double>("pThrL3",0);
   heLow_=iConfig.getUntrackedParameter<double>("lowerHighEnergyCut",40);
@@ -198,10 +85,10 @@ void DQMHcalIsoTrackAlCaReco::analyze(const edm::Event& iEvent, const edm::Event
   nTotal++;
 
   edm::Handle<trigger::TriggerEvent> trEv;
-  iEvent.getByLabel(hltEventTag_,trEv);
+  iEvent.getByToken(hltEventTag_,trEv);
   
   edm::Handle<reco::IsolatedPixelTrackCandidateCollection> recoIsoTracks;
-  iEvent.getByLabel(arITrLabel_,recoIsoTracks);
+  iEvent.getByToken(arITrLabel_,recoIsoTracks);
 
   const trigger::TriggerObjectCollection& TOCol(trEv->getObjects());
 

@@ -13,7 +13,6 @@ Implementation:
 //
 // Original Author:  Brian Paul Bockelman,8 R-018,+41227670861,
 //         Created:  Fri Oct 21 11:37:26 CEST 2011
-// $Id: ExternalLHEProducer.cc,v 1.9 2013/03/28 22:23:18 wmtan Exp $
 //
 //
 
@@ -28,8 +27,9 @@ Implementation:
 #include <fcntl.h>
 #include <sys/wait.h>
 
-#include <boost/shared_ptr.hpp>
-#include <boost/ptr_container/ptr_deque.hpp>
+#include "boost/bind.hpp"
+#include "boost/shared_ptr.hpp"
+#include "boost/ptr_container/ptr_deque.hpp"
 
 // user include files
 #include "FWCore/Framework/interface/Frameworkfwd.h"
@@ -127,7 +127,7 @@ ExternalLHEProducer::ExternalLHEProducer(const edm::ParameterSet& iConfig) :
   outputFile_(iConfig.getParameter<std::string>("outputFile")),
   args_(iConfig.getParameter<std::vector<std::string> >("args")),
   npars_(iConfig.getParameter<uint32_t>("numberOfParameters")),
-  nEvents_(iConfig.getParameter<uint32_t>("nEvents"))
+  nEvents_(iConfig.getUntrackedParameter<uint32_t>("nEvents"))
 {
   if (npars_ != args_.size())
     throw cms::Exception("ExternalLHEProducer") << "Problem with configuration: " << args_.size() << " script arguments given, expected " << npars_;
@@ -155,9 +155,20 @@ ExternalLHEProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
   if (!partonLevel)
     return;
 
-  std::auto_ptr<LHEEventProduct> product(new LHEEventProduct(*partonLevel->getHEPEUP()));
-  if (partonLevel->getPDF())
+  std::auto_ptr<LHEEventProduct> product(
+	       new LHEEventProduct(*partonLevel->getHEPEUP(),
+				   partonLevel->originalXWGTUP())
+	       );
+  if (partonLevel->getPDF()) {
     product->setPDF(*partonLevel->getPDF());
+  }
+  std::for_each(partonLevel->weights().begin(),
+                partonLevel->weights().end(),
+                boost::bind(&LHEEventProduct::addWeight,
+                            product.get(), _1));
+  product->setScales(partonLevel->scales());
+  product->setNpLO(partonLevel->npLO());
+  product->setNpNLO(partonLevel->npNLO());
   std::for_each(partonLevel->getComments().begin(),
                 partonLevel->getComments().end(),
                 boost::bind(&LHEEventProduct::addComment,
@@ -442,7 +453,7 @@ ExternalLHEProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptio
   desc.add<std::string>("outputFile", "myoutput");
   desc.add<std::vector<std::string> >("args");
   desc.add<uint32_t>("numberOfParameters");
-  desc.add<uint32_t>("nEvents");
+  desc.addUntracked<uint32_t>("nEvents");
 
   descriptions.addDefault(desc);
 }

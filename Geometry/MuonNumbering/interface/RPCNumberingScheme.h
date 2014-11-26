@@ -1,13 +1,11 @@
-#ifndef MuonNumbering_RPCNumberingScheme_h
-#define MuonNumbering_RPCNumberingScheme_h
+#ifndef Geometry_MuonNumbering_RPCNumberingScheme_h
+#define Geometry_MuonNumbering_RPCNumberingScheme_h
 
 /** \class RPCNumberingScheme
  *
  * implementation of MuonNumberingScheme for muon rpc,
  * converts the MuonBaseNumber to a unit id
  *  
- *  $Date: 2006/03/22 18:46:23 $
- *  $Revision: 1.3 $
  * \author Arno Straessner, CERN <arno.straessner@cern.ch>
  *
  */

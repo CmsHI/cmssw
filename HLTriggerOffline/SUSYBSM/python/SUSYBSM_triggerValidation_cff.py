@@ -47,8 +47,8 @@ HLTSusyExoVal = cms.EDAnalyzer("TriggerValidator",
             muons = cms.string('muons'),
             reco_ptMuonMin = cms.double(10.0),
             reco_ptPhotMin = cms.double(0.0),
-            calomet = cms.string('met'),
-            electrons = cms.string('gsfElectrons')
+            calomet = cms.string('caloMet'),
+            electrons = cms.string('gedGsfElectrons')
         )
     ),
                                
@@ -313,7 +313,12 @@ HLTSusyExoVal = cms.EDAnalyzer("TriggerValidator",
                                          ## Put false for usage in the DQM framework (reduce the number of bins).
     triggerTag = cms.InputTag("hltTriggerSummaryAOD"),
     hltConfigName = cms.string("HLT"),
-    triggerName = cms.string("@"),
+    hltPathsToCheck = cms.vstring(
+      "HLT_PFHT900_v",
+      "HLT_PFHT350_PFMET120_NoiseCleaned_v",
+      "HLT_PFMET170_NoiseCleaned_v",
+      "HLT_PFMET120_NoiseCleaned_BTagCSV07_v"
+    ),
     muonTag = cms.InputTag('muons'),
     histoFileName = cms.untracked.string('MonElements_LM1_IDEAL_30x_v1_300pre7.root'),
     PlotMakerL1Input = cms.PSet(
@@ -323,8 +328,8 @@ HLTSusyExoVal = cms.EDAnalyzer("TriggerValidator",
         def_electronPtMin = cms.double(10.0),
         def_muonPtMin = cms.double(7.0),
         def_photonPtMin = cms.double(30.0),
-        calomet = cms.string('met'),
-        electrons = cms.string('gsfElectrons'),
+        calomet = cms.string('caloMet'),
+        electrons = cms.string('gedGsfElectrons'),
         jets = cms.string('iterativeCone5CaloJets'),
         muons = cms.string('muons'),
         def_jetPtMin = cms.double(30.0),

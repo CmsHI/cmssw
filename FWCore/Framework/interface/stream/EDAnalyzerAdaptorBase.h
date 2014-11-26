@@ -19,6 +19,7 @@
 //
 
 // system include files
+#include <vector>
 
 // user include files
 #include "DataFormats/Provenance/interface/BranchType.h"
@@ -38,6 +39,10 @@ namespace edm {
   class ProductHolderIndexHelper;
   class EDConsumerBase;
   class PreallocationConfiguration;
+  class ProductHolderIndexAndSkipBit;
+  class ActivityRegistry;
+  class ProductRegistry;
+  class ThinnedAssociationsHelper;
 
   namespace maker {
     template<typename T> class ModuleHolderT;
@@ -45,6 +50,7 @@ namespace edm {
   
   namespace stream {
     class EDAnalyzerBase;
+
     class EDAnalyzerAdaptorBase
     {
       
@@ -73,18 +79,24 @@ namespace edm {
       }
       
       //Same interface as EDConsumerBase
-      void itemsToGet(BranchType, std::vector<ProductHolderIndex>&) const;
-      void itemsMayGet(BranchType, std::vector<ProductHolderIndex>&) const;
+      void itemsToGet(BranchType, std::vector<ProductHolderIndexAndSkipBit>&) const;
+      void itemsMayGet(BranchType, std::vector<ProductHolderIndexAndSkipBit>&) const;
+      std::vector<ProductHolderIndexAndSkipBit> const& itemsToGetFromEvent() const;
+
       void updateLookup(BranchType iBranchType,
                         ProductHolderIndexHelper const&);
       
       const EDConsumerBase* consumer() const;
+      
+      void modulesDependentUpon(const std::string& iProcessName,
+                                std::vector<const char*>& oModuleLabels) const;
     private:
       EDAnalyzerAdaptorBase(const EDAnalyzerAdaptorBase&); // stop default
       
       const EDAnalyzerAdaptorBase& operator=(const EDAnalyzerAdaptorBase&); // stop default
       
       bool doEvent(EventPrincipal& ep, EventSetup const& c,
+                   ActivityRegistry*,
                    ModuleCallingContext const*) ;
       void doPreallocate(PreallocationConfiguration const&);
       
@@ -125,11 +137,14 @@ namespace edm {
       virtual void doEndLuminosityBlock(LuminosityBlockPrincipal& lbp, EventSetup const& c,
                                         ModuleCallingContext const*)=0;
 
+      void doPreForkReleaseResources();
+      void doPostForkReacquireResources(unsigned int iChildIndex, unsigned int iNumberOfChildren);
+
       //For now, the following are just dummy implemenations with no ability for users to override
       void doRespondToOpenInputFile(FileBlock const& fb);
       void doRespondToCloseInputFile(FileBlock const& fb);
-      void doPreForkReleaseResources();
-      void doPostForkReacquireResources(unsigned int iChildIndex, unsigned int iNumberOfChildren);
+      void doRegisterThinnedAssociations(ProductRegistry const&,
+                                         ThinnedAssociationsHelper&) { }
 
       // ---------- member data --------------------------------
       void setModuleDescription(ModuleDescription const& md) {

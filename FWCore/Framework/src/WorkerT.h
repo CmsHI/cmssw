@@ -17,6 +17,9 @@ WorkerT: Code common to all workers.
 namespace edm {
 
   class ModuleCallingContext;
+  class ProductHolderIndexAndSkipBit;
+  class ProductRegistry;
+  class ThinnedAssociationsHelper;
 
   UnscheduledHandler* getUnscheduledHandler(EventPrincipal const& ep);
 
@@ -25,16 +28,16 @@ namespace edm {
   public:
     typedef T ModuleType;
     typedef WorkerT<T> WorkerType;
-    WorkerT(T*,
+    WorkerT(std::shared_ptr<T>,
             ModuleDescription const&,
             ExceptionToActionTable const* actions);
 
     virtual ~WorkerT();
 
-  void setModule( T* iModule) {
-    module_ = iModule;
-    resetModuleDescription(&(module_->moduleDescription()));
-  }
+    void setModule( std::shared_ptr<T> iModule) {
+      module_ = iModule;
+      resetModuleDescription(&(module_->moduleDescription()));
+    }
     
     virtual Types moduleType() const override;
 
@@ -95,9 +98,24 @@ namespace edm {
     virtual void implPreForkReleaseResources() override;
     virtual void implPostForkReacquireResources(unsigned int iChildIndex, 
                                                unsigned int iNumberOfChildren) override;
-     virtual std::string workerType() const override;
+    virtual void implRegisterThinnedAssociations(ProductRegistry const&, ThinnedAssociationsHelper&) override;
+    virtual std::string workerType() const override;
 
-    T* module_;
+    virtual void modulesDependentUpon(std::vector<const char*>& oModuleLabels) const override {
+      module_->modulesDependentUpon(module_->moduleDescription().processName(),oModuleLabels);
+    }
+
+    virtual void itemsToGet(BranchType branchType, std::vector<ProductHolderIndexAndSkipBit>& indexes) const override {
+      module_->itemsToGet(branchType, indexes);
+    }
+
+    virtual void itemsMayGet(BranchType branchType, std::vector<ProductHolderIndexAndSkipBit>& indexes) const override {
+      module_->itemsMayGet(branchType, indexes);
+    }
+
+    virtual std::vector<ProductHolderIndexAndSkipBit> const& itemsToGetFromEvent() const override { return module_->itemsToGetFromEvent(); }
+
+    std::shared_ptr<T> module_;
   };
 
 }

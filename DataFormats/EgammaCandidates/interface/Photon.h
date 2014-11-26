@@ -35,7 +35,7 @@ namespace reco {
 
     /// constructor from values
     Photon( const LorentzVector & p4, 
-	    Point caloPos, 
+	    const Point& caloPos, 
 	    const PhotonCoreRef & core,  
 	    const Point & vtx = Point( 0, 0, 0 ) );
 
@@ -47,6 +47,8 @@ namespace reco {
 
     /// returns a reference to the core photon object
     reco::PhotonCoreRef photonCore() const { return photonCore_;}
+    void setPhotonCore(const reco::PhotonCoreRef &photonCore) { photonCore_ = photonCore; }
+    
     //
     /// Retrieve photonCore attributes
     //
@@ -56,7 +58,7 @@ namespace reco {
     /// Ref to SuperCluster
     reco::SuperClusterRef superCluster() const;
     /// Ref to PFlow SuperCluster
-    reco::SuperClusterRef pfSuperCluster() const {return this->photonCore()->pfSuperCluster();}
+    reco::SuperClusterRef parentSuperCluster() const {return this->photonCore()->parentSuperCluster();}
     /// vector of references to  Conversion's
     reco::ConversionRefVector conversions() const {return this->photonCore()->conversions() ;}  
     enum ConversionProvenance {egamma=0, 
@@ -80,6 +82,7 @@ namespace reco {
     void setVertex(const Point & vertex);
     /// Implement Candidate method for particle species
     bool isPhoton() const { return true ; }
+ 
 
     //=======================================================
     // Fiducial Flags
@@ -147,8 +150,8 @@ namespace reco {
       float hcalDepth2OverEcalBc;
       std::vector<CaloTowerDetId> hcalTowersBehindClusters;
       ShowerShape()
-	: sigmaEtaEta(std::numeric_limits<float>::infinity()),
-	   sigmaIetaIeta(std::numeric_limits<float>::infinity()),
+	: sigmaEtaEta(std::numeric_limits<float>::max()),
+	   sigmaIetaIeta(std::numeric_limits<float>::max()),
 	   e1x5(0), 
 	   e2x5(0), 
 	   e3x3(0), 
@@ -162,6 +165,8 @@ namespace reco {
       {}
     } ;
     void setShowerShapeVariables ( const ShowerShape& a )     { showerShapeBlock_ = a ;}
+    void full5x5_setShowerShapeVariables ( const ShowerShape& a )     { full5x5_showerShapeBlock_ = a ;}
+    
     /// the total hadronic over electromagnetic fraction
     float hadronicOverEm() const {return   showerShapeBlock_.hcalDepth1OverEcal + showerShapeBlock_.hcalDepth2OverEcal  ;}
     /// the  hadronic release in depth1 over electromagnetic fraction
@@ -188,6 +193,18 @@ namespace reco {
     float r1x5 ()           const {return showerShapeBlock_.e1x5/showerShapeBlock_.e5x5;}
     float r2x5 ()           const {return showerShapeBlock_.e2x5/showerShapeBlock_.e5x5;}
     float r9 ()             const {return showerShapeBlock_.e3x3/this->superCluster()->rawEnergy();}  
+    
+    ///full5x5 Shower shape variables
+    float full5x5_e1x5()            const {return full5x5_showerShapeBlock_.e1x5;}
+    float full5x5_e2x5()            const {return full5x5_showerShapeBlock_.e2x5;}
+    float full5x5_e3x3()            const {return full5x5_showerShapeBlock_.e3x3;}
+    float full5x5_e5x5()            const {return full5x5_showerShapeBlock_.e5x5;}
+    float full5x5_maxEnergyXtal()   const {return full5x5_showerShapeBlock_.maxEnergyXtal;}
+    float full5x5_sigmaEtaEta()     const {return full5x5_showerShapeBlock_.sigmaEtaEta;}
+    float full5x5_sigmaIetaIeta()   const {return full5x5_showerShapeBlock_.sigmaIetaIeta;}
+    float full5x5_r1x5 ()           const {return full5x5_showerShapeBlock_.e1x5/full5x5_showerShapeBlock_.e5x5;}
+    float full5x5_r2x5 ()           const {return full5x5_showerShapeBlock_.e2x5/full5x5_showerShapeBlock_.e5x5;}
+    float full5x5_r9 ()             const {return full5x5_showerShapeBlock_.e3x3/this->superCluster()->rawEnergy();}      
 
     //=======================================================
     // Energy Determinations
@@ -387,18 +404,27 @@ namespace reco {
     struct PflowIsolationVariables
     {
 
-      float chargedHadronIso;
-      float neutralHadronIso;
-      float photonIso ;
+      float chargedHadronIso; //  equivalent to sumChargedHadronPt in  DataFormats/MuonReco/interface/MuonPFIsolation.h
+      float chargedHadronIsoWrongVtx; //  equivalent to sumChargedHadronPt in  DataFormats/MuonReco/interface/MuonPFIsolation.h
+      float neutralHadronIso; //  equivalent to sumNeutralHadronPt in  DataFormats/MuonReco/interface/MuonPFIsolation.h
+      float photonIso ;       //  equivalent to sumPhotonPt in  DataFormats/MuonReco/interface/MuonPFIsolation.h
       float modFrixione ;      
-      
+      float sumChargedParticlePt; //!< sum-pt of charged Particles(inludes e/mu) 
+      float sumNeutralHadronEtHighThreshold;  //!< sum pt of neutral hadrons with a higher threshold
+      float sumPhotonEtHighThreshold;  //!< sum pt of PF photons with a higher threshold
+      float sumPUPt;  //!< sum pt of charged Particles not from PV  (for Pu corrections)
+
       PflowIsolationVariables():
 	
 	chargedHadronIso(0),
+	chargedHadronIsoWrongVtx(0),
 	neutralHadronIso(0),
 	photonIso(0),
-        modFrixione(0)
-      		   
+        modFrixione(0),
+	sumChargedParticlePt(0),
+      	sumNeutralHadronEtHighThreshold(0),
+	sumPhotonEtHighThreshold(0),
+	sumPUPt(0)	   
       {}
       
       
@@ -406,8 +432,13 @@ namespace reco {
 
     /// Accessors for Particle Flow Isolation variables 
     float chargedHadronIso() const {return  pfIsolation_.chargedHadronIso;}
+    float chargedHadronIsoWrongVtx() const {return  pfIsolation_.chargedHadronIsoWrongVtx;}
     float neutralHadronIso() const {return  pfIsolation_.neutralHadronIso;}
     float photonIso() const {return  pfIsolation_.photonIso;}
+    float sumChargedParticlePt() const {return pfIsolation_.sumChargedParticlePt;}
+    float sumNeutralHadronEtHighThreshold() const {return pfIsolation_.sumNeutralHadronEtHighThreshold;}
+    float sumPhotonEtHighThreshold() const {return pfIsolation_.sumPhotonEtHighThreshold;}
+    float sumPUPt() const {return pfIsolation_.sumPUPt;}
 
     /// Set Particle Flow Isolation variables
     void setPflowIsolationVariables ( const PflowIsolationVariables& pfisol ) {  pfIsolation_ = pfisol;} 
@@ -450,6 +481,7 @@ namespace reco {
     IsolationVariables isolationR04_;
     IsolationVariables isolationR03_;
     ShowerShape        showerShapeBlock_;
+    ShowerShape        full5x5_showerShapeBlock_;
     EnergyCorrections eCorrections_; 
     MIPVariables        mipVariableBlock_; 
     PflowIsolationVariables pfIsolation_;

@@ -14,7 +14,7 @@ HLTProcessName = "HLT"
 ELECTRON_ET_CUT_MIN = 10.0
 TAG_ELECTRON_ET_CUT_MIN = 20.0
 W_ELECTRON_ET_CUT_MIN = 27.0
-ELECTRON_COLL = "gsfElectrons"
+ELECTRON_COLL = "gedGsfElectrons"
 ELECTRON_CUTS = "(abs(superCluster.eta)<2.5) && (ecalEnergy*sin(superClusterPosition.theta)>" + str(ELECTRON_ET_CUT_MIN) + ")"
 
 #met, mt cuts for W selection
@@ -49,7 +49,7 @@ GsfMatchedPhotonCands = cms.EDProducer("ElectronMatchedCandidateProducer",
 PassingWP90 = goodElectrons.clone(
 cut = cms.string(
     goodElectrons.cut.value() +
-    " && (gsfTrack.trackerExpectedHitsInner.numberOfHits<=1 && !(-0.02<convDist<0.02 && -0.02<convDcot<0.02))" #wrt std WP90 allowing 1 numberOfMissingExpectedHits 
+    " && (gsfTrack.hitPattern().numberOfHits(\'MISSING_INNER_HITS\')<=1 && !(-0.02<convDist<0.02 && -0.02<convDcot<0.02))" #wrt std WP90 allowing 1 numberOfMissingExpectedHits 
     " && (ecalEnergy*sin(superClusterPosition.theta)>" + str(ELECTRON_ET_CUT_MIN) + ")"
     " && ((isEB"
     " && ( dr03TkSumPt/p4.Pt <0.12 && dr03EcalRecHitSumEt/p4.Pt < 0.09 && dr03HcalTowerSumEt/p4.Pt  < 0.1 )"
@@ -71,7 +71,7 @@ cut = cms.string(
 PassingWP80 = goodElectrons.clone(
 cut = cms.string(
     goodElectrons.cut.value() +
-    " && (gsfTrack.trackerExpectedHitsInner.numberOfHits==0 && !(-0.02<convDist<0.02 && -0.02<convDcot<0.02))" 
+    " && (gsfTrack.hitPattern().numberOfHits(\'MISSING_INNER_HITS\')==0 && !(-0.02<convDist<0.02 && -0.02<convDcot<0.02))" 
     " && (ecalEnergy*sin(superClusterPosition.theta)>" + str(ELECTRON_ET_CUT_MIN) + ")"
     " && ((isEB"
     " && ( dr03TkSumPt/p4.Pt <0.12 && dr03EcalRecHitSumEt/p4.Pt < 0.09 && dr03HcalTowerSumEt/p4.Pt  < 0.1 )" #wrt std WP80 relaxing iso cuts to WP90 

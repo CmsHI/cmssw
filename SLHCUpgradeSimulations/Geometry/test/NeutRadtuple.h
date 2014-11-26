@@ -9,7 +9,6 @@
 #include "FWCore/Utilities/interface/InputTag.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
-#include "DataFormats/Common/interface/EDProduct.h"
 #include "DataFormats/Common/interface/Ref.h"
 
 #include "FastSimulation/Event/interface/FSimEvent.h"
@@ -17,7 +16,7 @@
 
 #include "SimDataFormats/TrackingAnalysis/interface/TrackingParticle.h"
 
-#include "CommonTools/RecoAlgos/interface/TrackingParticleSelector.h"
+//#include "CommonTools/RecoAlgos/interface/TrackingParticleSelector.h"
 #include "SimTracker/TrackAssociation/interface/TrackAssociatorBase.h"
 
 class TTree;

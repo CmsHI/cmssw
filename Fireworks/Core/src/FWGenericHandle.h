@@ -28,7 +28,6 @@
 //
 // Original Author:  Chris Jones
 //         Created:  Sat Jan  7 15:40:43 EST 2006
-// $Id: FWGenericHandle.h,v 1.3 2012/08/03 18:20:28 wmtan Exp $
 //
 
 // system include files
@@ -128,14 +127,14 @@ public:
 
    void clear() { prov_ = 0; whyFailed_.reset();}
       
-   void setWhyFailed(boost::shared_ptr<cms::Exception> const& iWhyFailed) {
+   void setWhyFailed(std::shared_ptr<cms::Exception> const& iWhyFailed) {
     whyFailed_=iWhyFailed;
   }
 private:
    edm::TypeWithDict type_;
    edm::ObjectWithDict prod_;
    Provenance const* prov_;    
-   boost::shared_ptr<cms::Exception> whyFailed_;
+   std::shared_ptr<cms::Exception> whyFailed_;
 };
 
 typedef Handle<FWGenericObject> FWGenericHandle;

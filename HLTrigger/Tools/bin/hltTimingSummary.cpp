@@ -770,7 +770,7 @@ int main(int argc, char ** argv) {
   if (vmap.count("recalc")) {
 
     startHere = vmap["recalc"].as<std::string>() ; 
-    ifstream filterFile(startHere.c_str()) ;
+    std::ifstream filterFile(startHere.c_str()) ;
     if (filterFile.is_open()) { //--- Filter modules listed in a file ---//
       while ( !filterFile.eof() ) {
 	std::string skipped ;
@@ -798,7 +798,7 @@ int main(int argc, char ** argv) {
   if (vmap.count("excludeMod")) {
     excludeModName = vmap["excludeMod"].as<std::string>() ; 
         
-    ifstream excludeModFile(excludeModName.c_str()) ;
+    std::ifstream excludeModFile(excludeModName.c_str()) ;
     if (excludeModFile.is_open()) { //--- Excluded modules listed in a file ---//
       while ( !excludeModFile.eof() ) {
 	std::string skipped ;
@@ -827,7 +827,7 @@ int main(int argc, char ** argv) {
   if (vmap.count("excludePath")) {
     excludePathName = vmap["excludePath"].as<std::string>() ; 
     
-    ifstream excludePathFile(excludePathName.c_str()) ;
+    std::ifstream excludePathFile(excludePathName.c_str()) ;
     if (excludePathFile.is_open()) { //--- Excluded paths listed in a file ---//
       while ( !excludePathFile.eof() ) {
 	std::string skipped ;
@@ -856,7 +856,7 @@ int main(int argc, char ** argv) {
   if (vmap.count("modPrint")) {
     modPrintName = vmap["modPrint"].as<std::string>() ; 
  
-    ifstream modPrintFile(modPrintName.c_str()) ;
+    std::ifstream modPrintFile(modPrintName.c_str()) ;
     if (modPrintFile.is_open()) { //--- Excluded modules listed in a file ---//
       while ( !modPrintFile.eof() ) {
 	std::string modname ;
@@ -961,8 +961,8 @@ int main(int argc, char ** argv) {
     
   //--- Prepare the output ---//
   TFile* outFile = new TFile(outname.c_str(), "recreate") ;
-  ofstream txtfile ; 
-  ofstream sumfile ; 
+  std::ofstream txtfile ; 
+  std::ofstream sumfile ; 
   if ( !writeSummary ) {
     std::cout << "Output to file: " << outname << std::endl ;
   } else {
@@ -1014,11 +1014,11 @@ int main(int argc, char ** argv) {
   std::vector<int> longestEventByModule ; 
   std::vector<int> pathFilterModule ; 
 
-  std::vector< std::pair<unsigned int,unsigned int> > slowEventSummaryVector ; 
-  std::vector< std::pair<unsigned int,unsigned int> > slowPathSummaryVector ; 
-  std::vector< std::pair<unsigned int,unsigned int> > slowModuleSummaryVector ; 
+  std::vector< std::pair<unsigned int,unsigned long long> > slowEventSummaryVector ; 
+  std::vector< std::pair<unsigned int,unsigned long long> > slowPathSummaryVector ; 
+  std::vector< std::pair<unsigned int,unsigned long long> > slowModuleSummaryVector ; 
   std::vector<int> modIdxInterested;
-  std::vector < std::vector< std::pair<unsigned int,unsigned int> > > slowModInterestedVector ; 
+  std::vector < std::vector< std::pair<unsigned int,unsigned long long> > > slowModInterestedVector ; 
   
   //--- One loop through all events ---//
   bool init = false ; int nSkips = 0 ; 
@@ -1047,8 +1047,8 @@ int main(int argc, char ** argv) {
       for (int k=0; k<numberOfspecificTotalTime; k++) {
       	specificPathTimeSummaryVector.push_back(specificPathTimeSummaryVectorAtK);
       }
-      std::pair<unsigned int,unsigned int> pair ;
-      std::vector <std::pair<unsigned int,unsigned int> > slowModInterestedVectorAtK;
+      //      std::pair<unsigned int,unsigned int> pair ;
+      std::vector <std::pair<unsigned int,unsigned long long> > slowModInterestedVectorAtK;
       for (unsigned k=0; k<modInterested.size(); k++) {
       	slowModInterestedVector.push_back(slowModInterestedVectorAtK);
       }
@@ -1612,7 +1612,7 @@ int main(int argc, char ** argv) {
     // Needed to get run/event numbers
     TBEvtAux->GetEntry(ievt) ;
     //std::pair<int,int> eventInfo ;
-    std::pair<unsigned int,unsigned int> eventInfo ;
+    std::pair<unsigned int,unsigned long long> eventInfo ;
     eventInfo.first  = EvtAuxWrapper->id().run() ; 
     eventInfo.second = EvtAuxWrapper->id().event() ;
 

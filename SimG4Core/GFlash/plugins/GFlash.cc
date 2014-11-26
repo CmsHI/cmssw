@@ -13,7 +13,7 @@
 #include "G4StoppingPhysics.hh"
 #include "G4HadronElasticPhysics.hh" 
 #include "G4NeutronTrackingCut.hh"
-#include "HadronPhysicsQGSP_FTFP_BERT.hh"
+#include "G4HadronPhysicsQGSP_FTFP_BERT.hh"
 
 #include "G4DataQuestionaire.hh"
 #include "SimGeneral/GFlash/interface/GflashHistogram.h"
@@ -22,8 +22,8 @@
 
 GFlash::GFlash(G4LogicalVolumeToDDLogicalPartMap& map, 
 	       const HepPDT::ParticleDataTable * table_, 
-	       sim::FieldBuilder *fieldBuilder_, 
-	       const edm::ParameterSet & p) : PhysicsList(map, table_, fieldBuilder_, p), 
+	       sim::ChordFinderSetter *chordFinderSetter_, 
+	       const edm::ParameterSet & p) : PhysicsList(map, table_, chordFinderSetter_, p), 
 					      thePar(p.getParameter<edm::ParameterSet>("GFlash")) {
 
   G4DataQuestionaire it(photon);
@@ -63,7 +63,7 @@ GFlash::GFlash(G4LogicalVolumeToDDLogicalPartMap& map,
     RegisterPhysics( new G4HadronElasticPhysics(ver));
 
     // Hadron Physics
-    RegisterPhysics( new HadronPhysicsQGSP_FTFP_BERT(ver));   
+    RegisterPhysics( new G4HadronPhysicsQGSP_FTFP_BERT(ver));   
     // Stopping Physics
     RegisterPhysics( new G4StoppingPhysics(ver));
 
@@ -102,7 +102,7 @@ GFlash::GFlash(G4LogicalVolumeToDDLogicalPartMap& map,
   }
 
   // Monopoles
-  RegisterPhysics( new CMSMonopolePhysics(table_,fieldBuilder_,p));
+  RegisterPhysics( new CMSMonopolePhysics(table_,chordFinderSetter_,p));
 
   // singleton histogram object
   if(thePar.getParameter<bool>("GflashHistogram")) {

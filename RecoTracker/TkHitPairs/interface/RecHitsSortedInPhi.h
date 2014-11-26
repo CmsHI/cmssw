@@ -1,7 +1,7 @@
 #ifndef RecHitsSortedInPhi_H
 #define RecHitsSortedInPhi_H
 
-#include "TrackingTools/TransientTrackingRecHit/interface/TransientTrackingRecHit.h"
+#include "DataFormats/TrackerRecHit2D/interface/BaseTrackerRecHit.h"
 #include "TrackingTools/DetLayers/interface/DetLayer.h"
 
 #include <vector>
@@ -15,7 +15,7 @@
 class RecHitsSortedInPhi {
 public:
 
-  typedef TransientTrackingRecHit::ConstRecHitPointer Hit;
+  typedef BaseTrackerRecHit const * Hit;
 
   // A RecHit extension that caches the phi angle for fast access
   class HitWithPhi {
@@ -141,6 +141,7 @@ public:
   std::size_t size() const { return indeces.size()/2;}
   bool empty() const { return indeces.empty();}
   void clear() { indeces.clear();}
+  void shrink_to_fit() { indeces.shrink_to_fit();}
 
   void add (int il, int ol) { indeces.push_back(il);indeces.push_back(ol);}
 

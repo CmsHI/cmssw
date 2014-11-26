@@ -9,9 +9,13 @@
 #include <fstream>
 #include "TH1F.h"
 
-class ParameterSet;
-class Event;
-class EventSetup;
+namespace edm {
+  class Event;
+  class EventSetup;
+  class LuminosityBlock;
+  class ParameterSet;
+  class Run;
+}
 
 class TFile;
 class TTree;
@@ -19,7 +23,6 @@ class TBranch;
 class PUEvent;
 
 class PrimaryVertexGenerator;
-class RandomEngine;
 
 class PileUpProducer : public edm::EDProducer
 {
@@ -29,6 +32,7 @@ class PileUpProducer : public edm::EDProducer
   explicit PileUpProducer(edm::ParameterSet const & p);
   virtual ~PileUpProducer();
   virtual void beginRun(edm::Run const&, edm::EventSetup const&) override;
+  virtual void beginLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&) override;
   virtual void endRun(edm::Run const&, edm::EventSetup const&) override;
   virtual void produce(edm::Event & e, const edm::EventSetup & c) override;
 
@@ -45,7 +49,6 @@ class PileUpProducer : public edm::EDProducer
   PrimaryVertexGenerator* theVertexGenerator;
 
   double averageNumber_;
-  const RandomEngine* random;
   std::vector<std::string> theFileNames;
   std::string inputFile;
   unsigned theNumberOfFiles;
@@ -68,6 +71,8 @@ class PileUpProducer : public edm::EDProducer
   std::vector<double> dataProb;
   int varSize;
   int probSize;
+
+  bool currentValuesWereSet;
 };
 
 #endif

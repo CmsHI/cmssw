@@ -1,19 +1,16 @@
-
-#include "FWCore/Utilities/interface/EDMException.h"
-
 #include "Utilities/StorageFactory/interface/StorageMaker.h"
 #include "Utilities/StorageFactory/interface/StorageMakerFactory.h"
 #include "Utilities/StorageFactory/interface/StorageFactory.h"
 #include "Utilities/XrdAdaptor/src/XrdFile.h"
-
-// These are to be removed once the new client supports prepare requests.
 #include "XrdClient/XrdClientAdmin.hh"
 #include "XrdClient/XrdClientUrlSet.hh"
-#include "XrdCl/XrdClDefaultEnv.hh"
-
+#include "XrdClient/XrdClientEnv.hh"
 
 class XrdStorageMaker : public StorageMaker
 {
+private:
+  unsigned int timeout_ = 0;
+
 public:
   /** Open a storage object for the given URL (protocol + path), using the
       @a mode bits.  No temporary files are downloaded.  */
@@ -21,6 +18,16 @@ public:
 			 const std::string &path,
 			 int mode) override
   {
+    // The important part here is not the cache size (which will get
+    // auto-adjusted), but the fact the cache is set to something non-zero.
+    // If we don't do this before creating the XrdFile object, caching will be
+    // completely disabled, resulting in poor performance.
+    EnvPutInt(NAME_READCACHESIZE, 20*1024*1024);
+
+    // XrdClient has various timeouts which vary from 3 minutes to 8 hours.
+    // This enforces an even default (10 minutes) more appropriate for the
+    // cmsRun case.
+    if (timeout_ <= 0) {setTimeout(600);}
 
     StorageFactory *f = StorageFactory::get();
     StorageFactory::ReadHint readHint = f->readHint();
@@ -75,29 +82,24 @@ public:
 
   virtual void setDebugLevel (unsigned int level) override
   {
-    switch (level)
-    {
-      case 0:
-        XrdCl::DefaultEnv::SetLogLevel("Error");
-        break;
-      case 1:
-        XrdCl::DefaultEnv::SetLogLevel("Warning");
-        break;
-      case 2:
-        XrdCl::DefaultEnv::SetLogLevel("Info");
-        break;
-      case 3:
-        XrdCl::DefaultEnv::SetLogLevel("Debug");
-        break;
-      case 4:
-        XrdCl::DefaultEnv::SetLogLevel("Dump");
-        break;
-      default:
-        edm::Exception ex(edm::errors::Configuration);
-        ex << "Invalid log level specified " << level;
-        ex.addContext("Calling XrdStorageMaker::setDebugLevel()");
-        throw ex;
-    }
+    EnvPutInt("DebugLevel", level);
+  }
+
+  virtual void setTimeout(unsigned int timeout) override
+  {
+    timeout_ = timeout;
+    if (timeout == 0) {return;}
+    EnvPutInt("ConnectTimeout", timeout/3+1); // Default 120.  This should allow multiple connections to timeout before the open fails.
+    EnvPutInt("RequestTimeout", timeout/3+1); // Default 300.  This should allow almost three requests to be performed before the transaction times out.
+    EnvPutInt("TransactionTimeout", timeout); // Default 28800
+
+    // Safety mechanism - if client is redirected more than 255 times in 600
+    // seconds, then we abort the interaction.
+    EnvPutInt("RedirCntTimeout", 600); // Default 36000
+
+    // Enforce some CMS defaults.
+    EnvPutInt("MaxRedirectcount", 32); // Default 16
+    EnvPutInt("ReconnectWait", 5); // Default 5
   }
 };
 

@@ -102,6 +102,21 @@ namespace cond {
         }
       }
 
+      void open( boost::shared_ptr<coral::ISessionProxy>& coralSession, 
+		 const std::string& connectionString, 
+		 const std::string& schemaName ){
+        close();
+	database.reset( new ora::Database );
+	
+	ora::IBlobStreamingService* blobStreamer = cond::BlobStreamerPluginFactory::get()->create(  blobStreamingService );
+	if(!blobStreamer) throw cond::Exception("DbSession::open: cannot find required plugin. No instance of ora::IBlobStreamingService has been loaded..");
+	database->configuration().setBlobStreamingService( blobStreamer );
+	database->configuration().properties().setFlag( ora::Configuration::automaticContainerCreation() );
+	database->connect( coralSession, connectionString, schemaName );
+	transaction.reset( new cond::DbTransaction( database->transaction(), false ) );
+	isOpen = true;
+      }
+
       void close(){
         transaction.reset();
         database.reset();
@@ -157,6 +172,10 @@ void cond::DbSession::openReadOnly( const std::string& connectionString, const s
   m_implementation->openReadOnly( connectionString, id );
 }
 
+void cond::DbSession::open( boost::shared_ptr<coral::ISessionProxy>& coralSession, const std::string& connectionString, const std::string& schemaName ){
+  m_implementation->open( coralSession, connectionString, schemaName  );
+}
+
 void cond::DbSession::close()
 {
   m_implementation->close();
@@ -188,16 +207,12 @@ const std::string& cond::DbSession::blobStreamingService() const
 
 cond::DbTransaction& cond::DbSession::transaction()
 {
-  if(!m_implementation->connection.get() || !m_implementation->connection->isOpen())
-    throw cond::Exception("DbSession::transaction: cannot open transaction. Underlying connection is closed.");
   if(!m_implementation->transaction.get())
     throw cond::Exception("DbSession::transaction: cannot get transaction. Session has not been open.");
   return *m_implementation->transaction;
 }
 
 ora::Database& cond::DbSession::storage(){
-  if(!m_implementation->connection.get() || !m_implementation->connection->isOpen())
-    throw cond::Exception("DbSession::storage: cannot access the storage. Underlying connection is closed.");
   if(!m_implementation->database.get())
     throw cond::Exception("DbSession::storage: cannot access the database. Session has not been open.");
   return *m_implementation->database;
@@ -280,7 +295,7 @@ std::string cond::DbSession::classNameForItem( const std::string& objectId ){
   std::string ret("");
   if( !oid.isInvalid() ){
     ora::Container cont = storage().containerHandle( oid.containerId() );
-    ret = cont.className();
+    ret = cont.realClassName();
   }
   return ret; 
 }

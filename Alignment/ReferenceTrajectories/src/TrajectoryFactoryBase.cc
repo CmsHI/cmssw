@@ -111,8 +111,7 @@ TrajectoryFactoryBase::useRecHit( const TransientTrackingRecHit::ConstRecHitPoin
 
   if ( !theUseProjectedHits )
   {
-    const ProjectedRecHit2D* projectedHit = dynamic_cast< const ProjectedRecHit2D* >( hitPtr.get() );
-    if ( projectedHit != 0 ) return false;
+    if(trackerHitRTTI::isProjected(*hitPtr)) return false;
   }
 
   return true;
@@ -130,7 +129,9 @@ TrajectoryFactoryBase::materialEffects( const std::string & strME ) const
   if ( strME == "BrokenLines" ) return ReferenceTrajectoryBase::brokenLinesCoarse;
   if ( strME == "BrokenLinesCoarse" ) return ReferenceTrajectoryBase::brokenLinesCoarse;
   if ( strME == "BrokenLinesFine" ) return ReferenceTrajectoryBase::brokenLinesFine;
-          
+  if ( strME == "LocalGBL" ) return ReferenceTrajectoryBase::localGBL;
+  if ( strME == "CurvlinGBL" ) return ReferenceTrajectoryBase::curvlinGBL;
+            
   throw cms::Exception("BadConfig")
     << "[TrajectoryFactoryBase::materialEffects] Unknown parameter: " << strME;
 }

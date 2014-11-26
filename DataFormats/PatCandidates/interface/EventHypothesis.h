@@ -8,7 +8,7 @@
 
 namespace pat {
    // forward declaration
-   namespace eventhypothesis { template<typename T> struct Looper; }
+   namespace eventhypothesis { template<typename T> class Looper; }
    // real declarations
    namespace eventhypothesis { 
         // typedef for the Ref
@@ -105,8 +105,11 @@ namespace pat {
 
    namespace eventhypothesis {
         struct AcceptAllFilter : public ParticleFilter {
-            static const AcceptAllFilter & get() { static AcceptAllFilter dummyFilter; return dummyFilter; }
+            AcceptAllFilter(){}
+            static const AcceptAllFilter & get() { return s_dummyFilter; }
             virtual bool operator()(const CandRefType &cand, const std::string &role) const { return true; }
+            private:
+               static const AcceptAllFilter s_dummyFilter;
         };
         class RoleRegexpFilter : public ParticleFilter {
             public:

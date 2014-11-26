@@ -14,7 +14,10 @@ from SimCalorimetry.EcalZeroSuppressionProducers.ecalPreshowerDigis_cfi import *
 #from SimCalorimetry.Configuration.ecalDigiSequence_cff import *
 
 #HCAL
+from SimCalorimetry.HcalSimProducers.hcalUnsuppressedDigis_cfi import * ######fede
+hcalSimBlock.hitsProducer = cms.string("famosSimHits")
 from SimCalorimetry.HcalZeroSuppressionProducers.hcalDigisRealistic_cfi import *
+
 from SimCalorimetry.HcalTrigPrimProducers.hcaltpdigi_cff import * 
 from SimCalorimetry.HcalTrigPrimProducers.hcalTTPDigis_cfi import *
 
@@ -27,9 +30,9 @@ simRctDigis.useEcal = cms.bool(True)
 simRctDigis.useHcal = cms.bool(True)
 
 #ECAL reconstruction
-from RecoLocalCalo.EcalRecProducers.ecalGlobalUncalibRecHit_cfi import *
+from RecoLocalCalo.EcalRecProducers.ecalMultiFitUncalibRecHit_cfi import *
 from RecoLocalCalo.EcalRecProducers.ecalRecHit_cfi import *
-from RecoLocalCalo.EcalRecProducers.ecalDetIdToBeRecovered_cfi import *
+from RecoLocalCalo.EcalRecProducers.ecalDetIdToBeRecovered_cfi import *    
 
 import EventFilter.EcalDigiToRaw.ecalDigiToRaw_cfi
 ecalPacker = EventFilter.EcalDigiToRaw.ecalDigiToRaw_cfi.ecaldigitorawzerosup.clone()
@@ -63,6 +66,7 @@ hcalDigis.InputLabel = 'rawDataCollector'
 
 ##HcalRecHit
 from RecoLocalCalo.HcalRecAlgos.hcalRecAlgoESProd_cfi import *
+hcalOOTPileupESProducer = cms.ESProducer('OOTPileupDBCompatibilityESProducer')
 from RecoLocalCalo.HcalRecProducers.HcalHitReconstructor_hbhe_cfi import *
 from RecoLocalCalo.HcalRecProducers.HcalHitReconstructor_ho_cfi import *
 from RecoLocalCalo.HcalRecProducers.HcalHitReconstructor_hf_cfi import *
@@ -71,13 +75,13 @@ from RecoLocalCalo.HcalRecProducers.HBHEIsolatedNoiseReflagger_cfi import *
 #from Validation.HcalDigis.hcalDigisValidationSequence_cff import *
 dump = cms.EDAnalyzer("EventContentAnalyzer")
 
-DigiSequence = cms.Sequence((simHcalTriggerPrimitiveDigis*simHcalDigis*simHcalTTPDigis) + (simEcalTriggerPrimitiveDigis*simEcalDigis*simEcalPreshowerDigis ) # Digi
+DigiSequence = cms.Sequence((simHcalTriggerPrimitiveDigis * simHcalDigis*simHcalTTPDigis) + (simEcalTriggerPrimitiveDigis*simEcalDigis*simEcalPreshowerDigis ) # Digi
                             *simRctDigis*        # L1Simulation
-                            ecalPacker *esDigiToRaw *hcalRawData *rawDataCollector  *ecalPreshowerDigis *ecalDigis *hcalDigis #* printContent
+                           ecalPacker *esDigiToRaw *hcalRawData *rawDataCollector  *ecalPreshowerDigis *ecalDigis *hcalDigis #* printContent
                             )
 
 # Reconstruction
-ecalRecHitSequence = cms.Sequence(ecalGlobalUncalibRecHit*ecalDetIdToBeRecovered*ecalRecHit*ecalPreshowerRecHit)	   	
+ecalRecHitSequence = cms.Sequence(ecalMultiFitUncalibRecHit*ecalDetIdToBeRecovered*ecalRecHit*ecalPreshowerRecHit)	   	
 hcalRecHitSequence = cms.Sequence((hbheprereco+hfreco+horeco)*hbhereco)
 
 TotalDigisPlusRecHitsSequence = cms.Sequence(DigiSequence*ecalRecHitSequence*hcalRecHitSequence)

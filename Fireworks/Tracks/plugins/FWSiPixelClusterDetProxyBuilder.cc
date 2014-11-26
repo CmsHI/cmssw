@@ -6,7 +6,6 @@
 //
 // Original Author:
 //         Created:  Thu Dec  6 18:01:21 PST 2007
-// $Id: FWSiPixelClusterDetProxyBuilder.cc,v 1.4 2010/08/31 15:30:21 yana Exp $
 //
 
 #include "TEveGeoNode.h"
@@ -27,6 +26,7 @@ public:
   REGISTER_PROXYBUILDER_METHODS();
 
 private:
+  using FWProxyBuilderBase::build;
   virtual void build(const FWEventItem* iItem, TEveElementList* product, const FWViewContext*) override;
   FWSiPixelClusterDetProxyBuilder(const FWSiPixelClusterDetProxyBuilder&);
   const FWSiPixelClusterDetProxyBuilder& operator=(const FWSiPixelClusterDetProxyBuilder&);

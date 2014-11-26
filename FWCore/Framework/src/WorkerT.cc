@@ -101,7 +101,7 @@ namespace edm{
 
   template<typename T>
   inline
-  WorkerT<T>::WorkerT(T* ed, ModuleDescription const& md, ExceptionToActionTable const* actions) :
+  WorkerT<T>::WorkerT(std::shared_ptr<T> ed, ModuleDescription const& md, ExceptionToActionTable const* actions) :
   Worker(md, actions),
   module_(ed) {
     assert(module_ != 0);
@@ -115,8 +115,8 @@ namespace edm{
   inline
   bool
   WorkerT<T>::implDo(EventPrincipal& ep, EventSetup const& c, ModuleCallingContext const* mcc) {
-    boost::shared_ptr<Worker> sentry(this,[&ep](Worker* obj) {obj->postDoEvent(ep);});
-    return module_->doEvent(ep, c, mcc);
+    std::shared_ptr<Worker> sentry(this,[&ep](Worker* obj) {obj->postDoEvent(ep);});
+    return module_->doEvent(ep, c, activityRegistry(), mcc);
   }
   
   template<typename T>
@@ -321,6 +321,15 @@ namespace edm{
   WorkerT<T>::implPostForkReacquireResources(unsigned int iChildIndex,
                                              unsigned int iNumberOfChildren) {
     module_->doPostForkReacquireResources(iChildIndex, iNumberOfChildren);
+  }
+
+
+  template<typename T>
+  inline
+  void
+  WorkerT<T>::implRegisterThinnedAssociations(ProductRegistry const& registry,
+                                               ThinnedAssociationsHelper& helper) {
+    module_->doRegisterThinnedAssociations(registry, helper);
   }
 
   template<typename T>

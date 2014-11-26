@@ -31,14 +31,13 @@ public:
   
   // member functions
   void produce(edm::Event& iEvent,const edm::EventSetup& iSetup) override;
-  void endJob() override;
 
 private:  
   // member data
-  edm::InputTag     srcPart_ ;  
-  edm::InputTag     srcPV_   ;
-  double            max_dxy_ ;
-  double            max_dz_  ;
+  double                                          max_dxy_           ;
+  double                                          max_dz_            ;
+  edm::EDGetTokenT< std::vector<reco::Vertex> >   v_recoVertexToken_ ;
+  edm::EDGetTokenT< std::vector<reco::Track> >    v_recoTrackToken_  ;
 };
 
 
@@ -49,10 +48,10 @@ private:
 
 //______________________________________________________________________________
 TrackFromPVSelector::TrackFromPVSelector(const edm::ParameterSet& iConfig)
-  : srcPart_(iConfig.getParameter<edm::InputTag>("srcTrack"))
-  , srcPV_  (iConfig.getParameter<edm::InputTag>("srcVertex"))
-  , max_dxy_(iConfig.getParameter<double>("max_dxy"))
-  , max_dz_ (iConfig.getParameter<double>("max_dz"))
+  : max_dxy_          ( iConfig.getParameter<double>( "max_dxy" ) )
+  , max_dz_           ( iConfig.getParameter<double>( "max_dz" ) )
+  , v_recoVertexToken_( consumes< std::vector<reco::Vertex> >( iConfig.getParameter<edm::InputTag>( "srcVertex" ) ) )
+  , v_recoTrackToken_ ( consumes< std::vector<reco::Track> >( iConfig.getParameter<edm::InputTag>( "srcTrack" ) ) )
 {
   produces<std::vector<reco::Track> >();
 }
@@ -71,10 +70,10 @@ void TrackFromPVSelector::produce(edm::Event& iEvent,const edm::EventSetup& iSet
   std::auto_ptr<std::vector<reco::Track> > goodTracks(new std::vector<reco::Track >);
   
   edm::Handle< std::vector<reco::Vertex> > VertexHandle;
-  iEvent.getByLabel(srcPV_,VertexHandle);
+  iEvent.getByToken( v_recoVertexToken_, VertexHandle );
 
   edm::Handle< std::vector<reco::Track> > TrackHandle;
-  iEvent.getByLabel(srcPart_,TrackHandle);
+  iEvent.getByToken( v_recoTrackToken_, TrackHandle );
   
   if( (VertexHandle->size() == 0) || (TrackHandle->size() == 0) ) 
   {
@@ -95,10 +94,6 @@ void TrackFromPVSelector::produce(edm::Event& iEvent,const edm::EventSetup& iSet
   
   iEvent.put(goodTracks);
   
-}
-
-void TrackFromPVSelector::endJob()
-{
 }
 
 #include "FWCore/Framework/interface/MakerMacros.h"

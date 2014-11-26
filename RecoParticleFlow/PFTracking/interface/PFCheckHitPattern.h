@@ -68,7 +68,7 @@ private:
   /// Return a bool indicating if a given subdetector is in the barrel.
   static bool barrel(uint32_t subDet);
 
-  void print(const reco::HitPattern& hp) const;
+  void print(const reco::HitPattern::HitCategory, const reco::HitPattern& hp) const;
 
 private:
   /// Note if geometry info is already initialized.
@@ -77,7 +77,7 @@ private:
   /// For a given subdetector & layer number, this stores the minimum and maximum
   /// r (or z) values if it is barrel (or endcap) respectively.
   typedef std::map< DetInfo, std::pair< double, double> > RZrangeMap;
-  static RZrangeMap rangeRorZ_;
+  RZrangeMap rangeRorZ_;
 
 
 };

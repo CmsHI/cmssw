@@ -28,15 +28,18 @@
 
 #include "DQMServices/Core/interface/DQMStore.h"
 #include "DQMServices/Core/interface/MonitorElement.h"
+#include "DQMServices/Core/interface/DQMEDAnalyzer.h"
+
 
 #include "FWCore/ServiceRegistry/interface/Service.h"
 
+#include "DataFormats/METReco/interface/HcalNoiseRBX.h"
 
 //
 // class declaration
 //
 
-class HcalNoiseRates : public edm::EDAnalyzer {
+class HcalNoiseRates : public DQMEDAnalyzer {
  public:
   explicit HcalNoiseRates(const edm::ParameterSet&);
   ~HcalNoiseRates();
@@ -46,12 +49,13 @@ class HcalNoiseRates : public edm::EDAnalyzer {
   virtual void beginJob();
   virtual void analyze(const edm::Event&, const edm::EventSetup&);
   virtual void endJob();
+  virtual void bookHistograms(DQMStore::IBooker &, edm::Run const &, edm::EventSetup const &) override;
 
-  DQMStore* dbe_;
   std::string outputFile_;
 
   // parameters
   edm::InputTag rbxCollName_;          // label for the rbx collection
+  edm::EDGetTokenT<reco::HcalNoiseRBXCollection> tok_rbx_;
   double minRBXEnergy_;                // RBX energy threshold
   double minHitEnergy_;                // RecHit energy threshold
   bool   useAllHistos_;

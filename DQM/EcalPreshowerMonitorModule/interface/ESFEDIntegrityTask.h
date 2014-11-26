@@ -1,68 +1,47 @@
 #ifndef ESFEDIntegrityTask_H
 #define ESFEDIntegrityTask_H
 
-#include "FWCore/Framework/interface/EDAnalyzer.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
-class MonitorElement;
-class DQMStore;
+#include "DataFormats/FEDRawData/interface/FEDRawDataCollection.h"
+#include "DataFormats/EcalRawData/interface/EcalRawDataCollections.h"
 
-class ESFEDIntegrityTask : public edm::EDAnalyzer {
+#include "DQMServices/Core/interface/DQMEDAnalyzer.h"
+
+class MonitorElement;
+
+class ESFEDIntegrityTask : public DQMEDAnalyzer {
   
  public:
   
   ESFEDIntegrityTask(const edm::ParameterSet& ps);
-  virtual ~ESFEDIntegrityTask();
+  virtual ~ESFEDIntegrityTask() {}
   
  protected:
+
+  void bookHistograms(DQMStore::IBooker&, edm::Run const&, edm::EventSetup const&) override;
   
   /// Analyze
-  void analyze(const edm::Event& e, const edm::EventSetup& c);
-  
-  /// BeginJob
-  void beginJob(void);
-  
-  /// EndJob
-  void endJob(void);
-  
-  /// BeginRun
-  void beginRun(const edm::Run & r, const edm::EventSetup & c);
-  
-  /// EndRun
-  void endRun(const edm::Run & r, const edm::EventSetup & c);
-  
-  /// Reset
-  void reset(void);
-  
-  /// Setup
-  void setup(void);
-  
-  /// Cleanup
-  void cleanup(void);
+  void analyze(const edm::Event& e, const edm::EventSetup& c) override;
+
+  void endJob();
   
  private:
   
   int ievt_;
   
-  DQMStore* dqmStore_;
-  
   std::string prefixME_;
   std::string fedDirName_;
-  bool enableCleanup_;
-  bool mergeRuns_;
   bool debug_;
 
-  edm::InputTag dccCollections_;
-  edm::InputTag kchipCollections_;
-  edm::InputTag FEDRawDataCollection_; 
+  edm::EDGetTokenT<ESRawDataCollection> dccCollections_;
+  edm::EDGetTokenT<FEDRawDataCollection> FEDRawDataCollection_; 
   
   MonitorElement* meESFedsEntries_;
   MonitorElement* meESFedsFatal_;
   MonitorElement* meESFedsNonFatal_;
-  
-  bool init_;
 
 };
 

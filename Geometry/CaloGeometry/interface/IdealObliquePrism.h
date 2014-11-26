@@ -23,7 +23,6 @@
   is encoded in the sign of the thickness.  (positive = parallel to
   z-axis, negative = perpendicular)
 
-  $Date: 2011/05/29 18:06:58 $
   $Revision: 1.10 $
   \author J. Mans - Minnesota
   */
@@ -41,12 +40,10 @@ public:
   IdealObliquePrism& operator=( const IdealObliquePrism& idop ) ;
 	 
   IdealObliquePrism( const GlobalPoint& faceCenter, 
-		     const CornersMgr*  mgr       ,
+		     CornersMgr*        mgr       ,
 		     const CCGFloat*    parm       ) ;
 
   virtual ~IdealObliquePrism() ;
-
-  virtual const CornersVec& getCorners() const ;
 
   CCGFloat dEta() const ;
   CCGFloat dPhi() const ;
@@ -63,6 +60,7 @@ public:
 			     Pt3D&           ref  ) const ;
 
 private:
+  virtual void initCorners(CornersVec&)  override;
 
   static GlobalPoint etaPhiPerp( float eta, float phi, float perp ) ;
   static GlobalPoint etaPhiZ(float eta, float phi, float z) ;

@@ -77,8 +77,8 @@ void DTResolutionTest::beginRun(const edm::Run& run, const edm::EventSetup& cont
   for(int wheel=-2; wheel<3; wheel++){
     bookHistos(wheel);
   }
-  vector<DTChamber*> chambers = muonGeom->chambers();
-  for(vector<DTChamber*>::const_iterator chamber = chambers.begin();
+  vector<const DTChamber*> chambers = muonGeom->chambers();
+  for(vector<const DTChamber*>::const_iterator chamber = chambers.begin();
       chamber != chambers.end(); ++chamber) {
     bookHistos((*chamber)->id());
   }
@@ -194,8 +194,8 @@ void DTResolutionTest::endLuminosityBlock(LuminosityBlock const& lumiSeg, EventS
 
   edm::LogVerbatim ("resolution") <<"[DTResolutionTest]: "<<nLumiSegs<<" updates";
 
-  vector<DTChamber*>::const_iterator ch_it = muonGeom->chambers().begin();
-  vector<DTChamber*>::const_iterator ch_end = muonGeom->chambers().end();
+  vector<const DTChamber*>::const_iterator ch_it = muonGeom->chambers().begin();
+  vector<const DTChamber*>::const_iterator ch_end = muonGeom->chambers().end();
 
   edm::LogVerbatim ("resolution") << "[DTResolutionTest]: Residual Distribution tests results";
   
@@ -256,8 +256,10 @@ void DTResolutionTest::endLuminosityBlock(LuminosityBlock const& lumiSeg, EventS
 	  TProfile* prof = res_histo_2D_root->ProfileX();
 	  prof->GetXaxis()->SetRangeUser(0,2);
 	  //prof->Fit("pol1","Q0");
+	  //need our own copy to avoid threading problems
+	  TF1 fitting("mypol1","pol1");
 	  try {
-	    prof->Fit("pol1","Q0");
+	    prof->Fit(&fitting,"Q0");
 	  } catch (cms::Exception& iException) {
 	    edm::LogError ("resolution") << "[DTResolutionTest]: Exception when fitting..."
 					 << "SuperLayer : " << slID << "\n"
@@ -266,8 +268,7 @@ void DTResolutionTest::endLuminosityBlock(LuminosityBlock const& lumiSeg, EventS
 	    SlopeHistos.find(make_pair(slID.wheel(),slID.sector()))->second->setBinContent(BinNumber, -99.);
 	    continue;
 	  }
-	  TF1 *fitting = prof->GetFunction("pol1");
-	  double slope = fitting->GetParameter(1);
+	  double slope = fitting.GetParameter(1);
 	  SlopeHistos.find(make_pair(slID.wheel(),slID.sector()))->second->setBinContent(BinNumber, slope);	
 	}
       }

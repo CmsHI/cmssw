@@ -43,6 +43,28 @@ FamosCalorimetryBlock = cms.PSet(
             GapLossProbability = cms.double(0.9),
             SimulatePreshower = cms.bool(True)
         ),
+        ForwardCalorimeterProperties = cms.PSet(
+            HadronicCalorimeterProperties= cms.PSet(
+                  HCAL_Sampling = cms.double(0.0035),
+                  # Watch out ! The following two values are defined wrt the electron shower simulation
+                  # There are not directly related to the detector properties
+                  HCAL_PiOverE = cms.double(0.2),
+                  # HCAL_PiOverE = cms.double(0.4)
+                  HCALAeff= cms.double(55.845),
+                  HCALZeff= cms.double(26),
+                  HCALrho= cms.double(7.87),
+
+                  HCALradiationLengthIncm= cms.double(1.757),
+                  HCALradLenIngcm2= cms.double(13.84),
+                  HCALmoliereRadius= cms.double(1.719),
+                  HCALcriticalEnergy= cms.double(21E-3),
+                  HCALinteractionLength= cms.double(16.77),
+
+                  HCALetatow=cms.vdouble( 0.000, 0.087, 0.174, 0.261, 0.348, 0.435, 0.522, 0.609, 0.696, 0.783, 0.870,    0.957, 1.044, 1.131, 1.218, 1.305, 1.392, 1.479, 1.566, 1.653, 1.740, 1.830,    1.930, 2.043, 2.172, 2.322, 2.500, 2.650, 2.853, 3.000, 3.139, 3.314, 3.489,    3.664, 3.839, 4.013, 4.191, 4.363, 4.538, 4.716, 4.889, 5.191),
+#                  HCALDepthLam=cms.vdouble( 8.930, 9.001, 9.132, 8.912, 8.104, 8.571, 8.852, 9.230, 9.732, 10.29,          10.95, 11.68, 12.49, 12.57, 12.63,  6.449, 5.806, 8.973, 8.934,  8.823,          8.727, 8.641, 8.565, 8.496, 8.436, 8.383, 8.346, 8.307, 8.298,  8.281,          9.442, 9.437, 9.432, 9.429, 9.432, 9.433, 9.430, 9.437, 9.442, 9.446, 9.435)
+                  HCALDepthLam=cms.vdouble(8.014, 8.078, 8.195, 7.998, 7.273, 7.692, 7.944, 8.283, 8.734, 9.235, 9.827, 10.482, 11.209, 11.281, 11.335, 5.788, 5.211, 8.053, 8.018, 7.918, 7.832, 7.755, 7.687, 7.625, 7.571, 7.523, 7.490, 7.455, 7.447, 7.432, 8.474, 8.469, 8.465, 8.462, 8.465, 8.466, 8.463, 8.469, 8.474, 8.477, 8.467)
+                  ),
+        ),
         CalorimeterProperties = cms.PSet(
             # triplet for each p value:  p, k_e(p), k_h(p) ...
             RespCorrP = cms.vdouble(1.0, 1.0, 1.0, 1000.0, 1.0, 1.0),  

@@ -3,8 +3,6 @@
 
 /** \class CSCDigiToRaw
  *
- *  $Date: 2010/05/04 02:36:24 $
- *  $Revision: 1.11 $
  *  \author A. Tumanov - Rice
  */
 
@@ -37,7 +35,10 @@ public:
                         const CSCCorrelatedLCTDigiCollection& correlatedLCTDigis,
 			FEDRawDataCollection& fed_buffers,
 		        const CSCChamberMap* theMapping, 
-			edm::Event & e);
+			edm::Event & e, 
+			uint16_t theFormatVersion = 2005, 
+			bool usePreTriggers = true,
+			bool packEverything = false);
 
 private:
   void beginEvent(const CSCChamberMap* electronicsMap);
@@ -64,7 +65,9 @@ private:
   int clctWindowMax_;
   int preTriggerWindowMin_;
   int preTriggerWindowMax_;
-
+  uint16_t formatVersion_;
+  bool usePreTriggers_;
+  bool packEverything_;
 };
 
 

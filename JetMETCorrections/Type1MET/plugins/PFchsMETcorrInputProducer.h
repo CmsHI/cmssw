@@ -10,9 +10,7 @@
  * \authors Anne-Maria Visuri, Mikko Voutilainen
  *          Tai Sakuma
  *
- * \version $Revision: 1.2 $
  *
- * $Id: PFchsMETcorrInputProducer.h,v 1.2 2011/10/14 10:14:35 veelken Exp $
  *
  */
 
@@ -21,6 +19,8 @@
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Utilities/interface/InputTag.h"
+
+#include "DataFormats/VertexReco/interface/VertexFwd.h"
 
 #include "DataFormats/METReco/interface/CorrMETData.h"
 
@@ -42,7 +42,7 @@ class PFchsMETcorrInputProducer : public edm::EDProducer
 
   std::string moduleLabel_;
 
-  edm::InputTag src_; // input vertex collection
+  edm::EDGetTokenT<reco::VertexCollection> token_;
 
   unsigned goodVtxNdof_;
   double goodVtxZ_;

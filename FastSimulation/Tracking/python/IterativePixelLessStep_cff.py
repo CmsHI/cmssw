@@ -22,13 +22,24 @@ iterativePixelLessSeeds.pTMin = [0.3]
 iterativePixelLessSeeds.maxD0 = [99.]
 iterativePixelLessSeeds.maxZ0 = [99.]
 #-----
-iterativePixelLessSeeds.numberOfHits = [2]
+iterativePixelLessSeeds.numberOfHits = [3]
 #values for the seed compatibility constraint
-iterativePixelLessSeeds.originRadius = [2.0]
-iterativePixelLessSeeds.originHalfLength = [10.0]
-iterativePixelLessSeeds.originpTMin = [0.6] # was 0.5
+iterativePixelLessSeeds.originRadius = [1.0]
+iterativePixelLessSeeds.originHalfLength = [12.0]
+iterativePixelLessSeeds.originpTMin = [0.4] # was 0.6
 iterativePixelLessSeeds.zVertexConstraint = [-1.0]
 iterativePixelLessSeeds.primaryVertices = ['none']
+
+iterativePixelLessSeeds.newSyntax = True
+#iterativePixelLessSeeds.layerList = ['TIB1+TIB2',
+#                                     'TIB1+TID1_pos','TIB1+TID1_neg',
+#                                     'TID3_pos+TEC1_pos','TID3_neg+TEC1_neg',
+#                                     'TID1_pos+TID2_pos','TID2_pos+TID3_pos',
+#                                     'TEC1_pos+TEC2_pos','TEC2_pos+TEC3_pos','TEC3_pos+TEC4_pos','TEC3_pos+TEC5_pos','TEC4_pos+TEC5_pos',
+#                                     'TID1_neg+TID2_neg','TID2_neg+TID3_neg',
+#                                     'TEC1_neg+TEC2_neg','TEC2_neg+TEC3_neg','TEC3_neg+TEC4_neg','TEC3_neg+TEC5_neg','TEC4_neg+TEC5_neg']
+from RecoTracker.IterativeTracking.PixelLessStep_cff import pixelLessStepSeedLayers
+iterativePixelLessSeeds.layerList = pixelLessStepSeedLayers.layerList
 
 # candidate producer
 #from FastSimulation.Tracking.IterativeFourthCandidateProducer_cff import *

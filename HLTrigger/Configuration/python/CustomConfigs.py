@@ -24,11 +24,13 @@ def Base(process):
     process.MessageLogger.categories.append('L1GtTrigReport')
     process.MessageLogger.categories.append('HLTrigReport')
 
-# override the GlobalTag, connection string and pfnPrefix
-    if 'GlobalTag' in process.__dict__:
-        process.GlobalTag.connect   = 'frontier://FrontierProd/CMS_COND_31X_GLOBALTAG'
-        process.GlobalTag.pfnPrefix = cms.untracked.string('frontier://FrontierProd/')
-        
+#
+# No longer override - instead use GT config as provided via cmsDriver
+## override the GlobalTag, connection string and pfnPrefix
+#    if 'GlobalTag' in process.__dict__:
+#        process.GlobalTag.connect   = 'frontier://FrontierProd/CMS_CONDITIONS'
+#        process.GlobalTag.pfnPrefix = cms.untracked.string('frontier://Frontie#rProd/')
+#        
     process=ProcessName(process)
 
     return(process)
@@ -83,4 +85,12 @@ def HLTDropPrevious(process):
 
     process=Base(process)
     
+    return(process)
+
+
+def MassReplaceInputTag(process,old="rawDataCollector",new="rawDataRepacker"):
+#   replace InputTag values (adapted from Configuration/Applications/python/ConfigBuilder.py)
+    from PhysicsTools.PatAlgos.tools.helpers import massSearchReplaceAnyInputTag
+    for s in process.paths_().keys():
+        massSearchReplaceAnyInputTag(getattr(process,s),old,new)
     return(process)

@@ -2,7 +2,6 @@
 //
 // Package:     Tracks
 // Class  :     TrackUtils
-// $Id: TrackUtils.cc,v 1.42 2010/09/07 15:46:49 yana Exp $
 //
 
 // system include files
@@ -364,18 +363,7 @@ const SiStripCluster* extractClusterFromTrackingRecHit( const TrackingRecHit* re
    {     
       fwLog( fwlog::kDebug ) << "hit 2D ";
       
-      if( hit2D->cluster().isNonnull())
-      {
 	 cluster = hit2D->cluster().get();
-      }
-      else if( hit2D->cluster_regional().isNonnull())
-      {
-	 cluster = hit2D->cluster_regional().get();
-      }
-      else
-      {
-	 fwLog( fwlog::kDebug ) << "no cluster found!\n";
-      }
    }
    if( cluster == 0 )
    {
@@ -383,18 +371,7 @@ const SiStripCluster* extractClusterFromTrackingRecHit( const TrackingRecHit* re
      {
         fwLog( fwlog::kDebug ) << "hit 1D ";
 
-	if( hit1D->cluster().isNonnull())
-	{
 	   cluster = hit1D->cluster().get();
-	}
-	else if( hit1D->cluster_regional().isNonnull())
-	{
-	   cluster = hit1D->cluster_regional().get();
-	}
-	else
-	{
-	   fwLog( fwlog::kDebug ) << "no cluster found!\n";
-	}
      }
    }
    return cluster;
@@ -447,7 +424,7 @@ addSiStripClusters( const FWEventItem* iItem, const reco::Track &t, class TEveEl
       const float* pars = geom->getParameters( rawid );
       
       // -- get phi from SiStripHit
-      TrackingRecHitRef rechitRef = *it;
+      auto rechitRef = *it;
       const TrackingRecHit *rechit = &( *rechitRef );
       const SiStripCluster *cluster = extractClusterFromTrackingRecHit( rechit );
 

@@ -25,7 +25,11 @@ from Validation.MuonIdentification.muonIdVal_cff import *
 from Validation.RecoMuon.muonValidationHLT_cff import *
 from Validation.EventGenerator.BasicGenValidation_cff import *
 
-prevalidation = cms.Sequence( globalPrevalidation * hltassociation )
+prevalidation = cms.Sequence( globalPrevalidation * hltassociation * metPreValidSeq )
+prevalidationLiteTracking = cms.Sequence( prevalidation )
+prevalidationLiteTracking.replace(globalPrevalidation,globalPrevalidationLiteTracking)
+
+
 
 validation = cms.Sequence(cms.SequencePlaceholder("mix")
                          +genvalid_all
@@ -34,6 +38,10 @@ validation = cms.Sequence(cms.SequencePlaceholder("mix")
                          *globalrechitsanalyze
                          *globalValidation
                          *hltvalidation)
+
+validationLiteTracking = cms.Sequence( validation )
+validationLiteTracking.replace(globalValidation,globalValidationLiteTracking)
+validationLiteTracking.remove(condDataValidation)
 
 prevalidation_preprod = cms.Sequence( preprodPrevalidation )
 

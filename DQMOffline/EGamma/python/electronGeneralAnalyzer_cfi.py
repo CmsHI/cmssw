@@ -4,13 +4,13 @@ import FWCore.ParameterSet.Config as cms
 dqmElectronGeneralAnalysis = cms.EDAnalyzer("ElectronGeneralAnalyzer",
 
     Verbosity = cms.untracked.int32(0),
-    FinalStep = cms.string("AtRunEnd"),
+    FinalStep = cms.string("AtJobEnd"),
     InputFile = cms.string(""),
     OutputFile = cms.string(""),
     InputFolderName = cms.string("Egamma/Electrons/General"),
     OutputFolderName = cms.string("Egamma/Electrons/General"),
     
-    ElectronCollection = cms.InputTag("gsfElectrons"),
+    ElectronCollection = cms.InputTag("gedGsfElectrons"),
     MatchingObjectCollection = cms.InputTag("mergedSuperClusters"),
     TrackCollection = cms.InputTag("generalTracks"),
     GsfTrackCollection = cms.InputTag("electronGsfTracks"),

@@ -2,7 +2,6 @@
 
 #include "HLTrigger/HLTfilters/interface/HLTBool.h"
 #include "HLTrigger/HLTfilters/interface/HLTFiltCand.h"
-#include "HLTrigger/HLTfilters/interface/HLTLevel1GTSeed.h"
 #include "HLTrigger/HLTfilters/interface/HLTHighLevel.h"
 
 #include "DataFormats/L1Trigger/interface/L1EmParticle.h"
@@ -94,12 +93,14 @@ typedef HLTDoublet<  PFJet,CaloMET> HLT2PFJetCaloMET;
 typedef HLTDoublet<  PFJet,    MET> HLT2PFJetMET;
 
 typedef HLTDoublet<Electron            ,CaloJet> HLT2ElectronTau;
+typedef HLTDoublet<RecoEcalCandidate   ,CaloJet> HLT2PhotonTau;
 typedef HLTDoublet<RecoChargedCandidate,CaloJet> HLT2MuonTau;
 typedef HLTDoublet<Electron            ,CaloTau> HLT2ElectronCaloTau;
 typedef HLTDoublet<RecoChargedCandidate,CaloTau> HLT2MuonCaloTau;
 typedef HLTDoublet<Electron            ,HLTTau>  HLT2ElectronHLTTau;
 typedef HLTDoublet<RecoChargedCandidate,HLTTau>  HLT2MuonHLTTau;
 typedef HLTDoublet<Electron            ,PFTau>   HLT2ElectronPFTau;
+typedef HLTDoublet<RecoEcalCandidate   ,PFTau>   HLT2PhotonPFTau;
 typedef HLTDoublet<RecoChargedCandidate,PFTau>   HLT2MuonPFTau;
 typedef HLTDoublet<Electron            ,PFJet>   HLT2ElectronPFJet;
 typedef HLTDoublet<RecoChargedCandidate,PFJet>   HLT2MuonPFJet;
@@ -117,7 +118,6 @@ typedef HLTDoubletDZ<Electron            ,RecoChargedCandidate> HLT2ElectronMuon
 
 DEFINE_FWK_MODULE(HLTBool);
 DEFINE_FWK_MODULE(HLTFiltCand);
-DEFINE_FWK_MODULE(HLTLevel1GTSeed);
 DEFINE_FWK_MODULE(HLTHighLevel);
 
 DEFINE_FWK_MODULE(HLT2CaloJetCaloJet);
@@ -127,12 +127,14 @@ DEFINE_FWK_MODULE(HLT2PFJetPFJet);
 DEFINE_FWK_MODULE(HLT2PFJetCaloMET);
 DEFINE_FWK_MODULE(HLT2PFJetMET);
 DEFINE_FWK_MODULE(HLT2ElectronTau);
+DEFINE_FWK_MODULE(HLT2PhotonTau);
 DEFINE_FWK_MODULE(HLT2MuonTau);
 //DEFINE_FWK_MODULE(HLT2ElectronCaloTau);
 //DEFINE_FWK_MODULE(HLT2MuonCaloTau);
 //DEFINE_FWK_MODULE(HLT2ElectronHLTTau);
 //DEFINE_FWK_MODULE(HLT2MuonHLTTau);
 DEFINE_FWK_MODULE(HLT2ElectronPFTau);
+DEFINE_FWK_MODULE(HLT2PhotonPFTau);
 DEFINE_FWK_MODULE(HLT2MuonPFTau);
 DEFINE_FWK_MODULE(HLT2ElectronPFJet);
 DEFINE_FWK_MODULE(HLT2MuonPFJet);

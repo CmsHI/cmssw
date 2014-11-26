@@ -1,7 +1,10 @@
 #ifndef PFElecTkProducer_H
 #define PFElecTkProducer_H
+#include "DataFormats/ParticleFlowReco/interface/PFDisplacedVertex.h"
+#include "DataFormats/ParticleFlowReco/interface/PFConversion.h"
+#include "DataFormats/ParticleFlowReco/interface/PFV0.h"
 
-#include "FWCore/Framework/interface/EDProducer.h"
+#include "FWCore/Framework/interface/stream/EDProducer.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
@@ -15,6 +18,12 @@
 #include "DataFormats/EgammaReco/interface/ElectronSeed.h"
 #include "DataFormats/ParticleFlowReco/interface/PFCluster.h"
 #include "DataFormats/ParticleFlowReco/interface/PFClusterFwd.h"
+#include "DataFormats/GsfTrackReco/interface/GsfTrackFwd.h"
+#include "DataFormats/ParticleFlowReco/interface/PFDisplacedVertexFwd.h"
+#include "DataFormats/ParticleFlowReco/interface/PFConversionFwd.h"
+#include "DataFormats/ParticleFlowReco/interface/PFV0Fwd.h"
+#include "DataFormats/VertexReco/interface/VertexFwd.h"
+#include "DataFormats/ParticleFlowReco/interface/PFDisplacedTrackerVertex.h"
 
 class PFTrackTransformer;
 class GsfTrack;
@@ -32,7 +41,7 @@ class ConvBremPFTrackFinder;
  and transform them in PFGsfRecTracks.
 */
 
-class PFElecTkProducer : public edm::EDProducer {
+class PFElecTkProducer final : public edm::stream::EDProducer<> {
  public:
   
      ///Constructor
@@ -96,13 +105,13 @@ class PFElecTkProducer : public edm::EDProducer {
       reco::GsfPFRecTrack pftrack_;
       reco::GsfPFRecTrack secpftrack_;
       edm::ParameterSet conf_;
-      edm::InputTag gsfTrackLabel_;
-      edm::InputTag pfTrackLabel_;
-      edm::InputTag primVtxLabel_;
-      edm::InputTag pfEcalClusters_;
-      edm::InputTag pfNuclear_;
-      edm::InputTag pfConv_;
-      edm::InputTag pfV0_;
+      edm::EDGetTokenT<reco::GsfTrackCollection> gsfTrackLabel_;
+      edm::EDGetTokenT<reco::PFRecTrackCollection> pfTrackLabel_;
+      edm::EDGetTokenT<reco::VertexCollection> primVtxLabel_;
+      edm::EDGetTokenT<reco::PFClusterCollection> pfEcalClusters_;
+      edm::EDGetTokenT<reco::PFDisplacedTrackerVertexCollection>  pfNuclear_;
+      edm::EDGetTokenT<reco::PFConversionCollection> pfConv_;
+      edm::EDGetTokenT<reco::PFV0Collection>  pfV0_;
       bool useNuclear_;
       bool useConversions_;
       bool useV0_;
@@ -122,7 +131,6 @@ class PFElecTkProducer : public edm::EDProducer {
       bool modemomentum_;
       bool applySel_;
       bool applyGsfClean_;
-      bool useFifthStep_;
       bool useFifthStepForEcalDriven_;
       bool useFifthStepForTrackDriven_;
       //   bool useFifthStepSec_;
@@ -134,7 +142,15 @@ class PFElecTkProducer : public edm::EDProducer {
       
       /// Conv Brem Finder
       bool useConvBremFinder_;
-      double mvaConvBremFinderID_;
-      std::string path_mvaWeightFileConvBrem_;
+
+      double mvaConvBremFinderIDBarrelLowPt_;
+      double mvaConvBremFinderIDBarrelHighPt_;
+      double mvaConvBremFinderIDEndcapsLowPt_;
+      double mvaConvBremFinderIDEndcapsHighPt_;
+      std::string path_mvaWeightFileConvBremBarrelLowPt_;
+      std::string path_mvaWeightFileConvBremBarrelHighPt_;
+      std::string path_mvaWeightFileConvBremEndcapsLowPt_;
+      std::string path_mvaWeightFileConvBremEndcapsHighPt_;
+      
 };
 #endif

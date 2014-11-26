@@ -8,7 +8,6 @@
 //
 // Original Author:  Alja Mrak-Tadel
 //         Created:  Thu Mar 25 22:06:57 CET 2010
-// $Id: FW3DViewGeometry.cc,v 1.16 2011/09/27 17:22:17 matevz Exp $
 //
 
 // system include files
@@ -180,7 +179,7 @@ FW3DViewGeometry::showMuonEndcap( bool showMuonEndcap )
             for( Int_t iRing = 1; iRing <= 4; ++iRing )
 	    {
                if( iStation > 1 && iRing > 2 ) continue;
-               if( iStation > 3 && iRing > 1 ) continue;
+               // if( iStation > 3 && iRing > 1 ) continue;
                std::ostringstream s; s << "Ring" << iRing;
                TEveElementList* cRing  = new TEveElementList( s.str().c_str() );
                cStation->AddElement( cRing );

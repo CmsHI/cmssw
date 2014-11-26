@@ -22,7 +22,7 @@
 
 // user include files
 #include "FWCore/Framework/interface/Frameworkfwd.h"
-#include "FWCore/Framework/interface/EDProducer.h"
+#include "FWCore/Framework/interface/stream/EDProducer.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
@@ -46,19 +46,18 @@
 // class declaration
 //
 
-class InterestingTrackEcalDetIdProducer : public edm::EDProducer {
+class InterestingTrackEcalDetIdProducer : public edm::stream::EDProducer<> {
    public:
       explicit InterestingTrackEcalDetIdProducer(const edm::ParameterSet&);
       ~InterestingTrackEcalDetIdProducer();
 
    private:
-      virtual void beginJob() override ;
       virtual void produce(edm::Event&, const edm::EventSetup&) override;
-      virtual void endJob() override ;
       void beginRun(edm::Run const&, const edm::EventSetup&) override;
 
       
       // ----------member data ---------------------------
+	  edm::EDGetTokenT<reco::TrackCollection> trackCollectionToken_;
       edm::InputTag trackCollection_;
       edm::ParameterSet trackAssociatorPS_;
 
@@ -84,13 +83,16 @@ class InterestingTrackEcalDetIdProducer : public edm::EDProducer {
 // constructors and destructor
 //
 InterestingTrackEcalDetIdProducer::InterestingTrackEcalDetIdProducer(const edm::ParameterSet& iConfig) :
-  trackCollection_ (iConfig.getParameter<edm::InputTag>("TrackCollection")),
+
   trackAssociatorPS_ (iConfig.getParameter<edm::ParameterSet>("TrackAssociatorParameters")),
   minTrackPt_ (iConfig.getParameter<double>("MinTrackPt"))
 
 {
+  trackCollectionToken_=
+	  consumes<reco::TrackCollection> (iConfig.getParameter<edm::InputTag>("TrackCollection"));	 
   trackAssociator_.useDefaultPropagator();
-  trackAssociatorParameters_.loadParameters(trackAssociatorPS_);
+  edm::ConsumesCollector iC = consumesCollector();
+  trackAssociatorParameters_.loadParameters(trackAssociatorPS_, iC);
 
   produces<DetIdCollection>(); 
 }
@@ -119,7 +121,7 @@ InterestingTrackEcalDetIdProducer::produce(edm::Event& iEvent, const edm::EventS
 
    // Get tracks from event
    edm::Handle<reco::TrackCollection> tracks;
-   iEvent.getByLabel(trackCollection_,tracks);
+   iEvent.getByToken(trackCollectionToken_,tracks);
 
    // Loop over tracks
    for(reco::TrackCollection::const_iterator tkItr = tracks->begin(); tkItr != tracks->end(); ++tkItr)
@@ -157,17 +159,6 @@ void InterestingTrackEcalDetIdProducer::beginRun(edm::Run const& run, const edm:
   edm::ESHandle<CaloTopology> theCaloTopology;
   iSetup.get<CaloTopologyRecord>().get(theCaloTopology);
   caloTopology_ = &(*theCaloTopology); 
-}
-
-// ------------ method called once each job just before starting event loop  ------------
-void 
-InterestingTrackEcalDetIdProducer::beginJob()
-{
-}
-
-// ------------ method called once each job just after ending the event loop  ------------
-void 
-InterestingTrackEcalDetIdProducer::endJob() {
 }
 
 //define this as a plug-in

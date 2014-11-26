@@ -23,6 +23,7 @@
 #include "FWCore/Framework/interface/RunPrincipal.h"
 
 #include "FWCore/Framework/src/PreallocationConfiguration.h"
+#include "FWCore/Framework/src/EventSignalsSentry.h"
 
 using namespace edm::stream;
 //
@@ -82,14 +83,20 @@ EDAnalyzerAdaptorBase::registerProductsAndCallbacks(EDAnalyzerAdaptorBase const*
 }
 
 void
-EDAnalyzerAdaptorBase::itemsToGet(BranchType iType, std::vector<ProductHolderIndex>& iIndices) const {
+EDAnalyzerAdaptorBase::itemsToGet(BranchType iType, std::vector<ProductHolderIndexAndSkipBit>& iIndices) const {
   assert(not m_streamModules.empty());
   m_streamModules[0]->itemsToGet(iType,iIndices);
 }
 void
-EDAnalyzerAdaptorBase::itemsMayGet(BranchType iType, std::vector<ProductHolderIndex>& iIndices) const {
+EDAnalyzerAdaptorBase::itemsMayGet(BranchType iType, std::vector<ProductHolderIndexAndSkipBit>& iIndices) const {
   assert(not m_streamModules.empty());
-  m_streamModules[0]->itemsToGet(iType,iIndices);  
+  m_streamModules[0]->itemsMayGet(iType,iIndices);  
+}
+
+std::vector<edm::ProductHolderIndexAndSkipBit> const&
+EDAnalyzerAdaptorBase::itemsToGetFromEvent() const {
+  assert(not m_streamModules.empty());
+  return m_streamModules[0]->itemsToGetFromEvent();  
 }
 
 void
@@ -105,14 +112,22 @@ EDAnalyzerAdaptorBase::consumer() const {
   return m_streamModules[0];
 }
 
+void
+EDAnalyzerAdaptorBase::modulesDependentUpon(const std::string& iProcessName,
+                                            std::vector<const char*>& oModuleLabels) const {
+  assert(not m_streamModules.empty());
+  return m_streamModules[0]->modulesDependentUpon(iProcessName, oModuleLabels);
+}
 
 bool
 EDAnalyzerAdaptorBase::doEvent(EventPrincipal& ep, EventSetup const& c,
+                               ActivityRegistry* act,
                                ModuleCallingContext const* mcc) {
   assert(ep.streamID()<m_streamModules.size());
   auto mod = m_streamModules[ep.streamID()];
   Event e(ep, moduleDescription_, mcc);
   e.setConsumer(mod);
+  EventSignalsSentry sentry(act,mcc);
   mod->analyze(e, c);
   return true;
 }
@@ -123,7 +138,7 @@ EDAnalyzerAdaptorBase::doBeginJob() {
 
 void
 EDAnalyzerAdaptorBase::doBeginStream(StreamID id) {
-  m_streamModules[id]->beginStream();
+  m_streamModules[id]->beginStream(id);
 }
 void
 EDAnalyzerAdaptorBase::doEndStream(StreamID id) {
@@ -189,6 +204,16 @@ EDAnalyzerAdaptorBase::doRespondToOpenInputFile(FileBlock const& fb){}
 void
 EDAnalyzerAdaptorBase::doRespondToCloseInputFile(FileBlock const& fb){}
 void
-EDAnalyzerAdaptorBase::doPreForkReleaseResources(){}
+EDAnalyzerAdaptorBase::doPreForkReleaseResources()
+{
+  for(auto mod: m_streamModules) {
+    mod->preForkReleaseResources();
+  }
+}
 void
-EDAnalyzerAdaptorBase::doPostForkReacquireResources(unsigned int iChildIndex, unsigned int iNumberOfChildren){}
+EDAnalyzerAdaptorBase::doPostForkReacquireResources(unsigned int iChildIndex, unsigned int iNumberOfChildren)
+{
+  for(auto mod: m_streamModules) {
+    mod->postForkReacquireResources(iChildIndex,iNumberOfChildren);
+  }
+}

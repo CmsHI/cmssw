@@ -7,14 +7,14 @@ import FWCore.ParameterSet.Config as cms
 dqmElectronTagProbeAnalysis = cms.EDAnalyzer("ElectronTagProbeAnalyzer",
 
     Verbosity = cms.untracked.int32(0),
-    FinalStep = cms.string("AtRunEnd"),
+    FinalStep = cms.string("AtJobEnd"),
     InputFile = cms.string(""),
     OutputFile = cms.string(""),
     InputFolderName = cms.string("Egamma/Electrons/TagAndProbe"),
     OutputFolderName = cms.string("Egamma/Electrons/TagAndProbe"),
     
     Selection = cms.int32(3), # 0=All elec, 1=Etcut, 2=Iso, 3=eId
-    ElectronCollection = cms.InputTag("gsfElectrons"),
+    ElectronCollection = cms.InputTag("gedGsfElectrons"),
     MatchingObjectCollection = cms.InputTag("mergedSuperClusters"),
     TrackCollection = cms.InputTag("generalTracks"),
     GsfTrackCollection = cms.InputTag("electronGsfTracks"),

@@ -26,7 +26,7 @@ typedef std::map<DetId, EcalRecHit> RecHitsMap;
 class ecalRecHitLess : public std::binary_function<EcalRecHit, EcalRecHit, bool> 
 {
 public:
-  bool operator()(EcalRecHit x, EcalRecHit y) 
+  bool operator()(const EcalRecHit& x, const EcalRecHit& y) 
   { 
     return (x.energy() > y.energy()); 
   }
@@ -339,6 +339,12 @@ private:
 
   /// Output file name if required
   std::string fileName_;
+
+  //define Token(-s)
+  edm::EDGetTokenT<EcalRecHitCollection> productMonitoredEBpi0Token_;
+  edm::EDGetTokenT<EcalRecHitCollection> productMonitoredEBetaToken_;
+  edm::EDGetTokenT<EcalRecHitCollection> productMonitoredEEpi0Token_;
+  edm::EDGetTokenT<EcalRecHitCollection> productMonitoredEEetaToken_;
 };
 
 #endif

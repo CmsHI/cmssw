@@ -10,8 +10,9 @@
 #include "DataFormats/Provenance/interface/EventID.h"
 #include "DataFormats/Provenance/interface/Timestamp.h"
 #include "DataFormats/Provenance/interface/RunID.h"
+#include "DataFormats/Provenance/interface/RunLumiEventNumber.h"
 
-#include "boost/shared_ptr.hpp"
+#include <memory>
 
 namespace edm {
   class ParameterSet;
@@ -50,8 +51,8 @@ namespace edm {
     virtual void beginLuminosityBlock(LuminosityBlock&) override;
     virtual void endLuminosityBlock(LuminosityBlock&) override;
     virtual void readEvent_(EventPrincipal& eventPrincipal) override;
-    virtual boost::shared_ptr<LuminosityBlockAuxiliary> readLuminosityBlockAuxiliary_() override;
-    virtual boost::shared_ptr<RunAuxiliary> readRunAuxiliary_() override;
+    virtual std::shared_ptr<LuminosityBlockAuxiliary> readLuminosityBlockAuxiliary_() override;
+    virtual std::shared_ptr<RunAuxiliary> readRunAuxiliary_() override;
     virtual void skip(int offset) override;
     virtual void rewind_() override;
 
@@ -67,7 +68,7 @@ namespace edm {
 
     unsigned int numberEventsInThisRun_;
     unsigned int numberEventsInThisLumi_;
-    unsigned int const zerothEvent_;
+    EventNumber_t const zerothEvent_;
     EventID eventID_;
     EventID origEventID_;
     bool isRealData_;

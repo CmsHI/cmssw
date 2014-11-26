@@ -15,7 +15,6 @@
 
    \brief A base class to handle the shape of preshower strips.
 
-$Date: 2011/05/30 16:40:35 $
 $Revision: 1.12 $
 \author F. Cossutti
    
@@ -38,13 +37,11 @@ public:
   PreshowerStrip& operator=( const PreshowerStrip& tr ) ;
 
   PreshowerStrip( const GlobalPoint& po   ,
-		  const CornersMgr*  mgr  ,
+		        CornersMgr*  mgr  ,
 		  const CCGFloat*    parm  ) :
-    CaloCellGeometry ( po , mgr, parm ) {}
+    CaloCellGeometry ( po , mgr, parm ) {initSpan();}
 
   virtual ~PreshowerStrip();
-
-  virtual const CornersVec& getCorners() const ;
 
   CCGFloat dx() const { return param()[0] ; }
   CCGFloat dy() const { return param()[1] ; }
@@ -62,6 +59,8 @@ public:
 
   virtual Tr3D getTransform( Pt3DVec* /*lptr*/ ) const
     { return Tr3D() ; }
+ private:
+  virtual void initCorners(CaloCellGeometry::CornersVec&) override;
 };
 
 std::ostream& operator<<( std::ostream& s , const PreshowerStrip& cell) ;

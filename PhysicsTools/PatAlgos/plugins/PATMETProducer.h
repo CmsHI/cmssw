@@ -1,5 +1,4 @@
 //
-// $Id: PATMETProducer.h,v 1.10 2009/06/25 23:49:35 gpetrucc Exp $
 //
 
 #ifndef PhysicsTools_PatAlgos_PATMETProducer_h
@@ -49,8 +48,9 @@ namespace pat {
 
       // configurables
       edm::InputTag metSrc_;
+      edm::EDGetTokenT<edm::View<reco::MET> > metToken_;
       bool          addGenMET_;
-      edm::InputTag genMETSrc_;
+      edm::EDGetTokenT<edm::View<reco::GenMET> > genMETToken_;
       bool          addResolutions_;
       pat::helper::KinResolutionsLoader resolutionLoader_;
       bool          addMuonCorr_;

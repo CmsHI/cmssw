@@ -1,18 +1,17 @@
 /** \file
  *
- *  $Date: 2007/09/24 21:16:22 $
- *  $Revision: 1.0 $
  *  \author A. Tumanov - Rice
  */
 
 #include <iostream>
+#include <FWCore/Framework/interface/ConsumesCollector.h>
 #include "FWCore/Framework/interface/EDAnalyzer.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "DataFormats/Common/interface/Handle.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/Framework/interface/ESHandle.h"
-class CSCCorrelatedLCTDigi;
+#include "DataFormats/CSCDigi/interface/CSCCorrelatedLCTDigiCollection.h"
 
 class CSCDigiToPattern : public edm::EDAnalyzer {
 public:
@@ -22,6 +21,7 @@ public:
   //virtual void endJob();
 private:
   // variables persistent across events should be declared here.
+  edm::EDGetTokenT<CSCCorrelatedLCTDigiCollection> d_token;
   //
 };
 

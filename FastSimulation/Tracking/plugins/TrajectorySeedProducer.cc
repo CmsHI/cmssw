@@ -8,9 +8,7 @@
 #include "DataFormats/Common/interface/Handle.h"
 #include "DataFormats/Common/interface/OwnVector.h"
 #include "DataFormats/TrackerRecHit2D/interface/SiTrackerGSRecHit2DCollection.h" 
-#include "DataFormats/TrackerRecHit2D/interface/SiTrackerGSMatchedRecHit2DCollection.h" 
 #include "DataFormats/TrajectorySeed/interface/TrajectorySeedCollection.h"
-#include "DataFormats/BeamSpot/interface/BeamSpot.h"
 #include "DataFormats/VertexReco/interface/Vertex.h"
 
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
@@ -21,8 +19,6 @@
 #include "FastSimulation/Tracking/plugins/TrajectorySeedProducer.h"
 #include "FastSimulation/Tracking/interface/TrackerRecHit.h"
 
-#include "SimDataFormats/Track/interface/SimTrackContainer.h"
-#include "SimDataFormats/Vertex/interface/SimVertexContainer.h"
 
 #include "TrackingTools/TrajectoryParametrization/interface/CurvilinearTrajectoryError.h"
 #include "TrackingTools/TrajectoryState/interface/TrajectoryStateOnSurface.h"
@@ -38,7 +34,6 @@
 #include "TrackingTools/MaterialEffects/interface/PropagatorWithMaterial.h"
 //analyticalpropagator
 //#include "TrackingTools/GeomPropagators/interface/AnalyticalPropagator.h"
-
 
 //
 
@@ -109,8 +104,115 @@ TrajectorySeedProducer::TrajectorySeedProducer(const edm::ParameterSet& conf) :t
   // Layers
   newSyntax = conf.getParameter<bool>("newSyntax");
   if (newSyntax) {
-    layerList = conf.getParameter<std::vector<std::string> >("layerList");
-    // (AG)  for (unsigned i=0; i<layerList.size();i++) std::cout << "------- Layers = " << layerList[i] << std::endl;
+    std::vector<std::string> layerList = conf.getParameter<std::vector<std::string> >("layerList");
+    //for (unsigned i=0; i<layerList.size();i++) std::cout << "------- Layers = " << layerList[i] << std::endl; 
+
+    for(std::vector<std::string>::const_iterator it=layerList.begin(); it < layerList.end(); ++it) {
+      std::vector<LayerSpec> tempResult;
+      std::string line = *it;
+      std::string::size_type pos=0;
+      while (pos != std::string::npos) {
+        pos=line.find("+");
+        std::string layer = line.substr(0, pos);
+        //
+        LayerSpec layerSpec;
+        layerSpec.name = line.substr(0, pos);;
+        // Possible names: BPix(1-3) || FPix(1-2)(pos, neg) || TIB(1-4) || TID(1-3)(pos, neg) || TOB(1-6) || TEC(1-9)(pos, neg)
+        // BPix(1-3)
+        if (layerSpec.name.substr(0,4)=="BPix" ) {
+          layerSpec.subDet=PXB;
+          layerSpec.side=BARREL;
+          layerSpec.idLayer = std::atoi(layerSpec.name.substr(4,1).c_str());
+          if (layerSpec.idLayer>3 || layerSpec.idLayer==0) {
+            throw cms::Exception("FastSimulation/Tracking/python")
+              << "Bad data naming in IterativeInitialStep_cff.py  iterativeInitialSeeds.layerList" << std::endl
+              << "Layers: " << layerSpec.name << ", number needs to be in range 1-3" << std::endl;
+          }
+        }
+        // FPix(1-2)(pos, neg)
+        else if (layerSpec.name.substr(0,4)=="FPix" ) {
+          layerSpec.subDet=PXD;
+          if(layerSpec.name.substr(layerSpec.name.size()-3)=="pos")
+            layerSpec.side = POS_ENDCAP;
+          else //no validation if it's not neg
+            layerSpec.side = NEG_ENDCAP;
+          layerSpec.idLayer = std::atoi(layerSpec.name.substr(4,1).c_str());
+          if (layerSpec.idLayer>2 || layerSpec.idLayer==0) {
+            throw cms::Exception("FastSimulation/Tracking/python")
+              << "Bad data naming in IterativeInitialStep_cff.py  iterativeInitialSeeds.layerList" << std::endl
+              << "Layers: " << layerSpec.name << ", number needs to be in range 1-2" << std::endl;
+          }
+        }
+        // TIB(1-4)
+        else if (layerSpec.name.substr(0,3)=="TIB" || layerSpec.name.substr(0,4)=="MTIB") {
+          layerSpec.subDet=TIB;
+          layerSpec.side=BARREL;
+          layerSpec.idLayer = std::atoi(layerSpec.name.substr(layerSpec.name.find('B')+1,1).c_str());
+          if (layerSpec.idLayer>4 || layerSpec.idLayer==0) {
+            throw cms::Exception("FastSimulation/Tracking/python")
+              << "Bad data naming in IterativeInitialStep_cff.py  iterativeInitialSeeds.layerList" << std::endl
+              << "Layers: " << layerSpec.name << ", number needs to be in range 1-4" << std::endl;
+          }
+        }
+        // TID(1-3)(pos, neg)
+        else if (layerSpec.name.substr(0,3)=="TID" || layerSpec.name.substr(0,4)=="MTID") {
+          layerSpec.subDet=TID;
+          if(layerSpec.name.substr(layerSpec.name.size()-3)=="pos")
+            layerSpec.side = POS_ENDCAP;
+          else
+            layerSpec.side = NEG_ENDCAP;
+          layerSpec.idLayer = std::atoi(layerSpec.name.substr(layerSpec.name.find('D')+1,1).c_str());
+          if (layerSpec.idLayer>3 || layerSpec.idLayer==0) {
+            throw cms::Exception("FastSimulation/Tracking/python")
+              << "Bad data naming in IterativeInitialStep_cff.py  iterativeInitialSeeds.layerList" << std::endl
+              << "Layers: " << layerSpec.name << ", number needs to be in range 1-3" << std::endl;
+          }
+        }
+        // TOB(1-6)
+        else if (layerSpec.name.substr(0,3)=="TOB" ) {
+          layerSpec.subDet=TOB;
+          layerSpec.side=BARREL;
+          layerSpec.idLayer = std::atoi(layerSpec.name.substr(3,1).c_str());
+          if (layerSpec.idLayer>6 || layerSpec.idLayer==0) {
+            throw cms::Exception("FastSimulation/Tracking/python")
+              << "Bad data naming in IterativeInitialStep_cff.py  iterativeInitialSeeds.layerList" << std::endl
+              << "Layers: " << layerSpec.name << ", number needs to be in range 1-6" << std::endl;
+          }
+        }
+        // TEC(1-9)(pos, neg)
+        else if (layerSpec.name.substr(0,3)=="TEC" || layerSpec.name.substr(0,4)=="MTEC") {
+          layerSpec.subDet=TEC;
+          if(layerSpec.name.substr(layerSpec.name.size()-3)=="pos")
+            layerSpec.side = POS_ENDCAP;
+          else
+            layerSpec.side = NEG_ENDCAP;
+          layerSpec.idLayer = std::atoi(layerSpec.name.substr(layerSpec.name.find('C')+1,1).c_str());
+          if (layerSpec.idLayer>9 || layerSpec.idLayer==0) {
+            throw cms::Exception("FastSimulation/Tracking/python")
+              << "Bad data naming in IterativeInitialStep_cff.py  iterativeInitialSeeds.layerList" << std::endl
+              << "Layers: " << layerSpec.name << ", number needs to be in range 1-9" << std::endl;
+          }
+        } 
+        else { 
+          throw cms::Exception("FastSimulation/Tracking/python")
+            << "Bad data naming in IterativeInitialStep_cff.py  iterativeInitialSeeds.layerList" << std::endl
+            << "Layer: " << layerSpec.name << ", shouldn't exist" << std::endl
+            << "Case sensitive names: BPix FPix TIB MTIB TID MTID TOB TEC MTEC" << std::endl;
+        }
+        //
+        tempResult.push_back(layerSpec);
+        line=line.substr(pos+1,std::string::npos); 
+      }
+      theLayersInSets.push_back(tempResult);
+    }
+
+    //prints theLayersInSets
+    /* for (std::vector<std::vector<LayerSpec> >::const_iterator it = theLayersInSets.begin(); it != theLayersInSets.end(); ++it) {
+      for (std::vector<LayerSpec>::const_iterator is = it->begin(); is != it->end(); ++is) {
+        std::cout << is->name << " | " << is->subDet << " | " << is->idLayer << " | " << is->side << std::endl;
+      }
+      std::cout << "---" << std::endl;
+    } */
   } else {
     // TO BE DELETED (AG)
     firstHitSubDetectorNumber = 
@@ -182,6 +284,7 @@ TrajectorySeedProducer::TrajectorySeedProducer(const edm::ParameterSet& conf) :t
       throw cms::Exception("FastSimulation/TrajectorySeedProducer ") 
 	<< " WARNING : thirdHitSubDetectors does not have the proper size (should be " << check3 << ")"
 	<< std::endl;
+    }
     
     originRadius = conf.getParameter<std::vector<double> >("originRadius");
     if ( originRadius.size() != seedingAlgo.size() ) 
@@ -212,10 +315,19 @@ TrajectorySeedProducer::TrajectorySeedProducer(const edm::ParameterSet& conf) :t
       throw cms::Exception("FastSimulation/TrajectorySeedProducer ") 
 	<< " WARNING : zVertexConstraint does not have the proper size "
 	<< std::endl;
-  }
+  //removed - }
 
+    // consumes
+    beamSpotToken = consumes<reco::BeamSpot>(theBeamSpot);
+    edm::InputTag _label("famosSimHits");
+    simTrackToken = consumes<edm::SimTrackContainer>(_label);
+    simVertexToken = consumes<edm::SimVertexContainer>(_label);
+    recHitToken = consumes<SiTrackerGSMatchedRecHit2DCollection>(hitProducer);
+    for ( unsigned ialgo=0; ialgo<seedingAlgo.size(); ++ialgo ) {
+      _label = edm::InputTag(primaryVertices[ialgo]);
+      recoVertexToken.push_back(consumes<reco::VertexCollection>(_label));
+    }
 }
-
   
 // Virtual destructor needed.
 TrajectorySeedProducer::~TrajectorySeedProducer() {
@@ -289,7 +401,7 @@ TrajectorySeedProducer::produce(edm::Event& e, const edm::EventSetup& es) {
   
   // Beam spot
   edm::Handle<reco::BeamSpot> recoBeamSpotHandle;
-  e.getByLabel(theBeamSpot,recoBeamSpotHandle); 
+  e.getByToken(beamSpotToken,recoBeamSpotHandle); 
   math::XYZPoint BSPosition_ = recoBeamSpotHandle->position();
 
   //not used anymore. take the value from the py
@@ -303,10 +415,10 @@ TrajectorySeedProducer::produce(edm::Event& e, const edm::EventSetup& es) {
 
   // SimTracks and SimVertices
   edm::Handle<edm::SimTrackContainer> theSimTracks;
-  e.getByLabel("famosSimHits",theSimTracks);
+  e.getByToken(simTrackToken,theSimTracks);
   
   edm::Handle<edm::SimVertexContainer> theSimVtx;
-  e.getByLabel("famosSimHits",theSimVtx);
+  e.getByToken(simVertexToken,theSimVtx);
 
 #ifdef FAMOS_DEBUG
   std::cout << " Step A: SimTracks found " << theSimTracks->size() << std::endl;
@@ -314,7 +426,7 @@ TrajectorySeedProducer::produce(edm::Event& e, const edm::EventSetup& es) {
   
   //  edm::Handle<SiTrackerGSRecHit2DCollection> theGSRecHits;
   edm::Handle<SiTrackerGSMatchedRecHit2DCollection> theGSRecHits;
-  e.getByLabel(hitProducer, theGSRecHits);
+  e.getByToken(recHitToken, theGSRecHits);
   
   // No tracking attempted if no hits (but put an empty collection in the event)!
 #ifdef FAMOS_DEBUG
@@ -330,13 +442,12 @@ TrajectorySeedProducer::produce(edm::Event& e, const edm::EventSetup& es) {
   
   // Primary vertices
   vertices = std::vector<const reco::VertexCollection*>
-    (seedingAlgo.size(),static_cast<const reco::VertexCollection*>(0));
+    (seedingAlgo.size(),static_cast<const reco::VertexCollection*>(0)); 
   for ( unsigned ialgo=0; ialgo<seedingAlgo.size(); ++ialgo ) { 
     //PAT Attempt!!!! 
-
    //originHalfLength[ialgo] = 3.*sigmaz0; // Overrides the configuration
     edm::Handle<reco::VertexCollection> aHandle;
-    bool isVertexCollection = e.getByLabel(primaryVertices[ialgo],aHandle);
+    bool isVertexCollection = e.getByToken(recoVertexToken[ialgo],aHandle);
     if (!isVertexCollection ) continue;
     vertices[ialgo] = &(*aHandle);
   }
@@ -411,8 +522,7 @@ TrajectorySeedProducer::produce(edm::Event& e, const edm::EventSetup& es) {
     }
 
     // Loop on the successive seedings
-    for ( unsigned int ialgo = 0; ialgo < seedingAlgo.size(); ++ialgo ) { 
-
+    for ( unsigned int ialgo = 0; ialgo < seedingAlgo.size(); ++ialgo ) {
 #ifdef FAMOS_DEBUG
       std::cout << "Algo " << seedingAlgo[ialgo] << std::endl;
 #endif
@@ -439,20 +549,23 @@ TrajectorySeedProducer::produce(edm::Event& e, const edm::EventSetup& es) {
       TrackerRecHit& theSeedHits0 = theSeedHits[0];
       TrackerRecHit& theSeedHits1 = theSeedHits[1];
       TrackerRecHit& theSeedHits2 = theSeedHits[2];
+      
       bool compatible = false;
+      
       for ( iterRecHit1 = theRecHitRangeIteratorBegin; iterRecHit1 != theRecHitRangeIteratorEnd; ++iterRecHit1) {
+      //std::cout << (*iterRecHit1).localPosition().phi() << " | J - iterRecHit1"<< std::endl; // 
 	theSeedHits[0] = TrackerRecHit(&(*iterRecHit1),theGeometry,tTopo);
 #ifdef FAMOS_DEBUG
 	std::cout << "The first hit position = " << theSeedHits0.globalPosition() << std::endl;
 	std::cout << "The first hit subDetId = " << theSeedHits0.subDetId() << std::endl;
 	std::cout << "The first hit layer    = " << theSeedHits0.layerNumber() << std::endl;
-#endif
-
+#endif  
 	// Check if inside the requested detectors
 	bool isInside = true;
 	if (!selectMuons) {
-	  if (newSyntax) 
-	    isInside = true; // AG placeholder
+    //(newSyntax) ? std::cout << "TRUE " : std::cout << "FALSE "; //J-
+	  if (newSyntax)
+	    isInside = false; // AG placeholder true 
 	  else
 	    isInside = theSeedHits0.subDetId() < firstHitSubDetectors[ialgo][0];
 	  //	bool isInside = theSeedHits0.subDetId() < firstHitSubDetectors[ialgo][0];
@@ -460,15 +573,16 @@ TrajectorySeedProducer::produce(edm::Event& e, const edm::EventSetup& es) {
 	}
 
 	// Check if on requested detectors
-	//	bool isOndet =  theSeedHits0.isOnRequestedDet(firstHitSubDetectors[ialgo]);
+	// bool isOndet =  theSeedHits0.isOnRequestedDet(firstHitSubDetectors[ialgo]);
 	bool isOndet = true;
 	if (!selectMuons) {
-	  if (newSyntax) 
-	    isOndet = theSeedHits0.isOnRequestedDet(layerList);
+	  if (newSyntax)
+      isOndet = theSeedHits[0].isOnRequestedDet(theLayersInSets);
 	  else
 	    isOndet = theSeedHits0.isOnRequestedDet(firstHitSubDetectors[ialgo], seedingAlgo[ialgo]);
-	  //	bool isOndet =  theSeedHits0.isOnRequestedDet(firstHitSubDetectors[ialgo], seedingAlgo[ialgo]);
-	  //	if ( !isOndet ) break;
+      //std::cout << firstHitSubDetectors[ialgo][0] << " | " << seedingAlgo[ialgo] << " " << std::endl;  //seedingAlgo[iAlgo]: PixelTriplet, LowPtPixelTriplets, PixelPair, DetachedPixelTriplets, MixedTriplets, PixelLessPairs, TobTecLayerPairs......
+      //	bool isOndet =  theSeedHits0.isOnRequestedDet(firstHitSubDetectors[ialgo], seedingAlgo[ialgo]);
+      //	if ( !isOndet ) break;
 	  if ( !isOndet ) continue;
 	}
 
@@ -486,19 +600,18 @@ TrajectorySeedProducer::produce(edm::Event& e, const edm::EventSetup& es) {
 	  if (!selectMuons) {
 	    // Check if inside the requested detectors
 	    if (newSyntax) 
-	      isInside = true; // AG placeholder
+	      isInside = false; // AG placeholder true
 	    else
 	      isInside = theSeedHits1.subDetId() < secondHitSubDetectors[ialgo][0];
 	    if ( isInside ) continue;
 
 	    // Check if on requested detectors
-	    if (newSyntax) 
-	      isOndet = theSeedHits1.isOnRequestedDet(layerList);
+	    if (newSyntax)
+        isOndet = theSeedHits[0].isOnRequestedDet(theLayersInSets, theSeedHits[1]);
 	    else
 	      isOndet =  theSeedHits1.isOnRequestedDet(secondHitSubDetectors[ialgo], seedingAlgo[ialgo]);
 	    if ( !isOndet ) break;
 	  }
-
 	  // Check if on the same layer as previous hit
 	  if ( theSeedHits1.isOnTheSameLayer(theSeedHits0) ) continue;
 
@@ -521,26 +634,6 @@ TrajectorySeedProducer::produce(edm::Event& e, const edm::EventSetup& es) {
 #ifdef FAMOS_DEBUG
 	  std::cout << "Algo" << seedingAlgo[0] << "\t Are the two hits compatible with the PV? " << compatible << std::endl;
 #endif
-
-	  if (!selectMuons) {
-	    // Check if the pair is on the requested dets
-	    if ( numberOfHits[ialgo] == 2 ) {
-	      
-	      if ( seedingAlgo[0] ==  "ThirdMixedPairs" ){
-		compatible = compatible && theSeedHits[0].makesAPairWith3rd(theSeedHits[1]);
-	      } else {
-		compatible = compatible && theSeedHits[0].makesAPairWith(theSeedHits[1]);
-		//check
-		/*
-		  if((seedingAlgo[0] == "PixelLess" ||  seedingAlgo[0] ==  "TobTecLayerPairs") && !compatible) 
-		  std::cout << "NOT Compatible " <<  seedingAlgo[0] 
-		  <<  "Hit 1 Det/layer/ring = " << theSeedHits0.subDetId() << "/" <<  theSeedHits0.layerNumber() << "/" << theSeedHits0.ringNumber() 
-		  <<  "\tHit 2 Det/layer/ring = " << theSeedHits1.subDetId() << "/" <<  theSeedHits1.layerNumber() << "/" << theSeedHits1.ringNumber() <<  std::endl;
-		*/
-	      }
-	    }	
-	  }    
-	  
 	  // Reject non suited pairs
 	  if ( !compatible ) continue;
 
@@ -554,6 +647,7 @@ TrajectorySeedProducer::produce(edm::Event& e, const edm::EventSetup& es) {
 	  compatible = false;
 	  // Check if there is a third satisfying hit otherwise
 	  for ( iterRecHit3 = iterRecHit2+1; iterRecHit3 != theRecHitRangeIteratorEnd; ++iterRecHit3) {
+    
 	    theSeedHits[2] = TrackerRecHit(&(*iterRecHit3),theGeometry,tTopo);
 #ifdef FAMOS_DEBUG
 	    std::cout << "The third hit position = " << theSeedHits2.globalPosition() << std::endl;
@@ -564,25 +658,22 @@ TrajectorySeedProducer::produce(edm::Event& e, const edm::EventSetup& es) {
 	    if (!selectMuons) {
 	      // Check if inside the requested detectors
 	      if (newSyntax) 
-		isInside = true; // AG placeholder
+          isInside = false; // AG placeholder
 	      else 
-		isInside = theSeedHits2.subDetId() < thirdHitSubDetectors[ialgo][0];
+          isInside = theSeedHits2.subDetId() < thirdHitSubDetectors[ialgo][0];
 	      if ( isInside ) continue;
 	    
 	      // Check if on requested detectors
 	      if (newSyntax) 
-		isOndet = theSeedHits2.isOnRequestedDet(layerList);
+          isOndet = theSeedHits[0].isOnRequestedDet(theLayersInSets, theSeedHits[1], theSeedHits[2]);
 	      else 
-		isOndet =  theSeedHits2.isOnRequestedDet(thirdHitSubDetectors[ialgo], seedingAlgo[ialgo]);
+          isOndet =  theSeedHits2.isOnRequestedDet(thirdHitSubDetectors[ialgo], seedingAlgo[ialgo]);
 	      //	    if ( !isOndet ) break;
 	      if ( !isOndet ) continue;
 	    }
 
 	    // Check if on the same layer as previous hit
 	    compatible = !(theSeedHits2.isOnTheSameLayer(theSeedHits1));
-
-	    // Check if the triplet is on the requested det combination
-	    if (!selectMuons) compatible = compatible && theSeedHits[0].makesATripletWith(theSeedHits[1],theSeedHits[2]);
 
 #ifdef FAMOS_DEBUG
 	    if ( compatible ) 
@@ -598,7 +689,7 @@ TrajectorySeedProducer::produce(edm::Event& e, const edm::EventSetup& es) {
 	}
 
 	if ( compatible ) break;
-
+  
       }
 
       // There is no compatible seed for this track with this seeding algorithm 
@@ -674,9 +765,9 @@ TrajectorySeedProducer::produce(edm::Event& e, const edm::EventSetup& es) {
 
 #ifdef FAMOS_DEBUG
       std::cout << "TrajectorySeedProducer: TSOS global momentum "    << initialTSOS.globalMomentum() << std::endl;
-      std::cout << "\t\t\tpT = "                                     << initialTSOS.globalMomentum().perp() << std::endl;
-      std::cout << "\t\t\teta = "                                    << initialTSOS.globalMomentum().eta() << std::endl;
-      std::cout << "\t\t\tphi = "                                    << initialTSOS.globalMomentum().phi() << std::endl;
+      std::cout << "\t\t\tpT = "                                      << initialTSOS.globalMomentum().perp() << std::endl;
+      std::cout << "\t\t\teta = "                                     << initialTSOS.globalMomentum().eta() << std::endl;
+      std::cout << "\t\t\tphi = "                                     << initialTSOS.globalMomentum().phi() << std::endl;
       std::cout << "TrajectorySeedProducer: TSOS local momentum "     << initialTSOS.localMomentum()  << std::endl;
       std::cout << "TrajectorySeedProducer: TSOS local error "        << initialTSOS.localError().positionError() << std::endl;
       std::cout << "TrajectorySeedProducer: TSOS local error matrix " << initialTSOS.localError().matrix() << std::endl;
@@ -703,6 +794,7 @@ TrajectorySeedProducer::produce(edm::Event& e, const edm::EventSetup& es) {
 
 }
 
+
 // This is a copy of a method in 
 // TrackingTools/TrajectoryState/src/TrajectoryStateTransform.cc
 // but it does not return a pointer (thus avoiding a memory leak)
@@ -727,7 +819,7 @@ TrajectorySeedProducer::stateOnDet(const TrajectoryStateOnSurface& ts,
   }
   int surfaceSide = static_cast<int>(ts.surfaceSide());
 
-  pts = PTrajectoryStateOnDet( ts.localParameters(),
+  pts = PTrajectoryStateOnDet( ts.localParameters(),ts.globalMomentum().perp(),
 			       localErrors, detid,
 			       surfaceSide);
 }
@@ -812,4 +904,5 @@ TrajectorySeedProducer::compatibleWithBeamAxis(GlobalPoint& gpos1,
   return false;
 
 }  
+
 

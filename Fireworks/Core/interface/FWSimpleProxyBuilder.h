@@ -16,7 +16,6 @@
 //
 // Original Author:  Chris Jones, AljaMrak-Tadel
 //         Created:  Tue March 28  2 09:46:36 EST 2010
-// $Id: FWSimpleProxyBuilder.h,v 1.9 2010/08/16 17:59:11 amraktad Exp $
 //
 
 // system include files
@@ -43,12 +42,19 @@ public:
    // ---------- member functions ---------------------------
 
 protected:
+   using FWProxyBuilderBase::build;
    virtual void build(const FWEventItem* iItem, TEveElementList* product, const FWViewContext*);
+   using FWProxyBuilderBase::buildViewType;
    virtual void buildViewType(const FWEventItem* iItem, TEveElementList* product, FWViewType::EType viewType, const FWViewContext*);
 
- 
+   //called once for each item in collection, the void* points to the
+   // object properly offset in memory
+   virtual void build(const void*, unsigned int iIndex, TEveElement& iItemHolder, const FWViewContext*) = 0;
+   virtual void buildViewType(const void*, unsigned int iIndex, TEveElement& iItemHolder, FWViewType::EType, const FWViewContext*) = 0;
+
    virtual void clean();
    FWSimpleProxyHelper m_helper;
+
 private:
    FWSimpleProxyBuilder(const FWSimpleProxyBuilder&); // stop default
 
@@ -58,11 +64,7 @@ private:
    
    virtual bool visibilityModelChanges(const FWModelId&, TEveElement*, FWViewType::EType, const FWViewContext*);
 
-   //called once for each item in collection, the void* points to the
-   // object properly offset in memory
-   virtual void build(const void*, unsigned int iIndex, TEveElement& iItemHolder, const FWViewContext*) = 0;
-   virtual void buildViewType(const void*, unsigned int iIndex, TEveElement& iItemHolder, FWViewType::EType, const FWViewContext*) = 0;
-
+ 
    // ---------- member data --------------------------------
 };
 

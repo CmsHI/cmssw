@@ -13,7 +13,6 @@
 
 #include "DQMServices/Core/interface/DQMStore.h"
 #include "DQMServices/Core/interface/MonitorElement.h"
-#include "DQM/TrackerCommon/interface/CgiReader.h"
 
 #include "FWCore/ParameterSet/interface/FileInPath.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
@@ -366,7 +365,7 @@ void SiPixelDataQuality::computeGlobalQualityFlag(DQMStore * bei,
   if(DONE_ && currDir=="Pixel/EventInfo/reportSummaryContents"){ 
 
   // Evaluate error flag now, only stored in AdditionalPixelErrors:
-  MonitorElement * me_err = bei->get("Pixel/AdditionalPixelErrors/FedETypeNErrArray");
+  MonitorElement * me_err = bei->get("Pixel/AdditionalPixelErrors/FedETypeNErr");
   MonitorElement * me_evt = bei->get("Pixel/EventInfo/processedEvents");
   if(me_err && me_evt){
     for(int i=1; i!=41; i++)for(int j=1; j!=22; j++)
@@ -764,7 +763,7 @@ void SiPixelDataQuality::fillGlobalQualityPlot(DQMStore * bei, bool init, edm::E
     //cout<<"currDir="<<currDir<<endl;
     string dname = currDir.substr(currDir.find_last_of("/")+1);
     // find a detId for Blades and Ladders (first of the contained Modules!):
-    ifstream infile(edm::FileInPath("DQM/SiPixelMonitorClient/test/detId.dat").fullPath().c_str(),ios::in);
+    std::ifstream infile(edm::FileInPath("DQM/SiPixelMonitorClient/test/detId.dat").fullPath().c_str(),ios::in);
     string I_name[1440];
     int I_detId[1440];
     int I_fedId[1440];
@@ -1051,13 +1050,13 @@ void SiPixelDataQuality::fillGlobalQualityPlot(DQMStore * bei, bool init, edm::E
       bei->cd("Pixel/EventInfo/reportSummaryContents");
       if(bei->pwd()=="Pixel/EventInfo/reportSummaryContents"){
         for(int i=0; i!=40; i++){//loop over FEDs to fetch the errors
-          static const char buf[] = "Pixel/AdditionalPixelErrors/FED_%d/FedChNErrArray_%d";
+          static const char buf[] = "Pixel/AdditionalPixelErrors/FED_%d/FedChNErr";
           char fedplot[sizeof(buf)+4]; 
 	  int NErrors = 0;
 	  for(int j=0; j!=37; j++){//loop over FED channels within a FED
-            sprintf(fedplot,buf,i,j);
+            sprintf(fedplot,buf,i);
 	    MonitorElement * me = bei->get(fedplot);
-	    if(me) NErrors = NErrors + me->getIntValue();
+	    if(me) NErrors = NErrors + me->getBinContent(j+1);
 	  }
 	  //If I fill, then I end up majorly overcounting the numbers of errors...
 	  //if(NErrors>0){ errmodsVec->Fill(i,NErrors); } 

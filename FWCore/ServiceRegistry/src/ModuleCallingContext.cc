@@ -10,20 +10,27 @@
 namespace edm {
 
   ModuleCallingContext::ModuleCallingContext(ModuleDescription const* moduleDescription) :
+    previousModuleOnThread_(nullptr),
     moduleDescription_(moduleDescription),
     parent_(),
     state_(State::kInvalid) {
   }
 
-  ModuleCallingContext::ModuleCallingContext(ModuleDescription const* moduleDescription, State state, ParentContext const& parent) :
+  ModuleCallingContext::ModuleCallingContext(ModuleDescription const* moduleDescription,
+                                             State state,
+                                             ParentContext const& parent,
+                                             ModuleCallingContext const* previousOnThread) :
+    previousModuleOnThread_(previousOnThread),
     moduleDescription_(moduleDescription),
     parent_(parent),
     state_(state) {
   }
 
-  void ModuleCallingContext::setContext(State state, ParentContext const& parent) {
+  void ModuleCallingContext::setContext(State state, ParentContext const& parent,
+                                        ModuleCallingContext const* previousOnThread) {
     state_ = state;
     parent_ = parent;
+    previousModuleOnThread_ = previousOnThread;
   }
 
   StreamContext const*
@@ -63,6 +70,25 @@ namespace edm {
     return mcc;
   }
 
+  unsigned
+  ModuleCallingContext::depth() const {
+    unsigned depth = 0;
+    ModuleCallingContext const* mcc = this;
+    while(mcc->type() == ParentContext::Type::kModule) {
+      ++depth;
+      mcc = mcc->moduleCallingContext();
+    }
+    if(mcc->type() == ParentContext::Type::kInternal) {
+      ++depth;
+      mcc = mcc->internalContext()->moduleCallingContext();
+    }
+    while(mcc->type() == ParentContext::Type::kModule) {
+      ++depth;
+      mcc = mcc->moduleCallingContext();
+    }
+    return depth;
+  }
+
   std::ostream& operator<<(std::ostream& os, ModuleCallingContext const& mcc) {
     os << "ModuleCallingContext state = ";
     switch (mcc.state()) {
@@ -84,6 +110,13 @@ namespace edm {
       os << "    moduleDescription: " << *mcc.moduleDescription() << "\n";
     }
     os << "    " << mcc.parent();
+    if(mcc.previousModuleOnThread()) {
+      if(mcc.type() == ParentContext::Type::kModule && mcc.moduleCallingContext() == mcc.previousModuleOnThread()) {
+        os << "    previousModuleOnThread: same as parent module\n";
+      } else {
+        os << "    previousModuleOnThread: " << *mcc.previousModuleOnThread();
+      }
+    }
     return os;
   }
 }

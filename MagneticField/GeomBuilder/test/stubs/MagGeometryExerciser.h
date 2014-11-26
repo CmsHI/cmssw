@@ -4,8 +4,6 @@
 /** \class MagGeometryExerciser
  *  No description available.
  *
- *  $Date: 2007/03/09 14:38:47 $
- *  $Revision: 1.3 $
  *  \author N. Amapane - INFN Torino
  */
 
@@ -40,7 +38,7 @@ private:
   bool testFindVolume(const GlobalPoint & gp);
 
   const MagGeometry * theGeometry;
-  std::vector<MagVolume6Faces*> volumes;
+  std::vector<MagVolume6Faces const*> volumes;
 };
 #endif
 

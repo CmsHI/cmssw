@@ -13,8 +13,10 @@ from DQM.RPCMonitorClient.RPCTier0Source_cff import *
 from DQM.CSCMonitorModule.csc_dqm_sourceclient_offline_cff import *
 from DQM.EcalPreshowerMonitorModule.es_dqm_source_offline_cff import *
 from DQM.BeamMonitor.AlcaBeamMonitorHeavyIons_cff import *
+from DQMOffline.L1Trigger.L1TriggerDqmOffline_cff import *
 
 DQMOfflineHeavyIonsPreDPG = cms.Sequence( dqmDcsInfo *
+                                          l1TriggerDqmOffline * # L1 emulator is run within this sequence for real data
                                           ecal_dqm_source_offline *
                                           hcalOfflineDQMSource *
                                           SiStripDQMTier0_hi *
@@ -30,24 +32,35 @@ DQMOfflineHeavyIonsDPG = cms.Sequence( DQMOfflineHeavyIonsPreDPG *
 from DQMOffline.Muon.muonMonitors_cff import *
 from DQMOffline.JetMET.jetMETDQMOfflineSourceHI_cff import *
 from DQMOffline.EGamma.egammaDQMOffline_cff import *
-from DQMOffline.L1Trigger.L1TriggerDqmOffline_cff import *
 from DQMOffline.Trigger.DQMOffline_Trigger_cff import *
 #from DQMOffline.RecoB.PrimaryVertexMonitor_cff import *
 from DQM.Physics.DQMPhysics_cff import *
+from DQM.TrackingMonitorSource.TrackingSourceConfig_Tier0_HeavyIons_cff import *
+
+
+triggerOfflineDQMSource.remove(jetMETHLTOfflineAnalyzer)
 
 egammaDQMOffline.remove(electronAnalyzerSequence)
-photonAnalysis.isHeavyIon = True
-photonAnalysis.barrelRecHitProducer = 'ecalRecHit'
-photonAnalysis. barrelRecHitCollection = 'EcalRecHitsEB'
-photonAnalysis.endcapRecHitProducer = 'ecalRecHit'
-photonAnalysis. endcapRecHitCollection = 'EcalRecHitsEE'
+egammaDQMOffline.remove(zmumugammaAnalysis)
+egammaDQMOffline.remove(zmumugammaOldAnalysis)
+egammaDQMOffline.remove(photonAnalysis)
+stdPhotonAnalysis.isHeavyIon = True
+stdPhotonAnalysis.barrelRecHitProducer = cms.InputTag("ecalRecHit", "EcalRecHitsEB")
+stdPhotonAnalysis.endcapRecHitProducer = cms.InputTag("ecalRecHit", "EcalRecHitsEE")
 hltResults.RecHitsEBTag = cms.untracked.InputTag("ecalRecHit", "EcalRecHitsEB")
 hltResults.RecHitsEETag = cms.untracked.InputTag("ecalRecHit", "EcalRecHitsEE")
 
+
+globalAnalyzer.inputTags.offlinePVs = cms.InputTag("hiSelectedVertex")
+trackerAnalyzer.inputTags.offlinePVs = cms.InputTag("hiSelectedVertex")
+tightAnalyzer.inputTags.offlinePVs = cms.InputTag("hiSelectedVertex")
+looseAnalyzer.inputTags.offlinePVs = cms.InputTag("hiSelectedVertex")
+
+
 DQMOfflineHeavyIonsPrePOG = cms.Sequence( muonMonitors 
+                                          * TrackMonDQMTier0_hi
                                           * jetMETDQMOfflineSource
                                           * egammaDQMOffline
-                                          * l1TriggerDqmOffline
                                           * triggerOfflineDQMSource
                                           #* pvMonitor
                                           * alcaBeamMonitor

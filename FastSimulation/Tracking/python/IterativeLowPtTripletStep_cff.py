@@ -23,6 +23,15 @@ iterativeLowPtTripletSeeds.originpTMin = [0.35]
 iterativeLowPtTripletSeeds.zVertexConstraint = [-1.0]
 iterativeLowPtTripletSeeds.primaryVertices = ['none']
 
+iterativeLowPtTripletSeeds.newSyntax = True
+#iterativeLowPtTripletSeeds.layerList = ['BPix1+BPix2+BPix3',
+#                                   'BPix1+BPix2+FPix1_pos',
+#                                   'BPix1+BPix2+FPix1_neg',
+#                                   'BPix1+FPix1_pos+FPix2_pos',
+#                                   'BPix1+FPix1_neg+FPix2_neg']
+from RecoTracker.TkSeedingLayers.PixelLayerTriplets_cfi import PixelLayerTriplets
+iterativeLowPtTripletSeeds.layerList = PixelLayerTriplets.layerList
+
 # candidate producer
 import FastSimulation.Tracking.TrackCandidateProducer_cfi
 iterativeLowPtTripletTrackCandidatesWithTriplets = FastSimulation.Tracking.TrackCandidateProducer_cfi.trackCandidateProducer.clone()
@@ -46,7 +55,7 @@ lowPtTripletStepTracks = cms.EDProducer("FastTrackMerger",
                                         TrackProducers = cms.VInputTag(cms.InputTag("iterativeLowPtTripletTrackCandidatesWithTriplets"),
                                                                        cms.InputTag("iterativeLowPtTripletTracksWithTriplets")),
                                         RemoveTrackProducers =  cms.untracked.VInputTag(cms.InputTag("initialStep")),
-                                        trackAlgo = cms.untracked.uint32(5), # iter1
+                                        trackAlgo = cms.untracked.uint32(5), # lowPtTripletStep
                                         MinNumberOfTrajHits = cms.untracked.uint32(3),
                                         MaxLostTrajHits = cms.untracked.uint32(1)
                                         )

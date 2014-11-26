@@ -1,7 +1,5 @@
-#ifndef SimMuon_GEMDigiReader_h
-#define SimMuon_GEMDigiReader_h
-
 /** \class GEMDigiReader
+ *
  *  Dumps GEM digis 
  *  
  *  \authors: Vadim Khotilovich
@@ -42,14 +40,18 @@ public:
   
 private:
 
-  string label;
+  edm::EDGetTokenT<edm::PSimHitContainer> simhitToken_;
+  edm::EDGetTokenT<GEMDigiCollection> gemDigiToken_;
+  edm::EDGetTokenT<edm::DetSetVector<StripDigiSimLink> > gemDigiSimLinkToken_;
 };
 
 
 
-GEMDigiReader::GEMDigiReader(const edm::ParameterSet& pset)
+GEMDigiReader::GEMDigiReader(const edm::ParameterSet& pset) :
+  simhitToken_(consumes<edm::PSimHitContainer>(pset.getParameter<edm::InputTag>("simhitToken"))),
+  gemDigiToken_(consumes<GEMDigiCollection>(pset.getParameter<edm::InputTag>("gemDigiToken"))),
+  gemDigiSimLinkToken_(consumes<edm::DetSetVector<StripDigiSimLink> >(pset.getParameter<edm::InputTag>("gemDigiSimLinkToken")))
 {
-  label = pset.getUntrackedParameter<string>("label", "simMuonGEMDigis");
 }
 
 
@@ -57,17 +59,17 @@ void GEMDigiReader::analyze(const edm::Event & event, const edm::EventSetup& eve
 {
   cout << "--- Run: " << event.id().run() << " Event: " << event.id().event() << endl;
 
-  edm::Handle<GEMDigiCollection> digis;
-  event.getByLabel(label, digis);
-
-  edm::Handle<edm::PSimHitContainer> simHits; 
-  event.getByLabel("g4SimHits","MuonGEMHits",simHits);    
-
   edm::ESHandle<GEMGeometry> pDD;
   eventSetup.get<MuonGeometryRecord>().get( pDD );
+
+  edm::Handle<edm::PSimHitContainer> simHits; 
+  event.getByToken(simhitToken_, simHits);    
+
+  edm::Handle<GEMDigiCollection> digis;
+  event.getByToken(gemDigiToken_, digis);
    
   edm::Handle< edm::DetSetVector<StripDigiSimLink> > thelinkDigis;
-  event.getByLabel(label, "GEM", thelinkDigis);
+  event.getByToken(gemDigiSimLinkToken_, thelinkDigis);
 
   GEMDigiCollection::DigiRangeIterator detUnitIt;
   for (detUnitIt = digis->begin();	detUnitIt != digis->end(); ++detUnitIt)
@@ -120,9 +122,6 @@ void GEMDigiReader::analyze(const edm::Event & event, const edm::EventSetup& eve
   cout<<"--------------"<<endl;
 }
 
-
-
-#endif
 #include <FWCore/Framework/interface/MakerMacros.h>
 DEFINE_FWK_MODULE(GEMDigiReader);
 

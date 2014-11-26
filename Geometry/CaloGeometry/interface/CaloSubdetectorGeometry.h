@@ -3,6 +3,9 @@
 
 #include <vector>
 #include <set>
+#if !defined(__CINT__) && !defined(__MAKECINT__) && !defined(__REFLEX__)
+#include <atomic>
+#endif
 #include "DataFormats/DetId/interface/DetId.h"
 #include "DataFormats/GeometryVector/interface/GlobalPoint.h"
 #include "Geometry/CaloGeometry/interface/CaloCellGeometry.h"
@@ -17,7 +20,6 @@ Base class for a geometry container for a specific calorimetry
 subdetector.
 
 
-$Date: 2013/03/04 15:55:17 $
 $Revision: 1.32 $
 \author J. Mans - Minnesota
 */
@@ -116,7 +118,7 @@ class CaloSubdetectorGeometry {
 			      const GlobalPoint& p2  ) 
       { return reco::deltaR( p1, p2 ) ; }
 
-      mutable std::vector<DetId> m_validIds ;
+      void addValidID(const DetId& id);
 
    private:
 
@@ -128,10 +130,15 @@ class CaloSubdetectorGeometry {
       CaloSubdetectorGeometry(            const CaloSubdetectorGeometry& ) ;
       CaloSubdetectorGeometry& operator=( const CaloSubdetectorGeometry& ) ;
 
-      mutable bool m_sortedIds ;
+      std::vector<DetId> m_validIds ;
 
+#if !defined(__CINT__) && !defined(__MAKECINT__) && !defined(__REFLEX__)
+      mutable std::atomic<std::vector<CCGFloat>*>  m_deltaPhi ;
+      mutable std::atomic<std::vector<CCGFloat>*>  m_deltaEta ;
+#else
       mutable std::vector<CCGFloat>*  m_deltaPhi ;
       mutable std::vector<CCGFloat>*  m_deltaEta ;
+#endif
 };
 
 

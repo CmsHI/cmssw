@@ -5,7 +5,6 @@
 //
 // Package:     Electrons
 // Class  :     FWHCalTowerDetailView
-// $Id: FWCaloTowerDetailView.h,v 1.1 2010/03/09 21:49:34 amraktad Exp $
 //
 
 // user include files
@@ -22,9 +21,9 @@ public:
    FWCaloTowerDetailView();
    virtual ~FWCaloTowerDetailView(); 
 
-
-private:
+   using FWDetailViewGL<CaloTower>::build;
    virtual void build (const FWModelId &id, const CaloTower*);
+private:
    virtual void setTextInfo(const FWModelId&, const CaloTower*);
    TEveCaloData* m_data;
    FWECALDetailViewBuilder* m_builder;

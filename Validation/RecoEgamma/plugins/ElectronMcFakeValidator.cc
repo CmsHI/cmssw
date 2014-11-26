@@ -44,23 +44,23 @@ ElectronMcFakeValidator::ElectronMcFakeValidator( const edm::ParameterSet & conf
  : ElectronDqmAnalyzerBase(conf)
  {
   //outputFile_ = conf.getParameter<std::string>("outputFile");
-  electronCollection_ = conf.getParameter<edm::InputTag>("electronCollection");
-  electronCoreCollection_ = conf.getParameter<edm::InputTag>("electronCoreCollection");
-  electronTrackCollection_ = conf.getParameter<edm::InputTag>("electronTrackCollection");
-  electronSeedCollection_ = conf.getParameter<edm::InputTag>("electronSeedCollection");
-  matchingObjectCollection_ = conf.getParameter<edm::InputTag>("matchingObjectCollection");
+  electronCollection_ = consumes<reco::GsfElectronCollection>(conf.getParameter<edm::InputTag>("electronCollection"));
+  electronCoreCollection_ = consumes<reco::GsfElectronCoreCollection>(conf.getParameter<edm::InputTag>("electronCoreCollection"));
+  electronTrackCollection_ = consumes<reco::GsfTrackCollection>(conf.getParameter<edm::InputTag>("electronTrackCollection"));
+  electronSeedCollection_ = consumes<reco::ElectronSeedCollection>(conf.getParameter<edm::InputTag>("electronSeedCollection"));
+  matchingObjectCollection_ = consumes<reco::GenJetCollection>(conf.getParameter<edm::InputTag>("matchingObjectCollection"));
 
-  beamSpotTag_ = conf.getParameter<edm::InputTag>("beamSpot");
+  beamSpotTag_ = consumes<reco::BeamSpot>(conf.getParameter<edm::InputTag>("beamSpot"));
   readAOD_ = conf.getParameter<bool>("readAOD");
 
-  isoFromDepsTk03Tag_ = conf.getParameter<edm::InputTag>( "isoFromDepsTk03" ) ;
-  isoFromDepsTk04Tag_ = conf.getParameter<edm::InputTag>( "isoFromDepsTk04" ) ;
-  isoFromDepsEcalFull03Tag_ = conf.getParameter<edm::InputTag>( "isoFromDepsEcalFull03" ) ;
-  isoFromDepsEcalFull04Tag_ = conf.getParameter<edm::InputTag>( "isoFromDepsEcalFull04" ) ;
-  isoFromDepsEcalReduced03Tag_ = conf.getParameter<edm::InputTag>( "isoFromDepsEcalReduced03" ) ;
-  isoFromDepsEcalReduced04Tag_ = conf.getParameter<edm::InputTag>( "isoFromDepsEcalReduced04" ) ;
-  isoFromDepsHcal03Tag_ = conf.getParameter<edm::InputTag>( "isoFromDepsHcal03" ) ;
-  isoFromDepsHcal04Tag_ = conf.getParameter<edm::InputTag>( "isoFromDepsHcal04" ) ;
+  isoFromDepsTk03Tag_ = consumes<edm::ValueMap<double>>(conf.getParameter<edm::InputTag>( "isoFromDepsTk03" )) ;
+  isoFromDepsTk04Tag_ = consumes<edm::ValueMap<double>>(conf.getParameter<edm::InputTag>( "isoFromDepsTk04" )) ;
+  isoFromDepsEcalFull03Tag_ = consumes<edm::ValueMap<double>>(conf.getParameter<edm::InputTag>( "isoFromDepsEcalFull03" )) ;
+  isoFromDepsEcalFull04Tag_ = consumes<edm::ValueMap<double>>(conf.getParameter<edm::InputTag>( "isoFromDepsEcalFull04" ));
+  isoFromDepsEcalReduced03Tag_ = consumes<edm::ValueMap<double>>(conf.getParameter<edm::InputTag>( "isoFromDepsEcalReduced03" )) ;
+  isoFromDepsEcalReduced04Tag_ = consumes<edm::ValueMap<double>>(conf.getParameter<edm::InputTag>( "isoFromDepsEcalReduced04" )) ;
+  isoFromDepsHcal03Tag_ = consumes<edm::ValueMap<double>>(conf.getParameter<edm::InputTag>( "isoFromDepsHcal03" )) ;
+  isoFromDepsHcal04Tag_ = consumes<edm::ValueMap<double>>(conf.getParameter<edm::InputTag>( "isoFromDepsHcal04" )) ;
 
   maxPt_ = conf.getParameter<double>("MaxPt");
   maxAbsEta_ = conf.getParameter<double>("MaxAbsEta");
@@ -470,12 +470,16 @@ void ElectronMcFakeValidator::book()
 
   // matching object type
   std::string matchingObjectType ;
-  if (std::string::npos!=matchingObjectCollection_.label().find("iterativeCone5GenJets",0))
+/*  if (std::string::npos!=matchingObjectCollection_.label().find("iterativeCone5GenJets",0))
    { matchingObjectType = "GenJet" ; }
   if (matchingObjectType=="")
    { edm::LogError("ElectronMcFakeValidator::beginJob")<<"Unknown matching object type !" ; }
   else
    { edm::LogInfo("ElectronMcFakeValidator::beginJob")<<"Matching object type: "<<matchingObjectType ; }
+*/  
+  // Emilia
+  matchingObjectType = "GenJet" ;
+  
   std::string htitle = "# "+matchingObjectType+"s", xtitle = "N_{"+matchingObjectType+"}" ;
   h1_matchingObjectNum = bookH1withSumw2("matchingObjectNum",htitle,fhits_nbin,0.,fhits_max,xtitle) ;
 
@@ -864,6 +868,16 @@ void ElectronMcFakeValidator::book()
   h1_ele_photonIso = bookH1withSumw2("photonIso","photonIso",100,0.0,20.,"photonIso","Events","ELE_LOGY E1 P");
   h1_ele_photonIso_barrel = bookH1withSumw2("photonIso_barrel","photonIso for barrel",100,0.0,20.,"photonIso_barrel","Events","ELE_LOGY E1 P");
   h1_ele_photonIso_endcaps = bookH1withSumw2("photonIso_endcaps","photonIso for endcaps",100,0.0,20.,"photonIso_endcaps","Events","ELE_LOGY E1 P");
+  // -- pflow over pT
+  h1_ele_chargedHadronRelativeIso = bookH1withSumw2("chargedHadronRelativeIso","chargedHadronRelativeIso",100,0.0,2.,"chargedHadronRelativeIso","Events","ELE_LOGY E1 P");
+  h1_ele_chargedHadronRelativeIso_barrel = bookH1withSumw2("chargedHadronRelativeIso_barrel","chargedHadronRelativeIso for barrel",100,0.0,2.,"chargedHadronRelativeIso_barrel","Events","ELE_LOGY E1 P");
+  h1_ele_chargedHadronRelativeIso_endcaps = bookH1withSumw2("chargedHadronRelativeIso_endcaps","chargedHadronRelativeIso for endcaps",100,0.0,2.,"chargedHadronRelativeIso_endcaps","Events","ELE_LOGY E1 P");
+  h1_ele_neutralHadronRelativeIso = bookH1withSumw2("neutralHadronRelativeIso","neutralHadronRelativeIso",100,0.0,2.,"neutralHadronRelativeIso","Events","ELE_LOGY E1 P");
+  h1_ele_neutralHadronRelativeIso_barrel = bookH1withSumw2("neutralHadronRelativeIso_barrel","neutralHadronRelativeIso for barrel",100,0.0,2.,"neutralHadronRelativeIso_barrel","Events","ELE_LOGY E1 P");
+  h1_ele_neutralHadronRelativeIso_endcaps = bookH1withSumw2("neutralHadronRelativeIso_endcaps","neutralHadronRelativeIso for endcaps",100,0.0,2.,"neutralHadronRelativeIso_endcaps","Events","ELE_LOGY E1 P");
+  h1_ele_photonRelativeIso = bookH1withSumw2("photonRelativeIso","photonRelativeIso",100,0.0,2.,"photonRelativeIso","Events","ELE_LOGY E1 P");
+  h1_ele_photonRelativeIso_barrel = bookH1withSumw2("photonRelativeIso_barrel","photonRelativeIso for barrel",100,0.0,2.,"photonRelativeIso_barrel","Events","ELE_LOGY E1 P");
+  h1_ele_photonRelativeIso_endcaps = bookH1withSumw2("photonRelativeIso_endcaps","photonRelativeIso for endcaps",100,0.0,2.,"photonRelativeIso_endcaps","Events","ELE_LOGY E1 P");
 
   // conversion rejection information
   h1_ele_convFlags = bookH1withSumw2("convFlags","conversion rejection flag",5,-2.5,2.5);
@@ -889,30 +903,30 @@ void ElectronMcFakeValidator::analyze( const edm::Event & iEvent, const edm::Eve
  {
   // get reco electrons
   edm::Handle<reco::GsfElectronCollection> gsfElectrons;
-  iEvent.getByLabel(electronCollection_,gsfElectrons);
+  iEvent.getByToken(electronCollection_,gsfElectrons);
   edm::Handle<GsfElectronCoreCollection> gsfElectronCores ;
-  iEvent.getByLabel(electronCoreCollection_,gsfElectronCores) ;
+  iEvent.getByToken(electronCoreCollection_,gsfElectronCores) ;
   edm::Handle<GsfTrackCollection> gsfElectronTracks ;
-  iEvent.getByLabel(electronTrackCollection_,gsfElectronTracks) ;
+  iEvent.getByToken(electronTrackCollection_,gsfElectronTracks) ;
   edm::Handle<ElectronSeedCollection> gsfElectronSeeds ;
-  iEvent.getByLabel(electronSeedCollection_,gsfElectronSeeds) ;
+  iEvent.getByToken(electronSeedCollection_,gsfElectronSeeds) ;
 
-  edm::Handle<edm::ValueMap<double> > isoFromDepsTk03Handle          ;   iEvent.getByLabel( isoFromDepsTk03Tag_         , isoFromDepsTk03Handle          ) ;
-  edm::Handle<edm::ValueMap<double> > isoFromDepsTk04Handle          ;   iEvent.getByLabel( isoFromDepsTk04Tag_         , isoFromDepsTk04Handle          ) ;
-  edm::Handle<edm::ValueMap<double> > isoFromDepsEcalFull03Handle    ;   iEvent.getByLabel( isoFromDepsEcalFull03Tag_   , isoFromDepsEcalFull03Handle    ) ;
-  edm::Handle<edm::ValueMap<double> > isoFromDepsEcalFull04Handle    ;   iEvent.getByLabel( isoFromDepsEcalFull04Tag_   , isoFromDepsEcalFull04Handle    ) ;
-  edm::Handle<edm::ValueMap<double> > isoFromDepsEcalReduced03Handle ;   iEvent.getByLabel( isoFromDepsEcalReduced03Tag_, isoFromDepsEcalReduced03Handle ) ;
-  edm::Handle<edm::ValueMap<double> > isoFromDepsEcalReduced04Handle ;   iEvent.getByLabel( isoFromDepsEcalReduced04Tag_, isoFromDepsEcalReduced04Handle ) ;
-  edm::Handle<edm::ValueMap<double> > isoFromDepsHcal03Handle        ;   iEvent.getByLabel( isoFromDepsHcal03Tag_       , isoFromDepsHcal03Handle        ) ;
-  edm::Handle<edm::ValueMap<double> > isoFromDepsHcal04Handle        ;   iEvent.getByLabel( isoFromDepsHcal04Tag_       , isoFromDepsHcal04Handle        ) ;
+  edm::Handle<edm::ValueMap<double> > isoFromDepsTk03Handle          ;   iEvent.getByToken( isoFromDepsTk03Tag_         , isoFromDepsTk03Handle          ) ;
+  edm::Handle<edm::ValueMap<double> > isoFromDepsTk04Handle          ;   iEvent.getByToken( isoFromDepsTk04Tag_         , isoFromDepsTk04Handle          ) ;
+  edm::Handle<edm::ValueMap<double> > isoFromDepsEcalFull03Handle    ;   iEvent.getByToken( isoFromDepsEcalFull03Tag_   , isoFromDepsEcalFull03Handle    ) ;
+  edm::Handle<edm::ValueMap<double> > isoFromDepsEcalFull04Handle    ;   iEvent.getByToken( isoFromDepsEcalFull04Tag_   , isoFromDepsEcalFull04Handle    ) ;
+  edm::Handle<edm::ValueMap<double> > isoFromDepsEcalReduced03Handle ;   iEvent.getByToken( isoFromDepsEcalReduced03Tag_, isoFromDepsEcalReduced03Handle ) ;
+  edm::Handle<edm::ValueMap<double> > isoFromDepsEcalReduced04Handle ;   iEvent.getByToken( isoFromDepsEcalReduced04Tag_, isoFromDepsEcalReduced04Handle ) ;
+  edm::Handle<edm::ValueMap<double> > isoFromDepsHcal03Handle        ;   iEvent.getByToken( isoFromDepsHcal03Tag_       , isoFromDepsHcal03Handle        ) ;
+  edm::Handle<edm::ValueMap<double> > isoFromDepsHcal04Handle        ;   iEvent.getByToken( isoFromDepsHcal04Tag_       , isoFromDepsHcal04Handle        ) ;
 
   // get gen jets
   edm::Handle<reco::GenJetCollection> genJets ;
-  iEvent.getByLabel(matchingObjectCollection_,genJets);
+  iEvent.getByToken(matchingObjectCollection_,genJets);
 
   // get the beamspot from the Event:
   edm::Handle<reco::BeamSpot> recoBeamSpotHandle;
-  iEvent.getByLabel(beamSpotTag_,recoBeamSpotHandle);
+  iEvent.getByToken(beamSpotTag_,recoBeamSpotHandle);
   const BeamSpot bs = *recoBeamSpotHandle;
 
   edm::LogInfo("ElectronMcFakeValidator::analyze")
@@ -1094,18 +1108,20 @@ void ElectronMcFakeValidator::analyze( const edm::Event & iEvent, const edm::Eve
 
       // supercluster related distributions
       reco::SuperClusterRef sclRef = bestGsfElectron.superCluster();
-      if (!bestGsfElectron.ecalDrivenSeed()&&bestGsfElectron.trackerDrivenSeed()) sclRef = bestGsfElectron.pflowSuperCluster();
-      h1_scl_En_->Fill(sclRef->energy());
-      double R=TMath::Sqrt(sclRef->x()*sclRef->x() + sclRef->y()*sclRef->y() +sclRef->z()*sclRef->z());
-      double Rt=TMath::Sqrt(sclRef->x()*sclRef->x() + sclRef->y()*sclRef->y());
-      h1_scl_Et_->Fill(sclRef->energy()*(Rt/R));
-      h2_scl_EtVsEta_->Fill(sclRef->eta(),sclRef->energy()*(Rt/R));
-      h2_scl_EtVsPhi_->Fill(sclRef->phi(),sclRef->energy()*(Rt/R));
-      if (bestGsfElectron.classification() < 100)  h1_scl_EoEmatchingObject_barrel->Fill(sclRef->energy()/moIter->energy());
-      if (bestGsfElectron.classification() >= 100)  h1_scl_EoEmatchingObject_endcaps->Fill(sclRef->energy()/moIter->energy());
-      h1_scl_Eta_->Fill(sclRef->eta());
-      h2_scl_EtaVsPhi_->Fill(sclRef->phi(),sclRef->eta());
-      h1_scl_Phi_->Fill(sclRef->phi());
+      if (!bestGsfElectron.ecalDrivenSeed()&&bestGsfElectron.trackerDrivenSeed()) sclRef = bestGsfElectron.parentSuperCluster();
+      if( sclRef.isNonnull() ) {
+	h1_scl_En_->Fill(sclRef->energy());      
+	double R=TMath::Sqrt(sclRef->x()*sclRef->x() + sclRef->y()*sclRef->y() +sclRef->z()*sclRef->z());
+	double Rt=TMath::Sqrt(sclRef->x()*sclRef->x() + sclRef->y()*sclRef->y());
+	h1_scl_Et_->Fill(sclRef->energy()*(Rt/R));
+	h2_scl_EtVsEta_->Fill(sclRef->eta(),sclRef->energy()*(Rt/R));
+	h2_scl_EtVsPhi_->Fill(sclRef->phi(),sclRef->energy()*(Rt/R));
+	if (bestGsfElectron.classification() < 100)  h1_scl_EoEmatchingObject_barrel->Fill(sclRef->energy()/moIter->energy());
+	if (bestGsfElectron.classification() >= 100)  h1_scl_EoEmatchingObject_endcaps->Fill(sclRef->energy()/moIter->energy());
+	h1_scl_Eta_->Fill(sclRef->eta());
+	h2_scl_EtaVsPhi_->Fill(sclRef->phi(),sclRef->eta());
+	h1_scl_Phi_->Fill(sclRef->phi());
+      }
       h1_scl_SigIEtaIEta_->Fill(bestGsfElectron.scSigmaIEtaIEta());
       if (bestGsfElectron.isEB()) h1_scl_SigIEtaIEta_barrel_->Fill(bestGsfElectron.scSigmaIEtaIEta());
       if (bestGsfElectron.isEE()) h1_scl_SigIEtaIEta_endcaps_->Fill(bestGsfElectron.scSigmaIEtaIEta());
@@ -1351,9 +1367,9 @@ void ElectronMcFakeValidator::analyze( const edm::Event & iEvent, const edm::Eve
         if (bestGsfElectron.classification() == GsfElectron::SHOWERING)
           h2_ele_PtinVsPtoutShowering_mean->Fill(bestGsfElectron.gsfTrack()->outerMomentum().Rho(), bestGsfElectron.gsfTrack()->innerMomentum().Rho());
 
-      h1_ele_mva->Fill(bestGsfElectron.mva());
-      if (bestGsfElectron.isEB()) h1_ele_mva_barrel->Fill(bestGsfElectron.mva());
-      if (bestGsfElectron.isEE()) h1_ele_mva_endcaps->Fill(bestGsfElectron.mva());
+      h1_ele_mva->Fill(bestGsfElectron.mva_e_pi());
+      if (bestGsfElectron.isEB()) h1_ele_mva_barrel->Fill(bestGsfElectron.mva_e_pi());
+      if (bestGsfElectron.isEE()) h1_ele_mva_endcaps->Fill(bestGsfElectron.mva_e_pi());
 
       if (bestGsfElectron.ecalDrivenSeed()) h1_ele_provenance->Fill(1.);
       if (bestGsfElectron.trackerDrivenSeed()) h1_ele_provenance->Fill(-1.);
@@ -1372,17 +1388,30 @@ void ElectronMcFakeValidator::analyze( const edm::Event & iEvent, const edm::Eve
       if (!bestGsfElectron.trackerDrivenSeed()&&bestGsfElectron.ecalDrivenSeed() && bestGsfElectron.isEE()) h1_ele_provenance_endcaps->Fill(2.);
 
       // Pflow isolation
-      h1_ele_chargedHadronIso->Fill(bestGsfElectron.pfIsolationVariables().chargedHadronIso);
-      if (bestGsfElectron.isEB()) h1_ele_chargedHadronIso_barrel->Fill(bestGsfElectron.pfIsolationVariables().chargedHadronIso);
-      if (bestGsfElectron.isEE()) h1_ele_chargedHadronIso_endcaps->Fill(bestGsfElectron.pfIsolationVariables().chargedHadronIso);
+      h1_ele_chargedHadronIso->Fill(bestGsfElectron.pfIsolationVariables().sumChargedHadronPt);
+      if (bestGsfElectron.isEB()) h1_ele_chargedHadronIso_barrel->Fill(bestGsfElectron.pfIsolationVariables().sumChargedHadronPt);
+      if (bestGsfElectron.isEE()) h1_ele_chargedHadronIso_endcaps->Fill(bestGsfElectron.pfIsolationVariables().sumChargedHadronPt);
 
-      h1_ele_neutralHadronIso->Fill(bestGsfElectron.pfIsolationVariables().neutralHadronIso);
-      if (bestGsfElectron.isEB()) h1_ele_neutralHadronIso_barrel->Fill(bestGsfElectron.pfIsolationVariables().neutralHadronIso);
-      if (bestGsfElectron.isEE()) h1_ele_neutralHadronIso_endcaps->Fill(bestGsfElectron.pfIsolationVariables().neutralHadronIso);
+      h1_ele_neutralHadronIso->Fill(bestGsfElectron.pfIsolationVariables().sumNeutralHadronEt);
+      if (bestGsfElectron.isEB()) h1_ele_neutralHadronIso_barrel->Fill(bestGsfElectron.pfIsolationVariables().sumNeutralHadronEt);
+      if (bestGsfElectron.isEE()) h1_ele_neutralHadronIso_endcaps->Fill(bestGsfElectron.pfIsolationVariables().sumNeutralHadronEt);
 
-      h1_ele_photonIso->Fill(bestGsfElectron.pfIsolationVariables().photonIso);
-      if (bestGsfElectron.isEB()) h1_ele_photonIso_barrel->Fill(bestGsfElectron.pfIsolationVariables().photonIso);
-      if (bestGsfElectron.isEE()) h1_ele_photonIso_endcaps->Fill(bestGsfElectron.pfIsolationVariables().photonIso);
+      h1_ele_photonIso->Fill(bestGsfElectron.pfIsolationVariables().sumPhotonEt);
+      if (bestGsfElectron.isEB()) h1_ele_photonIso_barrel->Fill(bestGsfElectron.pfIsolationVariables().sumPhotonEt);
+      if (bestGsfElectron.isEE()) h1_ele_photonIso_endcaps->Fill(bestGsfElectron.pfIsolationVariables().sumPhotonEt);
+
+      // -- pflow over pT
+      h1_ele_chargedHadronRelativeIso->Fill(bestGsfElectron.pfIsolationVariables().sumChargedHadronPt / bestGsfElectron.pt());
+      if (bestGsfElectron.isEB()) h1_ele_chargedHadronRelativeIso_barrel->Fill(bestGsfElectron.pfIsolationVariables().sumChargedHadronPt / bestGsfElectron.pt());
+      if (bestGsfElectron.isEE()) h1_ele_chargedHadronRelativeIso_endcaps->Fill(bestGsfElectron.pfIsolationVariables().sumChargedHadronPt / bestGsfElectron.pt());
+
+      h1_ele_neutralHadronRelativeIso->Fill(bestGsfElectron.pfIsolationVariables().sumNeutralHadronEt / bestGsfElectron.pt());
+      if (bestGsfElectron.isEB()) h1_ele_neutralHadronRelativeIso_barrel->Fill(bestGsfElectron.pfIsolationVariables().sumNeutralHadronEt / bestGsfElectron.pt());
+      if (bestGsfElectron.isEE()) h1_ele_neutralHadronRelativeIso_endcaps->Fill(bestGsfElectron.pfIsolationVariables().sumNeutralHadronEt / bestGsfElectron.pt());
+
+      h1_ele_photonRelativeIso->Fill(bestGsfElectron.pfIsolationVariables().sumPhotonEt / bestGsfElectron.pt());
+      if (bestGsfElectron.isEB()) h1_ele_photonRelativeIso_barrel->Fill(bestGsfElectron.pfIsolationVariables().sumPhotonEt / bestGsfElectron.pt());
+      if (bestGsfElectron.isEE()) h1_ele_photonRelativeIso_endcaps->Fill(bestGsfElectron.pfIsolationVariables().sumPhotonEt / bestGsfElectron.pt());
 
       // isolation
       h1_ele_tkSumPt_dr03->Fill(bestGsfElectron.dr03TkSumPt());
