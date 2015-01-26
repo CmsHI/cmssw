@@ -78,8 +78,8 @@ UETableProducer::UETableProducer(const edm::ParameterSet& iConfig):
   runnum_(0)
 {
   //now do what ever initialization is needed
-  //  calibrationFile_ = iConfig.getParameter<std::string>("txtFile");
-  calibrationFile_ = "RecoHI/HiJetAlgos/data/ue_calibrations_pf_data.txt";
+  calibrationFile_ = iConfig.getParameter<std::string>("txtFile");
+  //calibrationFile_ = "RecoHI/HiJetAlgos/data/ue_calibrations_pf_data.txt";
 
   debug_ = iConfig.getUntrackedParameter<bool>("debug",false);
 
@@ -120,8 +120,8 @@ UETableProducer::beginRun(const edm::EventSetup& iSetup)
 void 
 UETableProducer::endJob() {
 
-  edm::FileInPath ueData(calibrationFile_.data());
-  std::string qpDataName = ueData.fullPath();
+  std::string qpDataName = calibrationFile_.c_str();
+  fprintf(stderr, "%s:%d: %s\n", __FILE__, __LINE__, qpDataName.c_str());
   std::ifstream textTable_(qpDataName.c_str());
 
   UETable* ue_predictor_pf = new UETable();
@@ -176,7 +176,7 @@ UETableProducer::endJob() {
 	  ue_predictor_pf->values.push_back(val);
     }
     ++index;
-	if (index % 100 == 0) {
+	if (index % 1000 == 0) {
 		fprintf(stderr, "%s:%d: file line %u\n", __FILE__, __LINE__, index);
 	}
   }
