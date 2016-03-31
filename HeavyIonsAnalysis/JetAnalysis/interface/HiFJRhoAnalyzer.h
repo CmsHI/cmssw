@@ -6,6 +6,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <iostream>     // std::cout
 
 //root
 #include "TTree.h"
@@ -43,6 +44,11 @@ class HiFJRhoAnalyzer : public edm::EDAnalyzer {
       edm::EDGetTokenT<std::vector<double>>                  etaToken_;
       edm::EDGetTokenT<std::vector<double>>                  rhoToken_;
       edm::EDGetTokenT<std::vector<double>>                  rhomToken_;
+      edm::EDGetTokenT<std::vector<double>>                  rhoCorrToken_;
+      edm::EDGetTokenT<std::vector<double>>                  rhomCorrToken_;
+      edm::EDGetTokenT<std::vector<double>>                  corrWKtAreaToken_;
+      edm::EDGetTokenT<std::vector<double>>                  rhoGridToken_;
+      edm::EDGetTokenT<std::vector<double>>                  meanRhoGridToken_;
       
        //output
       TTree *tree_;
@@ -53,6 +59,11 @@ class HiFJRhoAnalyzer : public edm::EDAnalyzer {
         std::vector<double> etaMax;
         std::vector<double> rho;
         std::vector<double> rhom;
+        std::vector<double> rhoCorr;
+        std::vector<double> rhomCorr;
+        std::vector<double> corr;
+        std::vector<double> rhoGrid;
+        std::vector<double> meanRhoGrid;
       };
       
       RHO rhoObj_;

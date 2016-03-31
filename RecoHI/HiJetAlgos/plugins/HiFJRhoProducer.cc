@@ -65,6 +65,8 @@ HiFJRhoProducer::HiFJRhoProducer(const edm::ParameterSet& iConfig) :
   produces<std::vector<double > >("mapEtaEdges");
   produces<std::vector<double > >("mapToRho");
   produces<std::vector<double > >("mapToRhoM");
+  etaRanges = iConfig.getUntrackedParameter<std::vector<double> >("etaRanges");
+
 }
 
 
@@ -85,25 +87,29 @@ void HiFJRhoProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
   edm::Handle<edm::View<reco::Jet> > jets;
   iEvent.getByToken(jetsToken_, jets);
 
-  std::auto_ptr<std::vector<double>> mapEtaRangesOut ( new std::vector<double>(8,-999.));
   //make settable from config later
-  mapEtaRangesOut->at(0) = -5.;
-  mapEtaRangesOut->at(1) = -3.;
-  mapEtaRangesOut->at(2) = -2.1;
-  mapEtaRangesOut->at(3) = -1.3;
-  mapEtaRangesOut->at(4) =  1.3;
-  mapEtaRangesOut->at(5) =  2.1;
-  mapEtaRangesOut->at(6) =  3.;
-  mapEtaRangesOut->at(7) =  5.;
+  // mapEtaRangesOut->at(0) = -5.;
+  // mapEtaRangesOut->at(1) = -3.;
+  // mapEtaRangesOut->at(2) = -2.1;
+  // mapEtaRangesOut->at(3) = -1.3;
+  // mapEtaRangesOut->at(4) =  1.3;
+  // mapEtaRangesOut->at(5) =  2.1;
+  // mapEtaRangesOut->at(6) =  3.;
+  // mapEtaRangesOut->at(7) =  5.;
+  int neta = (int)etaRanges.size();
+  std::auto_ptr<std::vector<double>> mapEtaRangesOut ( new std::vector<double>(neta,-999.));
 
-  std::auto_ptr<std::vector<double>> mapToRhoOut ( new std::vector<double>(7,1e-6));
-  std::auto_ptr<std::vector<double>> mapToRhoMOut ( new std::vector<double>(7,1e-6));
+  for(int ieta = 0; ieta < neta; ieta++){
+   mapEtaRangesOut->at(ieta) = etaRanges[ieta];
+  }
+  std::auto_ptr<std::vector<double>> mapToRhoOut ( new std::vector<double>(neta-1,1e-6));
+  std::auto_ptr<std::vector<double>> mapToRhoMOut ( new std::vector<double>(neta-1,1e-6));
   
   static double rhoVec[999];
   static double rhomVec[999];
   static double etaVec[999];
 
-  int neta = (int)mapEtaRangesOut->size();
+  // int neta = (int)mapEtaRangesOut->size();
   int nacc = 0;
   unsigned int njetsEx = 0;
   unsigned int njetsEx2 = 0;

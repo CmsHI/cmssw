@@ -76,8 +76,10 @@ process.TFileService = cms.Service("TFileService",
 from Configuration.StandardSequences.ReconstructionHeavyIons_cff import voronoiBackgroundPF, voronoiBackgroundCalo
 from RecoJets.JetProducers.kt4PFJets_cfi import kt4PFJets
 from RecoHI.HiJetAlgos.hiFJRhoProducer import hiFJRhoProducer
+from RecoHI.HiJetAlgos.hiFJGridEmptyAreaCalculator_cff import hiFJGridEmptyAreaCalculator
 process.kt4PFJets = kt4PFJets
 process.hiFJRhoProducer = hiFJRhoProducer
+process.hiFJGridEmptyAreaCalculator = hiFJGridEmptyAreaCalculator
 process.kt4PFJets.src = cms.InputTag('particleFlowTmp')
 process.kt4PFJets.doAreaFastjet = True
 process.kt4PFJets.jetPtMin      = cms.double(0.0)
@@ -130,6 +132,7 @@ process.jetSequences = cms.Sequence(
     voronoiBackgroundCalo+
     process.kt4PFJets +
     process.hiFJRhoProducer +
+    process.hiFJGridEmptyAreaCalculator +
     process.hiFJRhoAnalyzer +
     process.akPu2CaloJets +
     process.akPu2PFJets +
