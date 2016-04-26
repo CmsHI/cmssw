@@ -393,6 +393,8 @@ private:
     int muchg[MAXJETS];
 
     float discr_fr01[MAXJETS];
+    float discr_jetID_cuts[MAXJETS];
+    float discr_jetID_bdt[MAXJETS];
 
     float refpt[MAXJETS];
     float refeta[MAXJETS];

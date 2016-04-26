@@ -46,6 +46,8 @@
 
 #include "fastjet/contrib/Njettiness.hh"
 
+#include "HeavyIonsAnalysis/JetAnalysis/interface/JetID_BDTG_TMVAClassification.h"
+
 using namespace std;
 using namespace edm;
 using namespace reco;
@@ -245,6 +247,9 @@ HiInclusiveJetAnalyzer::beginJob() {
   
   // jet ID information, jet composition
   if(doHiJetID_){
+    t->Branch("discr_jetID_cuts", jets_.discr_jetID_cuts,"discr_jetID_cuts[nref]/F");
+    t->Branch("discr_jetID_bdt", jets_.discr_jetID_bdt,"discr_jetID_bdt[nref]/F");
+
     t->Branch("discr_fr01", jets_.discr_fr01,"discr_fr01[nref]/F");
 
     t->Branch("trackMax", jets_.trackMax,"trackMax[nref]/F");
@@ -658,6 +663,14 @@ HiInclusiveJetAnalyzer::analyze(const Event& iEvent,
   jets_.b = b;
   jets_.nref = 0;
 
+  //intialize BDT for JetID
+  ReadBDTG *reader =0;
+  if(doHiJetID_){
+	  string inputArrs[] = { "trackMax/jtpt", "trackHardSum/jtpt", "trackHardN/jtpt", "chargedN/jtpt", "chargedHardSum/jtpt", "chargedHardN/jtpt", "photonN/jtpt", "photonHardSum/jtpt", "photonHardN/jtpt", "neutralN/jtpt", "hcalSum/jtpt", "ecalSum/jtpt", "chargedMax/jtpt", "chargedSum/jtpt", "neutralMax/jtpt", "neutralSum/jtpt", "photonMax/jtpt", "photonSum/jtpt", "eSum/jtpt", "muSum/jtpt" };
+	  vector<string> inputArrsVec;
+	  for(unsigned int ivar=0; ivar< (sizeof(inputArrs)/sizeof(inputArrs[0])); ivar++){ inputArrsVec.push_back(inputArrs[ivar]); }
+	  reader = new ReadBDTG(inputArrsVec);
+  }
 
   if(doTrigger_){
     fillL1Bits(iEvent);
@@ -1025,6 +1038,24 @@ HiInclusiveJetAnalyzer::analyze(const Event& iEvent,
     //     if(etrk.quality(reco::TrackBase::qualityByName(qualityString_))) pev_.trkQual[pev_.nTrk]=1;
 
     if(doHiJetID_){
+
+      // JetID Selections for 5 TeV PbPb
+      // Cuts by Yen-Jie Lee, BDT by Kurt Jung
+      double rawpt = jets_.rawpt[jets_.nref];
+      float jtpt = jet.pt();
+      int ijet = jets_.nref;
+      jets_.discr_jetID_cuts[jets_.nref] = jets_.neutralMax[ijet]/rawpt*0.085 + 
+					   jets_.photonMax[ijet]/rawpt*0.337 + 
+					   jets_.chargedMax[ijet]/rawpt*0.584 + 
+					   jets_.neutralSum[ijet]/rawpt*-0.454 + 
+					   jets_.photonSum[ijet]/rawpt*-0.127 + 
+					   jets_.chargedSum[ijet]/rawpt*(-0.239) + 
+					   jets_.jtpu[ijet]/rawpt*(-0.184) + 0.173;
+      //begin bdt - TMVA requires you to load in all input vars and names into separate containers (eyeroll)
+      float inVars[] = {jets_.trackMax[ijet]/jtpt, jets_.trackHardSum[ijet]/jtpt, jets_.trackHardN[ijet]/jtpt, jets_.chargedN[ijet]/jtpt, jets_.chargedHardSum[ijet]/jtpt, jets_.chargedHardN[ijet]/jtpt, jets_.photonN[ijet]/jtpt, jets_.photonHardSum[ijet]/jtpt, jets_.photonHardN[ijet]/jtpt, jets_.neutralN[ijet]/jtpt, jets_.hcalSum[ijet]/jtpt, jets_.ecalSum[ijet]/jtpt, jets_.chargedMax[ijet]/jtpt, jets_.chargedSum[ijet], jets_.neutralMax[ijet]/jtpt, jets_.neutralSum[ijet]/jtpt, jets_.photonMax[ijet]/jtpt, jets_.photonSum[ijet]/jtpt, jets_.eSum[ijet]/jtpt, jets_.muSum[ijet]/jtpt}; 
+      vector<double> inputVars;
+      for(unsigned int ivar=0; ivar<(sizeof(inVars)/sizeof(inVars[0])); ivar++){ inputVars.push_back((double)inVars[ivar]); }
+      jets_.discr_jetID_bdt[jets_.nref] = reader->GetMvaValue(inputVars);
 
       /////////////////////////////////////////////////////////////////
       // Jet core pt^2 discriminant for fake jets
