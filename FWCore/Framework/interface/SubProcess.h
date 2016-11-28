@@ -14,10 +14,9 @@
 #include "FWCore/ServiceRegistry/interface/ServiceLegacy.h"
 #include "FWCore/ServiceRegistry/interface/ServiceToken.h"
 #include "FWCore/Utilities/interface/BranchType.h"
+#include "FWCore/Utilities/interface/get_underlying_safe.h"
 
 #include "DataFormats/Provenance/interface/SelectedProducts.h"
-
-#include "boost/shared_ptr.hpp"
 
 #include <map>
 #include <memory>
@@ -53,8 +52,10 @@ namespace edm {
 
     virtual ~SubProcess();
 
-    SubProcess(SubProcess const&) = delete; // Disallow copying and moving
-    SubProcess& operator=(SubProcess const&) = delete; // Disallow copying and moving
+    SubProcess(SubProcess const&) = delete; // Disallow copying
+    SubProcess& operator=(SubProcess const&) = delete; // Disallow copying
+    SubProcess(SubProcess&&) = default; // Allow Moving
+    SubProcess& operator=(SubProcess&&) = default; // Allow moving
     
     //From OutputModule
     void selectProducts(ProductRegistry const& preg, 
@@ -102,21 +103,33 @@ namespace edm {
     void closeOutputFiles() {
       ServiceRegistry::Operate operate(serviceToken_);
       schedule_->closeOutputFiles();
-      if(subProcess_.get()) subProcess_->closeOutputFiles();
+      if(hasSubProcesses()) {
+        for(auto& subProcess : *subProcesses_) {
+          subProcess.closeOutputFiles();
+        }
+      }
     }
 
     // Call openNewFileIfNeeded() on all OutputModules
     void openNewOutputFilesIfNeeded() {
       ServiceRegistry::Operate operate(serviceToken_);
       schedule_->openNewOutputFilesIfNeeded();
-      if(subProcess_.get()) subProcess_->openNewOutputFilesIfNeeded();
+      if(hasSubProcesses()) {
+        for(auto& subProcess : *subProcesses_) {
+          subProcess.openNewOutputFilesIfNeeded();
+        }
+      }
     }
 
     // Call openFiles() on all OutputModules
     void openOutputFiles(FileBlock& fb) {
       ServiceRegistry::Operate operate(serviceToken_);
       schedule_->openOutputFiles(fb);
-      if(subProcess_.get()) subProcess_->openOutputFiles(fb);
+      if(hasSubProcesses()) {
+        for(auto& subProcess : *subProcesses_) {
+          subProcess.openOutputFiles(fb);
+        }
+      }
     }
 
     void updateBranchIDListHelper(BranchIDLists const&);
@@ -128,25 +141,47 @@ namespace edm {
     void respondToCloseInputFile(FileBlock const& fb) {
       ServiceRegistry::Operate operate(serviceToken_);
       schedule_->respondToCloseInputFile(fb);
-      if(subProcess_.get()) subProcess_->respondToCloseInputFile(fb);
+      if(hasSubProcesses()) {
+        for(auto& subProcess : *subProcesses_) {
+          subProcess.respondToCloseInputFile(fb);
+        }
+      }
     }
 
     // Call shouldWeCloseFile() on all OutputModules.
     bool shouldWeCloseOutput() const {
       ServiceRegistry::Operate operate(serviceToken_);
-      return schedule_->shouldWeCloseOutput() || (subProcess_.get() ? subProcess_->shouldWeCloseOutput() : false);
+      if(schedule_->shouldWeCloseOutput()) {
+        return true;
+      }
+      if(hasSubProcesses()) {
+        for(auto const& subProcess : *subProcesses_) {
+          if(subProcess.shouldWeCloseOutput()) { 
+            return true;
+          }
+        }
+      }
+      return false;
     }
 
     void preForkReleaseResources() {
       ServiceRegistry::Operate operate(serviceToken_);
       schedule_->preForkReleaseResources();
-      if(subProcess_.get()) subProcess_->preForkReleaseResources();
+      if(hasSubProcesses()) {
+        for(auto& subProcess : *subProcesses_) {
+          subProcess.preForkReleaseResources();
+        }
+      }
     }
 
     void postForkReacquireResources(unsigned int iChildIndex, unsigned int iNumberOfChildren) {
       ServiceRegistry::Operate operate(serviceToken_);
       schedule_->postForkReacquireResources(iChildIndex, iNumberOfChildren);
-      if(subProcess_.get()) subProcess_->postForkReacquireResources(iChildIndex, iNumberOfChildren);
+      if(hasSubProcesses()) {
+        for(auto& subProcess : *subProcesses_) {
+          subProcess.postForkReacquireResources(iChildIndex, iNumberOfChildren);
+        }
+      }
     }
 
     /// Return a vector allowing const access to all the ModuleDescriptions for this SubProcess
@@ -181,7 +216,11 @@ namespace edm {
     void enableEndPaths(bool active) {
       ServiceRegistry::Operate operate(serviceToken_);
       schedule_->enableEndPaths(active);
-      if(subProcess_.get()) subProcess_->enableEndPaths(active);
+      if(hasSubProcesses()) {
+        for(auto& subProcess : *subProcesses_) {
+          subProcess.enableEndPaths(active);
+        }
+      }
     }
 
     /// Return true if end_paths are active, and false if they are inactive.
@@ -201,14 +240,28 @@ namespace edm {
     /// If there is a subprocess, get this information from the subprocess.
     bool terminate() const {
       ServiceRegistry::Operate operate(serviceToken_);
-      return subProcess_.get() ? subProcess_->terminate() : schedule_->terminate();
+      if(schedule_->terminate()) {
+        return true;
+      }
+      if(hasSubProcesses()) {
+        for(auto const& subProcess : *subProcesses_) {
+          if(subProcess.terminate()) { 
+            return true;
+          }
+        }
+      }
+      return false;
     }
 
     ///  Clear all the counters in the trigger report.
     void clearCounters() {
       ServiceRegistry::Operate operate(serviceToken_);
       schedule_->clearCounters();
-      if(subProcess_.get()) subProcess_->clearCounters();
+      if(hasSubProcesses()) {
+        for(auto& subProcess : *subProcesses_) {
+          subProcess.clearCounters();
+        }
+      }
     }
 
   private:
@@ -230,13 +283,21 @@ namespace edm {
       return droppedBranchIDToKeptBranchID_;
     }
 
+    bool hasSubProcesses() const {
+      return subProcesses_.get() != nullptr && !subProcesses_->empty();
+    }
+
+    std::shared_ptr<BranchIDListHelper const> branchIDListHelper() const {return get_underlying_safe(branchIDListHelper_);}
+    std::shared_ptr<BranchIDListHelper>& branchIDListHelper() {return get_underlying_safe(branchIDListHelper_);}
+    std::shared_ptr<ThinnedAssociationsHelper const> thinnedAssociationsHelper() const {return get_underlying_safe(thinnedAssociationsHelper_);}
+    std::shared_ptr<ThinnedAssociationsHelper> thinnedAssociationsHelper() {return get_underlying_safe(thinnedAssociationsHelper_);}
     
-    std::shared_ptr<ActivityRegistry>             actReg_;
+    std::shared_ptr<ActivityRegistry>             actReg_; // We do not use propagate_const because the registry itself is mutable.
     ServiceToken                                  serviceToken_;
     std::shared_ptr<ProductRegistry const>        parentPreg_;
     std::shared_ptr<ProductRegistry const>        preg_;
-    std::shared_ptr<BranchIDListHelper>           branchIDListHelper_;
-    std::shared_ptr<ThinnedAssociationsHelper>    thinnedAssociationsHelper_;
+    edm::propagate_const<std::shared_ptr<BranchIDListHelper>> branchIDListHelper_;
+    edm::propagate_const<std::shared_ptr<ThinnedAssociationsHelper>> thinnedAssociationsHelper_;
     std::unique_ptr<ExceptionToActionTable const> act_table_;
     std::shared_ptr<ProcessConfiguration const>   processConfiguration_;
     ProcessContext                                processContext_;
@@ -248,11 +309,11 @@ namespace edm {
     std::vector<ProcessHistoryRegistry>           processHistoryRegistries_;
     std::vector<HistoryAppender>                  historyAppenders_;
     PrincipalCache                                principalCache_;
-    boost::shared_ptr<eventsetup::EventSetupProvider> esp_;
-    std::auto_ptr<Schedule>                       schedule_;
+    edm::propagate_const<std::shared_ptr<eventsetup::EventSetupProvider>> esp_;
+    edm::propagate_const<std::unique_ptr<Schedule>> schedule_;
     std::map<ProcessHistoryID, ProcessHistoryID>  parentToChildPhID_;
-    std::auto_ptr<SubProcess>                     subProcess_;
-    std::unique_ptr<ParameterSet>                 processParameterSet_;
+    edm::propagate_const<std::unique_ptr<std::vector<SubProcess>>> subProcesses_;
+    edm::propagate_const<std::unique_ptr<ParameterSet>> processParameterSet_;
 
     // keptProducts_ are pointers to the BranchDescription objects describing
     // the branches we are to write.
@@ -275,6 +336,6 @@ namespace edm {
   };
 
   // free function
-  std::auto_ptr<ParameterSet> popSubProcessParameterSet(ParameterSet& parameterSet);
+  std::unique_ptr<std::vector<ParameterSet> > popSubProcessVParameterSet(ParameterSet& parameterSet);
 }
 #endif

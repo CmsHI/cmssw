@@ -30,8 +30,12 @@ from Alignment.OfflineValidation.TkAlAllInOneTool.trackSplittingValidation \
     import TrackSplittingValidation
 from Alignment.OfflineValidation.TkAlAllInOneTool.zMuMuValidation \
     import ZMuMuValidation
+from Alignment.OfflineValidation.TkAlAllInOneTool.primaryVertexValidation \
+    import PrimaryVertexValidation
 from Alignment.OfflineValidation.TkAlAllInOneTool.preexistingValidation \
     import *
+from Alignment.OfflineValidation.TkAlAllInOneTool.plottingOptions \
+    import PlottingOptions
 import Alignment.OfflineValidation.TkAlAllInOneTool.globalDictionaries \
     as globalDictionaries
 
@@ -79,7 +83,7 @@ class ValidationJob:
             self.__valType = "offline"            
         section = self.__valType + ":" + self.__valName
         if not self.__config.has_section( section ):
-            raise AllInOneError, ("Validation '%s' of type '%s' is requested in"
+            raise AllInOneError("Validation '%s' of type '%s' is requested in"
                                   " '[validation]' section, but is not defined."
                                   "\nYou have to add a '[%s]' section."
                                   %( self.__valName, self.__valType, section ))
@@ -93,7 +97,7 @@ class ValidationJob:
             firstAlignList = alignmentsList[0].split()
             firstAlignName = firstAlignList[0].strip()
             if firstAlignName == "IDEAL":
-                raise AllInOneError, ("'IDEAL' has to be the second (reference)"
+                raise AllInOneError("'IDEAL' has to be the second (reference)"
                                       " alignment in 'compare <val_name>: "
                                       "<alignment> <reference>'.")
             if len( firstAlignList ) > 1:
@@ -139,8 +143,12 @@ class ValidationJob:
         elif valType == "zmumu":
             validation = ZMuMuValidation( name, 
                 Alignment( alignments.strip(), self.__config ), self.__config )
+        elif valType == "primaryvertex":
+            validation = PrimaryVertexValidation( name, 
+                Alignment( alignments.strip(), self.__config ), self.__config )
         else:
-            raise AllInOneError, "Unknown validation mode '%s'"%valType
+            raise AllInOneError("Unknown validation mode '%s'"%valType)
+
         return validation
 
     def __createJob( self, jobMode, outpath ):
@@ -161,6 +169,8 @@ class ValidationJob:
 
     def runJob( self ):
         if self.__preexisting:
+            if self.validation.jobid:
+                self.batchJobIds.append(self.validation.jobid)
             log = ">             " + self.validation.name + " is already validated."
             print log
             return log
@@ -209,13 +219,13 @@ class ValidationJob:
                             "-submit": "" }
                 try:
                     theCrab.run( options )
-                except AllInOneError, e:
+                except AllInOneError as e:
                     print "crab:", str(e).split("\n")[0]
                     exit(1)
                 ValidationJob.crabCount += 1
 
             else:
-                raise AllInOneError, ("Unknown 'jobmode'!\n"
+                raise AllInOneError("Unknown 'jobmode'!\n"
                                       "Please change this parameter either in "
                                       "the [general] or in the ["
                                       + self.__valType + ":" + self.__valName
@@ -239,8 +249,8 @@ def createOfflineParJobsMergeScript(offlineValidationList, outFilePath):
     theFile.close()
 
 def createExtendedValidationScript(offlineValidationList, outFilePath, resultPlotFile):
-    repMap = offlineValidationList[0].getRepMap() # bit ugly since some special features are filled
-    repMap[ "CMSSW_BASE" ] = os.environ['CMSSW_BASE']
+    config = offlineValidationList[0].config
+    repMap = PlottingOptions(config, "offline")
     repMap[ "resultPlotFile" ] = resultPlotFile
     repMap[ "extendedInstantiation" ] = "" #give it a "" at first in order to get the initialisation back
 
@@ -248,33 +258,58 @@ def createExtendedValidationScript(offlineValidationList, outFilePath, resultPlo
         repMap[ "extendedInstantiation" ] = validation.appendToExtendedValidation( repMap[ "extendedInstantiation" ] )
 
     theFile = open( outFilePath, "w" )
-    # theFile.write( replaceByMap( configTemplates.extendedValidationTemplate ,repMap ) )
     theFile.write( replaceByMap( configTemplates.extendedValidationTemplate ,repMap ) )
     theFile.close()
     
 def createTrackSplitPlotScript(trackSplittingValidationList, outFilePath):
-    repMap = trackSplittingValidationList[0].getRepMap() # bit ugly since some special features are filled
-    repMap[ "CMSSW_BASE" ] = os.environ['CMSSW_BASE']
+    config = trackSplittingValidationList[0].config
+    repMap = PlottingOptions(config, "split")
     repMap[ "trackSplitPlotInstantiation" ] = "" #give it a "" at first in order to get the initialisation back
 
     for validation in trackSplittingValidationList:
         repMap[ "trackSplitPlotInstantiation" ] = validation.appendToExtendedValidation( repMap[ "trackSplitPlotInstantiation" ] )
     
     theFile = open( outFilePath, "w" )
-    # theFile.write( replaceByMap( configTemplates.trackSplitPlotTemplate ,repMap ) )
     theFile.write( replaceByMap( configTemplates.trackSplitPlotTemplate ,repMap ) )
     theFile.close()
-    
+
+def createPrimaryVertexPlotScript(PrimaryVertexValidationList, outFilePath):
+    repMap = PrimaryVertexValidationList[0].getRepMap() # bit ugly since some special features are filled
+    repMap[ "CMSSW_BASE" ] = os.environ['CMSSW_BASE']
+    repMap[ "PrimaryVertexPlotInstantiation" ] = "" #give it a "" at first in order to get the initialisation back
+
+    for validation in PrimaryVertexValidationList:
+        repMap[ "PrimaryVertexPlotInstantiation" ] = validation.appendToExtendedValidation( repMap[ "PrimaryVertexPlotInstantiation" ] )
+
+    theFile = open( outFilePath, "w" )
+    theFile.write( replaceByMap( configTemplates.PrimaryVertexPlotTemplate ,repMap ) )
+    theFile.close()
+
+def createMergeZmumuPlotsScript(zMuMuValidationList, outFilePath):
+    config = zMuMuValidationList[0].config
+    repMap = PlottingOptions(config, "zmumu")
+    repMap[ "mergeZmumuPlotsInstantiation" ] = "" #give it a "" at first in order to get the initialisation back
+
+    for validation in zMuMuValidationList:
+        repMap[ "mergeZmumuPlotsInstantiation" ] = validation.appendToExtendedValidation( repMap[ "mergeZmumuPlotsInstantiation" ] )
+
+    theFile = open( outFilePath, "w" )
+    theFile.write( replaceByMap( configTemplates.mergeZmumuPlotsTemplate ,repMap ) )
+    theFile.close()
+
 def createMergeScript( path, validations ):
     if(len(validations) == 0):
         raise AllInOneError("Cowardly refusing to merge nothing!")
 
-    repMap = validations[0].getRepMap() #FIXME - not nice this way
+    config = validations[0].config
+    repMap = config.getGeneral()
     repMap.update({
             "DownloadData":"",
             "CompareAlignments":"",
             "RunExtendedOfflineValidation":"",
             "RunTrackSplitPlot":"",
+            "MergeZmumuPlots":"",
+            "RunPrimaryVertexPlot":"",
             "CMSSW_BASE": os.environ["CMSSW_BASE"],
             "SCRAM_ARCH": os.environ["SCRAM_ARCH"],
             "CMSSW_RELEASE_BASE": os.environ["CMSSW_RELEASE_BASE"],
@@ -290,7 +325,7 @@ def createMergeScript( path, validations ):
                 comparisonLists[ validationName ].append( validation )
             else:
                 comparisonLists[ validationName ] = [ validation ]
-
+   
     # introduced to merge individual validation outputs separately
     #  -> avoids problems with merge script
     repMap["haddLoop"] = "mergeRetCode=0\n"
@@ -300,6 +335,7 @@ def createMergeScript( path, validations ):
     repMap["mergeParallelFilePrefixes"] = ""
 
     anythingToMerge = []
+    
     for validationType in comparisonLists:
         for validation in comparisonLists[validationType]:
             if isinstance(validation, PreexistingValidation) or validation.NJobs == 1:
@@ -329,10 +365,15 @@ def createMergeScript( path, validations ):
 
     if "OfflineValidation" in anythingToMerge:
         repMap["mergeOfflineParJobsScriptPath"] = os.path.join(path, "TkAlOfflineJobsMerge.C")
+        
         createOfflineParJobsMergeScript( comparisonLists["OfflineValidation"],
                                          repMap["mergeOfflineParJobsScriptPath"] )
-        repMap["copyMergeScripts"] += ("cp .oO[CMSSW_BASE]Oo./src/Alignment/OfflineValidation/scripts/merge_TrackerOfflineValidation.C .\n"
+        repMap["copyMergeScripts"] += ("cp .oO[Alignment/OfflineValidation]Oo./scripts/merge_TrackerOfflineValidation.C .\n"
                                        "rfcp %s .\n" % repMap["mergeOfflineParJobsScriptPath"])
+        repMap_offline = repMap.copy()
+        repMap_offline.update(PlottingOptions(config, "offline"))
+        repMap["copyMergeScripts"] = \
+            replaceByMap(repMap["copyMergeScripts"], repMap_offline)
 
     if anythingToMerge:
         # DownloadData is the section which merges output files from parallel jobs
@@ -341,40 +382,66 @@ def createMergeScript( path, validations ):
     else:
         repMap["DownloadData"] = ""
 
-
     if "OfflineValidation" in comparisonLists:
         repMap["extendedValScriptPath"] = os.path.join(path, "TkAlExtendedOfflineValidation.C")
         createExtendedValidationScript(comparisonLists["OfflineValidation"],
                                        repMap["extendedValScriptPath"],
                                        "OfflineValidation")
+        repMap_offline = repMap.copy()
+        repMap_offline.update(PlottingOptions(config, "offline"))
         repMap["RunExtendedOfflineValidation"] = \
-            replaceByMap(configTemplates.extendedValidationExecution, repMap)
+            replaceByMap(configTemplates.extendedValidationExecution, repMap_offline)
 
     if "TrackSplittingValidation" in comparisonLists:
         repMap["trackSplitPlotScriptPath"] = \
             os.path.join(path, "TkAlTrackSplitPlot.C")
         createTrackSplitPlotScript(comparisonLists["TrackSplittingValidation"],
                                        repMap["trackSplitPlotScriptPath"] )
+        repMap_split = repMap.copy()
+        repMap_split.update(PlottingOptions(config, "split"))
         repMap["RunTrackSplitPlot"] = \
-            replaceByMap(configTemplates.trackSplitPlotExecution, repMap)
+            replaceByMap(configTemplates.trackSplitPlotExecution, repMap_split)
+
+    if "ZMuMuValidation" in comparisonLists:
+        repMap["mergeZmumuPlotsScriptPath"] = \
+            os.path.join(path, "TkAlMergeZmumuPlots.C")
+        createMergeZmumuPlotsScript(comparisonLists["ZMuMuValidation"],
+                                       repMap["mergeZmumuPlotsScriptPath"] )
+        repMap_zMuMu = repMap.copy()
+        repMap_zMuMu.update(PlottingOptions(config, "zmumu"))
+        repMap["MergeZmumuPlots"] = \
+            replaceByMap(configTemplates.mergeZmumuPlotsExecution, repMap_zMuMu)
+
+    if "PrimaryVertexValidation" in comparisonLists:
+        repMap["PrimaryVertexPlotScriptPath"] = \
+            os.path.join(path, "TkAlPrimaryVertexValidationPlot.C")
+
+        createPrimaryVertexPlotScript(comparisonLists["PrimaryVertexValidation"],
+                                      repMap["PrimaryVertexPlotScriptPath"] )
+        repMap_PVVal = repMap.copy()
+        repMap_PVVal.update(PlottingOptions(config,"primaryvertex"))
+        repMap["RunPrimaryVertexPlot"] = \
+            replaceByMap(configTemplates.PrimaryVertexPlotExecution, repMap_PVVal)
 
     repMap["CompareAlignments"] = "#run comparisons"
-    for validationId in comparisonLists:
-        compareStrings = [ val.getCompareStrings(validationId) for val in comparisonLists[validationId] ]
-        compareStringsPlain = [ val.getCompareStrings(validationId, plain=True) for val in comparisonLists[validationId] ]
+    if "OfflineValidation" in comparisonLists:
+        compareStrings = [ val.getCompareStrings("OfflineValidation") for val in comparisonLists["OfflineValidation"] ]
+        compareStringsPlain = [ val.getCompareStrings("OfflineValidation", plain=True) for val in comparisonLists["OfflineValidation"] ]
             
-        repMap.update({"validationId": validationId,
-                       "compareStrings": " , ".join(compareStrings),
-                       "compareStringsPlain": " ".join(compareStringsPlain) })
-        
+        repMap_offline = repMap.copy()
+        repMap_offline.update(PlottingOptions(config, "offline"))
+        repMap_offline.update({"validationId": "OfflineValidation",
+                               "compareStrings": " , ".join(compareStrings),
+                               "compareStringsPlain": " ".join(compareStringsPlain) })
+                               
         repMap["CompareAlignments"] += \
-            replaceByMap(configTemplates.compareAlignmentsExecution, repMap)
-      
+            replaceByMap(configTemplates.compareAlignmentsExecution, repMap_offline)
+                
     filePath = os.path.join(path, "TkAlMerge.sh")
     theFile = open( filePath, "w" )
     theFile.write( replaceByMap( configTemplates.mergeTemplate, repMap ) )
     theFile.close()
-    os.chmod(filePath,0755)
+    os.chmod(filePath,0o755)
     
     return filePath
     
@@ -434,20 +501,20 @@ To merge the outcome of all validation procedures run TkAlMerge.sh in your valid
     if options.config == [ os.path.abspath( defaultConfig ) ]:
         if ( not options.crabStatus ) and \
                ( not os.path.exists( defaultConfig ) ):
-                raise AllInOneError, ( "Default 'ini' file '%s' not found!\n"
+                raise AllInOneError( "Default 'ini' file '%s' not found!\n"
                                        "You can specify another name with the "
                                        "command line option '-c'/'--config'."
                                        %( defaultConfig ))
     else:
         for iniFile in failedIniFiles:
             if not os.path.exists( iniFile ):
-                raise AllInOneError, ( "'%s' does not exist. Please check for "
+                raise AllInOneError( "'%s' does not exist. Please check for "
                                        "typos in the filename passed to the "
                                        "'-c'/'--config' option!"
-                                       %( iniFile ) )
+                                       %( iniFile ))
             else:
-                raise AllInOneError, ( "'%s' does exist, but parsing of the "
-                                       "content failed!" ) % iniFile
+                raise AllInOneError(( "'%s' does exist, but parsing of the "
+                                       "content failed!" ) % iniFile)
 
     # get the job name
     if options.Name == None:
@@ -489,7 +556,7 @@ To merge the outcome of all validation procedures run TkAlMerge.sh in your valid
                             "-c": crabLogDir }
             try:
                 theCrab.run( crabOptions )
-            except AllInOneError, e:
+            except AllInOneError as e:
                 print "crab:  No output retrieved for this task."
             crabOptions = { "-status": "",
                             "-c": crabLogDir }
@@ -505,7 +572,7 @@ To merge the outcome of all validation procedures run TkAlMerge.sh in your valid
     if not os.path.exists( outPath ):
         os.makedirs( outPath )
     elif not os.path.isdir( outPath ):
-        raise AllInOneError,"the file %s is in the way rename the Job or move it away"%outPath
+        raise AllInOneError("the file %s is in the way rename the Job or move it away"%outPath)
 
     # replace default templates by the ones specified in the "alternateTemplates" section
     loadTemplates( config )
@@ -561,6 +628,6 @@ if __name__ == "__main__":
     else:
         try:
             main()
-        except AllInOneError, e:
+        except AllInOneError as e:
             print "\nAll-In-One Tool:", str(e)
             exit(1)

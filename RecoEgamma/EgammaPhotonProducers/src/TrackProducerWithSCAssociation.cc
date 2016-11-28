@@ -88,6 +88,9 @@ void TrackProducerWithSCAssociation::produce(edm::Event& theEvent, const edm::Ev
   edm::ESHandle<MeasurementTracker> theMeasTk;
   getFromES(setup,theG,theMF,theFitter,thePropagator,theMeasTk,theBuilder);
 
+  edm::ESHandle<TrackerTopology> httopo;
+  setup.get<TrackerTopologyRcd>().get(httopo);
+  const TrackerTopology *ttopo = httopo.product();
  
 
   //
@@ -181,7 +184,7 @@ void TrackProducerWithSCAssociation::produce(edm::Event& theEvent, const edm::Ev
     //put everything in the event
     // we copy putInEvt to get OrphanHandle filled...
     putInEvt(theEvent,thePropagator.product(),theMeasTk.product(), 
-	     outputRHColl, outputTColl, outputTEColl, outputTrajectoryColl, algoResults, theBuilder.product());
+	     outputRHColl, outputTColl, outputTEColl, outputTrajectoryColl, algoResults, theBuilder.product(), ttopo);
     
     // now construct associationmap and put it in the  event
     if (  validTrackCandidateSCAssociationInput_ ) {    
@@ -245,8 +248,8 @@ std::vector<reco::TransientTrack> TrackProducerWithSCAssociation::getTransient(e
   } catch (cms::Exception &e){ edm::LogInfo("TrackProducerWithSCAssociation") << "cms::Exception caught!!!" << "\n" << e << "\n";}
 
 
-  for (AlgoProductCollection::iterator prod=algoResults.begin();prod!=algoResults.end(); prod++){
-    ttks.push_back( reco::TransientTrack(*(((*prod).second).first),thePropagator.product()->magneticField() ));
+  for (auto & prod : algoResults){
+    ttks.emplace_back(*prod.track,thePropagator.product()->magneticField());
   }
 
   //LogDebug("TrackProducerWithSCAssociation") << "TrackProducerWithSCAssociation end" << "\n";
@@ -265,7 +268,8 @@ void TrackProducerWithSCAssociation::putInEvt(edm::Event& evt,
 					       std::auto_ptr<reco::TrackCollection>& selTracks,
 					       std::auto_ptr<reco::TrackExtraCollection>& selTrackExtras,
 					       std::auto_ptr<std::vector<Trajectory> >&   selTrajectories,
-					       AlgoProductCollection& algoResults, TransientTrackingRecHitBuilder const * hitBuilder)
+                                               AlgoProductCollection& algoResults, TransientTrackingRecHitBuilder const * hitBuilder,
+                                               const TrackerTopology *ttopo)
 {
 
 TrackingRecHitRefProd rHits = evt.getRefBeforePut<TrackingRecHitCollection>();
@@ -277,15 +281,15 @@ TrackingRecHitRefProd rHits = evt.getRefBeforePut<TrackingRecHitCollection>();
   edm::Ref< std::vector<Trajectory> >::key_type iTjRef = 0;
   std::map<unsigned int, unsigned int> tjTkMap;
 
-  for(AlgoProductCollection::iterator i=algoResults.begin(); i!=algoResults.end();i++){
-    Trajectory * theTraj = (*i).first;
+  for(auto & i : algoResults){
+    Trajectory * theTraj = i.trajectory;
     if(myTrajectoryInEvent_) {
       selTrajectories->push_back(*theTraj);
       iTjRef++;
     }
     
-    reco::Track * theTrack = (*i).second.first;
-    PropagationDirection seedDir = (*i).second.second;
+    reco::Track * theTrack =  i.track;
+    PropagationDirection seedDir = i.pDir;
     
     //LogDebug("TrackProducer") << "In KfTrackProducerBase::putInEvt - seedDir=" << seedDir;
     
@@ -335,7 +339,7 @@ TrackingRecHitRefProd rHits = evt.getRefBeforePut<TrackingRecHitCollection>();
       {
         edm::Handle<MeasurementTrackerEvent> mte;
         evt.getByToken(measurementTrkToken_, mte);
-	setSecondHitPattern(theTraj,track,thePropagator,&*mte);
+	setSecondHitPattern(theTraj,track,thePropagator,&*mte, ttopo);
       }
     //==============================================================
 
@@ -357,7 +361,7 @@ TrackingRecHitRefProd rHits = evt.getRefBeforePut<TrackingRecHitCollection>();
     unsigned int nHitsAdded = 0;
     for (;ih<ie; ++ih) {
       auto const & hit = (*selHits)[ih];
-      track.appendHitPattern(hit);
+      track.appendHitPattern(hit, *ttopo);
       ++nHitsAdded;
     }
     tx.setHits( rHits, hidx, nHitsAdded);
@@ -368,7 +372,7 @@ TrackingRecHitRefProd rHits = evt.getRefBeforePut<TrackingRecHitCollection>();
            j != transHits.end(); j ++ ) {
         if ((**j).hit()!=0){
           TrackingRecHit * hit = (**j).hit()->clone();
-          track.appendHitPattern(*hit);
+          track.appendHitPattern(*hit, *ttopo);
           selHits->push_back( hit );
           tx.add( TrackingRecHitRef( rHits, hidx ++ ) );
         }
@@ -378,7 +382,7 @@ TrackingRecHitRefProd rHits = evt.getRefBeforePut<TrackingRecHitCollection>();
            j != transHits.begin()-1; --j ) {
         if ((**j).hit()!=0){
           TrackingRecHit * hit = (**j).hit()->clone();
-          track.appendHitPattern(*hit);
+          track.appendHitPattern(*hit, *ttopo);
           selHits->push_back( hit );
         tx.add( TrackingRecHitRef( rHits, hidx ++ ) );
         }

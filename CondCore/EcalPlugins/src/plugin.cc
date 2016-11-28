@@ -153,6 +153,9 @@
 
 #include "CondFormats/EcalObjects/interface/EcalPulseCovariances.h"
 #include "CondFormats/DataRecord/interface/EcalPulseCovariancesRcd.h"
+#include "CondFormats/EcalObjects/interface/EcalPulseSymmCovariances.h"
+#include "CondFormats/DataRecord/interface/EcalPulseSymmCovariancesRcd.h"
+
 
 REGISTER_PLUGIN(EcalPedestalsRcd,EcalCondObjectContainer<EcalPedestal>); 
 REGISTER_PLUGIN(EcalWeightXtalGroupsRcd,EcalCondObjectContainer<EcalXtalGroupId>);
@@ -210,3 +213,4 @@ REGISTER_PLUGIN(EcalTimeBiasCorrectionsRcd, EcalTimeBiasCorrections);
 REGISTER_PLUGIN(EcalSamplesCorrelationRcd, EcalSamplesCorrelation);
 REGISTER_PLUGIN(EcalPulseShapesRcd,EcalCondObjectContainer<EcalPulseShape>);
 REGISTER_PLUGIN(EcalPulseCovariancesRcd,EcalCondObjectContainer<EcalPulseCovariance>);
+REGISTER_PLUGIN(EcalPulseSymmCovariancesRcd,EcalCondObjectContainer<EcalPulseSymmCovariance>);

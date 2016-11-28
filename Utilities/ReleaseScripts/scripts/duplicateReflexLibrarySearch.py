@@ -120,7 +120,7 @@ def searchClassDefXml ():
                     equivList.append( (matchString, equiv) )
             equivList.append( (packagesREs[packageName], packageName) )
     classDict = {}
-    ncdict = {'class' : 'className'}
+    ncdict = {'class' : 'className', 'function' : 'functionName'}
     for filename in xmlFiles:
         if (not filename) or (ignoreSrcRE.match(filename)): continue
         dupProblems     = ''
@@ -160,6 +160,11 @@ def searchClassDefXml ():
             except:
                 # this isn't a real classes_def.xml file.  Skip it
                 print "**** SKIPPING '%s' - Doesn't seem to have proper information." % filename
+                continue
+        if not classList:
+            classList = xmlObj.functionName
+            if not classList:
+                print "**** SKIPPING '%s' - Dosen't seem to have proper information(not class/function)." % filename
                 continue
         for piece in classList:
             try:
@@ -245,7 +250,7 @@ def searchDuplicatePlugins ():
     cmd = "cat %s | awk '{print $2\" \"$1}' | sort | uniq | awk '{print $1}' | sort | uniq -c | grep '2 ' | awk '{print $2}'" % edmpluginFile
     output = commands.getoutput (cmd).split('\n')
     for line in output:
-      if ignoreEdmDP.has_key(line): continue
+      if line in ignoreEdmDP: continue
       line = line.replace("*","\*")
       cmd = "cat %s | grep ' %s ' | awk '{print $1}' | sort | uniq " % (edmpluginFile,line)
       out1 = commands.getoutput (cmd).split('\n')

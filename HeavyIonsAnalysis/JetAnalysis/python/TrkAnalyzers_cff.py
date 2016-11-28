@@ -2,7 +2,7 @@ import FWCore.ParameterSet.Config as cms
 
 from HeavyIonsAnalysis.TrackAnalysis.trackAnalyzer_cff import *
 
-anaTrack.trackPtMin = 0.49
+anaTrack.trackPtMin = 0.40
 anaTrack.useQuality = False
 anaTrack.doPFMatching = True
 anaTrack.doSimVertex = False  

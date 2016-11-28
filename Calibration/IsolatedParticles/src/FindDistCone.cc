@@ -1,3 +1,4 @@
+#include "Calibration/IsolatedParticles/interface/CaloConstants.h"
 #include "Calibration/IsolatedParticles/interface/FindDistCone.h"
 
 #include <iostream>
@@ -42,8 +43,8 @@ namespace spr {
 			   bool debug) {
 
     double dR, Rec;
-    if (fabs(eta1)<1.479) Rec=129;
-    else Rec=317;
+    if (fabs(eta1)<spr::etaBEEcal) Rec=spr::rFrontEB;
+    else                           Rec=spr::zFrontEE;
     double ce1=cosh(eta1);
     double ce2=cosh(eta2);
     double te1=tanh(eta1);
@@ -67,8 +68,8 @@ namespace spr {
     // and Geometry/HcalCommonData/data/hcalbarrelalgo.xml
 
     double dR, Rec;
-    if (fabs(eta1)<1.392) Rec=177.5; 
-    else Rec=391.95;
+    if (fabs(eta1)<spr::etaBEHcal) Rec=spr::rFrontHB; 
+    else                           Rec=spr::zFrontHE;
     double ce1=cosh(eta1);
     double ce2=cosh(eta2);
     double te1=tanh(eta1);
@@ -137,27 +138,31 @@ namespace spr {
     }
   }
 
-  double getEnergy(HBHERecHitCollection::const_iterator hit, bool) {
-    return hit->energy();
+  double getEnergy(HBHERecHitCollection::const_iterator hit, bool useRaw, bool) {
+    double energy = (useRaw) ? hit->eraw() : hit->energy();
+    return energy;
   }
 
-  double getEnergy(EcalRecHitCollection::const_iterator hit, bool) {
+  double getEnergy(EcalRecHitCollection::const_iterator hit, bool, bool) {
     return hit->energy();
   }
   
-  double getEnergy(edm::PCaloHitContainer::const_iterator hit, bool) {
+  double getEnergy(edm::PCaloHitContainer::const_iterator hit, bool, bool) {
     // This will not yet handle Ecal CaloHits!!
     double samplingWeight = 1.;
     // Hard coded sampling weights from JFH analysis of iso tracks
     // Sept 2009.
-    HcalDetId detId(hit->id());
-    if (detId.subdet() == HcalBarrel)
-      samplingWeight = 114.1;
-    else if (detId.subdet() == HcalEndcap) 
-      samplingWeight = 167.3;
-    else {
-      // ONLY protection against summing HO, HF simhits
-      return 0.;
+    DetId id = hit->id();
+    if (id.det() == DetId::Hcal) {
+      HcalDetId detId(id);
+      if (detId.subdet() == HcalBarrel)
+	samplingWeight = 114.1;
+      else if (detId.subdet() == HcalEndcap) 
+	samplingWeight = 167.3;
+      else {
+	// ONLY protection against summing HO, HF simhits
+	return 0.;
+      }
     }
     
     return samplingWeight*hit->energy();
@@ -182,5 +187,18 @@ namespace spr {
       EBDetId EBid = EBDetId(hit->id());
       return geo->getPosition(EBid);
     }
+  }
+
+  double getRawEnergy(HBHERecHitCollection::const_iterator hit, bool useRaw) {
+    double energy = (useRaw) ? hit->eraw() : hit->energy();
+    return energy;
+  }
+
+  double getRawEnergy(EcalRecHitCollection::const_iterator hit, bool) {
+    return hit->energy();
+  }
+  
+  double getRawEnergy(edm::PCaloHitContainer::const_iterator hit, bool) {
+    return hit->energy();
   }
 }

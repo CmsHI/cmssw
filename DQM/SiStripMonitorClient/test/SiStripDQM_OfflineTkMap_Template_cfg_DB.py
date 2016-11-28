@@ -9,7 +9,7 @@ process = cms.Process("SiStrpDQMQTestTuning")
 options = VarParsing.VarParsing("analysis")
 
 options.register ('globalTag',
-                                    "DONOTEXIST::All",
+                                    "DONOTEXIST",
                                     VarParsing.VarParsing.multiplicity.singleton, # singleton or list
                                     VarParsing.VarParsing.varType.string,          # string, int, or float
                                     "GlobalTag")
@@ -19,11 +19,10 @@ options.register ('dqmFile',
                                     VarParsing.VarParsing.varType.string,          # string, int, or float
                                     "DQM root file")
 options.register ('runNumber',
-                                    1,
+                                    0,
                                     VarParsing.VarParsing.multiplicity.singleton, # singleton or list
                                     VarParsing.VarParsing.varType.int,          # string, int, or float
                                     "run number")
-
 options.register ('detIdInfoFile',
                                     "",
                                     VarParsing.VarParsing.multiplicity.singleton, # singleton or list
@@ -81,8 +80,8 @@ process.maxEvents = cms.untracked.PSet(
     input = cms.untracked.int32(1)
 )
 
-process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_condDBv2_cff')
-from Configuration.AlCa.GlobalTag_condDBv2 import GlobalTag
+process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
+from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, options.globalTag, '')
 # loading TrackerTopologyEP via GeometryDB (since 62x)
 process.load('Configuration.StandardSequences.GeometryDB_cff')
@@ -101,6 +100,7 @@ process.siStripOfflineAnalyser = cms.EDAnalyzer("SiStripOfflineDQM",
        PrintFaultyModuleList    = cms.untracked.bool(False),
 
       InputFileName            = cms.untracked.string(options.dqmFile),
+       OutputFileName           = cms.untracked.string("/tmp/testRunNum.root"), 
        CreateTkMap              = cms.untracked.bool(True),
        CreateTkInfoFile         = cms.untracked.bool(True),
        TkmapParameters          = cms.untracked.PSet(
@@ -117,17 +117,17 @@ process.siStripOfflineAnalyser = cms.EDAnalyzer("SiStripOfflineDQM",
     cms.PSet(mapName=cms.untracked.string('NumberOfDigi'),TopModules=cms.untracked.bool(True),RunNumber=cms.untracked.uint32(options.runNumber)),
     cms.PSet(mapName=cms.untracked.string('NumberOfOfffTrackCluster'),TopModules=cms.untracked.bool(True),RunNumber=cms.untracked.uint32(options.runNumber)),
     cms.PSet(mapName=cms.untracked.string('NumberOfOfffTrackCluster'),mapSuffix=cms.untracked.string("_autoscale"),mapMax=cms.untracked.double(-1.),RunNumber=cms.untracked.uint32(options.runNumber)),
-    cms.PSet(mapName=cms.untracked.string('NumberOfOnTrackCluster'),RunNumber=cms.untracked.uint32(options.runNumber)),
-    cms.PSet(mapName=cms.untracked.string('StoNCorrOnTrack'),RunNumber=cms.untracked.uint32(options.runNumber)),
+    cms.PSet(mapName=cms.untracked.string('NumberOfOnTrackCluster'),mapMax=cms.untracked.double(-1.),RunNumber=cms.untracked.uint32(options.runNumber)),
+    cms.PSet(mapName=cms.untracked.string('StoNCorrOnTrack'),TopModules=cms.untracked.bool(True),RunNumber=cms.untracked.uint32(options.runNumber),mapMax=cms.untracked.double(35.)), #to be tuned properly
     cms.PSet(mapName=cms.untracked.string('NApvShots'),mapMax=cms.untracked.double(-1.),logScale=cms.untracked.bool(True),RunNumber=cms.untracked.uint32(options.runNumber)),
-    cms.PSet(mapName=cms.untracked.string('NApvShots'),logScale=cms.untracked.bool(True),psuMap=cms.untracked.bool(True),loadLVCabling=cms.untracked.bool(True),TopModules=cms.untracked.bool(True),RunNumber=cms.untracked.uint32(options.runNumber)),
-    #cms.PSet(mapName=cms.untracked.string('MedianChargeApvShots'),mapMax=cms.untracked.double(-1.),RunNumber=cms.untracked.uint32(options.runNumber)),
-    #cms.PSet(mapName=cms.untracked.string('ClusterCharge'),mapMax=cms.untracked.double(-1.),RunNumber=cms.untracked.uint32(options.runNumber)),
-    cms.PSet(mapName=cms.untracked.string('NumberMissingHits'),RunNumber=cms.untracked.uint32(options.runNumber)),
-    cms.PSet(mapName=cms.untracked.string('ChargePerCMfromTrack'),RunNumber=cms.untracked.uint32(options.runNumber)),
-    cms.PSet(mapName=cms.untracked.string('ChargePerCMfromOrigin'),RunNumber=cms.untracked.uint32(options.runNumber)),
-    cms.PSet(mapName=cms.untracked.string('NumberValidHits'),RunNumber=cms.untracked.uint32(options.runNumber)),
-     cms.PSet(mapName=cms.untracked.string('NumberInactiveHits'),RunNumber=cms.untracked.uint32(options.runNumber))
+    cms.PSet(mapName=cms.untracked.string('NApvShots'),mapMax=cms.untracked.double(-1.),logScale=cms.untracked.bool(True),psuMap=cms.untracked.bool(True),loadLVCabling=cms.untracked.bool(True),TopModules=cms.untracked.bool(True),RunNumber=cms.untracked.uint32(options.runNumber)),
+#    cms.PSet(mapName=cms.untracked.string('MedianChargeApvShots'),mapMax=cms.untracked.double(-1.)),
+#    cms.PSet(mapName=cms.untracked.string('ClusterCharge'),mapMax=cms.untracked.double(-1.)),
+#    cms.PSet(mapName=cms.untracked.string('ChargePerCMfromOrigin')),
+    cms.PSet(mapName=cms.untracked.string('ChargePerCMfromTrack'),RunNumber=cms.untracked.uint32(options.runNumber),mapMax=cms.untracked.double(-1.)),
+    cms.PSet(mapName=cms.untracked.string('NumberMissingHits'),RunNumber=cms.untracked.uint32(options.runNumber),mapMax=cms.untracked.double(-1.)),
+    cms.PSet(mapName=cms.untracked.string('NumberValidHits'),RunNumber=cms.untracked.uint32(options.runNumber),mapMax=cms.untracked.double(-1.)),
+    cms.PSet(mapName=cms.untracked.string('NumberInactiveHits'),RunNumber=cms.untracked.uint32(options.runNumber))
     )
 )
 
@@ -153,8 +153,7 @@ process.siStripQualityESProducer.ListOfRecordToMerge=cms.VPSet(
 process.ssqualitystat = cms.EDAnalyzer("SiStripQualityStatistics",
                                        dataLabel = cms.untracked.string(""),
                                        TkMapFileName = cms.untracked.string("PCLBadComponents.png"),  #available filetypes: .pdf .png .jpg .svg
-                                       SaveTkHistoMap = cms.untracked.bool(False),
-                                       RunNumber=cms.untracked.uint32(options.runNumber)
+                                       SaveTkHistoMap = cms.untracked.bool(False)
                               )
 
 

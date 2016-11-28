@@ -43,7 +43,6 @@ public:
      */
    FWDisplayProperties(Color_t iColor,
                        bool    isVisible,
-                       bool    filetrPassed,
                        Char_t  transparency);
    //virtual ~FWDisplayProperties();
 
@@ -61,19 +60,9 @@ public:
       return m_isVisible;
    }
 
-   bool filterPassed() const {
-      return m_filterPassed;
-   }
-
-   void setFilterPassed(bool x)
-   {
-      m_filterPassed = x;
-   }
-
    bool operator==(const FWDisplayProperties& iRHS) const {
       return m_color == iRHS.m_color 
              && m_isVisible == iRHS.m_isVisible
-             && m_filterPassed == iRHS.m_filterPassed
              && m_transparency == iRHS.m_transparency;
    }
    bool operator!=(const FWDisplayProperties& iRHS) const {
@@ -108,7 +97,6 @@ private:
 
    Color_t m_color;
    bool    m_isVisible;
-   bool    m_filterPassed;
    Char_t  m_transparency;
 };
 

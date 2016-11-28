@@ -21,6 +21,7 @@ from RecoJets.JetProducers.ca8PFJetsCHS_groomingValueMaps_cfi import ca8PFJetsCH
 from CommonTools.PileupAlgos.Puppi_cff import puppi
 from CommonTools.PileupAlgos.softKiller_cfi import softKiller
 from RecoJets.JetProducers.ak4PFJetsPuppi_cfi import ak4PFJetsPuppi
+from RecoJets.JetProducers.ak8PFJetsPuppi_cfi import ak8PFJetsPuppi
 from RecoJets.JetProducers.ak4PFJetsSK_cfi import ak4PFJetsSK
 
 sisCone7PFJets = sisCone5PFJets.clone( rParam = 0.7 )
@@ -40,6 +41,7 @@ ak5PFJets.doAreaFastjet = True
 ak5PFJetsTrimmed.doAreaFastjet = True
 ak7PFJets.doAreaFastjet = True
 ak8PFJets.doAreaFastjet = True
+ak8PFJetsPuppi.doAreaFastjet = True
 ak4PFJetsSK.doAreaFastjet = True
 
 kt6PFJetsCentralChargedPileUp = kt6PFJets.clone(
@@ -61,15 +63,18 @@ kt6PFJetsCentralNeutralTight = kt6PFJetsCentralNeutral.clone(
     )
 
 
-
-fixedGridRhoFastjetCentralChargedPileUp = fixedGridRhoFastjetAll.clone(
-    src = cms.InputTag("pfPileUpAllChargedParticles"),
+fixedGridRhoFastjetCentral = fixedGridRhoFastjetAll.clone(
     maxRapidity = cms.double(2.5)
     )
 
+fixedGridRhoFastjetCentralChargedPileUp = fixedGridRhoFastjetAll.clone(
+    pfCandidatesTag = "pfPileUpAllChargedParticles",
+    maxRapidity = 2.5
+    )
+
 fixedGridRhoFastjetCentralNeutral = fixedGridRhoFastjetAll.clone(
-    src = cms.InputTag("pfAllNeutralHadronsAndPhotons"),
-    maxRapidity = cms.double(2.5)
+    pfCandidatesTag = "pfAllNeutralHadronsAndPhotons",
+    maxRapidity = 2.5
     )
 
 
@@ -137,6 +142,11 @@ ak8PFJetsCHSSoftDrop = ak5PFJetsCHSSoftDrop.clone(
     R0 = 0.8
     )
 
+ak8PFJetsPuppiSoftDrop = ak8PFJetsCHSSoftDrop.clone(
+    src = cms.InputTag("puppi")
+    )
+
+
 
 ca8PFJetsCHS = ak8PFJetsCHS.clone(
     jetAlgorithm = cms.string("CambridgeAachen")
@@ -183,10 +193,11 @@ hepTopTagPFJetsCHS.src = cms.InputTag("ak8PFJetsCHSConstituents", "constituents"
 
 recoPFJets   =cms.Sequence(fixedGridRhoAll+
                            fixedGridRhoFastjetAll+
+                           fixedGridRhoFastjetCentral+
                            fixedGridRhoFastjetCentralChargedPileUp+
                            fixedGridRhoFastjetCentralNeutral+
                            ak4PFJets+
-			   pfNoPileUpJMESequence+
+                           pfNoPileUpJMESequence+
                            ak4PFJetsCHS+                           
                            ak8PFJetsCHS+
                            ak8PFJetsCHSConstituents+
@@ -203,6 +214,7 @@ recoAllPFJets=cms.Sequence(sisCone5PFJets+sisCone7PFJets+
                            kt6PFJetsCentralNeutralTight+
                            fixedGridRhoAll+
                            fixedGridRhoFastjetAll+
+                           fixedGridRhoFastjetCentral+
                            fixedGridRhoFastjetCentralChargedPileUp+
                            fixedGridRhoFastjetCentralNeutral+
                            iterativeCone5PFJets+
@@ -246,6 +258,7 @@ recoAllPFJets=cms.Sequence(sisCone5PFJets+sisCone7PFJets+
 recoPFJetsWithSubstructure=cms.Sequence(
                            fixedGridRhoAll+
                            fixedGridRhoFastjetAll+
+                           fixedGridRhoFastjetCentral+
                            fixedGridRhoFastjetCentralChargedPileUp+
                            fixedGridRhoFastjetCentralNeutral+
                            ak4PFJets+

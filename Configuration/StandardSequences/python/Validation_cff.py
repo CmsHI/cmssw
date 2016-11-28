@@ -28,11 +28,13 @@ from Validation.RecoMuon.muonValidationHLT_cff import *
 from Validation.EventGenerator.BasicGenValidation_cff import *
 # miniAOD
 from Validation.RecoParticleFlow.miniAODValidation_cff import *
+from Validation.RecoEgamma.photonMiniAODValidationSequence_cff import *
+from Validation.RecoEgamma.egammaValidationMiniAOD_cff import *
 
 prevalidation = cms.Sequence( globalPrevalidation * hltassociation * metPreValidSeq * jetPreValidSeq )
 prevalidationLiteTracking = cms.Sequence( prevalidation )
 prevalidationLiteTracking.replace(globalPrevalidation,globalPrevalidationLiteTracking)
-prevalidationMiniAOD = cms.Sequence( genParticles1 * miniAODValidationSequence * JetValidationMiniAOD * type0PFMEtCorrectionPFCandToVertexAssociationForValidationMiniAOD * METValidationMiniAOD )
+prevalidationMiniAOD = cms.Sequence( genParticles1 * miniAODValidationSequence * photonMiniAODValidationSequence * egammaValidationMiniAOD)
 
 
 validation = cms.Sequence(cms.SequencePlaceholder("mix")
@@ -43,11 +45,16 @@ validation = cms.Sequence(cms.SequencePlaceholder("mix")
                          *globalValidation
                          *hltvalidation)
 
+_validation_fastsim = validation.copy()
+for _entry in [globaldigisanalyze,globalhitsanalyze,globalrechitsanalyze]:
+    _validation_fastsim.remove(_entry)
+eras.fastSim.toReplaceWith(validation,_validation_fastsim)
+
 validationLiteTracking = cms.Sequence( validation )
 validationLiteTracking.replace(globalValidation,globalValidationLiteTracking)
 validationLiteTracking.remove(condDataValidation)
 
-validationMiniAOD = cms.Sequence()
+validationMiniAOD = cms.Sequence(type0PFMEtCorrectionPFCandToVertexAssociationForValidationMiniAOD * JetValidationMiniAOD * METValidationMiniAOD)
 
 prevalidation_preprod = cms.Sequence( preprodPrevalidation )
 

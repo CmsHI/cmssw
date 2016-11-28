@@ -97,7 +97,8 @@ public:
 
     /// track algorithm
     enum TrackAlgorithm {
-        undefAlgorithm = 0, ctf = 1, rs = 2, cosmics = 3,
+        undefAlgorithm = 0, ctf = 1, 
+        duplicateMerge = 2, cosmics = 3,
         initialStep = 4,
         lowPtTripletStep = 5,
         pixelPairStep = 6,
@@ -112,7 +113,9 @@ public:
         outInEcalSeededConv = 15, inOutEcalSeededConv = 16,
         nuclInter = 17,
         standAloneMuon = 18, globalMuon = 19, cosmicStandAloneMuon = 20, cosmicGlobalMuon = 21,
-        iter1LargeD0 = 22, iter2LargeD0 = 23, iter3LargeD0 = 24, iter4LargeD0 = 25, iter5LargeD0 = 26,
+        // Phase1
+        highPtTripletStep = 22, lowPtQuadStep = 23, detachedQuadStep = 24,
+        reservedForUpgrades1 = 25, reservedForUpgrades2 = 26,
         bTagGhostTracks = 27,
         beamhalo = 28,
         gsf = 29,
@@ -141,7 +144,6 @@ public:
 
     /// algo mask
     typedef std::bitset<algoSize> AlgoMask;
- 
 
     static const std::string algoNames[];
 
@@ -168,7 +170,7 @@ public:
     TrackBase(double chi2, double ndof, const Point &vertex,
               const Vector &momentum, int charge, const CovarianceMatrix &cov,
               TrackAlgorithm = undefAlgorithm, TrackQuality quality = undefQuality,
-              signed char nloops = 0);
+              signed char nloops = 0, uint8_t stopReason = 0);
 
     /// virtual destructor
     virtual ~TrackBase();
@@ -323,14 +325,30 @@ public:
 
     /// append hit patterns from vector of hit references
     template<typename C>
-    bool appendHits(const C &c);
+    bool appendHits(const C &c, const TrackerTopology& ttopo);
 
     template<typename I>
-    bool appendHits(const I &begin, const I &end);
+    bool appendHits(const I &begin, const I &end, const TrackerTopology& ttopo);
 
     /// append a single hit to the HitPattern
-    bool appendHitPattern(const TrackingRecHit &hit);
-    bool appendHitPattern(const DetId &id, TrackingRecHit::Type hitType);
+    bool appendHitPattern(const TrackingRecHit &hit, const TrackerTopology& ttopo);
+    bool appendHitPattern(const DetId &id, TrackingRecHit::Type hitType, const TrackerTopology& ttopo);
+
+    /**
+     * This is meant to be used only in cases where the an
+     * already-packed hit information is re-interpreted in terms of
+     * HitPattern (i.e. MiniAOD PackedCandidate, and the IO rule for
+     * reading old versions of HitPattern)
+     */
+    bool appendTrackerHitPattern(uint16_t subdet, uint16_t layer, uint16_t stereo, TrackingRecHit::Type hitType);
+
+    /**
+     * This is meant to be used only in cases where the an
+     * already-packed hit information is re-interpreted in terms of
+     * HitPattern (i.e. the IO rule for reading old versions of
+     * HitPattern)
+     */
+    bool appendMuonHitPattern(const DetId& id, TrackingRecHit::Type hitType);
 
     /// Sets HitPattern as empty
     void resetHitPattern();
@@ -343,9 +361,7 @@ public:
     void setAlgoMask(AlgoMask a) { algoMask_ = a;}
 
     AlgoMask algoMask() const { return algoMask_;}
-#if ( !defined(__CINT__) && !defined(__MAKECINT__) && !defined(__REFLEX__) ) || defined(__ROOTCLING__)
     unsigned long long algoMaskUL() const { return algoMask().to_ullong();}
-#endif
     bool isAlgoInMask(TrackAlgorithm a) const {return algoMask()[a];}
 
 
@@ -377,6 +393,11 @@ public:
     bool isLooper() const;
 
     signed char nLoops() const;
+
+    void setStopReason(uint8_t value) { stopReason_ = value; }
+
+    uint8_t stopReason() const { return stopReason_; }
+
 
 private:
     /// hit pattern
@@ -415,6 +436,9 @@ private:
 
     /// number of loops made during the building of the trajectory of a looper particle
     signed char nLoops_; // I use signed char because I don't expect more than 128 loops and I could use a negative value for a special purpose.
+
+    /// Stop Reason
+    uint8_t stopReason_;
 };
 
 //  Access the hit pattern, indicating in which Tracker layers the track has hits.
@@ -423,14 +447,22 @@ inline const HitPattern & TrackBase::hitPattern() const
     return hitPattern_;
 }
 
-inline bool TrackBase::appendHitPattern(const DetId &id, TrackingRecHit::Type hitType)
+inline bool TrackBase::appendHitPattern(const DetId &id, TrackingRecHit::Type hitType, const TrackerTopology& ttopo)
 {
-    return hitPattern_.appendHit(id, hitType);
+    return hitPattern_.appendHit(id, hitType, ttopo);
 }
 
-inline bool TrackBase::appendHitPattern(const TrackingRecHit &hit)
+inline bool TrackBase::appendHitPattern(const TrackingRecHit &hit, const TrackerTopology& ttopo)
 {
-    return hitPattern_.appendHit(hit);
+    return hitPattern_.appendHit(hit, ttopo);
+}
+
+inline bool TrackBase::appendTrackerHitPattern(uint16_t subdet, uint16_t layer, uint16_t stereo, TrackingRecHit::Type hitType) {
+    return hitPattern_.appendTrackerHit(subdet, layer, stereo, hitType);
+}
+
+inline bool TrackBase::appendMuonHitPattern(const DetId& id, TrackingRecHit::Type hitType) {
+    return hitPattern_.appendMuonHit(id, hitType);
 }
 
 inline void TrackBase::resetHitPattern()
@@ -439,15 +471,15 @@ inline void TrackBase::resetHitPattern()
 }
 
 template<typename I>
-bool TrackBase::appendHits(const I &begin, const I &end)
+bool TrackBase::appendHits(const I &begin, const I &end, const TrackerTopology& ttopo)
 {
-    return hitPattern_.appendHits(begin, end);
+    return hitPattern_.appendHits(begin, end, ttopo);
 }
 
 template<typename C>
-bool TrackBase::appendHits(const C &c)
+bool TrackBase::appendHits(const C &c, const TrackerTopology& ttopo)
 {
-    return setHitPattern(c.begin(), c.end());
+    return hitPattern_.appendHits(c.begin(), c.end(), ttopo);
 }
 
 inline TrackBase::index TrackBase::covIndex(index i, index j)
@@ -463,7 +495,7 @@ inline TrackBase::TrackAlgorithm TrackBase::algo() const
 }
 inline TrackBase::TrackAlgorithm TrackBase::originalAlgo() const
 {
-    return (TrackAlgorithm) (originalAlgorithm_);
+  return (TrackAlgorithm) (originalAlgorithm_);
 }
 
 

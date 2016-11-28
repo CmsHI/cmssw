@@ -52,6 +52,7 @@ PrimaryVertexMonitor::PrimaryVertexMonitor(const edm::ParameterSet& pSet)
   vertexInputTag_   = pSet.getParameter<InputTag>("vertexLabel");
   beamSpotInputTag_ = pSet.getParameter<InputTag>("beamSpotLabel");
   vertexToken_   = consumes<reco::VertexCollection>(vertexInputTag_);
+  scoreToken_    = consumes<VertexScore>(vertexInputTag_);
   beamspotToken_ = consumes<reco::BeamSpot>        (beamSpotInputTag_);
 
 }
@@ -81,14 +82,24 @@ PrimaryVertexMonitor::bookHistograms(DQMStore::IBooker &iBooker,
   auto vposx = conf_.getParameter<double>("Xpos");
   auto vposy = conf_.getParameter<double>("Ypos");
 
-  nbtksinvtx[0] = iBooker.book1D("otherVtxTrksNbr","Reconstructed Tracks in Vertex (other Vtx)",40,-0.5,99.5); 
+  nbtksinvtx[0] = iBooker.book1D("otherVtxTrksNbr","Reconstructed Tracks in Vertex (other Vtx)",40,-0.5,99.5);
+  ntracksVsZ[0]  = iBooker.bookProfile("otherVtxTrksVsZ","Reconstructed Tracks in Vertex (other Vtx) vs Z",80,-20.,20.,50,0,100,"");
+  ntracksVsZ[0]->setAxisTitle("z-bs",1);
+  ntracksVsZ[0]->setAxisTitle("#tracks",2);
+
+  score[0]      = iBooker.book1D("otherVtxScore","sqrt(score) (other Vtx)",100,0.,400.); 
   trksWeight[0] = iBooker.book1D("otherVtxTrksWeight","Total weight of Tracks in Vertex (other Vtx)",40,0,100.); 
   vtxchi2[0]    = iBooker.book1D("otherVtxChi2","#chi^{2} (other Vtx)",100,0.,200.);
   vtxndf[0]     = iBooker.book1D("otherVtxNdf","ndof (other Vtx)",100,0.,200.);
   vtxprob[0]    = iBooker.book1D("otherVtxProb","#chi^{2} probability (other Vtx)",100,0.,1.);
   nans[0]       = iBooker.book1D("otherVtxNans","Illegal values for x,y,z,xx,xy,xz,yy,yz,zz (other Vtx)",9,0.5,9.5);
 
-  nbtksinvtx[1] = iBooker.book1D("tagVtxTrksNbr","Reconstructed Tracks in Vertex (tagged Vtx)",100,-0.5,99.5); 
+  nbtksinvtx[1] = iBooker.book1D("tagVtxTrksNbr","Reconstructed Tracks in Vertex (tagged Vtx)",100,-0.5,99.5);
+  ntracksVsZ[1]  = iBooker.bookProfile("tagVtxTrksVsZ","Reconstructed Tracks in Vertex (tagged Vtx) vs Z",80,-20.,20.,50,0,100,"");
+  ntracksVsZ[1]->setAxisTitle("z-bs",1);
+  ntracksVsZ[1]->setAxisTitle("#tracks",2);
+ 
+  score[1]     	= iBooker.book1D("tagVtxScore","sqrt(score) (tagged Vtx)",100,0.,400.);
   trksWeight[1] = iBooker.book1D("tagVtxTrksWeight","Total weight of Tracks in Vertex (tagged Vtx)",100,0,100.); 
   vtxchi2[1]    = iBooker.book1D("tagVtxChi2","#chi^{2} (tagged Vtx)",100,0.,200.);
   vtxndf[1]     = iBooker.book1D("tagVtxNdf","ndof (tagged Vtx)",100,0.,200.);
@@ -229,6 +240,10 @@ void PrimaryVertexMonitor::analyze(const edm::Event& iEvent, const edm::EventSet
   Handle<reco::VertexCollection> recVtxs;
   iEvent.getByToken(vertexToken_, recVtxs);
 
+  Handle<VertexScore> scores;
+  iEvent.getByToken(scoreToken_, scores);
+
+
   edm::Handle<reco::BeamSpot> beamSpotHandle;
   iEvent.getByToken(beamspotToken_,beamSpotHandle);
 
@@ -255,6 +270,12 @@ void PrimaryVertexMonitor::analyze(const edm::Event& iEvent, const edm::EventSet
 
   vertexPlots(recVtxs->front(), beamSpot, 1);
 
+  if (scores.isValid() && (*scores).size()>0) {
+    auto pvScore = (*scores).get(0);
+    score[1]->Fill(std::sqrt(pvScore));
+    for (unsigned int i=1; i<(*scores).size(); ++i) score[0]->Fill(std::sqrt((*scores).get(i)));
+  }
+
   // fill PV tracks MEs (as now, for alignment)
   pvTracksPlots(recVtxs->front());
 
@@ -262,6 +283,7 @@ void PrimaryVertexMonitor::analyze(const edm::Event& iEvent, const edm::EventSet
       v!=recVtxs->end(); ++v){
     vertexPlots(*v, beamSpot, 0);
   }
+
   // Beamline plots:
   bsX->Fill(beamSpot.x0());
   bsY->Fill(beamSpot.y0());
@@ -355,7 +377,8 @@ void PrimaryVertexMonitor::vertexPlots(const Vertex & v, const BeamSpot& beamSpo
 	  t!=v.tracks_end(); t++) weight+= v.trackWeight(*t);
       trksWeight[i]->Fill(weight);
       nbtksinvtx[i]->Fill(v.tracksSize());
-
+      ntracksVsZ[i]->Fill(v.position().z()- beamSpot.z0(),v.tracksSize());
+  
       vtxchi2[i]->Fill(v.chi2());
       vtxndf[i]->Fill(v.ndof());
       vtxprob[i]->Fill(ChiSquaredProbability(v.chi2() ,v.ndof()));

@@ -26,12 +26,10 @@ namespace edm {
   RootEmbeddedFileSequence::RootEmbeddedFileSequence(
                 ParameterSet const& pset,
                 EmbeddedRootSource& input,
-                InputFileCatalog const& catalog,
-                unsigned int nStreams) :
+                InputFileCatalog const& catalog) :
     RootInputFileSequence(pset, catalog),
     input_(input),
     orderedProcessHistoryIDs_(),
-    nStreams_(nStreams),
     sequential_(pset.getUntrackedParameter<bool>("sequential", false)),
     sameLumiBlock_(pset.getUntrackedParameter<bool>("sameLumiBlock", false)),
     fptr_(nullptr),
@@ -44,10 +42,6 @@ namespace edm {
     // have defined descriptions, the defaults in the getUntrackedParameterSet function calls can
     // and should be deleted from the code.
     initialNumberOfEventsToSkip_(pset.getUntrackedParameter<unsigned int>("skipEvents", 0U)),
-    skipBadFiles_(pset.getUntrackedParameter<bool>("skipBadFiles", false)),
-    bypassVersionCheck_(pset.getUntrackedParameter<bool>("bypassVersionCheck", false)),
-    treeMaxVirtualSize_(pset.getUntrackedParameter<int>("treeMaxVirtualSize", -1)),
-    productSelectorRules_(pset, "inputCommands", "InputSource"),
     enablePrefetching_(false) {
 
     if(noFiles()) {
@@ -100,7 +94,7 @@ namespace edm {
         --count;
         int offset = distribution(dre);
         setAtFileSequenceNumber(offset);
-        initFile(skipBadFiles_);
+        initFile(input_.skipBadFiles());
       }
     }
     if(rootFile()) {
@@ -135,44 +129,17 @@ namespace edm {
           ProcessConfiguration(),
           logicalFileName(),
           filePtr,
-          nullptr, // eventSkipperByID_
-          false,   // initialNumberOfEventsToSkip_ != 0 (not used)
-          -1,      // remainingEvents() 
-          -1,      // remainingLuminosityBlocks()
-	  nStreams_,
-          0U,      // treeCacheSize_
-          treeMaxVirtualSize_,
-          InputSource::RunsLumisAndEvents,
-          0U,      // setRun_
-          false,   // noEventSort_
-          productSelectorRules_,
+	  input_.nStreams(),
+          input_.treeMaxVirtualSize(),
+          input_.runHelper(),
+          input_.productSelectorRules(),
           InputType::SecondarySource,
-          std::make_shared<BranchIDListHelper>(),
-          std::make_shared<ThinnedAssociationsHelper>(),
-          std::vector<BranchID>(), // associationsFromSecondary_
-          nullptr, // duplicateChecker_
-          false,   // dropDescendants_
           input_.processHistoryRegistryForUpdate(),
           indexesIntoFiles(),
           currentIndexIntoFile,
           orderedProcessHistoryIDs_,
-          bypassVersionCheck_,
-          false,   // labelRawDataLikeMC_
-          false,   // usingGoToEvent_
+          input_.bypassVersionCheck(),
           enablePrefetching_);
-  }
-
-  void
-  RootEmbeddedFileSequence::dropUnwantedBranches_(std::vector<std::string> const& wantedBranches) {
-    std::vector<std::string> rules;
-    rules.reserve(wantedBranches.size() + 1);
-    rules.emplace_back("drop *");
-    for(std::string const& branch : wantedBranches) {
-      rules.push_back("keep " + branch + "_*");
-    }
-    ParameterSet pset;
-    pset.addUntrackedParameter("inputCommands", rules);
-    productSelectorRules_ = ProductSelectorRules(pset, "inputCommands", "InputSource");
   }
 
   void
@@ -193,7 +160,6 @@ namespace edm {
 
   bool
   RootEmbeddedFileSequence::readOneSequential(EventPrincipal& cache, size_t& fileNameHash, CLHEP::HepRandomEngine*, EventID const*) {
-    skipBadFiles_ = false;
     assert(rootFile());
     rootFile()->nextEventEntry();
     bool found = rootFile()->readCurrentEvent(cache);
@@ -215,7 +181,6 @@ namespace edm {
   RootEmbeddedFileSequence::readOneSequentialWithID(EventPrincipal& cache, size_t& fileNameHash, CLHEP::HepRandomEngine*, EventID const* idp) {
     assert(idp);
     EventID const& id = *idp;
-    skipBadFiles_ = false;
     int offset = initialNumberOfEventsToSkip_;
     initialNumberOfEventsToSkip_ = 0;
     if(offset > 0) {
@@ -255,7 +220,6 @@ namespace edm {
 
   void
   RootEmbeddedFileSequence::readOneSpecified(EventPrincipal& cache, size_t& fileNameHash, SecondaryEventIDAndFileInfo const& idx) {
-    skipBadFiles_ = false;
     EventID const& id = idx.eventID();
     bool found = skipToItem(id.run(), id.luminosityBlock(), id.event(), idx.fileNameHash());
     if(!found) {
@@ -276,7 +240,6 @@ namespace edm {
   RootEmbeddedFileSequence::readOneRandom(EventPrincipal& cache, size_t& fileNameHash, CLHEP::HepRandomEngine* engine, EventID const*) {
     assert(rootFile());
     assert(engine);
-    skipBadFiles_ = false;
     unsigned int currentSeqNumber = sequenceNumberOfFile();
     while(eventsRemainingInFile_ == 0) {
 
@@ -311,7 +274,6 @@ namespace edm {
     assert(engine);
     assert(idp);
     EventID const& id = *idp;
-    skipBadFiles_ = false;
     if(noMoreFiles() || !rootFile() ||
         rootFile()->indexIntoFileIter().run() != id.run() ||
         rootFile()->indexIntoFileIter().lumi() != id.luminosityBlock()) {
@@ -363,15 +325,5 @@ namespace edm {
                      "False: loopEvents() reads events regardless of lumi.");
     desc.addUntracked<unsigned int>("skipEvents", 0U)
         ->setComment("Skip the first 'skipEvents' events. Used only if 'sequential' is True and 'sameLumiBlock' is False");
-    desc.addUntracked<bool>("skipBadFiles", false)
-        ->setComment("True:  Ignore any missing or unopenable input file.\n"
-                     "False: Throw exception if missing or unopenable input file.");
-    desc.addUntracked<bool>("bypassVersionCheck", false)
-        ->setComment("True:  Bypass release version check.\n"
-                     "False: Throw exception if reading file in a release prior to the release in which the file was written.");
-    desc.addUntracked<int>("treeMaxVirtualSize", -1)
-        ->setComment("Size of ROOT TTree TBasket cache.  Affects performance.");
-
-    ProductSelectorRules::fillDescription(desc, "inputCommands");
   }
 }

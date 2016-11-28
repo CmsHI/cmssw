@@ -22,6 +22,7 @@
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/Utilities/interface/Parse.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
+#include "FWCore/Utilities/interface/EDGetToken.h" 
 #include "CondCore/DBOutputService/interface/PoolDBOutputService.h"
 
 /*** Alignment ***/
@@ -37,6 +38,7 @@
 #include "Alignment/LaserAlignment/interface/TsosVectorCollection.h"
 #include "TrackingTools/PatternTools/interface/TrajTrackAssociation.h"
 #include "DataFormats/BeamSpot/interface/BeamSpot.h"
+#include "Alignment/MillePedeAlignmentAlgorithm/interface/MillePedeFileReader.h"
 
 /*** Geometry ***/
 #include "Geometry/TrackingGeometryAligner/interface/GeometryAligner.h"
@@ -89,6 +91,14 @@ PCLTrackerAlProducer
   clusterValueMapTag_      (config.getParameter<edm::InputTag>("hitPrescaleMapTag")),
   theFirstRun              (cond::timeTypeSpecs[cond::runnumber].endValue)
 {
+  
+  tjTkAssociationMapToken = consumes<TrajTrackAssociationCollection>(tjTkAssociationMapTag_);
+  beamSpotToken = consumes<reco::BeamSpot>(beamSpotTag_);
+  tkLasBeamToken = consumes<TkFittedLasBeamCollection>(tkLasBeamTag_);
+  tsosVectorToken = consumes<TsosVectorCollection>(tkLasBeamTag_);
+  clusterValueMapToken = consumes<AliClusterValueMap>(clusterValueMapTag_);
+  
+
   createAlignmentAlgorithm(config);
   createCalibrations      (config);
   createMonitors          (config);
@@ -198,8 +208,8 @@ void PCLTrackerAlProducer
   if (tkLasBeamTag_.encode().size()) {
     edm::Handle<TkFittedLasBeamCollection> lasBeams;
     edm::Handle<TsosVectorCollection> tsoses;
-    run.getByLabel(tkLasBeamTag_, lasBeams);
-    run.getByLabel(tkLasBeamTag_, tsoses);
+    run.getByToken(tkLasBeamToken, lasBeams);
+    run.getByToken(tsosVectorToken, tsoses);
 
     theAlignmentAlgo->endRun(EndRunInfo(run.id(), &(*lasBeams),
                                         &(*tsoses)), setup);
@@ -259,7 +269,7 @@ void PCLTrackerAlProducer
   // -> merely skip if collection is empty
   edm::Handle<TrajTrackAssociationCollection> handleTrajTracksCollection;
 
-  if (event.getByLabel(tjTkAssociationMapTag_, handleTrajTracksCollection)) {
+  if (event.getByToken(tjTkAssociationMapToken, handleTrajTracksCollection)) {
     // Form pairs of trajectories and tracks
     ConstTrajTrackPairs trajTracks;
     for (auto iter  = handleTrajTracksCollection->begin();
@@ -272,7 +282,7 @@ void PCLTrackerAlProducer
     const AliClusterValueMap* clusterValueMapPtr = 0;
     if (clusterValueMapTag_.encode().size()) {
       edm::Handle<AliClusterValueMap> clusterValueMap;
-      event.getByLabel(clusterValueMapTag_, clusterValueMap);
+      event.getByToken(clusterValueMapToken, clusterValueMap);
       clusterValueMapPtr = &(*clusterValueMap);
     }
 
@@ -446,7 +456,7 @@ void PCLTrackerAlProducer
 
   // Create the geometries from the ideal geometries (first time only)
   //std::shared_ptr<TrackingGeometry> theTrackerGeometry;
-  createGeometries(setup);
+  createGeometries(setup, tTopo);
 
   applyAlignmentsToDB(setup);
   createAlignables(tTopo);
@@ -470,7 +480,7 @@ void PCLTrackerAlProducer
 void PCLTrackerAlProducer
 ::initBeamSpot(const edm::Event& event)
 {
-  event.getByLabel(beamSpotTag_, theBeamSpot);
+  event.getByToken(beamSpotToken, theBeamSpot);
 
   if (theExtraAlignables) {
     edm::LogInfo("Alignment") << "@SUB=TrackerAlignmentProducerForPCL::initBeamSpot"
@@ -486,7 +496,7 @@ void PCLTrackerAlProducer
 
 //_____________________________________________________________________________
 void PCLTrackerAlProducer
-::createGeometries(const edm::EventSetup& setup)
+::createGeometries(const edm::EventSetup& setup, const TrackerTopology* tTopo)
 {
   if (doTracker_) {
     edm::ESHandle<GeometricDet> geometricDet;
@@ -498,7 +508,7 @@ void PCLTrackerAlProducer
     setup.get<PTrackerParametersRcd>().get( ptp );
 
     theTrackerGeometry = boost::shared_ptr<TrackerGeometry>(
-        trackerBuilder.build(&(*geometricDet), *ptp )
+        trackerBuilder.build(&(*geometricDet), *ptp, tTopo )
     );
   }
 
@@ -976,7 +986,18 @@ void PCLTrackerAlProducer
                             << "Terminating algorithm.";
   theAlignmentAlgo->terminate();
 
-  storeAlignmentsToDB();
+  if (saveToDB_ || saveApeToDB_ || saveDeformationsToDB_) {
+    // if this is not the harvesting step there is no reason to look for the PEDE log and res files and to call the storeAlignmentsToDB method
+    MillePedeFileReader mpReader(theParameterSet.getParameter<edm::ParameterSet>("MillePedeFileReader"));
+    mpReader.read();
+    if (mpReader.storeAlignments()) {
+      storeAlignmentsToDB();
+    }
+  } else {
+    edm::LogInfo("Alignment") << "@SUB=PCLTrackerAlProducer::finish"
+			      << "no payload to be stored!";
+
+  }
 }
 
 //_____________________________________________________________________________

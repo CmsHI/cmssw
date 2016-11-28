@@ -29,7 +29,7 @@
 #include "FWCore/Framework/interface/ESHandle.h"
 
 #include "PhysicsTools/PatUtils/interface/PATJetCorrExtractor.h"
-#include "PhysicsTools/PatUtils/interface/SmearedJetProducerT.h"
+#include "PhysicsTools/PatUtils/interface/RawJetExtractorT.h"
 
 #include <string>
 
@@ -57,13 +57,9 @@ template <typename T, typename Textractor>
 	jetCorrInputFileName_ = cfg.getParameter<edm::FileInPath>("jetCorrInputFileName");
 	if ( jetCorrInputFileName_.location() == edm::FileInPath::Unknown) throw cms::Exception("ShiftedJetProducerT")
 	  << " Failed to find JEC parameter file = " << jetCorrInputFileName_ << " !!\n";
-	std::cout << "Reading JEC parameters = " << jetCorrUncertaintyTag_
-		  << " from file = " << jetCorrInputFileName_.fullPath() << "." << std::endl;
 	jetCorrParameters_ = new JetCorrectorParameters(jetCorrInputFileName_.fullPath().data(), jetCorrUncertaintyTag_);
 	jecUncertainty_ = new JetCorrectionUncertainty(*jetCorrParameters_);
       } else {
-	std::cout << "Reading JEC parameters = " << jetCorrUncertaintyTag_
-		  << " from DB/SQLlite file." << std::endl;
 	jetCorrPayloadName_ = cfg.getParameter<std::string>("jetCorrPayloadName");
       }
     }
@@ -142,7 +138,7 @@ template <typename T, typename Textractor>
       }
 
       if ( evt.isRealData() && addResidualJES_ ) {
-	const static SmearedJetProducer_namespace::RawJetExtractorT<T> rawJetExtractor;
+    const static pat::RawJetExtractorT<T> rawJetExtractor{};
 	reco::Candidate::LorentzVector rawJetP4 = rawJetExtractor(*originalJet);
 	if ( rawJetP4.E() > 1.e-1 ) {
 	  reco::Candidate::LorentzVector corrJetP4upToL3 =

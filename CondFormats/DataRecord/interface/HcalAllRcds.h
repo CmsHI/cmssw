@@ -12,6 +12,7 @@
 #include "CondFormats/DataRecord/interface/HcalPedestalsRcd.h"
 #include "CondFormats/DataRecord/interface/HcalPedestalWidthsRcd.h"
 #include "CondFormats/DataRecord/interface/HcalQIEDataRcd.h"
+#include "CondFormats/DataRecord/interface/HcalQIETypesRcd.h"
 #include "CondFormats/DataRecord/interface/HcalRespCorrsRcd.h"
 #include "CondFormats/DataRecord/interface/HcalTimeCorrsRcd.h"
 #include "CondFormats/DataRecord/interface/HcalZSThresholdsRcd.h"
@@ -27,5 +28,6 @@
 #include "CondFormats/DataRecord/interface/HcalMCParamsRcd.h"
 #include "CondFormats/DataRecord/interface/HcalFlagHFDigiTimeParamsRcd.h"
 #include "CondFormats/DataRecord/interface/HcalTimingParamsRcd.h"
+#include "Geometry/Records/interface/HcalRecNumberingRecord.h"
 #include "Geometry/Records/interface/IdealGeometryRecord.h"
 #endif

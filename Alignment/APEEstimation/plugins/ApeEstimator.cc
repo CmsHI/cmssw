@@ -863,9 +863,6 @@ ApeEstimator::bookSectorHistsForApeCalculation(){
 }
 
 
-
-
-
 // -----------------------------------------------------------------------------------------------------------
 
 void
@@ -1170,8 +1167,7 @@ ApeEstimator::fillHitVariables(const TrajectoryMeasurement& i_meas, const edm::E
   const float norResX = resX/errX;
   const float norResY = resY/errY;
   
-  
-  
+    
   // Take global orientation into account for residuals (sign is not important for errors)
   
   float resXprime(999.F), resYprime(999.F), norResXprime(999.F), norResYprime(999.F);
@@ -1341,9 +1337,7 @@ ApeEstimator::fillHitVariables(const TrajectoryMeasurement& i_meas, const edm::E
     float coveredStrips = std::fabs(projEdge2 - projEdge1);
     
     hitParams.projWidth = coveredStrips;
-    
-    
-    
+      
     
   }
   else{
@@ -2022,8 +2016,7 @@ ApeEstimator::fillHistsForApeCalculation(const TrackStruct& trackStruct){
     // which tracks to take? need min. nr. of selected hits?
     if(goodHitsPerTrack < minGoodHitsPerTrack_)return;
   }
-  
-  
+   
   for(std::vector<TrackStruct::HitParameterStruct>::const_iterator i_hit = trackStruct.v_hitParams.begin();
       i_hit != trackStruct.v_hitParams.end(); ++i_hit){
     // Put here from earlier method
@@ -2035,8 +2028,7 @@ ApeEstimator::fillHistsForApeCalculation(const TrackStruct& trackStruct){
       for(std::vector<unsigned int>::const_iterator i_hitSector = (*i_hit).v_sector.begin(); i_hitSector != (*i_hit).v_sector.end(); ++i_hitSector){
 	if((*i_sector).first == *i_hitSector){moduleInSector = true; break;}
       }
-      if(!moduleInSector)continue;
-      
+      if(!moduleInSector)continue;      
       
       if(!calculateApe_)continue;
       
@@ -2087,8 +2079,7 @@ ApeEstimator::fillHistsForApeCalculation(const TrackStruct& trackStruct){
 void
 ApeEstimator::calculateAPE(){
    // Loop over sectors for calculating APE
-   for(std::map<unsigned int,TrackerSectorStruct>::iterator i_sector = m_tkSector_.begin(); i_sector != m_tkSector_.end(); ++i_sector){
-     
+   for(std::map<unsigned int,TrackerSectorStruct>::iterator i_sector = m_tkSector_.begin(); i_sector != m_tkSector_.end(); ++i_sector){    
      
      // Loop over residual error bins to calculate APE for every bin
      for(std::map<unsigned int, std::map<std::string,TH1*> >::const_iterator i_errBins = (*i_sector).second.m_binnedHists.begin();

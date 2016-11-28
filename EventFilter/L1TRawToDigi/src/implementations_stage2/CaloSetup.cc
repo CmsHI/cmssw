@@ -16,7 +16,9 @@ namespace l1t {
                return std::unique_ptr<PackerTokens>(new CaloTokens(cfg, cc));
             };
 
-            virtual void fillDescription(edm::ParameterSetDescription& desc) override {};
+            virtual void fillDescription(edm::ParameterSetDescription& desc) override {
+	      desc.addOptional<edm::InputTag>("TowerInputLabel")->setComment("for stage 2");
+	    };
 
             virtual PackerMap getPackers(int fed, unsigned int fw) override {
                PackerMap res;
@@ -24,11 +26,11 @@ namespace l1t {
                if (fed == 1366) {
                   // Use board id 1 for packing
                   res[{1, 1}] = {
-                     PackerFactory::get()->make("stage2::CaloTowerPacker"),
-                     PackerFactory::get()->make("stage2::EGammaPacker"),
-                     PackerFactory::get()->make("stage2::EtSumPacker"),
-                     PackerFactory::get()->make("stage2::JetPacker"),
-                     PackerFactory::get()->make("stage2::TauPacker")
+		    //                     PackerFactory::get()->make("stage2::CaloTowerPacker"),
+                     PackerFactory::get()->make("stage2::CaloEGammaPacker"),
+                     PackerFactory::get()->make("stage2::CaloEtSumPacker"),
+                     PackerFactory::get()->make("stage2::CaloJetPacker"),
+                     PackerFactory::get()->make("stage2::CaloTauPacker")
                   };
                }
 
@@ -36,14 +38,16 @@ namespace l1t {
             };
 
             virtual void registerProducts(edm::stream::EDProducerBase& prod) override {
-               prod.produces<CaloTowerBxCollection>();
-               prod.produces<EGammaBxCollection>();
-               prod.produces<EtSumBxCollection>();
-               prod.produces<JetBxCollection>();
-               prod.produces<TauBxCollection>();
+               prod.produces<CaloTowerBxCollection>("CaloTower");
+               prod.produces<EGammaBxCollection>("EGamma");
+               prod.produces<EtSumBxCollection>("EtSum");
+               prod.produces<JetBxCollection>("Jet");
+               prod.produces<TauBxCollection>("Tau");
 
                prod.produces<EtSumBxCollection>("MP");
                prod.produces<JetBxCollection>("MP");
+	       prod.produces<EGammaBxCollection>("MP");
+	       prod.produces<TauBxCollection>("MP");
             };
 
             virtual std::unique_ptr<UnpackerCollections> getCollections(edm::Event& e) override {
@@ -57,20 +61,33 @@ namespace l1t {
                auto jet_unp = UnpackerFactory::get()->make("stage2::JetUnpacker");
                auto tau_unp = UnpackerFactory::get()->make("stage2::TauUnpacker");
 
-               auto mp_unp = UnpackerFactory::get()->make("stage2::MPUnpacker");
+	       auto mp_unp = UnpackerFactory::get()->make("stage2::MPUnpacker");
+	       if (fw >= 0x1001000b) {
+		 mp_unp = UnpackerFactory::get()->make("stage2::MPUnpacker_0x1001000b");
+	       }
+	       if (fw >= 0x10010010) {
+		 mp_unp = UnpackerFactory::get()->make("stage2::MPUnpacker_0x10010010");
+	       }
+	       if (fw >= 0x10010033) {
+		 mp_unp = UnpackerFactory::get()->make("stage2::MPUnpacker_0x10010033");
+	       }
 
                UnpackerMap res;
-               if (fed == 1366) {
+               if (fed == 1366 || (fed == 1360 && board == 0x221B)) {
+	          res[9]  = egamma_unp;
+	          res[11] = egamma_unp;
                   res[13] = jet_unp;
-                  res[15] = jet_unp;
+		  res[15] = jet_unp;
+		  res[17] = tau_unp;
+		  res[19] = tau_unp;
                   res[21] = etsum_unp;
-               } else if (fed == 1360) {
-                  res[1] = mp_unp;
-                  res[3] = mp_unp;
-                  res[5] = mp_unp;
-                  res[7] = mp_unp;
-                  res[9] = mp_unp;
-                  res[11] = mp_unp;
+	       } else if (fed == 1360 && board != 0x221B) {
+                  res[121] = mp_unp;
+                  res[123] = mp_unp;
+                  res[125] = mp_unp;
+                  res[127] = mp_unp;
+                  res[129] = mp_unp;
+                  res[131] = mp_unp;
 
                   for (int link = 0; link < 144; link += 2)
                      res[link] = tower_unp;

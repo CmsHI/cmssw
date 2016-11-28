@@ -147,6 +147,7 @@ process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_condD
 from Configuration.AlCa.GlobalTag_condDBv2 import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:run2_design', '')
 
+
 ##### To be used when running on Phys14MC with a CMSSW version > 72X
 #process.GlobalTag.toGet = cms.VPSet(
 #    cms.PSet(
@@ -183,12 +184,13 @@ if isMc:
     toGet = [
       cms.PSet(
         record = cms.string('TrackerAlignmentRcd'),
-        tag = cms.string('TrackerIdealGeometry210_mc')
+        tag = cms.string('TrackerIdealGeometry210_mc') # 'TrackerAlignment_2009_v2_offline'
       ),
     ],
   )
   process.es_prefer_trackerAlignment = cms.ESPrefer("PoolDBESSource","myTrackerAlignment")
 
+process.es_prefer_trackerAlignment = cms.ESPrefer("PoolDBESSource","myTrackerAlignment")
 if isData:
   # Recent geometry
   process.myTrackerAlignment = CalibTracker.Configuration.Common.PoolDBESSource_cfi.poolDBESSource.clone(
@@ -239,6 +241,7 @@ process.load("Alignment.APEEstimation.TriggerSelection_cff")
 ##
 from Alignment.APEEstimation.ApeEstimator_cff import *
 process.ApeEstimator1 = ApeEstimator.clone(
+    #~ tjTkAssociationMapTag = "TrackRefitterHighPurityForApeEstimator",
     tjTkAssociationMapTag = "TrackRefitterForApeEstimator",
     maxTracksPerEvent = 0,
     applyTrackCuts = False,

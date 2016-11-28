@@ -4,8 +4,7 @@
 #include "FWCore/Utilities/interface/DebugMacros.h"
 #include "FWCore/Utilities/interface/DictionaryTools.h"
 #include "FWCore/Utilities/interface/TypeID.h"
-#include "FWCore/PluginManager/interface/PluginCapabilities.h"
-
+#include "FWCore/Utilities/interface/TypeWithDict.h"
 
 #include "TClass.h"
 
@@ -16,17 +15,19 @@
 
 namespace edm {
   void loadType(TypeID const& type) {
-    checkClassDictionaries(type, true);
-    if (!missingTypes().empty()) {
-      TypeSet missing = missingTypes();
-      missingTypes().clear();
-      for_all(missing, loadType);
+    TypeSet missingTypes;
+    checkClassDictionaries(type,missingTypes,true);
+    if (!missingTypes.empty()) {
+      for_all(missingTypes, loadType);
     }
   }
 
   void loadCap(std::string const& name) {
     FDEBUG(1) << "Loading dictionary for " << name << "\n";
-    edmplugin::PluginCapabilities::get()->load(dictionaryPlugInPrefix() + name);
+    TypeWithDict typedict = TypeWithDict::byName(name);
+    if (!typedict) {
+      throw cms::Exception("DictionaryMissingClass") << "The dictionary of class '" << name << "' is missing!";
+    }
     TClass* cl = TClass::GetClass(name.c_str());
     loadType(TypeID(*cl->GetTypeInfo()));
   }
@@ -58,12 +59,6 @@ namespace edm {
   namespace {
     TClass* getRootClass(std::string const& name) {
       TClass* tc = TClass::GetClass(name.c_str());    
-      
-      // get ROOT TClass for this product
-      // CINT::Type* cint_type = CINT::Type::get(typ_ref);
-      // tc_ = cint_type->rootClass();
-      // TClass* tc = TClass::GetClass(typeid(se));
-      // tc_ = TClass::GetClass("edm::SendEvent");
       
       if(tc == 0) {
 	throw edm::Exception(errors::Configuration,"getRootClass")

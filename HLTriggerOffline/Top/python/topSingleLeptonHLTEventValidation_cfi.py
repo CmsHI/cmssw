@@ -23,7 +23,9 @@ topSingleMuonHLTValidation = cms.EDAnalyzer('TopSingleLeptonHLTValidation',
         minJets      = cms.untracked.uint32(4),
         # Trigger
         iTrigger     = cms.untracked.InputTag("TriggerResults","","HLT"),
-        vsPaths      = cms.untracked.vstring(['HLT_IsoMu18_CentralPFJet30_BTagCSV07_v', 'HLT_IsoMu18_TriCentralPFJet50_40_30_v', 'HLT_IsoMu22_v', 'HLT_IsoMu18_v', 'HLT_IsoMu22_TriCentralPFJet50_40_30_v', 'HLT_IsoMu22_CentralPFJet30_BTagCSV07_v', 'HLT_IsoMu20_eta2p1_TriCentralPFJet30_v', 'HLT_IsoMu20_eta2p1_TriCentralPFJet50_40_30_v', 'HLT_IsoMu20_eta2p1_CentralPFJet30_BTagCSV07_v', 'HLT_IsoMu20_eta2p1_v', 'HLT_IsoMu24_eta2p1_TriCentralPFJet30_v', 'HLT_IsoMu24_eta2p1_TriCentralPFJet50_40_30_v', 'HLT_IsoMu24_eta2p1_CentralPFJet30_BTagCSV07_v']),
+
+### Updating to HLT paths to be monitored by TOP PAG in 2016                                                                                                                 
+        vsPaths     = cms.untracked.vstring(['HLT_IsoMu18_v', 'HLT_IsoMu20_v', 'HLT_IsoMu22_v', 'HLT_IsoMu24_v', 'HLT_IsoTkMu18_v', 'HLT_IsoTkMu20_v', 'HLT_IsoTkMu22_v', 'HLT_IsoTkMu24_v','HLT_IsoMu17_eta2p1_v','HLT_IsoMu20_eta2p1_v','HLT_IsoMu24_eta2p1_v','HLT_IsoTkMu20_eta2p1_v','HLT_IsoTkMu24_eta2p1_v']),
 )
 
 # ttbar semi electronique
@@ -49,6 +51,7 @@ topSingleElectronHLTValidation = cms.EDAnalyzer('TopSingleLeptonHLTValidation',
         minJets      = cms.untracked.uint32(4),
         # Trigger
         iTrigger     = cms.untracked.InputTag("TriggerResults","","HLT"),
-#Soureek changing path name HLT_Ele23_WPLoose_Gsf_CentralPFJet30_BTagCVS07_v to HLT_Ele23_WPLoose_Gsf_CentralPFJet30_BTagCSV07_v
-        vsPaths      = cms.untracked.vstring(['HLT_Ele23_WPLoose_Gsf_TriCentralPFJet50_40_30_v', 'HLT_Ele23_WPLoose_Gsf_CentralPFJet30_BTagCSV07_v', 'HLT_Ele27_WPLoose_Gsf_WHbbBoost_v', 'HLT_Ele27_WPLoose_Gsf_v', 'HLT_Ele27_WPLoose_Gsf_CentralPFJet30_BTagCSV07_v' 'HLT_Ele27_WPLoose_Gsf_TriCentralPFJet50_40_30_v', 'HLT_Ele27_eta2p1_WPLoose_Gsf_TriCentralPFJet30_v', 'HLT_Ele27_eta2p1_WPLoose_Gsf_TriCentralPFJet50_40_30_v', 'HLT_Ele27_eta2p1_WPLoose_Gsf_v', 'HLT_Ele27_eta2p1_WPLoose_Gsf_CentralPFJet30_BTagCSV07_v', 'HLT_Ele32_eta2p1_WPLoose_Gsf_TriCentralPFJet30_v', 'HLT_Ele32_eta2p1_WPLoose_Gsf_TriCentralPFJet50_40_30_v', 'HLT_Ele32_eta2p1_WPLoose_Gsf_v', 'HLT_Ele32_eta2p1_WPLoose_Gsf_CentralPFJet30_BTagCSV07_v']),
+
+### Updating to HLT paths to be monitored by TOP PAG in 2016
+        vsPaths     = cms.untracked.vstring(['HLT_Ele27_WPLoose_Gsf_v','HLT_Ele25_WPTight_Gsf_v','HLT_Ele23_WPLoose_Gsf_v','HLT_Ele25_eta2p1_WPTight_Gsf_v', 'HLT_Ele27_WPTight_Gsf_v','HLT_Ele27_eta2p1_WPLoose_Gsf_v', 'HLT_Ele22_eta2p1_WPLoose_Gsf_v', 'HLT_Ele24_eta2p1_WPLoose_Gsf_v','HLT_Ele25_eta2p1_WPLoose_Gsf_v']),
 )

@@ -29,16 +29,18 @@ muonSeededTrajectoryCleanerBySharedHits = TrackingTools.TrajectoryCleaning.Traje
 
 ###------------- MeasurementEstimator, defining the searcgh window for pattern recongnition ----------------
 
-import TrackingTools.KalmanUpdators.Chi2MeasurementEstimatorESProducer_cfi
-muonSeededMeasurementEstimatorForInOut = TrackingTools.KalmanUpdators.Chi2MeasurementEstimatorESProducer_cfi.Chi2MeasurementEstimator.clone(
+import TrackingTools.KalmanUpdators.Chi2MeasurementEstimator_cfi
+muonSeededMeasurementEstimatorForInOut = TrackingTools.KalmanUpdators.Chi2MeasurementEstimator_cfi.Chi2MeasurementEstimator.clone(
     ComponentName = cms.string('muonSeededMeasurementEstimatorForInOut'),
-    MaxChi2 = cms.double(400.0), ## was 30 ## TO BE TUNED
+    MaxChi2 = cms.double(80.0), ## was 30 ## TO BE TUNED
     nSigma  = cms.double(4.),    ## was 3  ## TO BE TUNED 
+    MaxSagitta = cms.double(-1.)
 )
-muonSeededMeasurementEstimatorForOutIn = TrackingTools.KalmanUpdators.Chi2MeasurementEstimatorESProducer_cfi.Chi2MeasurementEstimator.clone(
+muonSeededMeasurementEstimatorForOutIn = TrackingTools.KalmanUpdators.Chi2MeasurementEstimator_cfi.Chi2MeasurementEstimator.clone(
     ComponentName = cms.string('muonSeededMeasurementEstimatorForOutIn'),
     MaxChi2 = cms.double(30.0), ## was 30 ## TO BE TUNED
-    nSigma  = cms.double(3.),    ## was 3  ## TO BE TUNED 
+    nSigma  = cms.double(3.),    ## was 3  ## TO BE TUNED
+    MaxSagitta = cms.double(-1.) 
 )
 
 ###------------- TrajectoryFilter, defining selections on the trajectories while building them ----------------
@@ -113,82 +115,27 @@ muonSeededTracksInOut = RecoTracker.TrackProducer.TrackProducer_cfi.TrackProduce
     Fitter = cms.string("muonSeededFittingSmootherWithOutliersRejectionAndRK"),
 )
 
-import RecoTracker.FinalTrackSelectors.multiTrackSelector_cfi
-muonSeededTracksInOutSelector = RecoTracker.FinalTrackSelectors.multiTrackSelector_cfi.multiTrackSelector.clone(
-    src='muonSeededTracksInOut',
-    trackSelectors= cms.VPSet(
-        RecoTracker.FinalTrackSelectors.multiTrackSelector_cfi.looseMTS.clone(
-            name = 'muonSeededTracksInOutLoose',
-            applyAdaptedPVCuts = cms.bool(False),
-            chi2n_par = 10.0,
-            minNumberLayers = 3,
-            min_nhits = 5,
-            maxNumberLostLayers = 4,
-            minNumber3DLayers = 0,
-            minHitsToBypassChecks = 7
-            ),
-        RecoTracker.FinalTrackSelectors.multiTrackSelector_cfi.tightMTS.clone(
-            name = 'muonSeededTracksInOutTight',
-            preFilterName = 'muonSeededTracksInOutLoose',
-            applyAdaptedPVCuts = cms.bool(False),
-            chi2n_par = 1.0,
-            minNumberLayers = 5,
-            min_nhits = 6,
-            maxNumberLostLayers = 3,
-            minNumber3DLayers = 2,
-            minHitsToBypassChecks = 10
-            ),
-        RecoTracker.FinalTrackSelectors.multiTrackSelector_cfi.highpurityMTS.clone(
-            name = 'muonSeededTracksInOutHighPurity',
-            preFilterName = 'muonSeededTracksInOutTight',
-            applyAdaptedPVCuts = cms.bool(False),
-            chi2n_par = 0.4,
-            minNumberLayers = 5,
-            min_nhits = 7,
-            maxNumberLostLayers = 2,
-            minNumber3DLayers = 2,
-            minHitsToBypassChecks = 20
-            ),
-        ) #end of vpset
-    ) #end of clone
 
-muonSeededTracksOutInSelector = RecoTracker.FinalTrackSelectors.multiTrackSelector_cfi.multiTrackSelector.clone(
-    src='muonSeededTracksOutIn',
-    trackSelectors= cms.VPSet(
-        RecoTracker.FinalTrackSelectors.multiTrackSelector_cfi.looseMTS.clone(
-            name = 'muonSeededTracksOutInLoose',
-            applyAdaptedPVCuts = cms.bool(False),
-            chi2n_par = 10.0,
-            minNumberLayers = 3,
-            min_nhits = 5,
-            maxNumberLostLayers = 4,
-            minNumber3DLayers = 0,
-            minHitsToBypassChecks = 7
-            ),
-        RecoTracker.FinalTrackSelectors.multiTrackSelector_cfi.tightMTS.clone(
-            name = 'muonSeededTracksOutInTight',
-            preFilterName = 'muonSeededTracksOutInLoose',
-            applyAdaptedPVCuts = cms.bool(False),
-            chi2n_par = 1.0,
-            minNumberLayers = 5,
-            min_nhits = 6,
-            maxNumberLostLayers = 3,
-            minNumber3DLayers = 2,
-            minHitsToBypassChecks = 10
-            ),
-        RecoTracker.FinalTrackSelectors.multiTrackSelector_cfi.highpurityMTS.clone(
-            name = 'muonSeededTracksOutInHighPurity',
-            preFilterName = 'muonSeededTracksOutInTight',
-            applyAdaptedPVCuts = cms.bool(False),
-            chi2n_par = 0.4,
-            minNumberLayers = 5,
-            min_nhits = 7,
-            maxNumberLostLayers = 2,
-            minNumber3DLayers = 2,
-            minHitsToBypassChecks = 20
-            ),
-        ) #end of vpset
-    ) #end of clone
+# Final Classifier
+from RecoTracker.FinalTrackSelectors.TrackCutClassifier_cff import *
+muonSeededTracksInOutClassifier = TrackCutClassifier.clone()
+muonSeededTracksInOutClassifier.src='muonSeededTracksInOut'
+muonSeededTracksInOutClassifier.mva.minPixelHits = [0,0,0]
+muonSeededTracksInOutClassifier.mva.maxChi2 = [9999.,9999.,9999.]
+muonSeededTracksInOutClassifier.mva.maxChi2n = [10.0,1.0,0.4]
+muonSeededTracksInOutClassifier.mva.minLayers = [3,5,5]
+muonSeededTracksInOutClassifier.mva.min3DLayers = [1,2,2]
+muonSeededTracksInOutClassifier.mva.maxLostLayers = [4,3,2]
+
+
+muonSeededTracksOutInClassifier = TrackCutClassifier.clone()
+muonSeededTracksOutInClassifier.src='muonSeededTracksOutIn'
+muonSeededTracksOutInClassifier.mva.minPixelHits = [0,0,0]
+muonSeededTracksOutInClassifier.mva.maxChi2 = [9999.,9999.,9999.]
+muonSeededTracksOutInClassifier.mva.maxChi2n = [10.0,1.0,0.4]
+muonSeededTracksOutInClassifier.mva.minLayers = [3,5,5]
+muonSeededTracksOutInClassifier.mva.min3DLayers = [1,2,2]
+muonSeededTracksOutInClassifier.mva.maxLostLayers = [4,3,2]
 
 
 
@@ -198,8 +145,8 @@ muonSeededStepCore = cms.Sequence(
     muonSeededSeedsOutIn + muonSeededTrackCandidatesOutIn + muonSeededTracksOutIn 
 )
 muonSeededStepExtra = cms.Sequence(
-    muonSeededTracksInOutSelector +
-    muonSeededTracksOutInSelector
+    muonSeededTracksInOutClassifier +
+    muonSeededTracksOutInClassifier
 )
 
 muonSeededStep = cms.Sequence(

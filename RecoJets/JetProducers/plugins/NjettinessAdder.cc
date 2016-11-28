@@ -27,18 +27,18 @@ NjettinessAdder::NjettinessAdder(const edm::ParameterSet& iConfig) :
   // Get the measure definition
   fastjet::contrib::NormalizedMeasure          normalizedMeasure        (beta_,R0_);
   fastjet::contrib::UnnormalizedMeasure        unnormalizedMeasure      (beta_);
-  fastjet::contrib::GeometricMeasure           geometricMeasure         (beta_);
+  fastjet::contrib::OriginalGeometricMeasure   geometricMeasure         (beta_);// changed in 1.020
   fastjet::contrib::NormalizedCutoffMeasure    normalizedCutoffMeasure  (beta_,R0_,Rcutoff_);
   fastjet::contrib::UnnormalizedCutoffMeasure  unnormalizedCutoffMeasure(beta_,Rcutoff_);
-  fastjet::contrib::GeometricCutoffMeasure     geometricCutoffMeasure   (beta_,Rcutoff_);
+  //fastjet::contrib::GeometricCutoffMeasure     geometricCutoffMeasure   (beta_,Rcutoff_); // removed in 1.020
 
   fastjet::contrib::MeasureDefinition const * measureDef = 0;
   switch ( measureDefinition_ ) {
   case UnnormalizedMeasure : measureDef = &unnormalizedMeasure; break;
-  case GeometricMeasure    : measureDef = &geometricMeasure; break;
+  case OriginalGeometricMeasure    : measureDef = &geometricMeasure; break;// changed in 1.020
   case NormalizedCutoffMeasure : measureDef = &normalizedCutoffMeasure; break;
   case UnnormalizedCutoffMeasure : measureDef = &unnormalizedCutoffMeasure; break;
-  case GeometricCutoffMeasure : measureDef = &geometricCutoffMeasure; break;
+  //case GeometricCutoffMeasure : measureDef = &geometricCutoffMeasure; break; // removed in 1.020
   case NormalizedMeasure : default : measureDef = &normalizedMeasure; break;
   } 
 
@@ -112,9 +112,9 @@ float NjettinessAdder::getTau(unsigned num, const edm::Ptr<reco::Jet> & object) 
   for (unsigned k = 0; k < object->numberOfDaughters(); ++k)
     {
       const reco::CandidatePtr & dp = object->daughterPtr(k);
-      if ( dp.isNonnull() && dp.isAvailable() ) {
-	if(dp->pt()>0.) FJparticles.push_back( fastjet::PseudoJet( dp->px(), dp->py(), dp->pz(), dp->energy() ) );
-      } else
+      if ( dp.isNonnull() && dp.isAvailable() )
+	FJparticles.push_back( fastjet::PseudoJet( dp->px(), dp->py(), dp->pz(), dp->energy() ) );
+      else
 	edm::LogWarning("MissingJetConstituent") << "Jet constituent required for N-subjettiness computation is missing!";
     }
 

@@ -82,6 +82,8 @@ struct HydjetEvent{
   Float_t ptav[ETABINS];
 
   Int_t mult;
+  std::vector<Float_t> E;
+  std::vector<Float_t> mass;
   std::vector<Float_t> pt;
   std::vector<Float_t> eta;
   std::vector<Float_t> phi;
@@ -261,6 +263,8 @@ HiGenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   using namespace edm;
   using namespace HepMC;
 
+  hev_.E.clear();
+  hev_.mass.clear();
   hev_.pt.clear();
   hev_.eta.clear();
   hev_.phi.clear();
@@ -326,10 +330,14 @@ HiGenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
       Float_t eta = (*it)->momentum().eta();
       Float_t phi = (*it)->momentum().phi();
       Float_t pt = (*it)->momentum().perp();
+      Float_t e = (*it)->momentum().e();
+      Float_t mass = (*it)->momentum().m();      
       const ParticleData * part = pdt->particle(pdg_id );
       Int_t charge = static_cast<Int_t>(part->charge());
       if (chargedOnly_&&charge==0) continue;
 
+      hev_.E.push_back( e);
+      hev_.mass.push_back( mass);
       hev_.pt.push_back( pt);
       hev_.eta.push_back( eta);
       hev_.phi.push_back( phi);
@@ -358,6 +366,8 @@ HiGenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
       if (stableOnly_ && p.status()!=1) continue;
       if (p.pt()<ptMin_) continue;
       if (chargedOnly_&&p.charge()==0) continue;
+      hev_.E.push_back( p.energy());
+      hev_.mass.push_back( p.mass());
       hev_.pt.push_back( p.pt());
       hev_.eta.push_back( p.eta());
       hev_.phi.push_back( p.phi());
@@ -473,6 +483,8 @@ HiGenAnalyzer::beginJob()
   if(doParticles_){
 
     hydjetTree_->Branch("mult",&hev_.mult,"mult/I");
+    hydjetTree_->Branch("E",&hev_.E);
+    hydjetTree_->Branch("mass",&hev_.mass);
     hydjetTree_->Branch("pt",&hev_.pt);
     hydjetTree_->Branch("eta",&hev_.eta);
     hydjetTree_->Branch("phi",&hev_.phi);

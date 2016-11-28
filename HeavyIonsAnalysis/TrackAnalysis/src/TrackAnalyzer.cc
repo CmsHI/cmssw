@@ -194,6 +194,7 @@ struct TrackEvent{
   unsigned int trkVtxIndex[MAXTRACKS];
   bool trkAssocVtx[MAXTRACKS*MAXVTX];
   int nTrkTimesnVtx;
+  float leadingTrackPt[4];//for single track trigger studies
 
   float trkExpHit1Eta[MAXTRACKS];
   float trkExpHit2Eta[MAXTRACKS];
@@ -615,6 +616,8 @@ TrackAnalyzer::fillTracks(const edm::Event& iEvent, const edm::EventSetup& iSetu
 
   pev_.nTrk=0;
   pev_.N=0;
+  pev_.leadingTrackPt[0]=0;  pev_.leadingTrackPt[1]=0;  pev_.leadingTrackPt[2]=0;  pev_.leadingTrackPt[3]=0;
+
   for(unsigned it=0; it<etracks->size(); ++it){
     const reco::Track & etrk = (*etracks)[it];
     reco::TrackRef trackRef=reco::TrackRef(etracks,it);
@@ -685,6 +688,8 @@ TrackAnalyzer::fillTracks(const edm::Event& iEvent, const edm::EventSetup& iSetu
 
     pev_.trkAlgo[pev_.nTrk] = etrk.algo();
     pev_.trkOriginalAlgo[pev_.nTrk] = etrk.originalAlgo();
+    
+
 
     if(doMVA_){
      if(etrk.algo() == 11){ //sets jet-core iteration tracks to MVA of +/-1 based on their highPurity bit (even though no MVA is used) 
@@ -785,8 +790,16 @@ TrackAnalyzer::fillTracks(const edm::Event& iEvent, const edm::EventSetup& iSetu
 					 pev_.pfEcal[pev_.nTrk],
 					 pev_.pfHcal[pev_.nTrk]);
 
+    //for checking single track triggers with various cuts
+    bool isHP = etrk.quality(reco::TrackBase::qualityByName(qualityStrings_[0].data()));
+    if(pev_.leadingTrackPt[0]<pev_.trkPt[pev_.nTrk] && TMath::Abs(pev_.trkEta[pev_.nTrk])<2.4 && isHP) pev_.leadingTrackPt[0] = pev_.trkPt[pev_.nTrk];
+    if(pev_.leadingTrackPt[1]<pev_.trkPt[pev_.nTrk] && TMath::Abs(pev_.trkEta[pev_.nTrk])<2.4 && isHP && pev_.trkPtError[pev_.nTrk]/pev_.trkPt[pev_.nTrk]<0.1 && TMath::Abs(pev_.trkDxy1[pev_.nTrk]/pev_.trkDxyError1[pev_.nTrk])<3 && TMath::Abs(pev_.trkDz1[pev_.nTrk]/pev_.trkDzError1[pev_.nTrk])<3) pev_.leadingTrackPt[1] = pev_.trkPt[pev_.nTrk];
+    if(pev_.leadingTrackPt[2]<pev_.trkPt[pev_.nTrk] && TMath::Abs(pev_.trkEta[pev_.nTrk])<2.4 && isHP && pev_.trkPtError[pev_.nTrk]/pev_.trkPt[pev_.nTrk]<0.1 && TMath::Abs(pev_.trkDxy1[pev_.nTrk]/pev_.trkDxyError1[pev_.nTrk])<3 && TMath::Abs(pev_.trkDz1[pev_.nTrk]/pev_.trkDzError1[pev_.nTrk])<3 && (doPFMatching_ && pev_.pfType[pev_.nTrk]==1)) pev_.leadingTrackPt[2] = pev_.trkPt[pev_.nTrk];
+    if(pev_.leadingTrackPt[3]<pev_.trkPt[pev_.nTrk] && TMath::Abs(pev_.trkEta[pev_.nTrk])<1 && isHP && pev_.trkPtError[pev_.nTrk]/pev_.trkPt[pev_.nTrk]<0.1 && TMath::Abs(pev_.trkDxy1[pev_.nTrk]/pev_.trkDxyError1[pev_.nTrk])<3 && TMath::Abs(pev_.trkDz1[pev_.nTrk]/pev_.trkDzError1[pev_.nTrk])<3 && (doPFMatching_ && pev_.pfType[pev_.nTrk]==1)) pev_.leadingTrackPt[3] = pev_.trkPt[pev_.nTrk];
+      
     pev_.nTrk++;
   }
+
 
 }
 
@@ -1213,6 +1226,7 @@ TrackAnalyzer::beginJob()
   trackTree_->Branch("trkFake",&pev_.trkFake,"trkFake[nTrk]/O");
   trackTree_->Branch("trkAlgo",&pev_.trkAlgo,"trkAlgo[nTrk]/b");
   trackTree_->Branch("trkOriginalAlgo",&pev_.trkOriginalAlgo,"trkOriginalAlgo[nTrk]/b");
+  trackTree_->Branch("leadingTrackPt",&pev_.leadingTrackPt,"leadingTrackPt[4]/F");
   if(doMVA_){
    trackTree_->Branch("trkMVA",&pev_.trkMVA,"trkMVA[nTrk]/F");
    if(mvaSrcLabel_.label() == "generalTracks"){

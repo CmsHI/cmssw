@@ -23,11 +23,12 @@ _mod2del.append(_reco.offlineBeamSpot)
 _reco.globalreco.remove(_reco.offlineBeamSpot) # temporary removing this by hand, cause the usual removal (see end of this file) doesn't seem work
 
 ###########################################
-# no castor / zdc in FastSim
+# no castor, zdc, Totem RP in FastSim
 ###########################################
 _reco.localreco.remove(_reco.castorreco)
 _reco.globalreco.remove(_reco.CastorFullReco)
 _reco.hcalLocalRecoSequence.remove(_reco.zdcreco)
+_reco.localreco.remove(_reco.totemRPLocalReconstruction)
 
 ##########################################
 # Calo rechits
@@ -77,8 +78,8 @@ _reco.KFFitterForRefitOutsideIn.Propagator = 'SmartPropagatorAny'
 _reco.KFSmootherForRefitOutsideIn.Propagator = 'SmartPropagator'
 
 # replace the standard ecal-driven seeds with the FastSim emulated ones
-import FastSimulation.Tracking.globalCombinedSeeds_cfi
-_reco.newCombinedSeeds = FastSimulation.Tracking.globalCombinedSeeds_cfi.newCombinedSeeds
+import FastSimulation.Tracking.ElectronSeeds_cff
+_reco.newCombinedSeeds = FastSimulation.Tracking.ElectronSeeds_cff.newCombinedSeeds
 _reco.globalreco.insert(0,_reco.newCombinedSeeds)
 
 ##########################################
@@ -98,10 +99,10 @@ _reco.trackerDrivenElectronSeeds.seedCollection.setModuleLabel("trackerDrivenEle
 _reco.trackerDrivenElectronSeeds.idCollection.setModuleLabel("trackerDrivenElectronSeedsTmp")
 
 # replace the ECAL driven electron track candidates with the FastSim emulated ones
-import FastSimulation.EgammaElectronAlgos.electronGSGsfTrackCandidates_cff
-_reco.electronGSGsfTrackCandidates = FastSimulation.EgammaElectronAlgos.electronGSGsfTrackCandidates_cff.electronGSGsfTrackCandidates
-_reco.electronGsfTracking.replace(_reco.electronCkfTrackCandidates,_reco.electronGSGsfTrackCandidates)
-_reco.electronGsfTracks.src = "electronGSGsfTrackCandidates"
+import FastSimulation.Tracking.electronCkfTrackCandidates_cff
+_reco.fastElectronCkfTrackCandidates = FastSimulation.Tracking.electronCkfTrackCandidates_cff.electronCkfTrackCandidates.clone()
+_reco.electronGsfTracking.replace(_reco.electronCkfTrackCandidates,_reco.fastElectronCkfTrackCandidates)
+_reco.electronGsfTracks.src = "fastElectronCkfTrackCandidates"
 
 # FastSim has no template fit on tracker hits
 _reco.electronGsfTracks.TTRHBuilder = "WithoutRefit"
@@ -135,6 +136,7 @@ _reco.egammaHighLevelRecoPrePF.remove(_reco.conversionSequence)
 ##########################################
 # not commisoned and not relevant in FastSim (?):
 _reco.globalreco.remove(_reco.muoncosmicreco)
+_reco.highlevelreco.remove(_reco.cosmicDCTracksSeq)
 _reco.highlevelreco.remove(_reco.muoncosmichighlevelreco)
 _reco.muons.FillCosmicsIdMap = False
 
@@ -170,14 +172,11 @@ _reco.tevMuons.RefitterParameters.Propagator = "SmartPropagatorAny"
 ##########################################
 # FastSim changes to jet/met reconstruction
 ##########################################
-# not commisoned and not relevant in FastSim (?):
-_reco.jetHighLevelReco.remove(_reco.recoJetAssociationsExplicit)
-
-# not commisoned and not relevant in FastSim (?):
-_reco.metreco.remove(_reco.BeamHaloId)
-
-# not commisoned and not relevant in FastSim (?):
-_reco.metrecoPlusHCALNoise.remove(_reco.hcalnoise)
+# CSCHaloData depends on cosmic muons, not available in fastsim
+_reco.BeamHaloId.remove(_reco.CSCHaloData)
+# GlobalHaloData and BeamHaloSummary depend on CSCHaloData
+_reco.BeamHaloId.remove(_reco.GlobalHaloData)
+_reco.BeamHaloId.remove(_reco.BeamHaloSummary)
 
 ############################################
 # deleting modules to avoid clashes with part of reconstruction run before mixing

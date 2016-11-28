@@ -25,4 +25,4 @@ def documentSkims():
 
 
 ### HI Analysis Skims ###
-from Configuration.Skimming.Skims_HI_cff import *
+from HeavyIonsAnalysis.Configuration.Skims_HI_cff import *

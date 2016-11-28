@@ -22,6 +22,7 @@ hiRegitMuTobTecStepClusters = RecoTracker.IterativeTracking.TobTecStep_cff.tobTe
     oldClusterRemovalInfo = cms.InputTag("hiRegitMuPixelLessStepClusters"),
     trajectories     = cms.InputTag("hiRegitMuPixelLessStepTracks"),
     overrideTrkQuals = cms.InputTag('hiRegitMuPixelLessStepSelector','hiRegitMuPixelLessStep'),
+    trackClassifier       = cms.InputTag(''),
     TrackQuality          = cms.string('tight')
 )
 

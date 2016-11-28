@@ -12,6 +12,9 @@
 #include "TrackingTools/GsfTracking/interface/GsfTrackConstraintAssociation.h"
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
 
+#include "DataFormats/TrackerCommon/interface/TrackerTopology.h"
+#include "Geometry/Records/interface/TrackerTopologyRcd.h"
+
 GsfTrackRefitter::GsfTrackRefitter(const edm::ParameterSet& iConfig):
   GsfTrackProducerBase(iConfig.getParameter<bool>("TrajectoryInEvent"),
 		       iConfig.getParameter<bool>("useHitsSplitting")),
@@ -50,11 +53,11 @@ void GsfTrackRefitter::produce(edm::Event& theEvent, const edm::EventSetup& setu
   //
   // create empty output collections
   //
-  std::auto_ptr<TrackingRecHitCollection>   outputRHColl (new TrackingRecHitCollection);
-  std::auto_ptr<reco::GsfTrackCollection>      outputTColl(new reco::GsfTrackCollection);
-  std::auto_ptr<reco::TrackExtraCollection> outputTEColl(new reco::TrackExtraCollection);
-  std::auto_ptr<reco::GsfTrackExtraCollection> outputGsfTEColl(new reco::GsfTrackExtraCollection);
-  std::auto_ptr<std::vector<Trajectory> >   outputTrajectoryColl(new std::vector<Trajectory>);
+  std::unique_ptr<TrackingRecHitCollection>   outputRHColl (new TrackingRecHitCollection);
+  std::unique_ptr<reco::GsfTrackCollection>      outputTColl(new reco::GsfTrackCollection);
+  std::unique_ptr<reco::TrackExtraCollection> outputTEColl(new reco::TrackExtraCollection);
+  std::unique_ptr<reco::GsfTrackExtraCollection> outputGsfTEColl(new reco::GsfTrackExtraCollection);
+  std::unique_ptr<std::vector<Trajectory> >   outputTrajectoryColl(new std::vector<Trajectory>);
 
   //
   //declare and get stuff to be retrieved from ES
@@ -67,6 +70,9 @@ void GsfTrackRefitter::produce(edm::Event& theEvent, const edm::EventSetup& setu
   //  getFromES(setup,theG,theMF,theFitter,thePropagator);
   edm::ESHandle<TransientTrackingRecHitBuilder> theBuilder;
   getFromES(setup,theG,theMF,theFitter,thePropagator,theMeasTk,theBuilder);
+
+  edm::ESHandle<TrackerTopology> httopo;
+  setup.get<TrackerTopologyRcd>().get(httopo);
 
   //
   //declare and get TrackCollection to be retrieved from the event
@@ -108,7 +114,7 @@ void GsfTrackRefitter::produce(edm::Event& theEvent, const edm::EventSetup& setu
   
   //put everything in th event
   putInEvt(theEvent, thePropagator.product(), theMeasTk.product(),
-	   outputRHColl, outputTColl, outputTEColl, outputGsfTEColl, outputTrajectoryColl, algoResults, theBuilder.product(), bs);
+	   outputRHColl, outputTColl, outputTEColl, outputGsfTEColl, outputTrajectoryColl, algoResults, theBuilder.product(), bs, httopo.product());
   LogDebug("GsfTrackRefitter") << "end" << "\n";
 }
 

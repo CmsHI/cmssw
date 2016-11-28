@@ -54,7 +54,7 @@ offlineHLTSource = cms.Sequence(
     egHLTOffDQMSource *
     muonFullOfflineDQM *
     HLTTauDQMOffline *
-    jetMETHLTOfflineAnalyzer *
+    jetMETHLTOfflineAnalyzer * 
     fsqHLTOfflineSourceSequence *
     HILowLumiHLTOfflineSourceSequence *
     hltInclusiveVBFSource *

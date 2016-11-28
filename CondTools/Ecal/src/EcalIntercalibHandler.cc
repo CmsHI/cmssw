@@ -3,7 +3,6 @@
 #include "CondFormats/EcalObjects/interface/EcalIntercalibConstants.h"
 #include "CondTools/Ecal/interface/EcalFloatCondObjectContainerXMLTranslator.h"
 
-
 #include<iostream>
 
 popcon::EcalIntercalibHandler::EcalIntercalibHandler(const edm::ParameterSet & ps)
@@ -26,7 +25,6 @@ popcon::EcalIntercalibHandler::EcalIntercalibHandler(const edm::ParameterSet & p
 
 
         std::cout << m_sid<<"/"<<m_user<<"/"<<m_location<<"/"<<m_gentag   << std::endl;
-
 
 }
 

@@ -1,23 +1,15 @@
 # available "type"s and relative global tags
 globalTag = {
-  'Fake': 'auto:run1_mc_Fake',
-  'FULL': 'auto:run2_mc_FULL',
-  'GRun': 'auto:run2_mc_GRun',       # used as default
-  '25ns14e33_v4': 'auto:run2_mc_25ns14e33_v4',
-  '25ns14e33_v3': 'auto:run2_mc_25ns14e33_v3',
-  '50ns_5e33_v3': 'auto:run2_mc_50ns_5e33_v3',
-  '25ns14e33_v1': 'auto:run2_mc_25ns14e33_v1',
-  '50ns_5e33_v1': 'auto:run2_mc_50ns_5e33_v1',
-  '50nsGRun': 'auto:run2_mc_50nsGRun',
-  '50ns' : 'auto:run2_mc_50nsGRun',
+  'Fake' : 'auto:run1_mc_Fake',
+  'Fake1': 'auto:run2_mc_Fake1',
+  'FULL' : 'auto:run2_mc_FULL',
+  'GRun' : 'auto:run2_mc_GRun',       # used as default
+  '25ns10e33_v2' : 'auto:run2_mc_25ns10e33_v2',
+  '25ns15e33_v4' : 'auto:run2_mc_25ns15e33_v4',
   'HIon' : 'auto:run2_mc_HIon',
-  'HIon_2015_v2' : 'auto:run2_mc_HIon',
   'PIon' : 'auto:run2_mc_PIon',
   'PRef' : 'auto:run2_mc_PRef',
-  'pp5TeV_2015_v2' : 'auto:run2_mc_PRef',
-  'LowPU': 'auto:run2_mc_LowPU',
-  '25nsLowPU': 'auto:run2_mc_25nsLowPU',
-  'data' : 'auto:run1_hlt',
+  'data' : 'auto:run2_hlt_relval',
 }
 
 
@@ -25,16 +17,16 @@ globalTag = {
 class ConnectionL1TMenu(object):
   def __init__(self, value):
     self.override = None
-    self.connect  = None
+    self.snapshotTime = None
 
     # extract the override tag and the connection string
     if value:
       if ',' in value:
         self.override = value.split(',')[0]
-        self.connect  = value.split(',')[1]
+        self.snapshotTime = value.split(',')[1]
       else:
         self.override = value
-        self.connect  = None
+        self.smapshotTime = None
 
 
 # type used to store a reference to an L1 menu
@@ -57,7 +49,7 @@ class ConnectionL1TMenuXml(object):
 class ConnectionHLTMenu(object):
   valid_versions  = 'v1', 'v2'
   valid_databases = 'online', 'offline', 'adg'
-  compatibility   = { 'hltdev': ('v1', 'offline'), 'orcoff': ('v2', 'adg') }
+  compatibility   = { 'hltdev': ('v2', 'offline'), 'orcoff': ('v2', 'adg') }
 
   def __init__(self, value):
     self.version    = None
@@ -69,8 +61,8 @@ class ConnectionHLTMenu(object):
       return
 
     if not ':' in value:
-      # default to 'v1/offline'
-      self.version    = 'v1'
+      # default to 'v2/offline'
+      self.version    = 'v2'
       self.database   = 'offline'
       self.name       = value
       return
@@ -104,14 +96,11 @@ class ConnectionHLTMenu(object):
         self.database = db
         self.name     = name
       else:
-        # use the default version for the given database
+        # use the confdb v2 by default
         if db not in self.valid_databases:
           raise Exception('Invalid HLT database "%s", valid values are "%s"' % (db, '", "'.join(self.valid_databases)))
         self.database = db
-        if db == 'offline' :
-          self.version  = 'v1'
-        else:
-          self.version  = 'v2'
+        self.version  = 'v2'
         self.name     = name
 
 # options marked with a (*) only apply when creating a whole process configuration
@@ -125,7 +114,6 @@ class HLTProcessOptions(object):
     self.globaltag  = None        # (*) if set, override the GlobalTag
     self.l1         = None        # (*) if set, override the L1 menu
     self.l1Xml      = None        # (*) if set, override the L1 menu Xml
-    self.l1skim     = False       # (*) if set, add snippet to process L1 skim files done with new L1, ignoring old L1
     self.emulator   = None        # (*) if set, run (part of) the L1 emulator instead of taking the L1 results from the data
     self.prescale   = None        # (*) if set, force the use of a specific prescale column. If set to "none", unprescale all paths
     self.open       = False       #     if set, cms.ignore all filters, making all paths run on and accept all events

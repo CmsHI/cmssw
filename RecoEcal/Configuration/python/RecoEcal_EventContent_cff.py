@@ -25,10 +25,7 @@ RecoEcalFEVT = cms.PSet(
         'keep *_particleFlowSuperClusterECAL_*_*',
 	# DROP statements
 	'drop recoBasicClusters_multi5x5BasicClusters_multi5x5BarrelBasicClusters_*',
-        'drop recoSuperClusters_multi5x5SuperClusters_multi5x5BarrelSuperClusters_*',
-        # temporarily here for pp for HI
-        'keep recoCaloClusters_islandBasicClusters_*_*'
-        )
+        'drop recoSuperClusters_multi5x5SuperClusters_multi5x5BarrelSuperClusters_*')
 )
 # RECO content
 RecoEcalRECO = cms.PSet(
@@ -56,10 +53,7 @@ RecoEcalRECO = cms.PSet(
         'drop recoClusterShapes_*_*_*', 
         'drop recoBasicClustersToOnerecoClusterShapesAssociation_*_*_*',
         'drop recoBasicClusters_multi5x5BasicClusters_multi5x5BarrelBasicClusters_*',
-        'drop recoSuperClusters_multi5x5SuperClusters_multi5x5BarrelSuperClusters_*',
-        # temporarily here for pp for HI
-        'keep recoCaloClusters_islandBasicClusters_*_*'
-)
+        'drop recoSuperClusters_multi5x5SuperClusters_multi5x5BarrelSuperClusters_*')
 )
 # AOD content
 RecoEcalAOD = cms.PSet(

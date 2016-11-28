@@ -734,6 +734,8 @@ const TrajectorySeed * SeedForPhotonConversionFromQuadruplets::buildSeed(
 #endif
   }
 
+  if(!hit) return nullptr;
+
   PTrajectoryStateOnDet const &  PTraj =
       trajectoryStateTransform::persistentState(updatedState, hit->geographicalId().rawId());
 
@@ -968,7 +970,7 @@ bubbleSortVsPhi(GlobalPoint arr[], int n, GlobalPoint vtx) {
     swapped = false;
     j++;
     for (int i = 0; i < n - j; i++) {
-      if ( reco::deltaPhi( (arr[i]-vtx).phi(), (arr[i + 1]-vtx).phi() ) > 0. ) {
+      if ( reco::deltaPhi( (arr[i]-vtx).barePhi(), (arr[i + 1]-vtx).barePhi() ) > 0. ) {
 	tmp = arr[i];
 	arr[i] = arr[i + 1];
 	arr[i + 1] = tmp;
@@ -987,7 +989,7 @@ bubbleReverseSortVsPhi(GlobalPoint arr[], int n, GlobalPoint vtx) {
     swapped = false;
     j++;
     for (int i = 0; i < n - j; i++) {
-      if ( reco::deltaPhi( (arr[i]-vtx).phi(), (arr[i + 1]-vtx).phi() ) < 0. ) {
+      if ( reco::deltaPhi( (arr[i]-vtx).barePhi(), (arr[i + 1]-vtx).barePhi() ) < 0. ) {
 	tmp = arr[i];
 	arr[i] = arr[i + 1];
 	arr[i + 1] = tmp;

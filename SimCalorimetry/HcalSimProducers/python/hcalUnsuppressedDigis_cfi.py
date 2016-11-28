@@ -18,16 +18,20 @@ hcalSimBlock = cms.PSet(
     doHPDNoise = cms.bool(False),
     doIonFeedback = cms.bool(True),
     doThermalNoise = cms.bool(True),
+    # fudge factors for "Cholesky" noise simulation (obsolete)
     HBTuningParameter = cms.double(0.875),
     HETuningParameter = cms.double(0.9),
     HFTuningParameter = cms.double(1.025),
     HOTuningParameter = cms.double(1),
+    # use old way of noise simulation  
     useOldHB = cms.bool(True),
     useOldHE = cms.bool(True),
     useOldHF = cms.bool(True),
     useOldHO = cms.bool(True),
     HBHEUpgradeQIE = cms.bool(True),
     HFUpgradeQIE   = cms.bool(False),
+    HFQIE8         = cms.bool(True),
+    HFQIE10        = cms.bool(False),
     #HPDNoiseLibrary = cms.PSet(
     #   FileName = cms.FileInPath("SimCalorimetry/HcalSimAlgos/data/hpdNoiseLibrary.root"),
     #   HPDName = cms.untracked.string("HPD")
@@ -42,9 +46,13 @@ hcalSimBlock = cms.PSet(
     DelivLuminosity = cms.double(0),
     HEDarkening = cms.bool(False),
     HFDarkening = cms.bool(False),
-    minFCToDelay=cms.double(-9999.) # old TC model! set to 5 for the new one
+    minFCToDelay=cms.double(5.) # old TC model! set to 5 for the new one
 )
 
+from Configuration.StandardSequences.Eras import eras
+eras.fastSim.toModify( hcalSimBlock, hitsProducer=cms.string('famosSimHits') )
+eras.run2_HF_2016.toModify( hcalSimBlock, HFQIE8=cms.bool(True), HFQIE10=cms.bool(True) )
+    
 #es_cholesky = cms.ESSource("PoolDBESSource",
 #    CondDBSetup,
 #    timetype = cms.string('runnumber'),

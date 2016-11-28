@@ -38,8 +38,8 @@
 namespace edm {
 
   // Constructor
-  MixingModule::MixingModule(const edm::ParameterSet& ps_mix) :
-  BMixingModule(ps_mix),
+  MixingModule::MixingModule(const edm::ParameterSet& ps_mix, MixingCache::Config const* globalConf) :
+  BMixingModule(ps_mix, globalConf),
   inputTagPlayback_(),
   mixProdStep2_(ps_mix.getParameter<bool>("mixProdStep2")),
   mixProdStep1_(ps_mix.getParameter<bool>("mixProdStep1")),
@@ -104,8 +104,6 @@ namespace edm {
             branchesActivate(TypeID(typeid(std::vector<reco::Track>)).friendlyClassName(),std::string(""),tag,label);
             branchesActivate(TypeID(typeid(std::vector<reco::TrackExtra>)).friendlyClassName(),std::string(""),tag,label);
             branchesActivate(TypeID(typeid(edm::OwnVector<TrackingRecHit,edm::ClonePolicy<TrackingRecHit> >)).friendlyClassName(),std::string(""),tag,label);
-	    InputTag mvatag(tag.label(),"MVAVals");
-            branchesActivate(TypeID(typeid(edm::ValueMap<float>)).friendlyClassName(),std::string(""),mvatag,label);
             adjustersObjects_.push_back(new Adjuster<edm::OwnVector<TrackingRecHit> >(tag, consumesCollector()));
 	    // note: no crossing frame is foreseen to be used for this object type
 	    
@@ -137,13 +135,19 @@ namespace edm {
             branchesActivate(TypeID(typeid(HepMCProduct)).friendlyClassName(),std::string(""),tag,label);
             bool makeCrossingFrame = pset.getUntrackedParameter<bool>("makeCrossingFrame", false);
             if(makeCrossingFrame) {
-              workersObjects_.push_back(new MixingWorker<HepMCProduct>(minBunch_,maxBunch_,bunchSpace_,std::string(""),label,labelCF,maxNbSources_,tag,tagCF));
+              workersObjects_.push_back(new MixingWorker<HepMCProduct>(minBunch_,maxBunch_,bunchSpace_,std::string(""),label,labelCF,maxNbSources_,tag,tagCF,tags));
               produces<CrossingFrame<HepMCProduct> >(label);
             }
 	    consumes<HepMCProduct>(tag);
 
             LogInfo("MixingModule") <<"Will mix "<<object<<"s with InputTag= "<<tag.encode()<<", label will be "<<label;
             //            std::cout <<"Will mix "<<object<<"s with InputTag= "<<tag.encode()<<", label will be "<<label<<std::endl;
+            for(size_t i = 1; i < tags.size(); ++i) { 
+              InputTag fallbackTag = tags[i];
+              std::string fallbackLabel;
+              branchesActivate(TypeID(typeid(HepMCProduct)).friendlyClassName(),std::string(""),fallbackTag,fallbackLabel);
+              mayConsume<HepMCProduct>(fallbackTag);
+            }
 
           } else if (object=="PCaloHit") {
             std::vector<std::string> subdets=pset.getParameter<std::vector<std::string> >("subdets");

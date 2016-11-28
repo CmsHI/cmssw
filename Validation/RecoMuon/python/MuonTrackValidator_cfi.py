@@ -21,6 +21,7 @@ muonTrackValidator = cms.EDAnalyzer("MuonTrackValidator",
     #
     # selection of TP for evaluation of efficiency, from "TrackingParticleSelectionForEfficiency"
     signalOnlyTP = cms.bool(True),
+    intimeOnlyTP = cms.bool(False),
     stableOnlyTP = cms.bool(False),
     chargedOnlyTP = cms.bool(True),
     pdgIdTP = cms.vint32(13,-13),
@@ -40,6 +41,7 @@ muonTrackValidator = cms.EDAnalyzer("MuonTrackValidator",
     #
     # if *not* uses associators, the TP-RecoTrack maps has to be specified 
     UseAssociators = cms.bool(False),
+    useGEMs = cms.bool(False),
     associators = cms.vstring('a_MuonAssociator'),
     associatormap = cms.InputTag("tpToMuonTrackAssociation"),
     #

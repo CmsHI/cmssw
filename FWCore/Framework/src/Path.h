@@ -56,7 +56,7 @@ namespace edm {
     Path(Path const&);
 
     template <typename T>
-    void processOneOccurrence(typename T::MyPrincipal&, EventSetup const&,
+    void processOneOccurrence(typename T::MyPrincipal const&, EventSetup const&,
                               StreamID const&, typename T::Context const*);
 
     int bitPosition() const { return bitpos_; }
@@ -95,7 +95,7 @@ namespace edm {
 
     int bitpos_;
     TrigResPtr trptr_;
-    std::shared_ptr<ActivityRegistry> actReg_;
+    std::shared_ptr<ActivityRegistry> actReg_; // We do not use propagate_const because the registry itself is mutable.
     ExceptionToActionTable const* act_table_;
 
     WorkersInPath workers_;
@@ -122,9 +122,9 @@ namespace edm {
     void recordStatus(int nwrwue, bool isEvent);
     void updateCounters(bool succeed, bool isEvent);
     
-    void handleEarlyFinish(EventPrincipal&);
-    void handleEarlyFinish(RunPrincipal&) {}
-    void handleEarlyFinish(LuminosityBlockPrincipal&) {}
+    void handleEarlyFinish(EventPrincipal const&);
+    void handleEarlyFinish(RunPrincipal const&) {}
+    void handleEarlyFinish(LuminosityBlockPrincipal const&) {}
   };
 
   namespace {
@@ -143,7 +143,7 @@ namespace edm {
         if(a_) T::postPathSignal(a_, status, pathContext_);
       }
     private:
-      ActivityRegistry* a_;
+      ActivityRegistry* a_; // We do not use propagate_const because the registry itself is mutable.
       int const& nwrwue_;
       hlt::HLTState const& state_;
       PathContext const* pathContext_;
@@ -151,7 +151,7 @@ namespace edm {
   }
 
   template <typename T>
-  void Path::processOneOccurrence(typename T::MyPrincipal& ep, EventSetup const& es,
+  void Path::processOneOccurrence(typename T::MyPrincipal const& ep, EventSetup const& es,
                                   StreamID const& streamID, typename T::Context const* context) {
 
     int nwrwue = -1;

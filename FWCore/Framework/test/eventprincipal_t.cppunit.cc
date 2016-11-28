@@ -175,8 +175,8 @@ void test_ep::setUp() {
 
     edm::BranchDescription const branchFromRegistry(it->second);
 
-    auto entryDescriptionPtr = std::make_shared<edm::Parentage>();
-    edm::ProductProvenance prov(branchFromRegistry.branchID(), entryDescriptionPtr);
+    std::vector<edm::BranchID> const ids;
+    edm::ProductProvenance prov(branchFromRegistry.branchID(), ids);
 
     std::shared_ptr<edm::ProcessConfiguration> process(processConfigurations_[tag]);
     assert(process);
@@ -233,7 +233,7 @@ void test_ep::failgetbyLabelTest() {
 
   std::string label("this does not exist");
 
-  edm::BasicHandle h(pEvent_->getByLabel(edm::PRODUCT_TYPE, tid, label, std::string(), std::string(), nullptr, nullptr));
+  edm::BasicHandle h(pEvent_->getByLabel(edm::PRODUCT_TYPE, tid, label, std::string(), std::string(), nullptr, nullptr, nullptr));
   CPPUNIT_ASSERT(h.failedToGet());
 }
 
@@ -242,7 +242,7 @@ void test_ep::failgetManybyTypeTest() {
   edm::TypeID tid(dummy);
   std::vector<edm::BasicHandle > handles;
 
-  pEvent_->getManyByType(tid, handles, nullptr, nullptr);
+  pEvent_->getManyByType(tid, handles, nullptr, nullptr, nullptr);
   CPPUNIT_ASSERT(handles.empty());
 }
 

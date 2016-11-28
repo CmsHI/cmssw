@@ -116,8 +116,6 @@ protected:
 private:
      FWTableViewTableManager(const FWTableViewTableManager&); // stop default     
      const FWTableViewTableManager& operator=(const FWTableViewTableManager&); // stop default
-   
-     const FWEventItem* collection() const;
 };
 
 

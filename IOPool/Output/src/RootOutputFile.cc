@@ -40,9 +40,7 @@
 #include "Rtypes.h"
 #include "RVersion.h"
 
-#if ROOT_VERSION_CODE >= ROOT_VERSION(5,30,0)
 #include "Compression.h"
-#endif
 
 #include <algorithm>
 #include <iomanip>
@@ -101,16 +99,15 @@ namespace edm {
       pEventEntryInfoVector_(&eventEntryInfoVector_),
       pBranchListIndexes_(nullptr),
       pEventSelectionIDs_(nullptr),
-      eventTree_(filePtr_, InEvent, om_->splitLevel(), om_->treeMaxVirtualSize()),
-      lumiTree_(filePtr_, InLumi, om_->splitLevel(), om_->treeMaxVirtualSize()),
-      runTree_(filePtr_, InRun, om_->splitLevel(), om_->treeMaxVirtualSize()),
+      eventTree_(filePtr(), InEvent, om_->splitLevel(), om_->treeMaxVirtualSize()),
+      lumiTree_(filePtr(), InLumi, om_->splitLevel(), om_->treeMaxVirtualSize()),
+      runTree_(filePtr(), InRun, om_->splitLevel(), om_->treeMaxVirtualSize()),
       treePointers_(),
       dataTypeReported_(false),
       processHistoryRegistry_(),
       parentageIDs_(),
       branchesWithStoredHistory_(),
       wrapperBaseTClass_(TClass::GetClass("edm::WrapperBase")) {
-#if ROOT_VERSION_CODE >= ROOT_VERSION(5,30,0)
     if (om_->compressionAlgorithm() == std::string("ZLIB")) {
       filePtr_->SetCompressionAlgorithm(ROOT::kZLIB);
     } else if (om_->compressionAlgorithm() == std::string("LZMA")) {
@@ -119,14 +116,13 @@ namespace edm {
       throw Exception(errors::Configuration) << "PoolOutputModule configured with unknown compression algorithm '" << om_->compressionAlgorithm() << "'\n"
 					     << "Allowed compression algorithms are ZLIB and LZMA\n";
     }
-#endif
     if (-1 != om->eventAutoFlushSize()) {
       eventTree_.setAutoFlush(-1*om->eventAutoFlushSize());
     }
     eventTree_.addAuxiliary<EventAuxiliary>(BranchTypeToAuxiliaryBranchName(InEvent),
                                             pEventAux_, om_->auxItems()[InEvent].basketSize_);
     eventTree_.addAuxiliary<StoredProductProvenanceVector>(BranchTypeToProductProvenanceBranchName(InEvent),
-                                                     pEventEntryInfoVector_, om_->auxItems()[InEvent].basketSize_);
+                                                     pEventEntryInfoVector(), om_->auxItems()[InEvent].basketSize_);
     eventTree_.addAuxiliary<EventSelectionIDVector>(poolNames::eventSelectionsBranchName(),
                                                     pEventSelectionIDs_, om_->auxItems()[InEvent].basketSize_,false);
     eventTree_.addAuxiliary<BranchListIndexes>(poolNames::branchListIndexesBranchName(),
@@ -633,7 +629,7 @@ namespace edm {
       treePointer = nullptr;
     }
     filePtr_->Close();
-    filePtr_.reset();
+    filePtr_ = nullptr; // propagate_const<T> has no reset() function
 
     // report that file has been closed
     Service<JobReport> reportSvc;

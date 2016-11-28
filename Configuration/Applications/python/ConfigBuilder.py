@@ -26,7 +26,6 @@ defaultOptions.geometry = 'SimDB'
 defaultOptions.geometryExtendedOptions = ['ExtendedGFlash','Extended','NoCastor']
 defaultOptions.magField = ''
 defaultOptions.conditions = None
-defaultOptions.useCondDBv1 = False
 defaultOptions.scenarioOptions=['pp','cosmics','nocoll','HeavyIons']
 defaultOptions.harvesting= 'AtRunEnd'
 defaultOptions.gflash = False
@@ -136,8 +135,8 @@ def filesFromDASQuery(query,option="",s=None):
 		if count!=0:
 			print 'Sleeping, then retrying DAS'
 			time.sleep(100)
-		p = Popen('das_client.py %s --query "%s"'%(option,query), stdout=PIPE,shell=True)
-		pipe=p.stdout.read()
+		p = Popen('das_client %s --query "%s"'%(option,query), stdout=PIPE,shell=True)
+                pipe=p.stdout.read()
 		tupleP = os.waitpid(p.pid, 0)
 		eC=tupleP[1]
 		count=count+1
@@ -385,7 +384,7 @@ class ConfigBuilder(object):
 			if entry.startswith("filelist:"):
 				filesFromList(entry[9:],self.process.source)
 			elif entry.startswith("dbs:") or entry.startswith("das:"):
-                                filesFromDASQuery('file dataset = %s'%(entry[4:]),self._options.dasoption,self.process.source)
+				filesFromDASQuery('file dataset = %s'%(entry[4:]),self._options.dasoption,self.process.source)
 			else:
 				self.process.source.fileNames.append(self._options.dirin+entry)
 		if self._options.secondfilein:
@@ -673,18 +672,10 @@ class ConfigBuilder(object):
 	if self._options.pileup:
 		pileupSpec=self._options.pileup.split(',')[0]
 
-		# FastSim: GEN-mixing or DIGI-RECO mixing?
-		GEN_mixing = False
-		if self._options.fast and pileupSpec.find("GEN_") == 0:
-                        GEN_mixing = True
-                        pileupSpec = pileupSpec[4:]
-
 		# Does the requested pile-up scenario exist?
 		from Configuration.StandardSequences.Mixing import Mixing,defineMixing
 		if not pileupSpec in Mixing and '.' not in pileupSpec and 'file:' not in pileupSpec:
 			message = pileupSpec+' is not a know mixing scenario:\n available are: '+'\n'.join(Mixing.keys())
-			if self._options.fast:
-				message += "\n-"*20+"\n additional options for FastSim (gen-mixing):\n" + "-"*20 + "\n" + '\n'.join(["GEN_" + x for x in Mixing.keys()]) + "\n"
 			raise Exception(message)
 
 		# Put mixing parameters in a dictionary
@@ -706,13 +697,6 @@ class ConfigBuilder(object):
 			self._options.inlineObjets+=',mix'
 		else:
 			self.loadAndRemember(mixingDict['file'])
-
-		# FastSim: transform cfg of MixingModule from FullSim to FastSim 
-		if self._options.fast:
-			if GEN_mixing:
-				self._options.customisation_file.insert(0,"FastSimulation/Configuration/MixingModule_Full2Fast.prepareGenMixing")
-			else:   
-				self._options.customisation_file.insert(0,"FastSimulation/Configuration/MixingModule_Full2Fast.prepareDigiRecoMixing")
 
 		mixingDict.pop('file')
 		if not "DATAMIX" in self.stepMap.keys(): # when DATAMIX is present, pileup_input refers to pre-mixed GEN-RAW
@@ -813,19 +797,9 @@ class ConfigBuilder(object):
 		self._options.conditions = self._options.conditions.replace("FrontierConditions_GlobalTag,",'')
 						
         self.loadAndRemember(self.ConditionsDefaultCFF)
-
-	if self._options.useCondDBv1:
-		from Configuration.AlCa.GlobalTag_condDBv1 import GlobalTag
-	else:
-		from Configuration.AlCa.GlobalTag import GlobalTag
-
+        from Configuration.AlCa.GlobalTag import GlobalTag
         self.process.GlobalTag = GlobalTag(self.process.GlobalTag, self._options.conditions, self._options.custom_conditions)
-
-	if self._options.useCondDBv1:
-	        self.additionalCommands.append('from Configuration.AlCa.GlobalTag_condDBv1 import GlobalTag')
-	else:
-	        self.additionalCommands.append('from Configuration.AlCa.GlobalTag import GlobalTag')
-
+        self.additionalCommands.append('from Configuration.AlCa.GlobalTag import GlobalTag')
         self.additionalCommands.append('process.GlobalTag = GlobalTag(process.GlobalTag, %s, %s)' % (repr(self._options.conditions), repr(self._options.custom_conditions)))
 
 	if self._options.slhc:
@@ -953,10 +927,7 @@ class ConfigBuilder(object):
         self.HARVESTINGDefaultCFF="Configuration/StandardSequences/Harvesting_cff"
         self.ALCAHARVESTDefaultCFF="Configuration/StandardSequences/AlCaHarvesting_cff"
         self.ENDJOBDefaultCFF="Configuration/StandardSequences/EndOfProcess_cff"
-        if self._options.useCondDBv1:
-	    self.ConditionsDefaultCFF = "Configuration/StandardSequences/FrontierConditions_GlobalTag_condDBv1_cff"
-	else:
-            self.ConditionsDefaultCFF = "Configuration/StandardSequences/FrontierConditions_GlobalTag_cff"
+        self.ConditionsDefaultCFF = "Configuration/StandardSequences/FrontierConditions_GlobalTag_cff"
         self.CFWRITERDefaultCFF = "Configuration/StandardSequences/CrossingFrameWriter_cff"
         self.REPACKDefaultCFF="Configuration/StandardSequences/DigiToRaw_Repack_cff"
 
@@ -990,7 +961,7 @@ class ConfigBuilder(object):
         self.RAW2DIGIDefaultSeq='RawToDigi'
         self.L1RecoDefaultSeq='L1Reco'
         self.L1TrackTriggerDefaultSeq='L1TrackTrigger'
-        if 'RAW2DIGI' in self.stepMap and 'RECO' in self.stepMap:
+        if self._options.fast or ('RAW2DIGI' in self.stepMap and 'RECO' in self.stepMap):
                 self.RECODefaultSeq='reconstruction'
         else:
                 self.RECODefaultSeq='reconstruction_fromRECO'
@@ -1116,41 +1087,19 @@ class ConfigBuilder(object):
             self.SIMDefaultCFF="Configuration/StandardSequences/SimNOBEAM_cff"
             self._options.beamspot='NoSmear'
 
-        # if fastsim switch event content
+        # fastsim requires some changes to the default cff files and sequences
 	if self._options.fast:
 		self.SIMDefaultCFF = 'FastSimulation.Configuration.SimIdeal_cff'
-		self.SIMDefaultSeq = 'psim'
 		self.RECODefaultCFF= 'FastSimulation.Configuration.Reconstruction_AftMix_cff'
-		self.RECODefaultSeq= 'reconstruction'
-                self.EVTCONTDefaultCFF = "FastSimulation.Configuration.EventContent_cff"
-                self.VALIDATIONDefaultCFF = "FastSimulation.Configuration.Validation_cff"
 		self.RECOBEFMIXDefaultCFF = 'FastSimulation.Configuration.Reconstruction_BefMix_cff'
 		self.RECOBEFMIXDefaultSeq = 'reconstruction_befmix'
-		self.DIGIDefaultCFF = 'FastSimulation.Configuration.Digi_cff'
-		if self._options.datamix == 'PreMix':
-			self.DIGIDefaultCFF="FastSimulation.Configuration.DigiDMPreMix_cff"
-		if "DIGIPREMIX" in self.stepMap.keys():
-			self.DIGIDefaultCFF="FastSimulation.Configuration.Digi_PreMix_cff"
-		if "DATAMIX" in self.stepMap.keys():
-			self.DATAMIXDefaultCFF="FastSimulation.Configuration.DataMixer"+self._options.datamix+"_cff"
-
-		self.DIGIDefaultSeq = 'pdigi'
-		self.L1EMDefaultCFF='FastSimulation.Configuration.SimL1Emulator_cff'
 		self.L1RecoDefaultCFF='FastSimulation.Configuration.L1Reco_cff'
-		self.DIGI2RAWDefaultCFF = 'FastSimulation.Configuration.DigiToRaw_cff'
-		self.DIGI2RAWDefaultSeq = 'DigiToRaw'
-		self.EVTCONTDefaultCFF = "FastSimulation.Configuration.EventContent_cff"
-		self.VALIDATIONDefaultCFF = "FastSimulation.Configuration.Validation_cff"
-
-		
+                self.DQMOFFLINEDefaultCFF="FastSimulation.Configuration.DQMOfflineMC_cff"
 
         # Mixing
 	if self._options.pileup=='default':
 		from Configuration.StandardSequences.Mixing import MixingDefaultKey
 		self._options.pileup=MixingDefaultKey
-		# temporary, until digi-reco mixing becomes standard in RelVals
-		if self._options.fast:
-			self._options.pileup="GEN_" + MixingDefaultKey
 		
 
 	#not driven by a default cff anymore
@@ -1461,10 +1410,10 @@ class ConfigBuilder(object):
         if self._options.gflash==True:
                 self.loadAndRemember("Configuration/StandardSequences/GFlashDIGI_cff")
 
-        if sequence == 'pdigi_valid' or sequence == 'pdigi_valid_nogen' or sequence == 'pdigi_hi':
+        if sequence == 'pdigi_valid':
             self.executeAndRemember("process.mix.digitizers = cms.PSet(process.theDigitizersValid)")
 
-	if sequence != 'pdigi_nogen' and sequence != 'pdigi_valid_nogen' and sequence != 'pdigi_hi' and not self.process.source.type_()=='EmptySource':
+	if sequence != 'pdigi_nogen' and sequence != 'pdigi_valid_nogen' and not self.process.source.type_()=='EmptySource':
 		if self._options.inputEventContent=='':
 			self._options.inputEventContent='REGEN'
 		else:
@@ -1550,7 +1499,7 @@ class ConfigBuilder(object):
 
     def prepare_L1REPACK(self, sequence = None):
             """ Enrich the schedule with the L1 simulation step, running the L1 emulator on data unpacked from the RAW collection, and repacking the result in a new RAW collection"""
-	    supported = ['GT','GT1','GT2','GCTGT']
+	    supported = ['GT','GT1','GT2','GCTGT','Full','FullSimTP','FullMC','Full2015Data','uGT']
             if sequence in supported:
                 self.loadAndRemember('Configuration/StandardSequences/SimL1EmulatorRepack_%s_cff'%sequence)
 		if self._options.scenario == 'HeavyIons':
@@ -1825,10 +1774,7 @@ class ConfigBuilder(object):
 			    return ''
 		    else:
 			    return '%s'%index
-		    
-            if not 'DIGI' in self.stepMap and not self._options.fast and not any(map( lambda s : s.startswith('genvalid'), valSeqName)):
-		    if self._options.restoreRNDSeeds==False and not self._options.restoreRNDSeeds==True:
-			    self._options.restoreRNDSeeds=True
+
 
             #rename the HLT process in validation steps
 	    if ('HLT' in self.stepMap and not self._options.fast) or self._options.hltProcess:
@@ -1843,6 +1789,14 @@ class ConfigBuilder(object):
 	    for (i,s) in enumerate(valSeqName):
 		    setattr(self.process,'validation_step%s'%NFI(i), cms.EndPath( getattr(self.process, s)))
 		    self.schedule.append(getattr(self.process,'validation_step%s'%NFI(i)))
+
+            #needed in case the miniAODValidation sequence is run starting from AODSIM
+	    if 'PAT' in self.stepMap and not 'RECO' in self.stepMap:
+		    return
+
+            if not 'DIGI' in self.stepMap and not self._options.fast and not any(map( lambda s : s.startswith('genvalid'), valSeqName)):
+		    if self._options.restoreRNDSeeds==False and not self._options.restoreRNDSeeds==True:
+			    self._options.restoreRNDSeeds=True
 
 	    if not 'DIGI' in self.stepMap and not self._options.fast:
 		    self.executeAndRemember("process.mix.playback = True")
@@ -1965,14 +1919,16 @@ class ConfigBuilder(object):
 
         self.loadDefaultOrSpecifiedCFF(sequence,self.DQMOFFLINEDefaultCFF)
         sequenceList=sequence.split('.')[-1].split('+')
+        postSequenceList=sequence.split('.')[-1].split('+')
 	from DQMOffline.Configuration.autoDQM import autoDQM
 	self.expandMapping(sequenceList,autoDQM,index=0)
+	self.expandMapping(postSequenceList,autoDQM,index=1)
 	
 	if len(set(sequenceList))!=len(sequenceList):
 		sequenceList=list(set(sequenceList))
 		print "Duplicate entries for DQM:, using",sequenceList
+
 	pathName='dqmoffline_step'
-	
 	for (i,sequence) in enumerate(sequenceList):
 		if (i!=0):
 			pathName='dqmoffline_%d_step'%(i)
@@ -1981,7 +1937,8 @@ class ConfigBuilder(object):
 			self.renameHLTprocessInSequence(sequence)
 
 		# if both HLT and DQM are run in the same process, schedule [HLT]DQM in an EndPath
-		if 'HLT' in self.stepMap.keys():
+	        # not for fastsim
+		if 'HLT' in self.stepMap.keys() and not self._options.fast:
 			# need to put [HLT]DQM in an EndPath, to access the HLT trigger results
 			setattr(self.process,pathName, cms.EndPath( getattr(self.process, sequence ) ) )
 		else:
@@ -1989,6 +1946,19 @@ class ConfigBuilder(object):
 			setattr(self.process,pathName, cms.Path( getattr(self.process, sequence) ) ) 
 		self.schedule.append(getattr(self.process,pathName))
 
+	pathName='dqmofflineOnPAT_step'
+	for (i,sequence) in enumerate(postSequenceList):
+                if (i!=0):
+                        pathName='dqmofflineOnPAT_%d_step'%(i)
+
+		# if both MINIAOD and DQM are run in the same process, schedule DQM in an EndPath
+		if 'PAT' in self.stepMap.keys():
+			# need to put DQM in an EndPath, to access the miniAOD filter results
+			setattr(self.process,pathName, cms.EndPath( getattr(self.process, sequence ) ) )
+		else:
+			# schedule DQM as a standard Path
+			setattr(self.process,pathName, cms.Path( getattr(self.process, sequence) ) )
+		self.schedule.append(getattr(self.process,pathName))
 
     def prepare_HARVESTING(self, sequence = None):
         """ Enrich the process with harvesting step """
@@ -2199,7 +2169,13 @@ class ConfigBuilder(object):
 		self.pythonCfgCode +="#Setup FWK for multithreaded\n"
 		self.pythonCfgCode +="process.options.numberOfThreads=cms.untracked.uint32("+self._options.nThreads+")\n"
 		self.pythonCfgCode +="process.options.numberOfStreams=cms.untracked.uint32(0)\n"
-
+	#repacked version
+	if self._options.isRepacked:
+		self.pythonCfgCode +="\n"
+		self.pythonCfgCode +="from Configuration.Applications.ConfigBuilder import MassReplaceInputTag\n"
+		self.pythonCfgCode +="MassReplaceInputTag(process)\n"
+		MassReplaceInputTag(self.process)
+		
         # special treatment in case of production filter sequence 2/2
         if self.productionFilterSequence:
                 self.pythonCfgCode +='# filter all path with the production filter sequence\n'
@@ -2218,14 +2194,6 @@ class ConfigBuilder(object):
 
         # dump customise fragment
 	self.pythonCfgCode += self.addCustomise()
-
-	#repacked version
-	if self._options.isRepacked:
-		self.pythonCfgCode +="\n"
-		self.pythonCfgCode +="from Configuration.Applications.ConfigBuilder import MassReplaceInputTag\n"
-		self.pythonCfgCode +="MassReplaceInputTag(process)\n"
-		MassReplaceInputTag(self.process)
-
 
 	if self._options.runUnscheduled:	
 		# prune and delete paths

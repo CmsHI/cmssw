@@ -106,10 +106,12 @@ namespace edm {
 
     template< typename T>
     void
-    ProducingModuleAdaptorBase<T>::modulesDependentUpon(const std::string& iProcessName,
-                                                        std::vector<const char*>& oModuleLabels) const {
+    ProducingModuleAdaptorBase<T>::modulesDependentUpon(std::string const& iProcessName,
+                                                        std::string const& iModuleLabel,
+                                                        bool iPrint,
+                                                        std::vector<char const*>& oModuleLabels) const {
       assert(not m_streamModules.empty());
-      return m_streamModules[0]->modulesDependentUpon(iProcessName, oModuleLabels);
+      return m_streamModules[0]->modulesDependentUpon(iProcessName, iModuleLabel, iPrint, oModuleLabels);
     }
 
     template< typename T>
@@ -158,7 +160,7 @@ namespace edm {
     template< typename T>
     void
     ProducingModuleAdaptorBase<T>::doStreamBeginRun(StreamID id,
-                                                    RunPrincipal& rp,
+                                                    RunPrincipal const& rp,
                                                     EventSetup const& c,
                                                     ModuleCallingContext const* mcc)
     {
@@ -173,7 +175,7 @@ namespace edm {
     template< typename T>
     void
     ProducingModuleAdaptorBase<T>::doStreamEndRun(StreamID id,
-                                                  RunPrincipal& rp,
+                                                  RunPrincipal const& rp,
                                                   EventSetup const& c,
                                                   ModuleCallingContext const* mcc)
     {
@@ -187,7 +189,7 @@ namespace edm {
     template< typename T>
     void
     ProducingModuleAdaptorBase<T>::doStreamBeginLuminosityBlock(StreamID id,
-                                                                LuminosityBlockPrincipal& lbp,
+                                                                LuminosityBlockPrincipal const& lbp,
                                                                 EventSetup const& c,
                                                                 ModuleCallingContext const* mcc) {
       auto mod = m_streamModules[id];
@@ -201,7 +203,7 @@ namespace edm {
     template< typename T>
     void
     ProducingModuleAdaptorBase<T>::doStreamEndLuminosityBlock(StreamID id,
-                                                              LuminosityBlockPrincipal& lbp,
+                                                              LuminosityBlockPrincipal const& lbp,
                                                               EventSetup const& c,
                                                               ModuleCallingContext const* mcc)
     {

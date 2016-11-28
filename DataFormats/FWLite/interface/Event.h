@@ -21,7 +21,7 @@
     foos.getByLabel(ev, "myFoos");
  }
  \endcode
- The above example will work for both CINT and compiled code. However, it is possible to exactly
+ The above example will work for both ROOT and compiled code. However, it is possible to exactly
  match the full framework if you only intend to compile your code.  In that case the access
  would look like
 
@@ -41,7 +41,6 @@
 // Original Author:  Chris Jones
 //         Created:  Tue May  8 15:01:20 EDT 2007
 //
-#if !defined(__CINT__) && !defined(__MAKECINT__)
 // system include files
 #include <typeinfo>
 #include <map>
@@ -174,10 +173,10 @@ namespace fwlite {
          edm::ProcessHistory const& history() const;
          void updateAux(Long_t eventIndex) const;
          void fillParameterSetRegistry() const;
-         void setGetter(std::shared_ptr<edm::EDProductGetter> getter) { return dataHelper_.setGetter(getter);}
+         void setGetter(std::shared_ptr<edm::EDProductGetter const> getter) { return dataHelper_.setGetter(getter);}
 
          // ---------- member data --------------------------------
-         TFile* file_;
+         mutable TFile* file_;
          // TTree* eventTree_;
          TTree* eventHistoryTree_;
          // Long64_t eventIndex_;
@@ -192,8 +191,8 @@ namespace fwlite {
          mutable std::vector<std::string> procHistoryNames_;
          mutable edm::EventAuxiliary aux_;
          mutable EntryFinder entryFinder_;
-         edm::EventAuxiliary* pAux_;
-         edm::EventAux* pOldAux_;
+         edm::EventAuxiliary const* pAux_;
+         edm::EventAux const* pOldAux_;
          TBranch* auxBranch_;
          int fileVersion_;
          mutable bool parameterSetRegistryFilled_;
@@ -203,5 +202,4 @@ namespace fwlite {
    };
 
 }
-#endif /*__CINT__ */
 #endif

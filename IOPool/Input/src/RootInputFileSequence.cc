@@ -112,7 +112,7 @@ namespace edm {
     if(!findFileForSpecifiedID_) {
       // We use a multimap because there may be hash collisions (Two different LFNs could have the same hash).
       // We map the hash of the LFN to the index into the list of files.
-      findFileForSpecifiedID_.reset(new std::unordered_multimap<size_t, size_t>);
+      findFileForSpecifiedID_ =  std::make_unique<std::unordered_multimap<size_t, size_t>>(); // propagate_const<T> has no reset() function
       auto hasher = std::hash<std::string>();
       for(auto fileIter = fileIterBegin_; fileIter != fileIterEnd_; ++fileIter) {
         findFileForSpecifiedID_->insert(std::make_pair(hasher(fileIter->logicalFileName()), fileIter - fileIterBegin_));
@@ -139,8 +139,7 @@ namespace edm {
   bool
   RootInputFileSequence::skipToItemInNewFile(RunNumber_t run, LuminosityBlockNumber_t lumi, EventNumber_t event) {
     // Look for item in files not yet opened.  We do not have a valid hash of the logical file name.
-    typedef std::vector<std::shared_ptr<IndexIntoFile> >::const_iterator Iter;
-    for(Iter it = indexesIntoFiles_.begin(), itEnd = indexesIntoFiles_.end(); it != itEnd; ++it) {
+    for(auto it = indexesIntoFiles_.begin(), itEnd = indexesIntoFiles_.end(); it != itEnd; ++it) {
       if(!*it) {
         // File not yet opened.
         setAtFileSequenceNumber(it - indexesIntoFiles_.begin());
@@ -166,8 +165,7 @@ namespace edm {
         return false;
       }
       // Look for item (run/lumi/event) in files previously opened without reopening unnecessary files.
-      typedef std::vector<std::shared_ptr<IndexIntoFile> >::const_iterator Iter;
-      for(Iter it = indexesIntoFiles_.begin(), itEnd = indexesIntoFiles_.end(); it != itEnd; ++it) {
+      for(auto it = indexesIntoFiles_.begin(), itEnd = indexesIntoFiles_.end(); it != itEnd; ++it) {
         if(*it && (*it)->containsItem(run, lumi, event)) {
           // We found it. Close the currently open file, and open the correct one.
           std::vector<FileCatalogItem>::const_iterator currentIter = fileIter_;
@@ -263,8 +261,6 @@ namespace edm {
         usedFallback_ = true;
         std::unique_ptr<InputSource::FileOpenSentry> sentry(input ? new InputSource::FileOpenSentry(*input, lfn_, usedFallback_) : nullptr);
         std::string fallbackFullName = gSystem->ExpandPathName(fallbackFileName().c_str());
-        StorageFactory *factory = StorageFactory::get();
-        if (factory) {factory->activateTimeout(fallbackFullName);}
         filePtr.reset(new InputFile(fallbackFullName.c_str(), "  Fallback request to file ", inputType));
       }
       catch (cms::Exception const& e) {
@@ -304,8 +300,10 @@ namespace edm {
       LogWarning("") << "Input file: " << fileName() << " was not found or could not be opened, and will be skipped.\n";
     }
   }
+
   void
   RootInputFileSequence::setIndexIntoFile(size_t index) {
    indexesIntoFiles_[index] = rootFile()->indexIntoFileSharedPtr();
   }
+
 }

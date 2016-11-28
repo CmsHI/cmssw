@@ -17,7 +17,6 @@
 #include <functional>
 #include <typeinfo>
 #include <vector>
-#include "FWCore/Utilities/interface/GCC11Compatibility.h"
 
 namespace edm {
   class ProductID;
@@ -46,7 +45,6 @@ namespace edm {
       typedef T const& reference;
       typedef ptrdiff_t difference_type;
       typedef typename base::const_iterator::iterator_category iterator_category;
-      const_iterator(typename base::const_iterator const& it) : i(it) { }
       const_iterator(iterator const& it) : i(it.i) { }
       const_iterator() {}
       const_iterator& operator++() { ++i; return *this; }
@@ -66,7 +64,10 @@ namespace edm {
       const_iterator & operator -=(difference_type d) { i -= d; return *this; }
       reference operator[](difference_type d) const { return *const_iterator(i+d); } // for boost::iterator_range []
     private:
+      const_iterator(typename base::const_iterator const& it) : i(it) { }
+      typename base::const_iterator base_iter() const { return i; }
       typename base::const_iterator i;
+      friend class OwnVector<T,P>;
     };
     class iterator {
     public:
@@ -75,7 +76,6 @@ namespace edm {
       typedef T & reference;
       typedef ptrdiff_t difference_type;
       typedef typename base::iterator::iterator_category iterator_category;
-      iterator(typename base::iterator const& it) : i(it) { }
       iterator() {}
       iterator& operator++() { ++i; return *this; }
       iterator operator++(int) { iterator ci = *this; ++i; return ci; }
@@ -95,6 +95,7 @@ namespace edm {
       iterator & operator -=(difference_type d) { i -= d; return *this; }
       reference operator[](difference_type d) const { return *iterator(i+d); } // for boost::iterator_range []
     private:
+      iterator(typename base::iterator const& it) : i(it) { }
       typename base::iterator i;
       friend class const_iterator;
       friend class OwnVector<T, P>;
@@ -125,9 +126,7 @@ namespace edm {
 #endif
 
     void shrink_to_fit() {
-#ifndef CMS_NOCXX11
       data_.shrink_to_fit();
-#endif
     }
 
 
@@ -136,6 +135,17 @@ namespace edm {
     template <typename D> void push_back(D* const& d);
     template <typename D> void push_back(std::auto_ptr<D> d);
     void push_back(T const& valueToCopy);
+
+    template <typename D> void set(size_t i, D*& d);
+    template <typename D> void set(size_t i, D* const & d);
+    template <typename D> void set(size_t i, std::auto_ptr<D> d);
+    void set(size_t i, T const& valueToCopy);
+
+    template <typename D> void insert(const_iterator i, D*& d);
+    template <typename D> void insert(const_iterator i, D* const & d);
+    template <typename D> void insert(const_iterator i, std::auto_ptr<D> d);
+    void insert(const_iterator i, T const& valueToCopy);
+
     bool is_back_safe() const;
     void pop_back();
     reference back();
@@ -309,6 +319,70 @@ namespace edm {
     data_.push_back(policy_type::clone(d));
   }
 
+  template<typename T, typename P>
+  template<typename D>
+  inline void OwnVector<T, P>::set(size_t i, D*& d) {
+    // see push_back for documentation
+    if (d == data_[i]) return; 
+    delete data_[i];
+    data_[i] = d;
+    d = 0;
+  }
+
+  template<typename T, typename P>
+  template<typename D>
+  inline void OwnVector<T, P>::set(size_t i, D* const& d) {
+    // see push_back for documentation
+    if (d == data_[i]) return; 
+    delete data_[i];
+    data_[i] = d;
+  }
+
+
+  template<typename T, typename P>
+  template<typename D>
+  inline void OwnVector<T, P>::set(size_t i, std::auto_ptr<D> d) {
+    if (d.get() == data_[i]) return; 
+    delete data_[i];
+    data_[i] = d.release();
+  }
+
+
+  template<typename T, typename P>
+  inline void OwnVector<T, P>::set(size_t i, T const& d) {
+    if (&d == data_[i]) return; 
+    delete data_[i];
+    data_[i] = policy_type::clone(d);
+  }
+
+
+  template<typename T, typename P>
+  template<typename D>
+  inline void OwnVector<T, P>::insert(const_iterator it, D*& d) {
+    data_.insert(it.base_iter(), d);
+    d = 0;
+  }
+
+  template<typename T, typename P>
+  template<typename D>
+  inline void OwnVector<T, P>::insert(const_iterator it, D* const& d) {
+    data_.insert(it.base_iter(), d);
+  }
+
+
+  template<typename T, typename P>
+  template<typename D>
+  inline void OwnVector<T, P>::insert(const_iterator it, std::auto_ptr<D> d) {
+    data_.insert(it.base_iter(), d.release());
+  }
+
+
+  template<typename T, typename P>
+  inline void OwnVector<T, P>::insert(const_iterator it, T const& d) {
+    data_.insert(it.base_iter(), policy_type::clone(d));
+  }
+
+
 
   template<typename T, typename P>
   inline void OwnVector<T, P>::pop_back() {
@@ -413,9 +487,6 @@ namespace edm {
   void OwnVector<T, P>::fillView(ProductID const& id,
                                  std::vector<void const*>& pointers,
                                  FillViewHelperVector& helpers) const {
-    typedef Ref<OwnVector>      ref_type ;
-    typedef reftobase::RefHolder<ref_type> holder_type;
-
     size_type numElements = this->size();
     pointers.reserve(numElements);
     helpers.reserve(numElements);

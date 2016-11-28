@@ -592,4 +592,3 @@ PVFitter::pvQuality (const BeamSpotFitPVData& pv) const
   double ey = pv.posError[1];
   return ex*ex*ey*ey*(1-pv.posCorr[0]*pv.posCorr[0]);
 }
-

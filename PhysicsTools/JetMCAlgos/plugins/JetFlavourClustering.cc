@@ -177,12 +177,12 @@ class JetFlavourClustering : public edm::stream::EDProducer<> {
 
       // ----------member data ---------------------------
       const edm::EDGetTokenT<edm::View<reco::Jet> >      jetsToken_;        // Input jet collection
-      const edm::EDGetTokenT<edm::View<reco::Jet> >      groomedJetsToken_; // Input groomed jet collection
-      const edm::EDGetTokenT<edm::View<reco::Jet> >      subjetsToken_;     // Input subjet collection
+      edm::EDGetTokenT<edm::View<reco::Jet> >      groomedJetsToken_; // Input groomed jet collection
+      edm::EDGetTokenT<edm::View<reco::Jet> >      subjetsToken_;     // Input subjet collection
       const edm::EDGetTokenT<reco::GenParticleRefVector> bHadronsToken_;    // Input b hadron collection
       const edm::EDGetTokenT<reco::GenParticleRefVector> cHadronsToken_;    // Input c hadron collection
       const edm::EDGetTokenT<reco::GenParticleRefVector> partonsToken_;     // Input parton collection
-      const edm::EDGetTokenT<reco::GenParticleRefVector> leptonsToken_;     // Input lepton collection
+      edm::EDGetTokenT<reco::GenParticleRefVector> leptonsToken_;     // Input lepton collection
 
       const std::string   jetAlgorithm_;
       const double        rParam_;
@@ -207,12 +207,9 @@ class JetFlavourClustering : public edm::stream::EDProducer<> {
 JetFlavourClustering::JetFlavourClustering(const edm::ParameterSet& iConfig) :
 
    jetsToken_(consumes<edm::View<reco::Jet> >( iConfig.getParameter<edm::InputTag>("jets")) ),
-   groomedJetsToken_(mayConsume<edm::View<reco::Jet> >( iConfig.exists("groomedJets") ? iConfig.getParameter<edm::InputTag>("groomedJets") : edm::InputTag() )),
-   subjetsToken_(mayConsume<edm::View<reco::Jet> >( iConfig.exists("subjets") ? iConfig.getParameter<edm::InputTag>("subjets") : edm::InputTag() )),
    bHadronsToken_(consumes<reco::GenParticleRefVector>( iConfig.getParameter<edm::InputTag>("bHadrons") )),
    cHadronsToken_(consumes<reco::GenParticleRefVector>( iConfig.getParameter<edm::InputTag>("cHadrons") )),
    partonsToken_(consumes<reco::GenParticleRefVector>( iConfig.getParameter<edm::InputTag>("partons") )),
-   leptonsToken_(mayConsume<reco::GenParticleRefVector>( iConfig.exists("leptons") ? iConfig.getParameter<edm::InputTag>("leptons") : edm::InputTag() )),
    jetAlgorithm_(iConfig.getParameter<std::string>("jetAlgorithm")),
    rParam_(iConfig.getParameter<double>("rParam")),
    jetPtMin_(0.), // hardcoded to 0. since we simply want to recluster all input jets which already had some PtMin applied
@@ -237,6 +234,15 @@ JetFlavourClustering::JetFlavourClustering(const edm::ParameterSet& iConfig) :
      fjJetDefinition_= JetDefPtr( new fastjet::JetDefinition(fastjet::antikt_algorithm, rParam_) );
    else
      throw cms::Exception("InvalidJetAlgorithm") << "Jet clustering algorithm is invalid: " << jetAlgorithm_ << ", use CambridgeAachen | Kt | AntiKt" << std::endl;
+
+   if (useSubjets_) {
+     groomedJetsToken_=consumes<edm::View<reco::Jet> >(iConfig.getParameter<edm::InputTag>("groomedJets"));
+     subjetsToken_=consumes<edm::View<reco::Jet> >(iConfig.getParameter<edm::InputTag>("subjets"));
+   }
+   if ( useLeptons_ ) {
+     leptonsToken_=consumes<reco::GenParticleRefVector>( iConfig.getParameter<edm::InputTag>("leptons") );
+   }
+
 }
 
 
@@ -296,6 +302,10 @@ JetFlavourClustering::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
      for( m = constituents.begin(); m != constituents.end(); ++m )
      {
        reco::CandidatePtr constit = *m;
+       if(!constit.isNonnull() || !constit.isAvailable()) {
+         edm::LogError("MissingJetConstituent") << "Jet constituent required for jet reclustering is missing. Reclustered jets are not guaranteed to reproduce the original jets!";
+         continue;
+       }
        if(constit->pt() == 0)
        {
          edm::LogWarning("NullTransverseMomentum") << "dropping input candidate with pt=0";

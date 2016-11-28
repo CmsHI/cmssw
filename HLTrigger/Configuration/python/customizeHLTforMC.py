@@ -23,12 +23,10 @@ def customizeHLTforMC(process,_fastSim=False):
     process.hltHbhereco.pedestalSubtractionType = cms.int32( 1 )
     process.hltHbhereco.pedestalUpperLimit      = cms.double( 2.7 ) 
     process.hltHbhereco.timeSlewParsType        = cms.int32( 3 )
-    #old MC
-    process.hltHbhereco.timeSlewPars            = cms.vdouble( 9.27638, -2.05585, 0, 9.27638, -2.05585, 0, 9.27638, -2.05585, 0 ) 
+    # new time slew parametrisation
+    process.hltHbhereco.timeSlewPars            = cms.vdouble( 12.2999, -2.19142, 0, 12.2999, -2.19142, 0, 12.2999, -2.19142, 0 )
+    # old response correction, matching the 2015D 25ns data
     process.hltHbhereco.respCorrM3              = cms.double( 1.0 )
-    #new MC once completely implemented
-#    process.hltHbhereco.timeSlewPars            = cms.vdouble( 12.2999, -2.19142, 0, 12.2999, -2.19142, 0, 12.2999, -2.19142, 0 )
-#    process.hltHbhereco.respCorrM3              = cms.double( 0.95 )
 
 
   if _fastSim:
@@ -55,9 +53,11 @@ def customizeHLTforMC(process,_fastSim=False):
       "HLT_Beam*_v*",
       #"HLT_L1Tech_*_v*",
       "HLT_HI*",
+      "HLT_PA*",
       "HLT_GlobalRunHPDNoise_v*",
       "HLT_L1TrackerCosmics_v*",
       "HLT_HcalUTCA_v*",
+      "HLT_L1FatEvents_v*",
 
       # TODO: paths not supported by FastSim, but for which a recovery should be attempted
       "HLT_DoubleMu33NoFiltersNoVtx_v*",
@@ -76,6 +76,8 @@ def customizeHLTforMC(process,_fastSim=False):
       "HLT_HT350_DisplacedDijet80_DisplacedTrack_v*",
       "HLT_HT400_DisplacedDijet40_Inclusive_v*",
       "HLT_HT250_DisplacedDijet40_DisplacedTrack_v*",
+      "HLT_HT200_DisplacedDijet40_DisplacedTrack_v*",
+      "HLT_HT350_DisplacedDijet40_Inclusive_v*",
       "HLT_TrkMu15_DoubleTrkMu5NoFiltersNoVtx_v*",
       "HLT_TrkMu17_DoubleTrkMu8NoFiltersNoVtx_v*",
       "HLT_MET60_IsoTrk*",
@@ -124,7 +126,6 @@ def customizeHLTforMC(process,_fastSim=False):
 
     ModulesToRemove = (
       #   "hltL3MuonIsolations",
-      #   "hltPixelVertices",
       "hltCkfL1SeededTrackCandidates",
       "hltCtfL1SeededithMaterialTracks",
       "hltCkf3HitL1SeededTrackCandidates",
@@ -157,9 +158,13 @@ def customizeHLTforMC(process,_fastSim=False):
       "hltL3TrackCandidateFromL2IOHit",
       "hltL3TrackCandidateFromL2NoVtx",
       "hltHcalDigis",
+      "hltHcalDigisL1EGSeeded",
+      "hltHcalDigisL1EGUnseeded",
       "hltHoreco",
       "hltHfreco",
       "hltHbhereco",
+      "hltHbherecoMethod2L1EGSeeded",
+      "hltHbherecoMethod2L1EGUnseeded",
       "hltESRawToRecHitFacility",
       "hltEcalRecHitAll",
       "hltESRecHitAll",
@@ -229,6 +234,8 @@ def customizeHLTforMC(process,_fastSim=False):
       "hltPixelTracksForHighPt",
       "hltHighPtPixelTracks",
       "hltPixelTracksForNoPU",
+      "hltPixelTracksForSeedsTau3mu",
+      "hltPixelTracksGlbDiTrkMuon",
 
       "hltFastPixelHitsVertex",
       "hltFastPixelTracks",
@@ -239,6 +246,7 @@ def customizeHLTforMC(process,_fastSim=False):
       "hltPixelLayerTripletsReg",
       "hltPixelLayerTripletsHITHB",
       "hltPixelLayerTripletsHITHE",
+      "hltPixelLayerTripletsAfterSplitting",
       "hltMixedLayerPairs",
 
       "hltFastPrimaryVertexbbPhi",
@@ -253,13 +261,15 @@ def customizeHLTforMC(process,_fastSim=False):
       "hltFastPVPixelTracks",
       "hltFastPVPixelTracksRecover",
 
+      "hltPAGoodHighPurityFullTracks",
+
       #   "hltPixelMatchElectronsActivity",
 
       "hltMuonCSCDigis",
       "hltMuonDTDigis",
       "hltMuonRPCDigis",
-      "hltGtDigis",
-#      "hltL1GtTrigReport",
+#     "hltGtDigis",
+#     "hltL1GtTrigReport",
       #   "hltCsc2DRecHits",
       #   "hltDt1DRecHits",
       #   "hltRpcRecHits",
@@ -282,12 +292,10 @@ def customizeHLTforMC(process,_fastSim=False):
       "HLTDoLocalStripSequenceRegForBTag",
       "HLTDoLocalPixelSequenceRegForBTag",
       "HLTDoLocalPixelSequenceRegForNoPU",
-      #   "hltSiPixelDigis",
-      #   "hltSiPixelClusters",
-      #   "hltSiPixelRecHits",
-      "HLTRecopixelvertexingSequence",
-#      "HLTEndSequence",
+      "HLTDoLocalPixelSequenceAfterSplitting",
+      "HLTPADoLocalStripSequenceAfterSplitting",
       "HLTBeginSequence",
+      "HLTBeginSequenceL1Fat",
       "HLTBeginSequenceNZS",
       "HLTBeginSequenceBPTX",
       "HLTBeginSequenceAntiBPTX",
@@ -297,8 +305,10 @@ def customizeHLTforMC(process,_fastSim=False):
       "HLTIterativeTracking",
       "HLTIterativeTrackingForHighPt",
       "HLTIterativeTrackingTau3Mu",
+      "HLTIterativeTrackingGlbDiTrkMuonIter02",
       "HLTIterativeTrackingReg",
       "HLTIterativeTrackingForPA",
+      "HLTPAIterativeTracking",
       "HLTIterativeTrackingForElectronIter02",
       "HLTIterativeTrackingForPhotonsIter02",
       "HLTIterativeTrackingL3MuonIter02",
@@ -313,6 +323,7 @@ def customizeHLTforMC(process,_fastSim=False):
       "HLTIterativeTrackingDisplacedJpsiIter02",
       "HLTIterativeTrackingDisplacedPsiPrimeIter02",
       "HLTIterativeTrackingDisplacedNRMuMuIter02",
+      "HLTIterativeTrackingDisplacedTau3muIter02",
       "HLTIterativeTrackingForBTagIteration0",
       "HLTIterativeTrackingIteration4DisplacedJets",
       "HLTRegionalCKFTracksForL3Isolation",
@@ -328,6 +339,8 @@ def customizeHLTforMC(process,_fastSim=False):
     import fnmatch,re
     ExplicitList = []
     HLTSchedule = tuple( path.label_() for path in process.HLTSchedule)
+    for path in HLTSchedule:
+      getattr(process,path).insert(1,process.HLTL1UnpackerSequence)
     for black in fastSimUnsupportedPaths:
       compiled = re.compile(fnmatch.translate(black))
       for path in HLTSchedule:
@@ -376,13 +389,22 @@ def customizeHLTforMC(process,_fastSim=False):
           setattr(process,label,getattr(fastsim,label))
         else:
           object = getattr(process,label)
+          # remove from sequences
           list = tuple(process.sequences_().keys())
           for name in list:
             sequence = getattr(process,name)
             more=True
             while more:
               more = sequence.remove(object)
+          # remove from paths
           list = tuple(process.paths_().keys())
+          for name in list:
+            path = getattr(process,name)
+            more=True
+            while more:
+              more = path.remove(object)
+          # remove from end paths
+          list = tuple(process.endpaths_().keys())
           for name in list:
             path = getattr(process,name)
             more=True
@@ -418,8 +440,8 @@ def customizeHLTforMC(process,_fastSim=False):
 # Update InputTags
 
     InputTags = (
-      ('hltGtDigis','gtDigis'),
-      ('hltL1GtObjectMap','gtDigis'),
+#     ('hltGtDigis','gtDigis'),
+#     ('hltL1GtObjectMap','gtDigis'),
       ('hltEcalDigis:ebDigis','ecalDigis:ebDigis'),
       ('hltEcalDigis:eeDigis','ecalDigis:eeDigis'),
       ('hltMuonCSCDigis','muonCSCDigis'),
@@ -429,6 +451,8 @@ def customizeHLTforMC(process,_fastSim=False):
       ('hltMuonRPCDigis','muonRPCDigis'),
       ('hltEcalPreshowerDigis','ecalPreshowerDigis'),
       ('hltHbhereco', 'hbhereco'),
+      ('hltHbherecoMethod2L1EGSeeded', 'hbhereco'),
+      ('hltHbherecoMethod2L1EGUnseeded', 'hbhereco'),
       ('hltHoreco', 'horeco'),
       ('hltHfreco', 'hfreco'),
 
@@ -445,11 +469,29 @@ def customizeHLTforMC(process,_fastSim=False):
       ('hltIter2DisplacedJpsiMerged', 'generalTracks'),
       ('hltIter2DisplacedPsiPrimeMerged', 'generalTracks'),
       ('hltIter2DisplacedNRMuMuMerged', 'generalTracks'),
+      ('hltIter2DisplacedTau3muMerged', 'generalTracks'),
+      ('hltIter2GlbDiTrkMuonMerged', 'generalTracks'),
       ('hltIter0PFlowTrackSelectionHighPurityForBTag', 'generalTracks'),
       ('hltIter4HighPtMerged', 'generalTracks'),
       ('hltIterativeTrackingForPAMerged', 'generalTracks'),
+      #('hltPAIterativeTrackingMerged', 'generalTracks'),
+      ('hltPAIterativeTrackingMerged', 'generalTracks'),
+      ('hltPAGoodHighPurityFullTracks','generalTracks'),
 
-      ('hltRegionalTracksForL3MuonIsolation', 'hltPixelTracks'),
+      ('hltFastPVPixelTracks','hltPixelTracks'),
+      ('hltFastPVPixelTracksRecover','hltPixelTracks'),
+      ('hltPixelTracksL3Muon','hltPixelTracks'),
+      ('hltPixelTracksGlbTrkMuon','hltPixelTracks'),
+      ('hltPixelTracksHighPtTkMuIso','hltPixelTracks'),
+      ('hltPixelTracksHybrid','hltPixelTracks'),
+      ('hltPixelTracksForPhotons','hltPixelTracks'),
+      ('hltPixelTracksForEgamma','hltPixelTracks'),
+      ('hltPixelTracksElectrons','hltPixelTracks'),
+      ('hltPixelTracksForHighPt','hltPixelTracks'),
+      ('hltHighPtPixelTracks','hltPixelTracks'),
+      ('hltPixelTracksForNoPU','hltPixelTracks'),
+      ('hltPixelTracksForSeedsTau3mu','hltPixelTracks'),
+      ('hltPixelTracksGlbDiTrkMuon','hltPixelTracks'),
 
       ('hltL1extraParticles','l1extraParticles'),
       ('hltL1extraParticles:Central','l1extraParticles:Central'),
@@ -461,7 +503,7 @@ def customizeHLTforMC(process,_fastSim=False):
       ('hltOfflineBeamSpot','offlineBeamSpot'),
       ('hltOnlineBeamSpot','offlineBeamSpot'),
       ('hltSiStripClusters','MeasurementTrackerEvent'),
-
+      ('hltSiStripClustersAfterSplitting','MeasurementTrackerEvent'),
       )
     from HLTrigger.Configuration.CustomConfigs import MassReplaceInputTag
     for pair in InputTags:
@@ -469,12 +511,13 @@ def customizeHLTforMC(process,_fastSim=False):
 
 # Update top-level named parameters
     NamedParameters = (
-      ('GMTReadoutCollection',cms.InputTag('gtDigis'),cms.InputTag('gmtDigis')),
+#     ('GMTReadoutCollection',cms.InputTag('gtDigis'),cms.InputTag('gmtDigis')),
       ('killDeadChannels',cms.bool(True),cms.bool(False)),
       ('recoverEBFE',cms.bool(True),cms.bool(False)),
       ('recoverEEFE',cms.bool(True),cms.bool(False)),
       ('src',cms.InputTag('hltHcalTowerNoiseCleaner'),cms.InputTag('hltTowerMakerForAll')),
-      ('initialSeeds',cms.InputTag('noSeedsHere'),cms.InputTag('globalPixelSeeds')),
+      ('src',cms.InputTag('hltHcalTowerNoiseCleanerWithrechit'),cms.InputTag('hltTowerMakerForAll')),
+      ('initialSeeds',cms.InputTag('noSeedsHere'),cms.InputTag('hltPixelPairSeeds')),
       ('preFilteredSeeds',cms.bool(True),cms.bool(False)),
       )
     from HLTrigger.Configuration.CustomConfigs import MassReplaceParameter
@@ -484,12 +527,8 @@ def customizeHLTforMC(process,_fastSim=False):
 # Update nested named parameters
     for label in ('hltEgammaElectronPixelSeeds','hltEgammaElectronPixelSeedsUnseeded',):
       if hasattr(process,label):
-        getattr(process,label).SeedConfiguration.initialSeeds = cms.InputTag('globalPixelSeeds')
+        getattr(process,label).SeedConfiguration.initialSeeds = cms.InputTag('hltPixelPairSeeds')
         getattr(process,label).SeedConfiguration.preFilteredSeeds = cms.bool(False)
-        if hasattr(fastsim,'globalPixelSeeds'): 
-          if hasattr(fastsim.globalPixelSeeds,'outputSeedCollectionName'):
-            getattr(process,label).SeedConfiguration.initialSeeds = cms.InputTag('globalPixelSeeds',fastsim.globalPixelSeeds.outputSeedCollectionName.value())
-
 
 # Extending fastsim import
     fastsim.extend(process)

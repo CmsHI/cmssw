@@ -97,20 +97,18 @@ void l1t::Stage1Layer2CentralityAlgorithm::processEvent(const std::vector<l1t::C
   // Begin MB Trigger //
   std::vector<int> thresholds = params_->minimumBiasThresholds();
   int numOverThresh[4] = {0};
-  if(thresholds.size() >= 4){ // guard against malformed/old GT
-    for(std::vector<CaloRegion>::const_iterator region = regions.begin(); region != regions.end(); region++) {
-      if(region->hwEta() < 4) {
-	if(region->hwPt() >= thresholds.at(0))
-	  numOverThresh[0]++;
-	if(region->hwPt() >= thresholds.at(2))
-	  numOverThresh[2]++;
-      }
-      if(region->hwEta() > 17) {
-	if(region->hwPt() >= thresholds.at(1))
-	  numOverThresh[1]++;
-	if(region->hwPt() >= thresholds.at(3))
-	  numOverThresh[3]++;
-      }
+  for(std::vector<CaloRegion>::const_iterator region = regions.begin(); region != regions.end(); region++) {
+    if(region->hwEta() < 4) {
+      if(region->hwPt() >= thresholds.at(0))
+	numOverThresh[0]++;
+      if(region->hwPt() >= thresholds.at(2))
+	numOverThresh[2]++;
+    }
+    if(region->hwEta() > 17) {
+      if(region->hwPt() >= thresholds.at(1))
+	numOverThresh[1]++;
+      if(region->hwPt() >= thresholds.at(3))
+	numOverThresh[3]++;
     }
   }
 
@@ -125,24 +123,5 @@ void l1t::Stage1Layer2CentralityAlgorithm::processEvent(const std::vector<l1t::C
   spare->SetRing(2, (bits[2]<<2) + (bits[1]<<1) + bits[0]);
   spare->SetRing(3, (bits[5]<<2) + (bits[4]<<1) + bits[3]);
   // End MB Trigger //
-
-  const bool verbose = false;
-  const bool hex = true;
-  if(verbose)
-  {
-    if(!hex)
-    {
-      std::cout << "HF Ring Sums (Centrality)" << std::endl;
-      std::cout << bitset<12>(spare->hwPt()).to_string() << std::endl;
-    } else {
-      std::cout << "Centrality" << std::endl;
-      std::cout << std::hex << spare->hwPt() << std::endl;
-      // std::cout << std::hex << spare->GetRing(0) << " "
-      // 		<< spare->GetRing(1) << " "
-      // 		<< bits[0] << " " << bits[1] << " "
-      // 		<< bits[2] << " " << bits[3] << " "
-      // 		<< bits[4] << " " << bits[5] << std::endl;
-    }
-  }
 
 }

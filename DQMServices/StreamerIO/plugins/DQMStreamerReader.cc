@@ -43,7 +43,13 @@ DQMStreamerReader::DQMStreamerReader(edm::ParameterSet const& pset,
   reset_();
 }
 
-DQMStreamerReader::~DQMStreamerReader() { closeFile_("destructor"); }
+DQMStreamerReader::~DQMStreamerReader() {
+  // Sometimes(?) the destructor called after service registry was already destructed
+  // and closeFile_ throws away no ServiceRegistry found exception...
+  //
+  // Normally, this file should be closed before this destructor is called.
+  //closeFile_("destructor");
+}
 
 void DQMStreamerReader::reset_() {
   // We have to load at least a single header,
@@ -93,7 +99,7 @@ void DQMStreamerReader::openFile_(const DQMFileIterator::LumiEntry& entry) {
   processedEventPerLs_ = 0;
   edm::ParameterSet pset;
 
-  std::string path = fiterator_.make_path(entry.datafn);
+  std::string path = entry.get_data_path();
 
   file_.lumi_ = entry;
   file_.streamFile_.reset(new edm::StreamerInputFile(path));
@@ -140,7 +146,7 @@ bool DQMStreamerReader::openNextFile_() {
   closeFile_("skipping to another file");
 
   DQMFileIterator::LumiEntry currentLumi = fiterator_.open();
-  std::string p = fiterator_.make_path(currentLumi.datafn);
+  std::string p = currentLumi.get_data_path();
 
   if (boost::filesystem::exists(p)) {
     try {
@@ -286,33 +292,29 @@ EventMsgView const* DQMStreamerReader::prepareNextEvent() {
  * This is the actual code for checking the new event and/or deserializing it.
  */
 bool DQMStreamerReader::checkNextEvent() {
-  EventMsgView const* eview = prepareNextEvent();
-  if (eview == nullptr) {
-    return false;
-  }
+  try {
+    EventMsgView const* eview = prepareNextEvent();
+    if (eview == nullptr) {
+      return false;
+    }
 
-  // this is reachable only if eview is set
-  // and the file is openned
-  if (file_.streamFile_->newHeader()) {
-    // A new file has been opened and we must compare Headers here !!
-    // Get header/init from reader
+    // this is reachable only if eview is set
+    // and the file is openned
+    if (file_.streamFile_->newHeader()) {
+      // A new file has been opened and we must compare Headers here !!
+      // Get header/init from reader
 
-    try {
       InitMsgView const* header = getHeaderMsg();
       deserializeAndMergeWithRegistry(*header, true);
-    } catch (const cms::Exception& e) {
-      fiterator_.logFileAction(std::string("Can't deserialize registry data: ") + e.what());
-      closeFile_("data file corrupted");
-      return checkNextEvent();
     }
-  }
 
-  // try to recover from corrupted files/events
-  try {
     deserializeEvent(*eview);
   } catch (const cms::Exception& e) {
-    fiterator_.logFileAction(std::string("Can't deserialize event data: ") + e.what());
-    closeFile_("error");
+    // try to recover from corrupted files/events
+    fiterator_.logFileAction(std::string("Can't deserialize event or registry data: ") + e.what());
+    closeFile_("data file corrupted");
+
+    // this is not optimal, but hopefully we won't catch this many times in a row
     return checkNextEvent();
   }
 
@@ -383,12 +385,18 @@ bool DQMStreamerReader::acceptEvent(const EventMsgView* evtmsg) {
 }
 
 void DQMStreamerReader::skip(int toSkip) {
-  for (int i = 0; i != toSkip; ++i) {
-    EventMsgView const* evMsg = prepareNextEvent();
+  try {
+    for (int i = 0; i != toSkip; ++i) {
+      EventMsgView const* evMsg = prepareNextEvent();
 
-    if (evMsg == nullptr) {
-      return;
+      if (evMsg == nullptr) {
+        return;
+      }
     }
+  } catch (const cms::Exception& e) {
+    // try to recover from corrupted files/events
+    fiterator_.logFileAction(std::string("Can't deserialize event data: ") + e.what());
+    closeFile_("data file corrupted");
   }
 }
 

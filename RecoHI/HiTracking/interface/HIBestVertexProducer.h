@@ -14,7 +14,7 @@ class HIBestVertexProducer : public edm::stream::EDProducer<>
 public:
 	explicit HIBestVertexProducer(const edm::ParameterSet& ps);
 	~HIBestVertexProducer();
-	virtual void produce(edm::Event& ev, const edm::EventSetup& es) override ;
+	virtual void produce(edm::Event& ev, const edm::EventSetup& es) override;
 	
 private:
 	void beginJob();

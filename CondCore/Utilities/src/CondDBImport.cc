@@ -28,8 +28,7 @@ namespace cond {
       std::string payloadTypeName;
       exists = session.fetchPayloadData( payloadId, payloadTypeName, data, streamerInfo );
       if( exists ) {
-	bool isOra = session.isOraSession();
-	return fetchOne(payloadTypeName, data, streamerInfo, payloadPtr, isOra);
+	return fetchOne(payloadTypeName, data, streamerInfo, payloadPtr );
       } else return std::make_pair( std::string(""), boost::shared_ptr<void>() );
     }
 
@@ -146,6 +145,8 @@ namespace cond {
       IMPORT_PAYLOAD_CASE( EcalPulseShape )
       IMPORT_PAYLOAD_CASE( EcalCondObjectContainer<EcalPulseCovariance> )
       IMPORT_PAYLOAD_CASE( EcalPulseCovariance )
+      IMPORT_PAYLOAD_CASE( EcalCondObjectContainer<EcalPulseSymmCovariance> )
+      IMPORT_PAYLOAD_CASE( EcalPulseSymmCovariance )
       IMPORT_PAYLOAD_CASE( FileBlob )
       IMPORT_PAYLOAD_CASE( GBRForest )
       IMPORT_PAYLOAD_CASE( GBRForestD )
@@ -173,6 +174,7 @@ namespace cond {
       IMPORT_PAYLOAD_CASE( HcalZSThresholds )
       IMPORT_PAYLOAD_CASE( HcalInterpolatedPulseColl )
       IMPORT_PAYLOAD_CASE( JetCorrectorParametersCollection )
+      IMPORT_PAYLOAD_CASE( JME::JetResolutionObject )
       IMPORT_PAYLOAD_CASE( METCorrectorParametersCollection )
       IMPORT_PAYLOAD_CASE( L1CaloEcalScale )
       IMPORT_PAYLOAD_CASE( L1CaloEtScale )
@@ -212,41 +214,23 @@ namespace cond {
       IMPORT_PAYLOAD_CASE( L1RPCHwConfig )
       IMPORT_PAYLOAD_CASE( l1t::CaloParams )
       IMPORT_PAYLOAD_CASE( l1t::CaloConfig )
+      IMPORT_PAYLOAD_CASE( L1TMuonBarrelParams )
+      IMPORT_PAYLOAD_CASE( L1TMuonGlobalParams )
+      IMPORT_PAYLOAD_CASE( L1TMuonOverlapParams )
+      IMPORT_PAYLOAD_CASE( L1TUtmAlgorithm )
+      IMPORT_PAYLOAD_CASE( L1TUtmBin )
+      IMPORT_PAYLOAD_CASE( L1TUtmCondition )
+      IMPORT_PAYLOAD_CASE( L1TUtmCut )
+      IMPORT_PAYLOAD_CASE( L1TUtmCutValue )
+      IMPORT_PAYLOAD_CASE( L1TUtmObject )
+      IMPORT_PAYLOAD_CASE( L1TUtmScale )
+      IMPORT_PAYLOAD_CASE( L1TUtmTriggerMenu )
+      IMPORT_PAYLOAD_CASE( L1TGlobalParameters )
       IMPORT_PAYLOAD_CASE( L1TriggerKey )
       IMPORT_PAYLOAD_CASE( MagFieldConfig )
       if( inputTypeName == "L1TriggerKeyList" ){ 
 	match = true;
-	const L1TriggerKeyList& obj = *static_cast<const L1TriggerKeyList*>( inputPtr );
-        L1TriggerKeyList converted;
-	for( const auto& kitem : obj.tscKeyToTokenMap() ){
-	  std::string pid("0");
-	  std::string sourcePid = source.parsePoolToken( kitem.second );
-	  if( !destination.lookupMigratedPayload( source.connectionString(), sourcePid, pid ) ){
-	    std::cout <<"WARNING: L1Trigger key stored on "<<sourcePid<<" has not been migrated (yet?). Attemping to do the export..."<<std::endl;
-	    bool exists = false;
-            std::pair<std::string,boost::shared_ptr<void> > missingPayload = fetchIfExists( sourcePid, source, exists );
-	    if( exists ) pid = import( source, sourcePid, missingPayload.first, missingPayload.second.get(), destination );
-	    std::cout <<"WARNING: OID "<<sourcePid<<" will be mapped to HASH "<<pid<<std::endl;
-	    if( pid != "0" ) destination.addMigratedPayload( source.connectionString(), sourcePid, pid );
-	  }
-          converted.addKey( kitem.first, pid );
-	}
-	for( const auto& ritem : obj.recordTypeToKeyToTokenMap() ){
-	  for( const auto& kitem : ritem.second ){
-	    std::string pid("0");
-	    std::string sourcePid = source.parsePoolToken( kitem.second );
-	    if( !destination.lookupMigratedPayload( source.connectionString(), sourcePid, pid ) ){
-	      std::cout <<"WARNING: L1Trigger key stored on "<<sourcePid<<" has not been migrated (yet?). Attemping to do the export..."<<std::endl;
-	      bool exists = false;
-	      std::pair<std::string,boost::shared_ptr<void> > missingPayload = fetchIfExists( sourcePid, source, exists );
-	      if( exists ) pid = import( source, sourcePid, missingPayload.first, missingPayload.second.get(), destination );
-	      std::cout <<"WARNING: OID "<<sourcePid<<" will be mapped to HASH "<<pid<<std::endl;
-	      if( pid != "0" ) destination.addMigratedPayload( source.connectionString(), sourcePid, pid );
-	    }
-	    converted.addKey( ritem.first, kitem.first, pid );
-	  }
-	}
-	payloadId = destination.storePayload( converted, boost::posix_time::microsec_clock::universal_time() );
+	throwException( "Import of \"L1TriggerKeyList\" type payloads is not supported.","import" );
       }
       //IMPORT_PAYLOAD_CASE( L1TriggerKeyList )
       IMPORT_PAYLOAD_CASE( lumi::LumiSectionData )
@@ -258,10 +242,11 @@ namespace cond {
       IMPORT_PAYLOAD_CASE( StorableDoubleMap<AbsOOTPileupCorrection> )
       IMPORT_PAYLOAD_CASE( PhysicsTools::Calibration::MVAComputerContainer )
       IMPORT_PAYLOAD_CASE( PCaloGeometry )
-      IMPORT_PAYLOAD_CASE( PHcalParameters )
+      IMPORT_PAYLOAD_CASE( HcalParameters )
       IMPORT_PAYLOAD_CASE( PGeometricDet )
       IMPORT_PAYLOAD_CASE( PGeometricDetExtra )
       IMPORT_PAYLOAD_CASE( PTrackerParameters )
+      IMPORT_PAYLOAD_CASE( PHGCalParameters )
 	//IMPORT_PAYLOAD_CASE( PerformancePayload )
       IMPORT_PAYLOAD_CASE( PerformancePayloadFromTable )
       IMPORT_PAYLOAD_CASE( PerformancePayloadFromTFormula )
@@ -320,6 +305,7 @@ namespace cond {
       IMPORT_PAYLOAD_CASE( EcalCondObjectContainer<EcalTPGPedestal> )
       IMPORT_PAYLOAD_CASE( EcalCondObjectContainer<EcalXtalGroupId> )
       IMPORT_PAYLOAD_CASE( EcalCondObjectContainer<float> )
+      IMPORT_PAYLOAD_CASE( L1TGlobalPrescalesVetos )
       if( inputTypeName == "PhysicsTools::Calibration::Histogram3D<double,double,double,double>" ){
 	match = true;
 	const PhysicsTools::Calibration::Histogram3D<double,double,double,double>& obj = *static_cast<const PhysicsTools::Calibration::Histogram3D<double,double,double,double>*>( inputPtr ); 

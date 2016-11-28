@@ -53,6 +53,7 @@
 
 //#include "Geometry/Records/interface/TrackerDigiGeometryRecord.h"
 #include "Geometry/Records/interface/IdealGeometryRecord.h"
+#include "Geometry/Records/interface/TrackerTopologyRcd.h"
 #include "Geometry/TrackerNumberingBuilder/interface/GeometricDet.h"
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeomBuilderFromGeometricDet.h"
@@ -123,11 +124,16 @@ TrackerTreeGenerator::analyze(const edm::Event& iEvent, const edm::EventSetup& i
    // now try to take directly the ideal geometry independent of used geometry in Global Tag
    edm::ESHandle<GeometricDet> geometricDet;
    iSetup.get<IdealGeometryRecord>().get(geometricDet);
+
+   //Retrieve tracker topology from geometry
+   edm::ESHandle<TrackerTopology> tTopoHandle;
+   iSetup.get<TrackerTopologyRcd>().get(tTopoHandle);
+   const TrackerTopology* const tTopo = tTopoHandle.product();
    
    edm::ESHandle<PTrackerParameters> ptp;
    iSetup.get<PTrackerParametersRcd>().get(ptp);
    TrackerGeomBuilderFromGeometricDet trackerBuilder;
-   TrackerGeometry* tkGeom = trackerBuilder.build(&(*geometricDet), *ptp);
+   TrackerGeometry* tkGeom = trackerBuilder.build(&(*geometricDet), *ptp, tTopo);
  
    const TrackerGeometry *bareTkGeomPtr = &(*tkGeom);
    
@@ -264,28 +270,28 @@ TrackerTreeGenerator::analyze(const edm::Event& iEvent, const edm::EventSetup& i
      if(tkTreeVar.subdetId==PixelSubdetector::PixelBarrel || tkTreeVar.subdetId==StripSubdetector::TIB
                                                           || tkTreeVar.subdetId==StripSubdetector::TOB){
        dR   = gWDirection.perp() - gPModule.perp();
-       dPhi = deltaPhi(gUDirection.phi(),gPModule.phi());
+       dPhi = deltaPhi(gUDirection.barePhi(),gPModule.barePhi());
        dZ   = gVDirection.z() - gPModule.z();
        tkTreeVar.uDirection = dPhi>0. ? 1 : -1;
        tkTreeVar.vDirection = dZ>0.   ? 1 : -1;
        tkTreeVar.wDirection = dR>0.   ? 1 : -1;
      }else if(tkTreeVar.subdetId==PixelSubdetector::PixelEndcap){
        dR   = gUDirection.perp() - gPModule.perp();
-       dPhi = deltaPhi(gVDirection.phi(),gPModule.phi());
+       dPhi = deltaPhi(gVDirection.barePhi(),gPModule.barePhi());
        dZ   = gWDirection.z() - gPModule.z();
        tkTreeVar.uDirection = dR>0.   ? 1 : -1;
        tkTreeVar.vDirection = dPhi>0. ? 1 : -1;
        tkTreeVar.wDirection = dZ>0.   ? 1 : -1;
      }else if(tkTreeVar.subdetId==StripSubdetector::TID || tkTreeVar.subdetId==StripSubdetector::TEC){
        dR = gVDirection.perp() - gPModule.perp();
-       dPhi = deltaPhi(gUDirection.phi(),gPModule.phi());
+       dPhi = deltaPhi(gUDirection.barePhi(),gPModule.barePhi());
        dZ = gWDirection.z() - gPModule.z();
        tkTreeVar.uDirection = dPhi>0. ? 1 : -1;
        tkTreeVar.vDirection = dR>0.   ? 1 : -1;
        tkTreeVar.wDirection = dZ>0.   ? 1 : -1;
      }
      tkTreeVar.posR         = gPModule.perp();
-     tkTreeVar.posPhi       = gPModule.phi();     // = gPModule.phi().degrees();
+     tkTreeVar.posPhi       = gPModule.barePhi();     // = gPModule.barePhi().degrees();
      tkTreeVar.posEta       = gPModule.eta();
      tkTreeVar.posX         = gPModule.x();
      tkTreeVar.posY         = gPModule.y();

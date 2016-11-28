@@ -12,7 +12,7 @@ hcalSimParameters = cms.PSet(
     # comes out to a 40% smearing of the single pe peak!
     #
     hf1 = cms.PSet(
-        readoutFrameSize = cms.int32(5),
+        readoutFrameSize = cms.int32(4),
         binOfMaximum = cms.int32(3),
         samplingFactor = cms.double(0.383),
         doPhotoStatistics = cms.bool(True),
@@ -22,7 +22,7 @@ hcalSimParameters = cms.PSet(
         timePhase = cms.double(14.0)        
     ),
     hf2 = cms.PSet(
-        readoutFrameSize = cms.int32(5),
+        readoutFrameSize = cms.int32(4),
         binOfMaximum = cms.int32(3),
         samplingFactor = cms.double(0.368),
         doPhotoStatistics = cms.bool(True),
@@ -112,7 +112,7 @@ def _modifyHcalSimParametersForPostLS1( object ) :
     object.ho.siPMCode = cms.int32(1)
     object.ho.pixels = cms.int32(2500)
     object.ho.doSiPMSmearing = cms.bool(False)
-    object.hf1.samplingFactor = cms.double(0.60)
-    object.hf2.samplingFactor = cms.double(0.60)
+    object.hf1.samplingFactor = cms.double(0.67)
+    object.hf2.samplingFactor = cms.double(0.67)
 
 eras.run2_common.toModify( hcalSimParameters, func=_modifyHcalSimParametersForPostLS1 )

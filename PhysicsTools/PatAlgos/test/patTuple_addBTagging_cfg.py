@@ -13,7 +13,7 @@ from PhysicsTools.PatAlgos.tools.jetTools import addJetCollection
 
 # b-tag discriminators
 btagDiscriminators = [
-     # legacy framework (supported with RECO/AOD but not MiniAOD)
+     # legacy framework (no longer supported, work with RECO/AOD but not MiniAOD)
      'jetBProbabilityBJetTags'
     ,'jetProbabilityBJetTags'
     ,'positiveOnlyJetBProbabilityBJetTags'
@@ -28,9 +28,6 @@ btagDiscriminators = [
     ,'simpleSecondaryVertexHighPurBJetTags'
     ,'negativeSimpleSecondaryVertexHighEffBJetTags'
     ,'negativeSimpleSecondaryVertexHighPurBJetTags'
-    ,'combinedSecondaryVertexBJetTags'
-    ,'positiveCombinedSecondaryVertexBJetTags'
-    ,'negativeCombinedSecondaryVertexBJetTags'
     ,'combinedSecondaryVertexV2BJetTags'
     ,'positiveCombinedSecondaryVertexV2BJetTags'
     ,'negativeCombinedSecondaryVertexV2BJetTags'
@@ -39,15 +36,12 @@ btagDiscriminators = [
     ,'negativeSimpleInclusiveSecondaryVertexHighEffBJetTags'
     ,'negativeSimpleInclusiveSecondaryVertexHighPurBJetTags'
     ,'doubleSecondaryVertexHighEffBJetTags'
-    ,'combinedInclusiveSecondaryVertexBJetTags'
-    ,'positiveCombinedInclusiveSecondaryVertexBJetTags'
-    ,'negativeCombinedInclusiveSecondaryVertexBJetTags'
     ,'combinedInclusiveSecondaryVertexV2BJetTags'
     ,'positiveCombinedInclusiveSecondaryVertexV2BJetTags'
     ,'negativeCombinedInclusiveSecondaryVertexV2BJetTags'
-    ,'combinedMVABJetTags'
-    ,'positiveCombinedMVABJetTags'
-    ,'negativeCombinedMVABJetTags'
+    ,'combinedMVAV2BJetTags'
+    ,'negativeCombinedMVAV2BJetTags'
+    ,'positiveCombinedMVAV2BJetTags'
      # new candidate-based framework (supported with RECO/AOD/MiniAOD)
     ,'pfJetBProbabilityBJetTags'
     ,'pfJetProbabilityBJetTags'
@@ -63,15 +57,13 @@ btagDiscriminators = [
     ,'pfSimpleSecondaryVertexHighPurBJetTags'
     ,'pfNegativeSimpleSecondaryVertexHighEffBJetTags'
     ,'pfNegativeSimpleSecondaryVertexHighPurBJetTags'
-    ,'pfCombinedSecondaryVertexBJetTags'
-    ,'pfPositiveCombinedSecondaryVertexBJetTags'
-    ,'pfNegativeCombinedSecondaryVertexBJetTags'
+    ,'pfSimpleInclusiveSecondaryVertexHighEffBJetTags'
+    ,'pfSimpleInclusiveSecondaryVertexHighPurBJetTags'
+    ,'pfNegativeSimpleInclusiveSecondaryVertexHighEffBJetTags'
+    ,'pfNegativeSimpleInclusiveSecondaryVertexHighPurBJetTags'
     ,'pfCombinedSecondaryVertexV2BJetTags'
     ,'pfPositiveCombinedSecondaryVertexV2BJetTags'
     ,'pfNegativeCombinedSecondaryVertexV2BJetTags'
-    ,'pfCombinedInclusiveSecondaryVertexBJetTags'
-    ,'pfPositiveCombinedInclusiveSecondaryVertexBJetTags'
-    ,'pfNegativeCombinedInclusiveSecondaryVertexBJetTags'
     ,'pfCombinedInclusiveSecondaryVertexV2BJetTags'
     ,'pfPositiveCombinedInclusiveSecondaryVertexV2BJetTags'
     ,'pfNegativeCombinedInclusiveSecondaryVertexV2BJetTags'
@@ -99,11 +91,14 @@ btagDiscriminators = [
     ,'negativeSoftPFElectronByPtBJetTags'
     ,'negativeSoftPFElectronByIP3dBJetTags'
     ,'negativeSoftPFElectronByIP2dBJetTags'
-    ,'pfCombinedSecondaryVertexSoftLeptonBJetTags'
-    ,'pfNegativeCombinedSecondaryVertexSoftLeptonBJetTags'
-    ,'pfCombinedMVABJetTags'
-    ,'pfPositiveCombinedMVABJetTags'
-    ,'pfNegativeCombinedMVABJetTags'
+    ,'pfCombinedMVAV2BJetTags'
+    ,'pfNegativeCombinedMVAV2BJetTags'
+    ,'pfPositiveCombinedMVAV2BJetTags'
+     # CTagging
+    ,'pfCombinedCvsLJetTags'
+    ,'pfCombinedCvsBJetTags'
+     # ChargeTagging
+    ,'pfChargeBJetTags'
 ]
 
 # uncomment the following lines to add ak4PFJets with new b-tags to your PAT output
@@ -160,8 +155,8 @@ process.out.outputCommands.append( 'drop *_selectedPatJetsAK4PF_caloTowers_*' )
 ## switch to RECO input
 from PhysicsTools.PatAlgos.patInputFiles_cff import filesRelValProdTTbarAODSIM
 process.source.fileNames = filesRelValProdTTbarAODSIM
-#from PhysicsTools.PatAlgos.patInputFiles_cff import filesRelValProdTTbarGENSIMRECO
-#process.source.fileNames = filesRelValProdTTbarGENSIMRECO
+#from PhysicsTools.PatAlgos.patInputFiles_cff import filesRelValTTbarGENSIMRECO
+#process.source.fileNames = filesRelValTTbarGENSIMRECO
 #                                         ##
 process.maxEvents.input = 10
 #                                         ##
@@ -169,4 +164,4 @@ process.maxEvents.input = 10
 #                                         ##
 process.out.fileName = 'patTuple_addBTagging.root'
 #                                         ##
-#   process.options.wantSummary = False   ##  (to suppress the long output at the end of the job)
+process.options.wantSummary = False   ##  (to suppress the long output at the end of the job)

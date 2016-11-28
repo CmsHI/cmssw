@@ -14,6 +14,8 @@
 #include "FastSimulation/CaloHitMakers/interface/HcalHitMaker.h"
 #include "FastSimulation/CaloHitMakers/interface/PreshowerHitMaker.h"
 
+#include "FastSimulation/Calorimetry/interface/KKCorrectionFactors.h"
+
 // For the uint32_t
 //#include <boost/cstdint.hpp>
 #include <map>
@@ -55,29 +57,29 @@ class CalorimetryManager{
   // Does the real job
   void reconstruct(RandomEngineAndDistribution const*);
 
-    // Return the address of the Calorimeter 
+  // Return the address of the Calorimeter 
   CaloGeometryHelper * getCalorimeter() const {return myCalorimeter_;}
 
   // Return the address of the FastHFShowerLibrary 
   FastHFShowerLibrary * getHFShowerLibrary() const {return theHFShowerLibrary;}
-
+  
   // load container from edm::Event
   void loadFromEcalBarrel(edm::PCaloHitContainer & c) const;
-
+  
   void loadFromEcalEndcap(edm::PCaloHitContainer & c) const;
-
+  
   void loadFromHcal(edm::PCaloHitContainer & c) const;
-
+  
   void loadFromPreshower(edm::PCaloHitContainer & c) const;
-
+  
   void loadMuonSimTracks(edm::SimTrackContainer & m) const;
-
+  
  private:
   // Simulation of electromagnetic showers in PS, ECAL, HCAL
   void EMShowerSimulation(const FSimTrack& myTrack, RandomEngineAndDistribution const*);
   
   void reconstructHCAL(const FSimTrack& myTrack, RandomEngineAndDistribution const*);
-
+  
   void MuonMipSimulation(const FSimTrack & myTrack, RandomEngineAndDistribution const*);
  
   /// Hadronic Shower Simulation
@@ -186,5 +188,8 @@ class CalorimetryManager{
   bool useShowerLibrary;
   bool useCorrectionSL;
   FastHFShowerLibrary *theHFShowerLibrary;
+
+  std::unique_ptr<KKCorrectionFactors> ecalCorrection;
+
 };
 #endif

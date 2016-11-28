@@ -19,6 +19,7 @@
 #include "FWCore/Utilities/interface/ConvertException.h"
 #include "FWCore/Utilities/interface/Exception.h"
 #include "FWCore/Utilities/interface/StreamID.h"
+#include "FWCore/Utilities/interface/propagate_const.h"
 
 #include <map>
 #include <memory>
@@ -52,7 +53,7 @@ namespace edm {
 
     private:
       // We own none of these resources.
-      ActivityRegistry* a_;
+      ActivityRegistry* a_; // We do not use propagate_const because the registry itself is mutable.
       typename T::Context const* context_;
       bool allowThrow_;
     };
@@ -135,13 +136,13 @@ namespace edm {
         reg_ = nullptr;
       }
     private:
-      edm::ActivityRegistry* reg_;
+      edm::ActivityRegistry* reg_; // We do not use propagate_const because the registry itself is mutable.
       GlobalContext const* context_;
     };
 
     
     template<typename T>
-    void runNow(typename T::MyPrincipal& p, EventSetup const& es,
+    void runNow(typename T::MyPrincipal const& p, EventSetup const& es,
                 GlobalContext const* context);
 
     /// returns the action table
@@ -152,8 +153,8 @@ namespace edm {
     void addToAllWorkers(Worker* w);
     
     WorkerManager                         workerManager_;
-    std::shared_ptr<ActivityRegistry>   actReg_;
-    WorkerPtr                             results_inserter_;
+    std::shared_ptr<ActivityRegistry>     actReg_; // We do not use propagate_const because the registry itself is mutable.
+    edm::propagate_const<WorkerPtr>       results_inserter_;
 
 
     ProcessContext const*                 processContext_;
@@ -194,7 +195,7 @@ namespace edm {
   }
   template <typename T>
   void
-  GlobalSchedule::runNow(typename T::MyPrincipal& p, EventSetup const& es,
+  GlobalSchedule::runNow(typename T::MyPrincipal const& p, EventSetup const& es,
               GlobalContext const* context) {
     //do nothing for event since we will run when requested
     for(auto & worker: allWorkers()) {

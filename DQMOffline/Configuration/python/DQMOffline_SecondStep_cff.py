@@ -6,7 +6,6 @@ from DQMServices.Components.DQMDcsInfoClient_cfi import *
 from DQMServices.Components.DQMFastTimerServiceClient_cfi import *
 
 from DQMOffline.Ecal.ecal_dqm_client_offline_cff import *
-from DQM.HcalMonitorModule.hcal_dqm_client_fileT0_cff import *
 from DQM.SiStripMonitorClient.SiStripClientConfig_Tier0_cff import *
 from DQM.SiPixelCommon.SiPixelOfflineDQM_client_cff import *
 from DQM.DTMonitorClient.dtDQMOfflineClients_cff import *
@@ -17,16 +16,17 @@ from DQM.BeamMonitor.AlcaBeamMonitorClient_cff import *
 from DQMServices.Components.DQMFEDIntegrityClient_cff import *
 from Validation.RecoTau.DQMSequences_cfi import *
 from DQMOffline.Hcal.HcalDQMOfflinePostProcessor_cff import *
+from DQM.HcalTasks.OfflineHarvestingSequence_pp import *
 
 DQMOffline_SecondStep_PreDPG = cms.Sequence( dqmDcsInfoClient *
                                              ecal_dqm_client_offline *
-                                             hcalOfflineDQMClient *
                                              SiStripOfflineDQMClient *
                                              PixelOfflineDQMClientNoDataCertification *
                                              dtClients *
                                              rpcTier0Client *
                                              cscOfflineCollisionsClients *
                                              es_dqm_client_offline *
+											 hcalOfflineHarvesting *
                                              HcalDQMOfflinePostProcessor * 
                                              dqmFEDIntegrityClient )
 
@@ -58,11 +58,17 @@ DQMOffline_SecondStepPOG = cms.Sequence( dqmRefHistoRootFileGetter *
                                          DQMOffline_SecondStep_PrePOG *
                                          DQMMessageLoggerClientSeq )
 
+HLTMonitoringClient = cms.Sequence(trackingMonitorClientHLT)
+
 DQMOffline_SecondStep = cms.Sequence( dqmRefHistoRootFileGetter *
                                       DQMOffline_SecondStep_PreDPG *
                                       DQMOffline_SecondStep_PrePOG *
+                                      HLTMonitoringClient *
                                       DQMMessageLoggerClientSeq *
                                       dqmFastTimerServiceClient)
+
+DQMOffline_SecondStep_FakeHLT = cms.Sequence( DQMOffline_SecondStep )
+DQMOffline_SecondStep_FakeHLT.remove( HLTMonitoringClient )
 
 DQMOffline_SecondStep_PrePOGMC = cms.Sequence( bTagCollectorSequenceDATA )
 
@@ -98,6 +104,9 @@ DQMHarvestCommonSiStripZeroBias = cms.Sequence(dqmRefHistoRootFileGetter *
                                                dqmFastTimerServiceClient
                                                )
 
+DQMHarvestTracking = cms.Sequence( TrackingOfflineDQMClient *
+                                   dqmFastTimerServiceClient )
+
 DQMHarvestMuon = cms.Sequence( dtClients *
                                rpcTier0Client *
                                cscOfflineCollisionsClients *
@@ -106,14 +115,13 @@ DQMHarvestMuon = cms.Sequence( dtClients *
 DQMHarvestEcal = cms.Sequence( ecal_dqm_client_offline *
                                 es_dqm_client_offline
                               )
-DQMHarvestHcal = cms.Sequence( hcalOfflineDQMClient )
+
+DQMHarvestHcal = cms.Sequence(hcalOfflineHarvesting)
 
 DQMHarvestJetMET = cms.Sequence( SusyPostProcessorSequence )
 
 DQMHarvestEGamma = cms.Sequence( egammaPostProcessing )                     
 
 DQMHarvestBTag = cms.Sequence( bTagCollectorSequenceDATA )  
-
-HLTMonitoringClient = cms.Sequence()
 
 DQMHarvestMiniAOD = cms.Sequence( dataCertificationJetMETSequence )

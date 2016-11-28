@@ -157,14 +157,15 @@ void SiStripTrackerMapCreator::createForOffline(const edm::ParameterSet & tkmapP
   bool tkMapFED = tkmapPset.getUntrackedParameter<bool>("fedMap",false);
   std::string namesuffix = tkmapPset.getUntrackedParameter<std::string>("mapSuffix",""); 
  
-  unsigned int runNumber_ = tkmapPset.getUntrackedParameter<unsigned int>("RunNumber",1);
-
-  std::stringstream ss;
-  ss << runNumber_;
-  sRunNumber = ss.str();
-  std::string tmap_title;
-  if      (runNumber_>0)  { tmap_title = " Run: " + sRunNumber + ", Tracker Map from " + map_type; }
-  else                    { tmap_title = " Tracker Map from " + map_type; }
+  //  std::string tmap_title = " Tracker Map from  " + map_type;
+  unsigned int runNumber_ = tkmapPset.getUntrackedParameter<unsigned int>("RunNumber",1); //LG                                                             
+  std::stringstream ss; //LG
+  ss << runNumber_; //LG
+  sRunNumber = ss.str(); //LG 
+  std::cout << sRunNumber << "\n\n\n\n\n\n";
+  std::string tmap_title; //LG
+  if      (runNumber_>0)  { tmap_title = " Run: " + sRunNumber + ", Tracker Map from " + map_type; } //LG
+  else                    { tmap_title = " Tracker Map from " + map_type; } //LG
   trackerMap_->setTitle(tmap_title);
 
   if(tkmapPset.exists("TopModules"))
@@ -293,7 +294,8 @@ void SiStripTrackerMapCreator::printBadModuleList(std::map<unsigned int,std::str
     }
   }
 
-  edm::LogVerbatim("BadModuleList") << "Run: " << sRunNumber << ", Number of bad modules in total:";
+  //  edm::LogVerbatim("BadModuleList") << "Number of bad modules in total:";
+  edm::LogVerbatim("BadModuleList") << "Run: " << sRunNumber << ", Number of bad modules in total:"; //LG
   edm::LogVerbatim("BadModuleList") << "--------------------------------------------------------------";
   edm::LogVerbatim("BadModuleList") << "TIB: " << ntib;
   edm::LogVerbatim("BadModuleList") << "TID/MINUS: " << ntids1;
@@ -361,7 +363,12 @@ void SiStripTrackerMapCreator::paintTkMapFromAlarm(uint32_t det_id, const Tracke
   if(isBad) { rval=255; gval=255; bval = 0; comment << " PCLBadModule ";}
   trackerMap_->setText(det_id, comment.str());
   trackerMap_->fillc(det_id, rval, gval, bval);
-  if(badmodmap && (flag!=0 || isBad)) (*badmodmap)[det_id] = comment.str();
+
+  if(badmodmap && (flag!=0 || isBad)){ 
+    uint  lay= tTopo->layer(SiStripDetId(det_id));
+    std::string layer =" Layer "+ std::to_string(lay); 
+    (*badmodmap)[det_id] = comment.str() + layer;
+  }
 
   detflag_[det_id] = flag;
 }
@@ -482,7 +489,7 @@ void SiStripTrackerMapCreator::paintTkMapFromHistogram(DQMStore* dqm_store, Moni
     nDet++;
     const TkLayerMap::XYbin& xyval = tkDetMap_->getXY(det_id , cached_detid , cached_layer , cached_XYbin);
     float fval = 0.0;
-    if ( (name.find("NumberOfOfffTrackCluster") != std::string::npos) || 
+    if ( (name.find("NumberOfOff") != std::string::npos) || //temporary fix 
          (name.find("NumberOfOnTrackCluster") != std::string::npos) ) {
       if (me->kind() == MonitorElement::DQM_KIND_TPROFILE2D) {   
 	TProfile2D* tp = me->getTProfile2D() ;
@@ -678,6 +685,11 @@ void SiStripTrackerMapCreator::createInfoFile(std::vector<std::string> map_names
       else {
         tkinfo_tree->Fill();
       }
+    }
+
+    // delete pointers
+    for(uint32_t ih = 0; ih < nHists; ++ih) {
+      delete tkHMaps.at(ih);
     }
 
   }

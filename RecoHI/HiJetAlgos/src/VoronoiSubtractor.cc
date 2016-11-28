@@ -70,7 +70,7 @@ void VoronoiSubtractor::offsetCorrectJets()
 	double orpt = candidate.perp();
 	unsubtracted += candidate;
 	if(addNegative_ || voronoi.pt() > 0){
-	  candidate.reset_PtYPhiM(addNegative_ ? voronoi.pt_subtracted() : voronoi.pt(),ref->rapidity(),ref->phi(),0);
+	  candidate.reset_PtYPhiM(addNegative_ ? voronoi.pt_subtracted() : voronoi.pt(),ref->rapidity(),ref->phi(),ref->mass());
 	  LogDebug("VoronoiSubtractor")<<"candidate "<<index
 				       <<" --- original pt : "<<orpt
 				       <<" ---  voronoi pt : "<<voronoi.pt()
@@ -162,7 +162,7 @@ void VoronoiSubtractor::subtractPedestal(vector<fastjet::PseudoJet> & coll)
       int index = input_object->user_index();
 
       fastjet::PseudoJet ps(input_object->four_mom());
-      ps.reset_PtYPhiM(ptnew,input_object->rapidity(),input_object->phi(),0);
+      ps.reset_PtYPhiM(ptnew,input_object->rapidity(),input_object->phi(),input_object->m());
       ps.set_user_index(index);
 
       LogDebug("VoronoiSubtractor")<<"New momentum : "<<ps.pt()

@@ -54,11 +54,11 @@ if __name__ == '__main__':
     parser.add_option('--inputLumiJSON',dest='inputLumiJSON',action='store',
                         help='Input Lumi/Pileup file in JSON format (required)')
     parser.add_option('--verbose',dest='verbose',action='store_true',help='verbose mode for printing' )
-    
+    parser.add_option('--runperiod',dest='runperiod',action='store', default='Run1',help='select runperiod Run1 or Run2, default Run1' )
     # parse arguments
     try:
         (options, args) = parser.parse_args()
-    except Exception , e:
+    except Exception as e:
         print e
 #    if not args:
 #        parser.print_usage()
@@ -75,10 +75,11 @@ if __name__ == '__main__':
         print '\toutputfile: ',options.outputfile
         print '\tinput selection file: ',options.inputfile
 
-
+    #print options.runperiod
     #inpf = open (options.inputfile, 'r')
     #inputfilecontent = inpf.read()
-    inputRange =  csvLumibyLSParser.csvLumibyLSParser (options.inputfile).runsandls()
+      
+    inputRange =  csvLumibyLSParser.csvLumibyLSParser (options.inputfile,options.runperiod).runsandls()
 
     #print 'number of runs processed %d' % csvLumibyLSParser.csvLumibyLSParser (options.inputfile).numruns()
 
@@ -112,9 +113,10 @@ if __name__ == '__main__':
                     if PUlumiInfo[0] > 0.:
                         scale=HLTlumiInfo[1]/PUlumiInfo[0] # rescale to HLT recorded Lumi
 
-                    if scale > 1.001:
-                        print 'Run %d, LS %d, HLT Scale (%f), HLTL (%f), PUL (%f) larger than one - please check!' % (run, LSnumber, scale, HLTlumiInfo[1],PUlumiInfo[0])
-                        scale=1.01  # HLT integrated values are wrong, punt                        
+                    if scale > 1.001: # happens by default for HF in Run2, therefore only print out if significant
+			if scale > 1.006:
+                        	print 'Run %d, LS %d, HLT Scale (%f), HLTL (%f), PUL (%f) larger than one - please check!' % (run, LSnumber, scale, HLTlumiInfo[1],PUlumiInfo[0])
+                    	scale=1.0  # HLT integrated values are wrong, punt                        
 
                     newIntLumi = scale*PUlumiInfo[0]
                     newRmsLumi = PUlumiInfo[1]
@@ -166,8 +168,7 @@ if __name__ == '__main__':
 
     outputfile = open(options.outputfile,'w')
     if not outputfile:
-        raise RuntimeError, \
-              "Could not open '%s' as an output JSON file" % output
+        raise RuntimeError("Could not open '%s' as an output JSON file" % output)
                     
     outputfile.write(OUTPUTLINE)
     outputfile.close()

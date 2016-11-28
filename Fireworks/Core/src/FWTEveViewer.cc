@@ -20,9 +20,7 @@
 
 #include "TMath.h"
 #include "TGLIncludes.h"
-#define protected public
 #include "TGLFBO.h"
-#undef protected
 
 #include "Fireworks/Core/interface/FWTEveViewer.h"
 #include "Fireworks/Core/interface/FWTGLViewer.h"
@@ -152,15 +150,15 @@ FWTEveViewer::CaptureAndSaveImage(const TString& file, int height)
    }
 
    int ww, hh;
-   if (fbo->fIsRescaled)
+   if (fbo->GetIsRescaled())
    {
-      ww = TMath::Nint(fbo->fW * fbo->fWScale);
-      hh = TMath::Nint(fbo->fH * fbo->fHScale);
+      ww = TMath::Nint(fbo->GetW() * fbo->GetWScale());
+      hh = TMath::Nint(fbo->GetH() * fbo->GetHScale());
    }
    else
    {
-      ww = fbo->fW;
-      hh = fbo->fH;
+      ww = fbo->GetW();
+      hh = fbo->GetH();
    }
 
    fbo->SetAsReadBuffer();

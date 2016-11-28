@@ -10,11 +10,11 @@ from Validation.HcalRecHits.hcalRecHitsPostProcessor_cff import *
 from Validation.EventGenerator.PostProcessor_cff import *
 from Validation.RecoEgamma.photonPostProcessor_cff import *
 from Validation.RecoEgamma.electronPostValidationSequence_cff import *
+from Validation.RecoEgamma.electronPostValidationSequenceMiniAOD_cff import *
 from Validation.RecoParticleFlow.PFValidationClient_cff import *
 from Validation.RPCRecHits.postValidation_cfi import *
 from Validation.RecoTau.DQMMCValidation_cfi import *
-from Validation.RecoEgamma.photonFastSimPostProcessor_cff import *
-from Validation.RecoVertex.PrimaryVertexAnalyzer4PUSlimmed_Client_cfi import *
+from Validation.RecoVertex.PostProcessorVertex_cff import *
 from Validation.RecoMET.METPostProcessor_cff import *
 from DQMOffline.RecoB.dqmCollector_cff import *
 
@@ -22,7 +22,7 @@ from DQMOffline.RecoB.dqmCollector_cff import *
 postValidation = cms.Sequence(
       recoMuonPostProcessors
     + postProcessorTrackSequence
-    + postProcessorVertex
+    + postProcessorVertexSequence
     + MuIsoValPostProcessor
     + calotowersPostProcessor
     + hcalSimHitsPostProcessor
@@ -44,14 +44,18 @@ postValidation_preprod = cms.Sequence(
 
 
 postValidation_fastsim = cms.Sequence(
-      recoMuonPostProcessorsFastSim
+      recoMuonPostProcessors
     + postProcessorTrackSequence
     + MuIsoValPostProcessor
-    + fastSimPhotonPostProcessor
+    + photonPostProcessor
     + bTagCollectorSequenceMC
     + runTauEff
 )
 
+postValidation_trackingOnly = cms.Sequence(
+      postProcessorTrackSequenceTrackingOnly
+    + postProcessorVertex
+)
  
 postValidation_gen = cms.Sequence(
     EventGeneratorPostProcessor
@@ -59,4 +63,8 @@ postValidation_gen = cms.Sequence(
 
 postValidationCosmics = cms.Sequence(
       postProcessorMuonMultiTrack
+)
+
+postValidationMiniAOD = cms.Sequence(
+      electronPostValidationSequenceMiniAOD
 )

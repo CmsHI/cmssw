@@ -35,10 +35,7 @@ SubEventGenJetProducer::SubEventGenJetProducer(edm::ParameterSet const& conf):
   VirtualJetProducer( conf )
 {
    //   mapSrc_ = conf.getParameter<edm::InputTag>( "srcMap");
-   signalOnly_ = conf.getParameter<bool>("signalOnly");
    ignoreHydro_ = conf.getUntrackedParameter<bool>("ignoreHydro", true);
-
-   if(signalOnly_) ignoreHydro_ = 0;
    produces<reco::BasicJetCollection>();
   // the subjet collections are set through the config file in the "jetCollInstanceName" field.
 
@@ -61,7 +58,6 @@ void SubEventGenJetProducer::inputTowers( )
       edm::Ptr<reco::Candidate> p = inputs_[i - inBegin];
       const GenParticle * pref = dynamic_cast<const GenParticle *>(p.get());
       int subevent = pref->collisionId();
-      if(signalOnly_ && subevent != 0) continue;
       LogDebug("SubEventContainers")<<"SubEvent is : "<<subevent<<endl;
       LogDebug("SubEventContainers")<<"SubSize is : "<<subInputs_.size()<<endl;
 
@@ -73,7 +69,7 @@ void SubEventGenJetProducer::inputTowers( )
       }
 
       LogDebug("SubEventContainers")<<"HydroTag is : "<<hydroTag_[subevent]<<endl;
-      if(ignoreHydro_ && hydroTag_[subevent] != 0) hydroTag_[subevent] = (int)checkHydro(pref);
+      if(hydroTag_[subevent] != 0) hydroTag_[subevent] = (int)checkHydro(pref);
 
       subInputs_[subevent].push_back(fastjet::PseudoJet(input->px(),input->py(),input->pz(),
 						input->energy()));

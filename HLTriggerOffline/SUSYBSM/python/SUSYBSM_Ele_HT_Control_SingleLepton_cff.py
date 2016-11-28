@@ -13,7 +13,7 @@ SUSY_HLT_Ele_HT_Control_SingleLepton = cms.EDAnalyzer('SUSY_HLT_SingleLepton',
                                                       beamSpot = cms.InputTag('offlineBeamSpot'),
 
                                                       leptonFilter = cms.InputTag('hltEle15VVVLGsfTrackIsoFilter','','HLT'),
-                                                      hltHt = cms.InputTag('hltPFHT','','HLT'),
+                                                      hltHt = cms.InputTag('hltPFHTJet30','','HLT'),
                                                       hltMet = cms.InputTag(''),
                                                       hltJets = cms.InputTag(''),
                                                       hltJetTags = cms.InputTag(''),
@@ -31,7 +31,7 @@ SUSY_HLT_Ele_HT_Control_SingleLepton = cms.EDAnalyzer('SUSY_HLT_SingleLepton',
                                                       csvmCut = cms.untracked.double(0.679),
                                                       csvtCut = cms.untracked.double(0.898),
 
-                                                      jetPtCut = cms.untracked.double(40.0),
+                                                      jetPtCut = cms.untracked.double(30.0),
                                                       jetEtaCut = cms.untracked.double(3.0),
                                                       metCut = cms.untracked.double(250.0),
                                                       htCut = cms.untracked.double(450.0),
@@ -51,6 +51,7 @@ SUSY_HLT_Ele_HT_Control_SingleLepton_POSTPROCESSING = cms.EDAnalyzer('DQMGeneric
                                                                      resolution = cms.vstring('')
                                                                      )
 
-SUSY_HLT_Ele_HT_Control_SingleLepton_FASTSIM = deepcopy(SUSY_HLT_Ele_HT_Control_SingleLepton)
 
-SUSY_HLT_Ele_HT_Control_SingleLepton_FASTSIM_POSTPROCESSING = deepcopy(SUSY_HLT_Ele_HT_Control_SingleLepton_POSTPROCESSING)
+# fastsim has no conversion collection (yet)
+from Configuration.StandardSequences.Eras import eras
+eras.fastSim.toModify(SUSY_HLT_Ele_HT_Control_SingleLepton,conversionCollection=cms.InputTag(''))

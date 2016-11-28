@@ -47,8 +47,8 @@ TrackSplittingMonitor::TrackSplittingMonitor(const edm::ParameterSet& iConfig)
   d0Cut_ = conf_.getParameter<double>("d0Cut");
   dzCut_ = conf_.getParameter<double>("dzCut");
   ptCut_ = conf_.getParameter<double>("ptCut");
-  norchiCut_ = conf_.getParameter<double>("norchiCut");	 
-
+  norchiCut_ = conf_.getParameter<double>("norchiCut");
+	  
 }
 
 TrackSplittingMonitor::~TrackSplittingMonitor() { 
@@ -154,6 +154,7 @@ void TrackSplittingMonitor::bookHistograms(DQMStore::IBooker & ibooker,
   }
 
 }
+
 
 //
 // -- Analyse
@@ -354,6 +355,7 @@ void TrackSplittingMonitor::analyze(const edm::Event& iEvent, const edm::EventSe
     }    
   }
 }
+
 
 
 DEFINE_FWK_MODULE(TrackSplittingMonitor);

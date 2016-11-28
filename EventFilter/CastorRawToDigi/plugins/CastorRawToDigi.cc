@@ -33,13 +33,13 @@ CastorRawToDigi::CastorRawToDigi(edm::ParameterSet const& conf):
   silent_(conf.getUntrackedParameter<bool>("silent",true)),
   usenominalOrbitMessageTime_(conf.getParameter<bool>("UseNominalOrbitMessageTime")),
   expectedOrbitMessageTime_(conf.getParameter<int>("ExpectedOrbitMessageTime"))
-  
+
 {
   if (fedUnpackList_.empty()) {
     for (int i=FEDNumbering::MINCASTORFEDID; i<=FEDNumbering::MAXCASTORFEDID; i++)
-      fedUnpackList_.push_back(i);
+     fedUnpackList_.push_back(i);
   } 
-  
+
   unpacker_.setExpectedOrbitMessageTime(expectedOrbitMessageTime_);  
   std::ostringstream ss;
   for (unsigned int i=0; i<fedUnpackList_.size(); i++) 
@@ -55,9 +55,6 @@ CastorRawToDigi::CastorRawToDigi(edm::ParameterSet const& conf):
     produces<HcalTTPDigiCollection>();
 
   tok_input_ = consumes<FEDRawDataCollection>(dataTag_);
-
-  
-
 
 }
 
@@ -75,8 +72,6 @@ void CastorRawToDigi::produce(edm::Event& e, const edm::EventSetup& es)
   es.get<CastorDbRecord>().get( pSetup );
   const CastorElectronicsMap* readoutMap=pSetup->getCastorMapping();
   
-  
-
   // Step B: Create empty output  : three vectors for three classes...
   std::vector<CastorDataFrame> castor;
   std::vector<ZDCDataFrame> zdc;
@@ -149,8 +144,11 @@ void CastorRawToDigi::produce(edm::Event& e, const edm::EventSetup& es)
       {
 	if (fed.size()==0)
 	  {
-	    edm::LogWarning("EmptyData") << "No data for FED "<< *i;
-	    report->addError(*i);
+	    if (complainEmptyData_) 
+	      {
+			edm::LogWarning("EmptyData") << "No data for FED " << *i;
+			report->addError(*i);
+	      }
 	  }
 	if (fed.size()!=0)
 	  {
@@ -163,8 +161,11 @@ void CastorRawToDigi::produce(edm::Event& e, const edm::EventSetup& es)
       {
 	if (fed.size()==0)
 	  {
-	    edm::LogWarning("EmptyData") << "No data for FED "<< *i;
-	    report->addError(*i);
+	    if (complainEmptyData_) 
+	      {
+			edm::LogWarning("EmptyData") << "No data for FED " << *i;
+			report->addError(*i);
+	      }
 	  }
 	if (fed.size()!=0)
 	  {
@@ -178,12 +179,12 @@ void CastorRawToDigi::produce(edm::Event& e, const edm::EventSetup& es)
   // Step B: encapsulate vectors in actual collections
   std::auto_ptr<CastorDigiCollection> castor_prod(new CastorDigiCollection()); 
   std::auto_ptr<CastorTrigPrimDigiCollection> htp_prod(new CastorTrigPrimDigiCollection());  
-   
-   castor_prod->swap_contents(castor);
-   htp_prod->swap_contents(htp);
-  
-   // Step C2: filter FEDs, if required
-   if (filter_.active()) {
+
+  castor_prod->swap_contents(castor);
+  htp_prod->swap_contents(htp);
+
+  // Step C2: filter FEDs, if required
+  if (filter_.active()) {
     CastorDigiCollection filtered_castor=filter_.filter(*castor_prod,*report);
     
     castor_prod->swap(filtered_castor);
@@ -233,4 +234,3 @@ void CastorRawToDigi::beginRun(edm::Run const& irun, edm::EventSetup const& es){
 		unpacker_.setExpectedOrbitMessageTime(expectedOrbitMessageTime_);
 	}
 }
-

@@ -31,7 +31,7 @@ September 21, 2009  Added HcalLutMetadata - Gena Kukartsev
 
 #include "CalibFormats/HcalObjects/interface/HcalDbService.h"
 #include "CalibFormats/HcalObjects/interface/HcalDbRecord.h"
-#include "Geometry/Records/interface/IdealGeometryRecord.h"
+#include "Geometry/Records/interface/HcalRecNumberingRecord.h"
 
 #include "FWCore/Framework/interface/IOVSyncValue.h"
 #include "CondFormats/HcalObjects/interface/AllObjects.h"
@@ -105,7 +105,7 @@ namespace edmtest
    HcalDumpConditions::analyze(const edm::Event& e, const edm::EventSetup& context)
   {
     edm::ESHandle<HcalTopology> topology ;
-    context.get<IdealGeometryRecord>().get( topology );
+    context.get<HcalRecNumberingRecord>().get( topology );
     const HcalTopology* topo=&(*topology);
 
     using namespace edm::eventsetup;
@@ -116,6 +116,8 @@ namespace edmtest
       dumpIt(new HcalElectronicsMap, new HcalElectronicsMapRcd, e,context,"ElectronicsMap");
     if (std::find (mDumpRequest.begin(), mDumpRequest.end(), std::string ("QIEData")) != mDumpRequest.end())
       dumpIt(new HcalQIEData(&(*topology)), new HcalQIEDataRcd, e,context,"QIEData", topo);
+    if (std::find (mDumpRequest.begin(), mDumpRequest.end(), std::string ("QIETypes")) != mDumpRequest.end())
+      dumpIt(new HcalQIETypes(&(*topology)), new HcalQIETypesRcd, e,context,"QIETypes", topo);
     if (std::find (mDumpRequest.begin(), mDumpRequest.end(), std::string ("Pedestals")) != mDumpRequest.end())
       dumpIt(new HcalPedestals(&(*topology)), new HcalPedestalsRcd, e,context,"Pedestals", topo);
     if (std::find (mDumpRequest.begin(), mDumpRequest.end(), std::string ("PedestalWidths")) != mDumpRequest.end())

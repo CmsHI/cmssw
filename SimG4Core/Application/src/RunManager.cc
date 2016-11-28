@@ -14,6 +14,7 @@
 #include "SimG4Core/Geometry/interface/DDDWorld.h"
 #include "SimG4Core/Geometry/interface/G4LogicalVolumeToDDLogicalPartMap.h"
 #include "SimG4Core/Geometry/interface/SensitiveDetectorCatalog.h"
+#include "SimG4Core/Physics/interface/DDG4ProductionCuts.h"
 
 #include "SimG4Core/SensitiveDetector/interface/AttachSD.h"
 
@@ -30,6 +31,8 @@
 #include "SimG4Core/Notification/interface/SimG4Exception.h"
 #include "SimG4Core/Notification/interface/BeginOfJob.h"
 #include "SimG4Core/Notification/interface/CurrentG4Track.h"
+
+#include "SimG4Core/Geometry/interface/G4CheckOverlap.h"
 
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/Framework/interface/ESHandle.h"
@@ -123,12 +126,12 @@ RunManager::RunManager(edm::ParameterSet const & p)
       m_pStackingAction(p.getParameter<edm::ParameterSet>("StackingAction")),
       m_pTrackingAction(p.getParameter<edm::ParameterSet>("TrackingAction")),
       m_pSteppingAction(p.getParameter<edm::ParameterSet>("SteppingAction")),
+      m_g4overlap(p.getParameter<edm::ParameterSet>("G4CheckOverlap")),
       m_G4Commands(p.getParameter<std::vector<std::string> >("G4Commands")),
       m_p(p), m_fieldBuilder(0), m_chordFinderSetter(nullptr),
       m_theLHCTlinkTag(p.getParameter<edm::InputTag>("theLHCTlinkTag"))
 {    
-  m_kernel = G4RunManagerKernel::GetRunManagerKernel();
-  if (m_kernel==0) m_kernel = new G4RunManagerKernel();
+  m_kernel = new G4RunManagerKernel();
 
   m_check = p.getUntrackedParameter<bool>("CheckOverlap",false);
   m_WriteFile = p.getUntrackedParameter<std::string>("FileNameGDML","");
@@ -188,7 +191,7 @@ void RunManager::initG4(const edm::EventSetup & es)
    
   G4LogicalVolumeToDDLogicalPartMap map_;
   SensitiveDetectorCatalog catalog_;
-  const DDDWorld * world = new DDDWorld(&(*pDD), map_, catalog_, m_check);
+  const DDDWorld * world = new DDDWorld(&(*pDD), map_, catalog_, false);
   m_registry.dddWorldSignal_(world);
 
   if (m_pUseMagneticField)
@@ -263,6 +266,12 @@ void RunManager::initG4(const edm::EventSetup & es)
   } 
   edm::LogInfo("SimG4CoreApplication") 
     << "RunManager: start initialisation of PhysicsList";
+
+  int verb = m_pPhysics.getUntrackedParameter<int>("Verbosity",0);
+  m_physicsList->SetDefaultCutValue(m_pPhysics.getParameter<double>("DefaultCutValue")*CLHEP::cm);
+  m_physicsList->SetCutsWithDefault();
+  m_prodCuts.reset(new DDG4ProductionCuts(map_, verb, m_pPhysics));	
+  m_prodCuts->update();
   
   m_kernel->SetPhysics(phys);
   m_kernel->InitializePhysics();
@@ -297,7 +306,7 @@ void RunManager::initG4(const edm::EventSetup & es)
   }
 
   if("" != m_WriteFile) {
-    G4GDMLParser gdml(new G4GDMLReadStructure(), new CMSGDMLWriteStructure());
+    G4GDMLParser gdml;
     gdml.Write(m_WriteFile, world->GetWorldVolume(), true);
   }
 
@@ -305,6 +314,8 @@ void RunManager::initG4(const edm::EventSetup & es)
     G4RegionReporter rrep;
     rrep.ReportRegions(m_RegionFile);
   }
+
+  if(m_check) { G4CheckOverlap check(m_g4overlap); }
 
   // If the Geant4 particle table is needed, decomment the lines below
   //

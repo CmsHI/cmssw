@@ -1,6 +1,6 @@
-import os
 import configTemplates
-from helperFunctions import replaceByMap
+from helperFunctions import replaceByMap, parsecolor, parsestyle
+import os
 from TkAlExceptions import AllInOneError
 
 class Alignment:
@@ -25,7 +25,7 @@ class Alignment:
         }
         section = "alignment:%s"%name
         if not config.has_section( section ):
-            raise AllInOneError, ("section %s not found. Please define the "
+            raise AllInOneError("section %s not found. Please define the "
                                   "alignment!"%section)
         config.checkInput(section,
                           knownSimpleOptions = ['globaltag', 'style', 'color', 'title'],
@@ -44,9 +44,12 @@ class Alignment:
         self.runGeomComp = runGeomComp
         self.globaltag = config.get( section, "globaltag" )
         self.conditions = self.__getConditions( config, section )
+
         self.color = config.get(section,"color")
         self.style = config.get(section,"style")
 
+        self.color = str(parsecolor(self.color))
+        self.style = str(parsestyle(self.style))
         
     def __shorthandExists(self, theRcdName, theShorthand):
         """Method which checks, if `theShorthand` is a valid shorthand for the

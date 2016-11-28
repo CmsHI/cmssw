@@ -1,27 +1,25 @@
 #! /usr/bin/env python
 
-from Validation.RecoTrack.plotting.validation import Sample
-import Validation.RecoTrack.plotting.trackingPlots as trackingPlots
+from Validation.RecoTrack.plotting.validation import Sample, Validation
 import Validation.RecoTrack.plotting.validation as validation
+import Validation.RecoTrack.plotting.trackingPlots as trackingPlots
+import Validation.RecoVertex.plotting.vertexPlots as vertexPlots
 
 #########################################################
 ########### User Defined Variables (BEGIN) ##############
 
 ### Reference release
-RefRelease='CMSSW_7_4_0_pre6'
+RefRelease='CMSSW_8_0_0_pre1'
 
 ### Relval release (set if different from $CMSSW_VERSION)
-NewRelease='CMSSW_7_4_0_pre8'
-
-#import Validation.RecoTrack.plotting.plotting as plotting
-#plotting.missingOk = True
+NewRelease='CMSSW_8_0_0_pre2'
 
 ### This is the list of IDEAL-conditions relvals 
 startupsamples= [
     Sample('RelValMinBias', midfix="13"),
     Sample('RelValTTbar', midfix="13"),
-    Sample('RelValQCD_Pt_3000_3500', midfix="13"),
     Sample('RelValQCD_Pt_600_800', midfix="13"),
+    Sample('RelValQCD_Pt_3000_3500', midfix="13"),
     Sample('RelValQCD_FlatPt_15_3000', append="HS", midfix="13"),
     Sample('RelValZMM', midfix="13"),
     Sample('RelValWjet_Pt_3000_3500', midfix="13"),
@@ -31,11 +29,22 @@ startupsamples= [
     Sample('RelValSingleMuPt100', midfix="UP15")
 ]
 
+def putype(t):
+    if "_pmx" in NewRelease:
+        return {"default": t, NewRelease: "pmx"+t}
+    return t
+
 pileupstartupsamples = [
-    Sample('RelValTTbar', putype="25ns", midfix="13"),
-    Sample('RelValTTbar', putype="50ns", midfix="13"),
-    Sample('RelValZMM', putype="25ns", midfix="13"),
-    Sample('RelValZMM', putype="50ns", midfix="13")
+    Sample('RelValTTbar', putype=putype("25ns"), midfix="13"),
+    Sample('RelValTTbar', putype=putype("50ns"), midfix="13"),
+    Sample('RelValZMM', putype=putype("25ns"), midfix="13"),
+    Sample('RelValZMM', putype=putype("50ns"), midfix="13")
+]
+
+phase1samples = [
+    Sample('RelValTenMuE_0_200'),
+    Sample("RelValTTbar", midfix="14TeV"),
+    Sample("RelValTTbar", midfix="14TeV", putype=putype("25ns")),
 ]
 
 upgradesamples = [
@@ -63,27 +72,79 @@ fastsimstartupsamples = [
 ]
 
 pileupfastsimstartupsamples = [
-#    Sample('RelValTTbar', putype="AVE20", midfix="13", fastsim=True, fastsimCorrespondingFullsimPileup="50ns")
+    Sample('RelValTTbar', putype=putype("25ns"), midfix="13", fastsim=True)
 ]
 
+doFastVsFull = True
+if "_pmx" in NewRelease:
+    startupsamples = []
+    fastsimstartupsamples = []
+    doFastVsFull = False
+    if not NewRelease in validation._globalTags:
+        validation._globalTags[NewRelease] = validation._globalTags[NewRelease.replace("_pmx", "")]
+if "_extended" in NewRelease:
+    startupsamples = [
+        Sample('RelValTTbar', midfix="13_HS"),
+        Sample('RelValZMM', midfix="13_HS"),
+    ]
+    pileupstartupsamples = [
+        Sample('RelValTTbar', putype=putype("25ns"), midfix="13_HS"),
+        Sample('RelValZMM', putype=putype("25ns"), midfix="13_HS"),
+    ]
+    fastsimstartupsamples = []
+    pileupfastsimstartupsamples = []
+    doFastVsFull = False
+    if not NewRelease in validation._globalTags:
+        validation._globalTags[NewRelease] = validation._globalTags[NewRelease.replace("_extended", "")]
+if "_phase1" in NewRelease:
+    startupsamples = phase1samples
+    pileupstartupsamples = []
+    fastsimstartupsamples = []
+    pileupfastsimstartupsamples = []
+    doFastVsFull = False
+
 ### Track algorithm name and quality. Can be a list.
-Algos= ['ootb', 'initialStep', 'lowPtTripletStep','pixelPairStep','detachedTripletStep','mixedTripletStep','pixelLessStep','tobTecStep','jetCoreRegionalStep','muonSeededStepInOut','muonSeededStepOutIn']
+Algos= ['ootb', 'initialStep', 'lowPtTripletStep','pixelPairStep','detachedTripletStep','mixedTripletStep','pixelLessStep','tobTecStep','jetCoreRegionalStep','muonSeededStepInOut','muonSeededStepOutIn',
+        'ak4PFJets','btvLike'
+]
 #Algos= ['ootb']
+#Algos= ['ootb','initialStep','lowPtTripletStep','pixelPairStep','mixedTripletStep','muonSeededStepInOut','muonSeededStepOutIn'] # phase1
 Qualities=['', 'highPurity']
+VertexCollections=["offlinePrimaryVertices", "selectedOfflinePrimaryVertices"]
+
+def limitProcessing(algo, quality):
+    return algo in Algos and quality in Qualities
 
 ### Reference and new repository
 RefRepository = '/afs/cern.ch/cms/Physics/tracking/validation/MC'
 NewRepository = 'new' # copy output into a local folder
 
 # Tracking validation plots
-val = trackingPlots.TrackingValidation(
+val = Validation(
     fullsimSamples = startupsamples + pileupstartupsamples + upgradesamples,
     fastsimSamples = fastsimstartupsamples + pileupfastsimstartupsamples,
-    newRelease=NewRelease,
+    refRelease=RefRelease, refRepository=RefRepository,
+    newRelease=NewRelease, newRepository=NewRepository
 )
+htmlReport = val.createHtmlReport()
 val.download()
-val.doPlots(algos=Algos, qualities=Qualities, refRelease=RefRelease,
-                   refRepository=RefRepository, newRepository=NewRepository, plotter=trackingPlots.plotter)
+val.doPlots(plotter=trackingPlots.plotter, plotterDrawArgs={"ratio": True},
+#            limitSubFoldersOnlyTo={"": limitProcessing, "allTPEffic": limitProcessing, "fromPV": limitProcessing, "fromPVAllTP": limitProcessing},
+            htmlReport=htmlReport, doFastVsFull=doFastVsFull
+)
+
+valv = Validation(
+    fullsimSamples = startupsamples + pileupstartupsamples + upgradesamples,
+    fastsimSamples=[],
+    refRelease=RefRelease, refRepository=RefRepository,
+    newRelease=NewRelease, newRepository=NewRepository)
+valv.download()
+valv.doPlots(plotter=vertexPlots.plotter, plotterDrawArgs={"ratio": True},
+             limitSubFoldersOnlyTo={"": VertexCollections},
+             htmlReport=htmlReport, doFastVsFull=doFastVsFull
+)
+htmlReport.write()
+
 
 # Timing plots
 #val2 = validation.Validation(
@@ -93,11 +154,12 @@ val.doPlots(algos=Algos, qualities=Qualities, refRelease=RefRelease,
 #             refRepository=RefRepository, newRepository=NewRepository, plotter=trackingPlots.timePlotter,
 #             algos=None, qualities=None)
 
-val3 = validation.Validation(
-    fullsimSamples = startupsamples + pileupstartupsamples + upgradesamples,
-    fastsimSamples=[], newRelease=NewRelease,
-    selectionName="_tp")
-val3.download()
-val3.doPlots(algos=None, qualities=None, refRelease=RefRelease,
-             refRepository=RefRepository, newRepository=NewRepository, plotter=trackingPlots.tpPlotter)
+# TrackingParticle plots
+#val3 = validation.Validation(
+#    fullsimSamples = startupsamples + pileupstartupsamples + upgradesamples,
+#    fastsimSamples=[], newRelease=NewRelease,
+#    selectionName="_tp")
+#val3.download()
+#val3.doPlots(algos=None, qualities=None, refRelease=RefRelease,
+#             refRepository=RefRepository, newRepository=NewRepository, plotter=trackingPlots.tpPlotter)
 

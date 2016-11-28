@@ -30,7 +30,6 @@ namespace cms
    std::vector<reco::GenJet>* subJets_;
    std::vector<int> hydroTag_;
    std::vector<int> nSubParticles_;
-   bool signalOnly_;
    bool ignoreHydro_;
 
   protected:

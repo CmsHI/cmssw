@@ -67,7 +67,6 @@ uncertainties_(iOther.uncertainties_),
 corrections_(iOther.corrections_),
 caloPackedMet_(iOther.caloPackedMet_) {
 
-  metSig_ =0.;
   initCorMap();
 }
 
@@ -80,6 +79,8 @@ caloMET_(srcMET.caloMET_),
 pfMET_(srcMET.pfMET_),
 metSig_(srcMET.metSig_),
 caloPackedMet_(srcMET.caloPackedMet_) {
+
+  setSignificanceMatrix(srcMET.getSignificanceMatrix());
 
   initCorMap();
 }

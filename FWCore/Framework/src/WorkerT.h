@@ -12,6 +12,7 @@ WorkerT: Code common to all workers.
 #include "FWCore/Framework/src/Worker.h"
 #include "FWCore/Framework/src/WorkerParams.h"
 #include "FWCore/ServiceRegistry/interface/ConsumesInfo.h"
+#include "FWCore/Utilities/interface/propagate_const.h"
 
 #include <map>
 #include <memory>
@@ -26,7 +27,7 @@ namespace edm {
   class ProductRegistry;
   class ThinnedAssociationsHelper;
 
-  UnscheduledHandler* getUnscheduledHandler(EventPrincipal const& ep);
+  UnscheduledHandler const* getUnscheduledHandler(EventPrincipal const& ep);
 
   template<typename T>
   class WorkerT : public Worker {
@@ -55,19 +56,19 @@ namespace edm {
     template<typename D>
     void callWorkerEndStream(D, StreamID);
     template<typename D>
-    void callWorkerStreamBegin(D, StreamID id, RunPrincipal& rp,
+    void callWorkerStreamBegin(D, StreamID id, RunPrincipal const& rp,
                                EventSetup const& c,
                                ModuleCallingContext const* mcc);
     template<typename D>
-    void callWorkerStreamEnd(D, StreamID id, RunPrincipal& rp,
+    void callWorkerStreamEnd(D, StreamID id, RunPrincipal const& rp,
                              EventSetup const& c,
                              ModuleCallingContext const* mcc);
     template<typename D>
-    void callWorkerStreamBegin(D, StreamID id, LuminosityBlockPrincipal& rp,
+    void callWorkerStreamBegin(D, StreamID id, LuminosityBlockPrincipal const& rp,
                                EventSetup const& c,
                                ModuleCallingContext const* mcc);
     template<typename D>
-    void callWorkerStreamEnd(D, StreamID id, LuminosityBlockPrincipal& rp,
+    void callWorkerStreamEnd(D, StreamID id, LuminosityBlockPrincipal const& rp,
                              EventSetup const& c,
                              ModuleCallingContext const* mcc);
     
@@ -76,26 +77,26 @@ namespace edm {
     T const& module() const {return *module_;}
 
   private:
-    virtual bool implDo(EventPrincipal& ep, EventSetup const& c,
+    virtual bool implDo(EventPrincipal const& ep, EventSetup const& c,
                         ModuleCallingContext const* mcc) override;
     virtual bool implDoPrePrefetchSelection(StreamID id,
-                                            EventPrincipal& ep,
+                                            EventPrincipal const& ep,
                                             ModuleCallingContext const* mcc) override;
-    virtual bool implDoBegin(RunPrincipal& rp, EventSetup const& c,
+    virtual bool implDoBegin(RunPrincipal const& rp, EventSetup const& c,
                              ModuleCallingContext const* mcc) override;
-    virtual bool implDoStreamBegin(StreamID id, RunPrincipal& rp, EventSetup const& c,
+    virtual bool implDoStreamBegin(StreamID id, RunPrincipal const& rp, EventSetup const& c,
                                    ModuleCallingContext const* mcc) override;
-    virtual bool implDoStreamEnd(StreamID id, RunPrincipal& rp, EventSetup const& c,
+    virtual bool implDoStreamEnd(StreamID id, RunPrincipal const& rp, EventSetup const& c,
                                  ModuleCallingContext const* mcc) override;
-    virtual bool implDoEnd(RunPrincipal& rp, EventSetup const& c,
+    virtual bool implDoEnd(RunPrincipal const& rp, EventSetup const& c,
                            ModuleCallingContext const* mcc) override;
-    virtual bool implDoBegin(LuminosityBlockPrincipal& lbp, EventSetup const& c,
+    virtual bool implDoBegin(LuminosityBlockPrincipal const& lbp, EventSetup const& c,
                              ModuleCallingContext const* mcc) override;
-    virtual bool implDoStreamBegin(StreamID id, LuminosityBlockPrincipal& lbp, EventSetup const& c,
+    virtual bool implDoStreamBegin(StreamID id, LuminosityBlockPrincipal const& lbp, EventSetup const& c,
                                    ModuleCallingContext const* mcc) override;
-    virtual bool implDoStreamEnd(StreamID id, LuminosityBlockPrincipal& lbp, EventSetup const& c,
+    virtual bool implDoStreamEnd(StreamID id, LuminosityBlockPrincipal const& lbp, EventSetup const& c,
                                  ModuleCallingContext const* mcc) override;
-    virtual bool implDoEnd(LuminosityBlockPrincipal& lbp, EventSetup const& c,
+    virtual bool implDoEnd(LuminosityBlockPrincipal const& lbp, EventSetup const& c,
                            ModuleCallingContext const* mcc) override;
     virtual void implBeginJob() override;
     virtual void implEndJob() override;
@@ -109,8 +110,8 @@ namespace edm {
     virtual void implRegisterThinnedAssociations(ProductRegistry const&, ThinnedAssociationsHelper&) override;
     virtual std::string workerType() const override;
 
-    virtual void modulesDependentUpon(std::vector<const char*>& oModuleLabels) const override {
-      module_->modulesDependentUpon(module_->moduleDescription().processName(),oModuleLabels);
+    virtual void modulesDependentUpon(std::vector<const char*>& oModuleLabels, bool iPrint) const override {
+      module_->modulesDependentUpon(module_->moduleDescription().processName(),module_->moduleDescription().moduleLabel(), iPrint, oModuleLabels);
     }
 
     virtual void modulesWhoseProductsAreConsumed(std::vector<ModuleDescription const*>& modules,
@@ -133,7 +134,7 @@ namespace edm {
 
     virtual std::vector<ProductHolderIndexAndSkipBit> const& itemsToGetFromEvent() const override { return module_->itemsToGetFromEvent(); }
 
-    std::shared_ptr<T> module_;
+    edm::propagate_const<std::shared_ptr<T>> module_;
   };
 
 }

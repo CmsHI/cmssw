@@ -13,6 +13,8 @@
 
 namespace {
   struct Count {
+#ifdef SISTRIP_COUNT
+    // note: this code is not thread safe, counts will be inaccurate if run with multiple threads
     double ncall=0;
     double ndep=0, ndep2=0, maxdep=0;
     double nstr=0, nstr2=0;
@@ -23,13 +25,17 @@ namespace {
     void val(double d) { ncv++; nval+=d; nval2+=d*d; maxv=std::max(d,maxv);}
     void zero() { dzero++;}    
     ~Count() {
-#ifdef SISTRIP_COUNT
       std::cout << "deposits " << ncall << " " << maxdep << " " << ndep/ncall << " " << std::sqrt(ndep2*ncall -ndep*ndep)/ncall << std::endl;
       std::cout << "zeros " << dzero << std::endl;
       std::cout << "strips  " << nstr/ndep << " " << std::sqrt(nstr2*ndep -nstr*nstr)/ndep << std::endl;
       std::cout << "vaules  " << ncv << " " << maxv << " " << nval/ncv << " " << std::sqrt(nval2*ncv -nval*nval)/ncv << std::endl;
-#endif
     }
+#else
+    void dep(double) {}
+    void str(double) {}
+    void val(double) {}
+    void zero() {}    
+#endif
   };
   
  Count count;
@@ -191,8 +197,13 @@ induceVector(const SiChargeCollectionDrifter::collection_type& collection_points
     for (int i=0; i!=N;++i) {
       auto delta = 1.f/(std::sqrt(2.f)*chargeSpread[i]);
       auto pos = delta*(float(fromStrip[i])-chargePosition[i]);
-      for (int j=0;j<=nStrip[i]; ++j)  /// include last strip
-	value[kk++] = pos+float(j)*delta;  
+
+      // VI: before value[0] was not defined and value[tot] was filled
+      //     to fix this the loop below was changed
+      for (int j=0;j<=nStrip[i]; ++j) { /// include last strip
+	value[kk] = pos+float(j)*delta;
+        ++kk;  
+      }
     }
     assert(kk==tot);
     

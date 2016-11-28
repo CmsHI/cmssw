@@ -93,21 +93,23 @@ private:
   void AllClusters(const edm::Event& ev, const edm::EventSetup& es); 
   void trackStudyFromTrack(edm::Handle<reco::TrackCollection > trackCollectionHandle, const edm::EventSetup& es);
   void trackStudyFromTrajectory(edm::Handle<TrajTrackAssociationCollection> TItkAssociatorCollection, const edm::EventSetup& es);
-  void trajectoryStudy(const edm::Ref<std::vector<Trajectory> > traj, const edm::EventSetup& es);
+  void trajectoryStudy(const edm::Ref<std::vector<Trajectory> > traj, const edm::EventSetup& es, bool track_ok);
   void trackStudy(const edm::Event& ev, const edm::EventSetup& es);
+  bool trackFilter(const reco::Track& track);
   //  LocalPoint project(const GeomDet *det,const GeomDet* projdet,LocalPoint position,LocalVector trackdirection)const;
   void hitStudy(const edm::EventSetup& es,
 		const ProjectedSiStripRecHit2D* projhit,
 		const SiStripMatchedRecHit2D*   matchedhit,
 		const SiStripRecHit2D*          hit2D,
 		const SiStripRecHit1D*          hit1D,
-		LocalVector localMomentum);
-  bool clusterInfos(SiStripClusterInfo* cluster, const uint32_t detid, enum ClusterFlags flags, LocalVector LV, const Det2MEs& MEs);	
-  template <class T> void RecHitInfo(const T* tkrecHit, LocalVector LV, const edm::EventSetup&);
+		      LocalVector               localMomentum,
+		const bool                      track_ok);
+  bool clusterInfos(SiStripClusterInfo* cluster, const uint32_t detid, enum ClusterFlags flags, bool track_ok, LocalVector LV, const Det2MEs& MEs);	
+  template <class T> void RecHitInfo(const T* tkrecHit, LocalVector LV, const edm::EventSetup&, bool ok);
 
   // fill monitorables 
-  void fillModMEs(SiStripClusterInfo* cluster,std::string name, float cos, const uint32_t detid, const LocalVector LV);
-  void fillMEs(SiStripClusterInfo*,const uint32_t detid, float,enum ClusterFlags,  const LocalVector LV, const Det2MEs& MEs);
+//  void fillModMEs(SiStripClusterInfo* cluster,std::string name, float cos, const uint32_t detid, const LocalVector LV);
+//  void fillMEs(SiStripClusterInfo*,const uint32_t detid, float,enum ClusterFlags,  const LocalVector LV, const Det2MEs& MEs);
 
   inline void fillME(MonitorElement* ME,float value1){if (ME!=0)ME->Fill(value1);}
   inline void fillME(MonitorElement* ME,float value1,float value2){if (ME!=0)ME->Fill(value1,value2);}
@@ -126,11 +128,12 @@ private:
   std::string topFolderName_;
   
   //******* TkHistoMaps
-  TkHistoMap *tkhisto_StoNCorrOnTrack, *tkhisto_NumOnTrack, *tkhisto_NumOffTrack, *tkhisto_ClChPerCMfromTrack;  
-  TkHistoMap *tkhisto_ClChPerCMfromOrigin, *tkhisto_NumMissingHits, *tkhisto_NumberInactiveHits, *tkhisto_NumberValidHits;
+  TkHistoMap *tkhisto_StoNCorrOnTrack, *tkhisto_NumOnTrack, *tkhisto_NumOffTrack;
+  TkHistoMap *tkhisto_ClChPerCMfromOrigin, *tkhisto_ClChPerCMfromTrack;
+  TkHistoMap *tkhisto_NumMissingHits, *tkhisto_NumberInactiveHits, *tkhisto_NumberValidHits; 
   //******** TkHistoMaps
   int numTracks;
-
+ 
   struct ModMEs{  
     MonitorElement* ClusterStoNCorr;
     MonitorElement* ClusterCharge;
@@ -166,6 +169,8 @@ private:
     MonitorElement* ClusterNoiseOffTrack;
     MonitorElement* ClusterWidthOnTrack;
     MonitorElement* ClusterWidthOffTrack;
+    MonitorElement* ClusterPosOnTrack;
+    MonitorElement* ClusterPosOffTrack;
     MonitorElement* ClusterChargePerCMfromTrack;
     MonitorElement* ClusterChargePerCMfromOriginOnTrack;
     MonitorElement* ClusterChargePerCMfromOriginOffTrack;

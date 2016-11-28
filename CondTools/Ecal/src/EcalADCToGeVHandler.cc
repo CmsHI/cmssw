@@ -25,7 +25,6 @@ popcon::EcalADCToGeVHandler::EcalADCToGeVHandler(const edm::ParameterSet & ps)
 
         std::cout << m_sid<<"/"<<m_user<<"/"<<m_location<<"/"<<m_gentag   << std::endl;
 
-
 }
 
 popcon::EcalADCToGeVHandler::~EcalADCToGeVHandler()
@@ -70,8 +69,9 @@ void popcon::EcalADCToGeVHandler::getNewObjects()
 
 
 	//unused	float the_value_low_eb=0.03894;
-	float the_value_low_ee=0.05678;
-	if( adc_ee!= the_value_low_ee ) magnet_high=true; 
+	// Run 1 :	float the_value_low_ee=0.05678;
+        float the_value_low_ee=0.0590975;
+        if( adc_ee > the_value_low_ee ) magnet_high=true;
   }  // check if there is already a payload
   else something_to_transfer = true;
 

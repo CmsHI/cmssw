@@ -1,7 +1,8 @@
-#include "DataFormats/HcalDetId/interface/HcalDetId.h"
 #include "CalibCalorimetry/CaloMiscalibTools/interface/HcalRecHitRecalib.h"
 
 #include "DataFormats/Common/interface/Handle.h"
+#include "DataFormats/HcalDetId/interface/HcalDetId.h"
+#include "Geometry/Records/interface/HcalRecNumberingRecord.h"
 #include "FWCore/ParameterSet/interface/FileInPath.h"
 #include "FWCore/Framework/interface/ESHandle.h"
 
@@ -53,7 +54,7 @@ void
 HcalRecHitRecalib::beginRun(const edm::Run&, const edm::EventSetup& iSetup)
 {
   edm::ESHandle<HcalTopology> topology;
-  iSetup.get<IdealGeometryRecord>().get( topology );
+  iSetup.get<HcalRecNumberingRecord>().get( topology );
   
   mapHcal_.prefillMap(*topology);
 
@@ -124,7 +125,7 @@ HcalRecHitRecalib::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
 
        //loop on all EcalRecHits (barrel)
       HBHERecHitCollection::const_iterator itHBHE;
-      for (itHBHE=HBHERecHits->begin(); itHBHE!=HBHERecHits->end(); itHBHE++) {
+      for (itHBHE=HBHERecHits->begin(); itHBHE!=HBHERecHits->end(); ++itHBHE) {
 	
 	// find intercalib constant for this cell
 
@@ -155,7 +156,7 @@ HcalRecHitRecalib::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
 
        //loop on all EcalRecHits (barrel)
       HFRecHitCollection::const_iterator itHF;
-      for (itHF=HFRecHits->begin(); itHF!=HFRecHits->end(); itHF++) {
+      for (itHF=HFRecHits->begin(); itHF!=HFRecHits->end(); ++itHF) {
 	
 	// find intercalib constant for this cell
 
@@ -186,7 +187,7 @@ HcalRecHitRecalib::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
 
        //loop on all EcalRecHits (barrel)
       HORecHitCollection::const_iterator itHO;
-      for (itHO=HORecHits->begin(); itHO!=HORecHits->end(); itHO++) {
+      for (itHO=HORecHits->begin(); itHO!=HORecHits->end(); ++itHO) {
 	
 	// find intercalib constant for this cell
 

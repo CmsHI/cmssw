@@ -126,6 +126,8 @@ bool support::isSafeClassName(const std::string &cname) {
     "class boost::thread_specific_ptr",
     "tbb::",
     "class tbb::",
+    "concurrent_unordered_map",
+    "class concurrent_unordered_map",
     "edm::AtomicPtrCache",
     "class edm::AtomicPtrCache",
     "edm::InputTag",
@@ -215,6 +217,16 @@ void support::writeLog(const std::string &ostring,const std::string &tfstring) {
      file<<ostring<<"\n";
      file.close();
 
+     return;
+}
+
+void support::fixAnonNS(std::string & name, const char * fname ){
+     const std::string anon_ns = "(anonymous namespace)";
+     if (name.substr(0, anon_ns.size()) == anon_ns ) {
+          const char* sname = "/src/";
+          const char* filename = std::strstr(fname, sname);
+          if (filename != NULL) name = name.substr(0, anon_ns.size() - 1)+" in "+filename+")"+name.substr(anon_ns.size());
+          }
      return;
 }
 

@@ -168,14 +168,6 @@ for idmod in my_id_modules:
 
 #####################################################################################
 
-#####################
-# tupel and necessary PAT sequences
-#####################
-
-process.load("HeavyIonsAnalysis.VectorBosonAnalysis.tupelSequence_pp_cff")
-
-#####################################################################################
-
 #########################
 # Main analysis list
 #########################
@@ -190,8 +182,7 @@ process.ana_step = cms.Path(process.hltanalysis *
                             process.ggHiNtuplizerGED +
                             process.pfcandAnalyzer +
                             process.HiForest +
-                            process.trackSequencesPP +
-                            process.tupelPatSequence
+                            process.trackSequencesPP
                             )
 
 #####################################################################################

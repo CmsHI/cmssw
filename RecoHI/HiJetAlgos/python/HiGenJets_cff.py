@@ -8,8 +8,7 @@ iterativeCone5HiGenJets = cms.EDProducer("SubEventGenJetProducer",
                                          GenJetParameters,
                                          AnomalousCellParameters,
                                          jetAlgorithm = cms.string("IterativeCone"),
-                                         rParam = cms.double(0.5),
-                                         signalOnly = cms.bool(False)
+                                         rParam = cms.double(0.5)
                                          )
 
 iterativeCone5HiGenJets.doAreaFastjet = cms.bool(True)
@@ -21,8 +20,7 @@ ak5HiGenJets = cms.EDProducer("SubEventGenJetProducer",
                               GenJetParameters,
                               AnomalousCellParameters,
                               jetAlgorithm = cms.string("AntiKt"),
-                              rParam = cms.double(0.5),
-                              signalOnly = cms.bool(False)
+                              rParam = cms.double(0.5)
                               )
 
 ak5HiGenJets.doAreaFastjet = cms.bool(True)

@@ -19,17 +19,20 @@
 #include "CondFormats/HcalObjects/interface/HcalElectronicsMap.h"
 #include "CondFormats/HcalObjects/interface/HcalLutMetadata.h"
 #include "Geometry/Records/interface/CaloGeometryRecord.h"
-#include "TH2.h"
+
 #include <algorithm>
+
+
+
 
 HcalTrigPrimDigiProducer::HcalTrigPrimDigiProducer(const edm::ParameterSet& ps)
 : 
   theAlgo_(ps.getParameter<bool>("peakFilter"),
 	  ps.getParameter<std::vector<double> >("weights"),
 	  ps.getParameter<int>("latency"),
-	  ps.getParameter<uint32_t>("FG_threshold1"),
-          ps.getParameter<uint32_t>("FG_threshold2"),
-          ps.getParameter<uint32_t>("ZS_threshold"),
+	  ps.getParameter<uint32_t>("FG_threshold"),
+	  ps.getParameter<uint32_t>("FG_HF_threshold"),
+	  ps.getParameter<uint32_t>("ZS_threshold"),
 	  ps.getParameter<int>("numberOfSamples"),
 	  ps.getParameter<int>("numberOfPresamples"),
 	  ps.getParameter<int>("numberOfSamplesHF"),
@@ -42,6 +45,16 @@ HcalTrigPrimDigiProducer::HcalTrigPrimDigiProducer(const edm::ParameterSet& ps)
   runZS_(ps.getParameter<bool>("RunZS")),
   runFrontEndFormatError_(ps.getParameter<bool>("FrontEndFormatError"))
 {
+    HFEMB_ = false;
+    if(ps.exists("LSConfig"))
+    {
+        LongShortCut_ = ps.getUntrackedParameter<edm::ParameterSet>("LSConfig");
+        HFEMB_ = LongShortCut_.getParameter<bool>("HcalFeatureHFEMBit");
+        MinLongEnergy_ = LongShortCut_.getParameter<double>("Min_Long_Energy"); //minimum long energy
+        MinShortEnergy_ = LongShortCut_.getParameter<double>("Min_Short_Energy"); //minimum short energy
+        LongShortSlope_ = LongShortCut_.getParameter<double>("Long_vrs_Short_Slope"); //slope of the line that cuts are based on
+        LongShortOffset_ = LongShortCut_.getParameter<double>("Long_Short_Offset"); //offset of line
+    }
   // register for data access
   if (runFrontEndFormatError_) {
     tok_raw_ = consumes<FEDRawDataCollection>(inputTagFEDRaw_);
@@ -51,6 +64,11 @@ HcalTrigPrimDigiProducer::HcalTrigPrimDigiProducer(const edm::ParameterSet& ps)
 
    produces<HcalTrigPrimDigiCollection>();
    theAlgo_.setPeakFinderAlgorithm(ps.getParameter<int>("PeakFinderAlgorithm"));
+
+   edm::ParameterSet hfSS=ps.getParameter<edm::ParameterSet>("HFTPScaleShift");
+
+   theAlgo_.setNCTScaleShift(hfSS.getParameter<int>("NCT"));
+   theAlgo_.setRCTScaleShift(hfSS.getParameter<int>("RCT"));
 }
 
 
@@ -109,15 +127,31 @@ void HcalTrigPrimDigiProducer::produce(edm::Event& iEvent, const edm::EventSetup
   }
 
 
+    edm::ESHandle < HcalDbService > pSetup;
+    eventSetup.get<HcalDbRecord> ().get(pSetup);
+
+    HcalFeatureBit* hfembit = 0;
+
+    if(HFEMB_)
+    {
+        hfembit = new HcalFeatureHFEMBit(MinShortEnergy_, MinLongEnergy_, LongShortSlope_, LongShortOffset_, *pSetup); //inputs values that cut will be based on
+        theAlgo_.run(inputCoder.product(), outTranscoder->getHcalCompressor().get(),
+                *hbheDigis, *hfDigis, *result, &(*pG), rctlsb, hfembit);
+
+    }// Step C: Invoke the algorithm, passing in inputs and getting back outputs.
+    else
+    {
+        theAlgo_.run(inputCoder.product(), outTranscoder->getHcalCompressor().get(),
+                *hbheDigis, *hfDigis, *result, &(*pG), rctlsb);
+    }
+
   // Step C: Invoke the algorithm, passing in inputs and getting back outputs.
-  theAlgo_.run(inputCoder.product(),outTranscoder->getHcalCompressor().get(),
-	       *hbheDigis,  *hfDigis, *result, &(*pG), rctlsb);
+ 
 
   // Step C.1: Run FE Format Error / ZS for real data.
   if (runFrontEndFormatError_) {
 
-        edm::ESHandle < HcalDbService > pSetup;
-        eventSetup.get<HcalDbRecord> ().get(pSetup);
+       
         const HcalElectronicsMap *emap = pSetup->getHcalMapping();
 
         edm::Handle < FEDRawDataCollection > fedHandle;
@@ -146,7 +180,6 @@ void HcalTrigPrimDigiProducer::produce(edm::Event& iEvent, const edm::EventSetup
   if (runZS_) theAlgo_.runZS(*result);
 
   //  edm::LogInfo("HcalTrigPrimDigiProducer") << "HcalTrigPrims: " << result->size();
-
 
   // Step D: Put outputs into event
   iEvent.put(result);

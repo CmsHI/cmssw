@@ -87,7 +87,7 @@ private:
   edm::HistoryAppender historyAppender_;
   std::shared_ptr<edm::LuminosityBlockPrincipal> m_lbp;
   std::shared_ptr<edm::RunPrincipal> m_rp;
-  std::shared_ptr<edm::ActivityRegistry> m_actReg;
+  std::shared_ptr<edm::ActivityRegistry> m_actReg; // We do not use propagate_const because the registry itself is mutable.
   edm::EventSetup* m_es = nullptr;
   edm::ModuleDescription m_desc = {"Dummy","dummy"};
   edm::WorkerParams m_params;
@@ -405,7 +405,7 @@ void testOneOutputModule::fileTest()
   edm::ServiceRegistry::Operate operate(serviceToken_);
   
   edm::ParameterSet pset;
-  std::shared_ptr<FileOutputModule> testProd{ new FileOutputModule(pset) };
+  std::shared_ptr<FileOutputModule> testProd = std::make_shared<FileOutputModule>(pset);
   
   CPPUNIT_ASSERT(0 == testProd->m_count);
   testTransitions(testProd, {Trans::kGlobalOpenInputFile, Trans::kEvent, Trans::kGlobalEndLuminosityBlock, Trans::kGlobalEndRun, Trans::kGlobalCloseInputFile});

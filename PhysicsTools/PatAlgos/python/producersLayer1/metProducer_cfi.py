@@ -50,8 +50,12 @@ patMETs = cms.EDProducer("PATMETProducer",
     # significance computation parameters, not used
     # if the significance is not computed
     srcJets = cms.InputTag("selectedPatJets"),
-    srcPFCands =  cms.InputTag("packedPFCandidates"),
+    srcPFCands =  cms.InputTag("particleFlow"),
     srcLeptons = cms.VInputTag("selectedPatElectrons", "selectedPatMuons", "selectedPatPhotons"),
+    srcJetSF = cms.string('AK4PFchs'),
+    srcJetResPt = cms.string('AK4PFchs_pt'),
+    srcJetResPhi = cms.string('AK4PFchs_phi'),
+    srcRho = cms.InputTag('fixedGridRhoAll'),
     parameters = METSignificanceParams
 )
 

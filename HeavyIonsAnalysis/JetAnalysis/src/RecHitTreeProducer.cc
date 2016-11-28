@@ -61,6 +61,8 @@
 #include "DataFormats/EcalDetId/interface/EcalDetIdCollections.h"
 #include "DataFormats/EgammaReco/interface/BasicClusterFwd.h"
 #include "DataFormats/DetId/interface/DetId.h"
+#include "DataFormats/EcalDetId/interface/EBDetId.h"
+#include "DataFormats/EcalDetId/interface/EEDetId.h"
 
 #include "DataFormats/VertexReco/interface/Vertex.h"
 #include "DataFormats/VertexReco/interface/VertexFwd.h"
@@ -85,8 +87,12 @@ struct MyRecHit{
   int depth[MAXHITS];
   int n;
 
+  uint32_t rawId[MAXHITS];
   int ieta[MAXHITS];
   int iphi[MAXHITS];
+  // ix and iy are EE only
+  int ix[MAXHITS];
+  int iy[MAXHITS];
 
   float e[MAXHITS];
   float eraw[MAXHITS];
@@ -251,22 +257,25 @@ private:
   const CentralityBins * cbins_;
   const CaloGeometry *geo;
 
-  edm::InputTag HcalRecHitHFSrc_;
-  edm::InputTag HcalRecHitHBHESrc_;
-  edm::InputTag zdcDigiSrc_;
-  edm::InputTag zdcRecHitSrc_;
+  edm::EDGetTokenT<HFRecHitCollection> HcalRecHitHFSrc_;
+  edm::EDGetTokenT<HBHERecHitCollection> HcalRecHitHBHESrc_;
+  edm::EDGetTokenT<ZDCDigiCollection> zdcDigiSrc_;
+  edm::EDGetTokenT<ZDCRecHitCollection> zdcRecHitSrc_;
 
-  edm::InputTag EBSrc_;
-  edm::InputTag EESrc_;
-  edm::InputTag BCSrc_;
-  edm::InputTag TowerSrc_;
-  edm::InputTag VtxSrc_;
+  edm::EDGetTokenT<edm::SortedCollection<EcalRecHit,edm::StrictWeakOrdering<EcalRecHit> > > EBSrc_;
+  edm::EDGetTokenT<edm::SortedCollection<EcalRecHit,edm::StrictWeakOrdering<EcalRecHit> > > EESrc_;
+  edm::EDGetTokenT<reco::BasicClusterCollection> BCSrc_;
+  edm::EDGetTokenT<CaloTowerCollection> TowerSrc_;
+  edm::EDGetTokenT<reco::CandidateView> TowerSrc_Candidates_;
+  edm::EDGetTokenT<reco::VertexCollection> VtxSrc_;
 
-  edm::InputTag JetSrc_;
+  edm::EDGetTokenT<reco::CaloJetCollection> JetSrc_;
 
-  edm::InputTag FastJetTag_;
+  edm::EDGetTokenT<std::vector<double>> FastJetTag_rhos_;
+  edm::EDGetTokenT<std::vector<double>> FastJetTag_sigmas_;
 
-  edm::InputTag srcVor_;
+  edm::EDGetTokenT<reco::VoronoiMap> srcVor_backgrounds_;
+  edm::EDGetTokenT<std::vector<float>> srcVor_vn_;
   int           fourierOrder_;
   int           etaBins_;
   bool   doUEraw_;
@@ -310,17 +319,18 @@ RecHitTreeProducer::RecHitTreeProducer(const edm::ParameterSet& iConfig) :
   geo(0)
 {
   //now do what ever initialization is needed
-  EBSrc_ = iConfig.getUntrackedParameter<edm::InputTag>("EBRecHitSrc",edm::InputTag("ecalRecHit","EcalRecHitsEB"));
-  EESrc_ = iConfig.getUntrackedParameter<edm::InputTag>("EERecHitSrc",edm::InputTag("ecalRecHit","EcalRecHitsEE"));
-  HcalRecHitHFSrc_ = iConfig.getUntrackedParameter<edm::InputTag>("hcalHFRecHitSrc",edm::InputTag("hfreco"));
-  HcalRecHitHBHESrc_ = iConfig.getUntrackedParameter<edm::InputTag>("hcalHBHERecHitSrc",edm::InputTag("hbhereco"));
-  zdcDigiSrc_ = iConfig.getUntrackedParameter<edm::InputTag>("zdcDigiSrc",edm::InputTag("castorDigis"));
-  zdcRecHitSrc_ = iConfig.getUntrackedParameter<edm::InputTag>("zdcRecHitSrc",edm::InputTag("nothing"));
+  EBSrc_ = consumes<edm::SortedCollection<EcalRecHit,edm::StrictWeakOrdering<EcalRecHit> > > (iConfig.getUntrackedParameter<edm::InputTag>("EBRecHitSrc",edm::InputTag("ecalRecHit","EcalRecHitsEB")));
+  EESrc_ = consumes<edm::SortedCollection<EcalRecHit,edm::StrictWeakOrdering<EcalRecHit> > > (iConfig.getUntrackedParameter<edm::InputTag>("EERecHitSrc",edm::InputTag("ecalRecHit","EcalRecHitsEE")));
+  HcalRecHitHFSrc_ = consumes<HFRecHitCollection> (iConfig.getUntrackedParameter<edm::InputTag>("hcalHFRecHitSrc",edm::InputTag("hfreco")));
+  HcalRecHitHBHESrc_ = consumes<HBHERecHitCollection> (iConfig.getUntrackedParameter<edm::InputTag>("hcalHBHERecHitSrc",edm::InputTag("hbhereco")));
+  zdcDigiSrc_ = consumes<ZDCDigiCollection> (iConfig.getUntrackedParameter<edm::InputTag>("zdcDigiSrc",edm::InputTag("castorDigis")));
+  zdcRecHitSrc_ = consumes<ZDCRecHitCollection> (iConfig.getUntrackedParameter<edm::InputTag>("zdcRecHitSrc",edm::InputTag("nothing")));
 
-  BCSrc_ = iConfig.getUntrackedParameter<edm::InputTag>("BasicClusterSrc1",edm::InputTag("ecalRecHit","EcalRecHitsEB","RECO"));
-  TowerSrc_ = iConfig.getUntrackedParameter<edm::InputTag>("towersSrc",edm::InputTag("towerMaker"));
-  VtxSrc_ = iConfig.getUntrackedParameter<edm::InputTag>("vtxSrc",edm::InputTag("hiSelectedVertex"));
-  JetSrc_ = iConfig.getUntrackedParameter<edm::InputTag>("JetSrc",edm::InputTag("iterativeConePu5CaloJets"));
+  BCSrc_ = consumes<reco::BasicClusterCollection> (iConfig.getUntrackedParameter<edm::InputTag>("BasicClusterSrc1",edm::InputTag("ecalRecHit","EcalRecHitsEB","RECO")));
+  TowerSrc_ = consumes<CaloTowerCollection> (iConfig.getUntrackedParameter<edm::InputTag>("towersSrc",edm::InputTag("towerMaker")));
+  TowerSrc_Candidates_ = consumes<reco::CandidateView> (iConfig.getUntrackedParameter<edm::InputTag>("towersSrc",edm::InputTag("towerMaker")));
+  VtxSrc_ = consumes<reco::VertexCollection> (iConfig.getUntrackedParameter<edm::InputTag>("vtxSrc",edm::InputTag("hiSelectedVertex")));
+  JetSrc_ = consumes<reco::CaloJetCollection> (iConfig.getUntrackedParameter<edm::InputTag>("JetSrc",edm::InputTag("iterativeConePu5CaloJets")));
   useJets_ = iConfig.getUntrackedParameter<bool>("useJets",true);
   doBasicClusters_ = iConfig.getUntrackedParameter<bool>("doBasicClusters",false);
   doTowers_ = iConfig.getUntrackedParameter<bool>("doTowers",true);
@@ -337,13 +347,15 @@ RecHitTreeProducer::RecHitTreeProducer(const edm::ParameterSet& iConfig) :
   etaBins_ = iConfig.getParameter<int>("etaBins");
   fourierOrder_ = iConfig.getParameter<int>("fourierOrder");
 
-  srcVor_ = iConfig.getParameter<edm::InputTag>("bkg");
+  srcVor_backgrounds_ = consumes<reco::VoronoiMap> (iConfig.getParameter<edm::InputTag>("bkg"));
+  srcVor_vn_ = consumes<std::vector<float>> (iConfig.getParameter<edm::InputTag>("bkg"));
 
   hasVtx_ = iConfig.getUntrackedParameter<bool>("hasVtx",true);
   saveBothVtx_ = iConfig.getUntrackedParameter<bool>("saveBothVtx",false);
 
   doFastJet_ = iConfig.getUntrackedParameter<bool>("doFastJet",true);
-  FastJetTag_ = iConfig.getUntrackedParameter<edm::InputTag>("FastJetTag",edm::InputTag("kt4CaloJets"));
+  FastJetTag_rhos_ = consumes<std::vector<double>> (iConfig.getUntrackedParameter<edm::InputTag>("FastJetTag",edm::InputTag("kt4CaloJets", "rhos")));
+  FastJetTag_sigmas_ = consumes<std::vector<double>> (iConfig.getUntrackedParameter<edm::InputTag>("FastJetTag",edm::InputTag("kt4CaloJets", "sigmas")));
   doEbyEonly_ = iConfig.getUntrackedParameter<bool>("doEbyEonly",false);
   hfTowerThreshold_ = iConfig.getUntrackedParameter<double>("HFtowerMin",3.);
   hfLongThreshold_ = iConfig.getUntrackedParameter<double>("HFlongMin",0.5);
@@ -389,34 +401,34 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
   if (hasVtx_) vtx = getVtx(ev);
 
   if(doEcal_){
-    ev.getByLabel(EBSrc_,ebHits);
-    ev.getByLabel(EESrc_,eeHits);
+    ev.getByToken(EBSrc_,ebHits);
+    ev.getByToken(EESrc_,eeHits);
   }
 
   if(doHcal_){
-    ev.getByLabel(HcalRecHitHBHESrc_,hbheHits);
+    ev.getByToken(HcalRecHitHBHESrc_,hbheHits);
   }
   if(doHF_){
-    ev.getByLabel(HcalRecHitHFSrc_,hfHits);
+    ev.getByToken(HcalRecHitHFSrc_,hfHits);
   }
 
   if(useJets_) {
-    ev.getByLabel(JetSrc_,jets);
+    ev.getByToken(JetSrc_,jets);
   }
 
   if(doBasicClusters_){
-    ev.getByLabel(BCSrc_,bClusters);
+    ev.getByToken(BCSrc_,bClusters);
   }
 
   if(doTowers_){
-    ev.getByLabel(TowerSrc_,towers);
+    ev.getByToken(TowerSrc_,towers);
 
   }
 
   if (doTowers_ && doVS_) {
-    ev.getByLabel(TowerSrc_,candidates_);
-    ev.getByLabel(srcVor_,backgrounds_);
-    ev.getByLabel(srcVor_,vn_);
+    ev.getByToken(TowerSrc_Candidates_,candidates_);
+    ev.getByToken(srcVor_backgrounds_,backgrounds_);
+    ev.getByToken(srcVor_vn_,vn_);
 
     UEParameters vnUE(vn_.product(),fourierOrder_,etaBins_);
     const std::vector<float>& vue = vnUE.get_raw();
@@ -436,8 +448,8 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
   }
 
   if(doFastJet_){
-    ev.getByLabel(edm::InputTag(FastJetTag_.label(),"rhos",FastJetTag_.process()),rhos);
-    ev.getByLabel(edm::InputTag(FastJetTag_.label(),"sigmas",FastJetTag_.process()),sigmas);
+    ev.getByToken(FastJetTag_rhos_,rhos);
+    ev.getByToken(FastJetTag_sigmas_,sigmas);
     bkg.n = rhos->size();
     for(unsigned int i = 0; i < rhos->size(); ++i){
       bkg.rho[i] = (*rhos)[i];
@@ -463,8 +475,14 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
   if(doHF_){
     for(unsigned int i = 0; i < hfHits->size(); ++i){
       const HFRecHit & hit= (*hfHits)[i];
+
+      const HcalDetId & id = hit.id();
+      hfRecHit.rawId[hfRecHit.n] = id.rawId();
+      hfRecHit.ieta[hfRecHit.n] = id.ieta();
+      hfRecHit.iphi[hfRecHit.n] = id.iphi();
+
       hfRecHit.e[hfRecHit.n] = hit.energy();
-      math::XYZPoint pos = getPosition(hit.id(),vtx);
+      math::XYZPoint pos = getPosition(id,vtx);
 
       if(!saveBothVtx_){
 	hfRecHit.et[hfRecHit.n] = getEt(pos,hit.energy());
@@ -472,10 +490,10 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
 	hfRecHit.phi[hfRecHit.n] = pos.phi();
 	hfRecHit.perp[hfRecHit.n] = pos.rho();
       }else{
-	hfRecHit.et[hfRecHit.n] = getEt(hit.id(),hit.energy());
-	hfRecHit.eta[hfRecHit.n] = getEta(hit.id());
-	hfRecHit.phi[hfRecHit.n] = getPhi(hit.id());
-	hfRecHit.perp[hfRecHit.n] = getPerp(hit.id());
+	hfRecHit.et[hfRecHit.n] = getEt(id,hit.energy());
+	hfRecHit.eta[hfRecHit.n] = getEta(id);
+	hfRecHit.phi[hfRecHit.n] = getPhi(id);
+	hfRecHit.perp[hfRecHit.n] = getPerp(id);
 
 	hfRecHit.etVtx[hfRecHit.n] = getEt(pos,hit.energy());
 	hfRecHit.etaVtx[hfRecHit.n] = pos.eta();
@@ -485,14 +503,14 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
       }
 
       hfRecHit.isjet[hfRecHit.n] = false;
-      hfRecHit.depth[hfRecHit.n] = hit.id().depth();
+      hfRecHit.depth[hfRecHit.n] = id.depth();
 
-      if(hit.id().ieta() > 0){
-	if(hit.energy() > hfShortThreshold_ && hit.id().depth() != 1) nHFshortPlus++;
-	if(hit.energy() > hfLongThreshold_ && hit.id().depth() == 1) nHFlongPlus++;
+      if(id.ieta() > 0){
+	if(hit.energy() > hfShortThreshold_ && id.depth() != 1) nHFshortPlus++;
+	if(hit.energy() > hfLongThreshold_ && id.depth() == 1) nHFlongPlus++;
       }else{
-	if(hit.energy() > hfShortThreshold_ && hit.id().depth() != 1) nHFshortMinus++;
-	if(hit.energy() > hfLongThreshold_ && hit.id().depth() == 1) nHFlongMinus++;
+	if(hit.energy() > hfShortThreshold_ && id.depth() != 1) nHFshortMinus++;
+	if(hit.energy() > hfLongThreshold_ && id.depth() == 1) nHFlongMinus++;
       }
 
       if(useJets_){
@@ -510,9 +528,14 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
 	const HBHERecHit & hit= (*hbheHits)[i];
 	if (getEt(hit.id(),hit.energy())<hbhePtMin_) continue;
 
+    const HcalDetId & id = hit.id();
+    hbheRecHit.rawId[hbheRecHit.n] = id.rawId();
+    hbheRecHit.ieta[hbheRecHit.n] = id.ieta();
+    hbheRecHit.iphi[hbheRecHit.n] = id.iphi();
+
 	hbheRecHit.e[hbheRecHit.n] = hit.energy();
 	hbheRecHit.eraw[hbheRecHit.n] = hit.eraw();
-	math::XYZPoint pos = getPosition(hit.id(),vtx);
+	math::XYZPoint pos = getPosition(id,vtx);
 
 	if(!saveBothVtx_){
 	  hbheRecHit.et[hbheRecHit.n] = getEt(pos,hit.energy());
@@ -520,10 +543,10 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
 	  hbheRecHit.phi[hbheRecHit.n] = pos.phi();
 	  hbheRecHit.perp[hbheRecHit.n] = pos.rho();
 	}else{
-	  hbheRecHit.et[hbheRecHit.n] = getEt(hit.id(),hit.energy());
-	  hbheRecHit.eta[hbheRecHit.n] = getEta(hit.id());
-	  hbheRecHit.phi[hbheRecHit.n] = getPhi(hit.id());
-	  hbheRecHit.perp[hbheRecHit.n] = getPerp(hit.id());
+	  hbheRecHit.et[hbheRecHit.n] = getEt(id,hit.energy());
+	  hbheRecHit.eta[hbheRecHit.n] = getEta(id);
+	  hbheRecHit.phi[hbheRecHit.n] = getPhi(id);
+	  hbheRecHit.perp[hbheRecHit.n] = getPerp(id);
 
 	  hbheRecHit.etVtx[hbheRecHit.n] = getEt(pos,hit.energy());
 	  hbheRecHit.etaVtx[hbheRecHit.n] = pos.eta();
@@ -532,7 +555,7 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
 	}
         
 	hbheRecHit.isjet[hbheRecHit.n] = false;
-	hbheRecHit.depth[hbheRecHit.n] = hit.id().depth();
+	hbheRecHit.depth[hbheRecHit.n] = id.depth();
 
 	if(useJets_){
 	  for(unsigned int j = 0 ; j < jets->size(); ++j){
@@ -550,8 +573,13 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
       const EcalRecHit & hit= (*ebHits)[i];
       if (getEt(hit.id(),hit.energy())<ebPtMin_) continue;
 
+      const DetId & id = hit.id();
+      ebRecHit.rawId[ebRecHit.n] = id.rawId();
+      ebRecHit.ieta[ebRecHit.n] = EBDetId(id).ieta();
+      ebRecHit.iphi[ebRecHit.n] = EBDetId(id).iphi();
+
       ebRecHit.e[ebRecHit.n] = hit.energy();
-      math::XYZPoint pos = getPosition(hit.id(),vtx);
+      math::XYZPoint pos = getPosition(id,vtx);
 
       if(!saveBothVtx_){
 	ebRecHit.et[ebRecHit.n] = getEt(pos,hit.energy());
@@ -559,10 +587,10 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
 	ebRecHit.phi[ebRecHit.n] = pos.phi();
 	ebRecHit.perp[ebRecHit.n] = pos.rho();
       }else{
-	ebRecHit.et[ebRecHit.n] = getEt(hit.id(),hit.energy());
-	ebRecHit.eta[ebRecHit.n] = getEta(hit.id());
-	ebRecHit.phi[ebRecHit.n] = getPhi(hit.id());
-	ebRecHit.perp[ebRecHit.n] = getPerp(hit.id());
+	ebRecHit.et[ebRecHit.n] = getEt(id,hit.energy());
+	ebRecHit.eta[ebRecHit.n] = getEta(id);
+	ebRecHit.phi[ebRecHit.n] = getPhi(id);
+	ebRecHit.perp[ebRecHit.n] = getPerp(id);
 	ebRecHit.etVtx[ebRecHit.n] = getEt(pos,hit.energy());
 	ebRecHit.etaVtx[ebRecHit.n] = pos.eta();
 	ebRecHit.phiVtx[ebRecHit.n] = pos.phi();
@@ -592,8 +620,15 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
       const EcalRecHit & hit= (*eeHits)[i];
       if (getEt(hit.id(),hit.energy())<eePtMin_) continue;
 
+      const DetId &id = hit.id();
+      eeRecHit.rawId[eeRecHit.n] = id.rawId();
+      // ix and iy are EE only
+      eeRecHit.ix[eeRecHit.n] = EEDetId(id).ix();
+      eeRecHit.iy[eeRecHit.n] = EEDetId(id).iy()*EEDetId(id).zside();
+      // positive (negative) eeRecHit.iy will correspond to EE+ (EE-)
+
       eeRecHit.e[eeRecHit.n] = hit.energy();
-      math::XYZPoint pos = getPosition(hit.id(),vtx);
+      math::XYZPoint pos = getPosition(id,vtx);
 
       if(!saveBothVtx_){
 	eeRecHit.et[eeRecHit.n] = getEt(pos,hit.energy());
@@ -601,10 +636,10 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
 	eeRecHit.phi[eeRecHit.n] = pos.phi();
 	eeRecHit.perp[eeRecHit.n] = pos.rho();
       }else{
-	eeRecHit.et[eeRecHit.n] = getEt(hit.id(),hit.energy());
-	eeRecHit.eta[eeRecHit.n] = getEta(hit.id());
-	eeRecHit.phi[eeRecHit.n] = getPhi(hit.id());
-	eeRecHit.perp[eeRecHit.n] = getPerp(hit.id());
+	eeRecHit.et[eeRecHit.n] = getEt(id,hit.energy());
+	eeRecHit.eta[eeRecHit.n] = getEta(id);
+	eeRecHit.phi[eeRecHit.n] = getPhi(id);
+	eeRecHit.perp[eeRecHit.n] = getPerp(id);
 	eeRecHit.etVtx[eeRecHit.n] = getEt(pos,hit.energy());
 	eeRecHit.etaVtx[eeRecHit.n] = pos.eta();
 	eeRecHit.phiVtx[eeRecHit.n] = pos.phi();
@@ -652,6 +687,11 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
 	myTowers.vsArea[myTowers.n] = vsArea;
 
       }
+      const CaloTowerDetId & id = hit.id();
+      myTowers.rawId[myTowers.n] = id.rawId();
+      myTowers.ieta[myTowers.n] = id.ieta();
+      myTowers.iphi[myTowers.n] = id.iphi();
+
       myTowers.e[myTowers.n] = hit.energy();
       myTowers.et[myTowers.n] = hit.p4(vtx).Et();
       myTowers.eta[myTowers.n] = hit.p4(vtx).Eta();
@@ -661,9 +701,9 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
 
       if (saveBothVtx_) {
 	myTowers.e[myTowers.n] = hit.energy();
-	myTowers.et[myTowers.n] = getEt(hit.id(),hit.energy());
-	myTowers.eta[myTowers.n] = getEta(hit.id());
-	myTowers.phi[myTowers.n] = getPhi(hit.id());
+	myTowers.et[myTowers.n] = getEt(id,hit.energy());
+	myTowers.eta[myTowers.n] = getEta(id);
+	myTowers.phi[myTowers.n] = getPhi(id);
 	myTowers.isjet[myTowers.n] = false;
 	myTowers.etVtx[myTowers.n] = hit.p4(vtx).Et();
 	myTowers.etaVtx[myTowers.n] = hit.p4(vtx).Eta();
@@ -700,6 +740,24 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
 	const reco::BasicCluster & bc= (*bClusters)[i];
 	double dr = reco::deltaR(bc.eta(),bc.phi(),jet.eta(),jet.phi());
 	if(dr < cone){
+
+	    // rawId will be the rawId of the seed RecHit.
+	    const DetId & id = bc.hitsAndFractions().at(0).first;
+	    myBC.rawId[myBC.n] = id.rawId();
+	    myBC.ieta[myBC.n] = -999;
+	    myBC.iphi[myBC.n] = -999;
+	    myBC.ix[myBC.n] = -999;
+	    myBC.iy[myBC.n] = -999;
+	    if ( id.subdetId() == EcalSubdetector::EcalBarrel ) {
+	        myBC.ieta[myBC.n] = EBDetId(id).ieta();
+	        myBC.iphi[myBC.n] = EBDetId(id).iphi();
+	    }
+	    else if (id.subdetId() == EcalSubdetector::EcalEndcap) {
+	        myBC.ix[myBC.n] = EEDetId(id).ix();
+	        myBC.iy[myBC.n] = EEDetId(id).iy()*EEDetId(id).zside();
+	        // positive (negative) myBC.iy will correspond to EE+ (EE-)
+	    }
+
 	  myBC.e[myBC.n] = bc.energy();
 	  myBC.et[myBC.n] = bc.energy()*sin(bc.position().theta());
 	  myBC.eta[myBC.n] = bc.eta();
@@ -728,6 +786,7 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
 	HcalCastorDetId castorid = rh.id();
 	energyCastor += rh.energy();
 	if (nhits  < 224) {
+	  castorRecHit.rawId[nhits] = castorid.rawId();
 	  castorRecHit.e[nhits] = rh.energy();
 	  castorRecHit.iphi[nhits] = castorid.sector();
 	  castorRecHit.depth[nhits] = castorid.module();
@@ -749,7 +808,7 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
 
     edm::Handle<ZDCRecHitCollection> zdcrechits;
 
-    try{ ev.getByLabel(zdcRecHitSrc_,zdcrechits); }
+    try{ ev.getByToken(zdcRecHitSrc_,zdcrechits); }
     catch(...) { edm::LogWarning(" ZDC ") << " Cannot get ZDC RecHits " << std::endl; }
 
     int nhits = 0;
@@ -782,7 +841,7 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
 
     edm::Handle<ZDCDigiCollection> zdcdigis;
 
-    try{ ev.getByLabel(zdcDigiSrc_,zdcdigis); }
+    try{ ev.getByToken(zdcDigiSrc_,zdcdigis); }
     catch(...) { edm::LogWarning(" ZDC ") << " Cannot get ZDC Digis " << std::endl; }
 
     int nhits = 0;
@@ -864,9 +923,11 @@ RecHitTreeProducer::beginJob()
     hbheTree->Branch("eta",hbheRecHit.eta,"eta[n]/F");
     hbheTree->Branch("phi",hbheRecHit.phi,"phi[n]/F");
     hbheTree->Branch("perp",hbheRecHit.perp,"perp[n]/F");
-
-    hbheTree->Branch("isjet",hbheRecHit.isjet,"isjet[n]/O");
     hbheTree->Branch("depth",hfRecHit.depth,"depth[n]/I");
+    hbheTree->Branch("isjet",hbheRecHit.isjet,"isjet[n]/O");
+    hbheTree->Branch("rawId",hbheRecHit.rawId,"rawId[n]/I");
+    hbheTree->Branch("ieta",hbheRecHit.ieta,"ieta[n]/I");
+    hbheTree->Branch("iphi",hbheRecHit.iphi,"iphi[n]/I");
 
     hfTree = fs->make<TTree>("hf",versionTag);
     hfTree->Branch("n",&hfRecHit.n,"n/I");
@@ -877,6 +938,9 @@ RecHitTreeProducer::beginJob()
     hfTree->Branch("perp",hfRecHit.perp,"perp[n]/F");
     hfTree->Branch("depth",hfRecHit.depth,"depth[n]/I");
     hfTree->Branch("isjet",hfRecHit.isjet,"isjet[n]/O");
+    hfTree->Branch("rawId",hfRecHit.rawId,"rawId[n]/I");
+    hfTree->Branch("ieta",hfRecHit.ieta,"ieta[n]/I");
+    hfTree->Branch("iphi",hfRecHit.iphi,"iphi[n]/I");
   }
 
   if(doEcal_){
@@ -888,6 +952,9 @@ RecHitTreeProducer::beginJob()
     eeTree->Branch("eta",eeRecHit.eta,"eta[n]/F");
     eeTree->Branch("phi",eeRecHit.phi,"phi[n]/F");
     eeTree->Branch("perp",eeRecHit.perp,"perp[n]/F");
+    eeTree->Branch("rawId",eeRecHit.rawId,"rawId[n]/I");
+    eeTree->Branch("ix",eeRecHit.ix,"ix[n]/I");
+    eeTree->Branch("iy",eeRecHit.iy,"iy[n]/I");
     eeTree->Branch("chi2",eeRecHit.chi2,"chi2[n]/F");
     eeTree->Branch("eError",eeRecHit.eError,"eError[n]/F");
     eeTree->Branch("flags",eeRecHit.flags,"flags[n]/i");
@@ -901,6 +968,9 @@ RecHitTreeProducer::beginJob()
     ebTree->Branch("eta",ebRecHit.eta,"eta[n]/F");
     ebTree->Branch("phi",ebRecHit.phi,"phi[n]/F");
     ebTree->Branch("perp",ebRecHit.perp,"perp[n]/F");
+    ebTree->Branch("rawId",ebRecHit.rawId,"rawId[n]/I");
+    ebTree->Branch("ieta",ebRecHit.ieta,"ieta[n]/I");
+    ebTree->Branch("iphi",ebRecHit.iphi,"iphi[n]/I");
     ebTree->Branch("chi2",ebRecHit.chi2,"chi2[n]/F");
     ebTree->Branch("eError",ebRecHit.eError,"eError[n]/F");
     ebTree->Branch("flags",ebRecHit.flags,"flags[n]/i");
@@ -918,6 +988,9 @@ RecHitTreeProducer::beginJob()
     towerTree->Branch("isjet",myTowers.isjet,"isjet[n]/O");
     towerTree->Branch("emEt",myTowers.emEt,"emEt[n]/F");
     towerTree->Branch("hadEt",myTowers.hadEt,"hadEt[n]/F");
+    towerTree->Branch("rawId",myTowers.rawId,"rawId[n]/I");
+    towerTree->Branch("ieta",myTowers.ieta,"ieta[n]/I");
+    towerTree->Branch("iphi",myTowers.iphi,"iphi[n]/I");
 
     if(doVS_){
 
@@ -945,6 +1018,7 @@ RecHitTreeProducer::beginJob()
     castorTree->Branch("phi",castorRecHit.phi,"phi[n]/F");
     castorTree->Branch("depth",castorRecHit.depth,"depth[n]/I");
     castorTree->Branch("saturation",castorRecHit.saturation,"saturation[n]/I");
+    castorTree->Branch("rawId",castorRecHit.rawId,"rawId[n]/I");
   }
 
   if(doZDCRecHit_){
@@ -993,6 +1067,11 @@ RecHitTreeProducer::beginJob()
     bcTree->Branch("jtpt",&myBC.jtpt,"jtpt/F");
     bcTree->Branch("jteta",&myBC.jteta,"jteta/F");
     bcTree->Branch("jtphi",&myBC.jtphi,"jtphi/F");
+    bcTree->Branch("rawId",myBC.rawId,"rawId[n]/I");
+    bcTree->Branch("ieta",myBC.ieta,"ieta[n]/I");
+    bcTree->Branch("iphi",myBC.iphi,"iphi[n]/I");
+    bcTree->Branch("ix",myBC.ix,"ix[n]/I");
+    bcTree->Branch("iy",myBC.iy,"iy[n]/I");
     //     bcTree->Branch("isjet",bcRecHit.isjet,"isjet[n]/O");
   }
 
@@ -1049,7 +1128,7 @@ double RecHitTreeProducer::getPerp(const DetId &id, reco::Vertex::Point vtx){
 
 reco::Vertex::Point RecHitTreeProducer::getVtx(const edm::Event& ev)
 {
-  ev.getByLabel(VtxSrc_,vtxs);
+  ev.getByToken(VtxSrc_, vtxs);
   int greatestvtx = 0;
   int nVertex = vtxs->size();
 

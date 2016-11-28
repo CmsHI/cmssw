@@ -8,7 +8,7 @@ castorDigis = cms.EDProducer("CastorRawToDigi",
     # Number of the first CASTOR FED.  If this is not specified, the
     # default from FEDNumbering is used.
     CastorFirstFED = cms.int32(690),
-    ZDCFirstFED = cms.int32(693),                         
+    ZDCFirstFED = cms.int32(693),
     # FED numbers to unpack.  If this is not specified, all FEDs from
     # FEDNumbering will be unpacked.
     FEDs = cms.untracked.vint32( 690, 691, 692, 693, 722),
@@ -31,5 +31,4 @@ castorDigis = cms.EDProducer("CastorRawToDigi",
     UseNominalOrbitMessageTime = cms.bool(True),
     ExpectedOrbitMessageTime = cms.int32(-1),
     UnpackZDC = cms.bool(True),
-
-   )
+)

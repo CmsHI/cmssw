@@ -5,6 +5,7 @@
 #include "boost/shared_ptr.hpp"
 
 #include "DataFormats/HcalDigi/interface/HcalUpgradeDataFrame.h"
+#include "DataFormats/HcalDigi/interface/QIE10DataFrame.h"
 #include "DataFormats/HcalDigi/interface/HBHEDataFrame.h"
 #include "DataFormats/HcalDigi/interface/HFDataFrame.h"
 #include "DataFormats/HcalDigi/interface/HODataFrame.h"
@@ -43,9 +44,6 @@ public:
   HcalSimpleRecAlgo(bool correctForTimeslew, 
 		    bool correctForContainment, float fixedPhaseNs);
 
-  /** Simple constructor for PMT-based detectors */
-  HcalSimpleRecAlgo();
-
   void beginRun(edm::EventSetup const & es);
   void endRun();
 
@@ -74,23 +72,24 @@ public:
   HBHERecHit reconstructHBHEUpgrade(const HcalUpgradeDataFrame& digi,  int first, int toadd, const HcalCoder& coder, const HcalCalibrations& calibs) const;
 
   HFRecHit reconstruct(const HFDataFrame& digi,  int first, int toadd, const HcalCoder& coder, const HcalCalibrations& calibs) const;
+  HFRecHit reconstructQIE10(const QIE10DataFrame& digi,  int first, int toadd, const HcalCoder& coder, const HcalCalibrations& calibs) const;
   HFRecHit reconstructHFUpgrade(const HcalUpgradeDataFrame& digi,  int first, int toadd, const HcalCoder& coder, const HcalCalibrations& calibs) const;
 
   HORecHit reconstruct(const HODataFrame& digi,  int first, int toadd, const HcalCoder& coder, const HcalCalibrations& calibs) const;
   HcalCalibRecHit reconstruct(const HcalCalibDataFrame& digi,  int first, int toadd, const HcalCoder& coder, const HcalCalibrations& calibs) const;
 
   void setpuCorrMethod(int method){ 
-    puCorrMethod_ = method; if( puCorrMethod_ == 2 ) psFitOOTpuCorr_ = std::auto_ptr<PulseShapeFitOOTPileupCorrection>(new PulseShapeFitOOTPileupCorrection());
-    if( puCorrMethod_ == 3) hltOOTpuCorr_ = std::auto_ptr<HcalDeterministicFit>(new HcalDeterministicFit());
+    puCorrMethod_ = method;
+    if( puCorrMethod_ == 2 )
+        psFitOOTpuCorr_ = std::auto_ptr<PulseShapeFitOOTPileupCorrection>(new PulseShapeFitOOTPileupCorrection());
   }
+
   void setpuCorrParams(bool   iPedestalConstraint, bool iTimeConstraint,bool iAddPulseJitter,bool iUnConstrainedFit,bool iApplyTimeSlew,
 		       double iTS4Min, double iTS4Max, double iPulseJitter,double iTimeMean,double iTimeSig,double iPedMean,double iPedSig,
 		       double iNoise,double iTMin,double iTMax,
 		       double its3Chi2,double its4Chi2,double its345Chi2,double iChargeThreshold, int iFitTimes); 
   void setMeth3Params(int iPedSubMethod, float iPedSubThreshold, int iTimeSlewParsType, std::vector<double> iTimeSlewPars, double irespCorrM3);
                
-  std::auto_ptr<PedestalSub> pedSubFxn_= std::auto_ptr<PedestalSub>(new PedestalSub());
-  
 private:
   bool correctForTimeslew_;
   bool correctForPulse_;
@@ -111,6 +110,8 @@ private:
 
   std::auto_ptr<PulseShapeFitOOTPileupCorrection> psFitOOTpuCorr_;
   
+  std::auto_ptr<PedestalSub> pedSubFxn_;
+
   // S.Brandt Feb19 : Add a pointer to the HLT algo
   std::auto_ptr<HcalDeterministicFit> hltOOTpuCorr_;
 };

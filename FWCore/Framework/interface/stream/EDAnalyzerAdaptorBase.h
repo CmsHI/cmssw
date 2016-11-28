@@ -69,7 +69,7 @@ namespace edm {
       // ---------- static member functions --------------------
       
       // ---------- member functions ---------------------------
-      const ModuleDescription& moduleDescription() { return moduleDescription_;}
+      const ModuleDescription& moduleDescription() const { return moduleDescription_;}
       
       std::string workerType() const { return "WorkerT<EDAnalyzerAdaptorBase>";}
       void
@@ -92,8 +92,10 @@ namespace edm {
       
       const EDConsumerBase* consumer() const;
       
-      void modulesDependentUpon(const std::string& iProcessName,
-                                std::vector<const char*>& oModuleLabels) const;
+      void modulesDependentUpon(std::string const& iProcessName,
+                                std::string const& iModuleLabel,
+                                bool iPrint,
+                                std::vector<char const*>& oModuleLabels) const;
 
       void modulesWhoseProductsAreConsumed(std::vector<ModuleDescription const*>& modules,
                                            ProductRegistry const& preg,
@@ -107,7 +109,7 @@ namespace edm {
       
       const EDAnalyzerAdaptorBase& operator=(const EDAnalyzerAdaptorBase&); // stop default
       
-      bool doEvent(EventPrincipal& ep, EventSetup const& c,
+      bool doEvent(EventPrincipal const& ep, EventSetup const& c,
                    ActivityRegistry*,
                    ModuleCallingContext const*) ;
       void doPreallocate(PreallocationConfiguration const&);
@@ -119,34 +121,34 @@ namespace edm {
       void doBeginStream(StreamID id);
       void doEndStream(StreamID id);
       void doStreamBeginRun(StreamID id,
-                            RunPrincipal& ep,
+                            RunPrincipal const& ep,
                             EventSetup const& c,
                             ModuleCallingContext const*);
       virtual void setupRun(EDAnalyzerBase*, RunIndex) = 0;
       void doStreamEndRun(StreamID id,
-                          RunPrincipal& ep,
+                          RunPrincipal const& ep,
                           EventSetup const& c,
                           ModuleCallingContext const*);
       virtual void streamEndRunSummary(EDAnalyzerBase*,edm::Run const&, edm::EventSetup const&) = 0;
 
       void doStreamBeginLuminosityBlock(StreamID id,
-                                        LuminosityBlockPrincipal& ep,
+                                        LuminosityBlockPrincipal const& ep,
                                         EventSetup const& c,
                                         ModuleCallingContext const*);
       virtual void setupLuminosityBlock(EDAnalyzerBase*, LuminosityBlockIndex) = 0;
       void doStreamEndLuminosityBlock(StreamID id,
-                                      LuminosityBlockPrincipal& ep,
+                                      LuminosityBlockPrincipal const& ep,
                                       EventSetup const& c,
                                       ModuleCallingContext const*);
       virtual void streamEndLuminosityBlockSummary(EDAnalyzerBase*,edm::LuminosityBlock const&, edm::EventSetup const&) = 0;
 
-      virtual void doBeginRun(RunPrincipal& rp, EventSetup const& c,
+      virtual void doBeginRun(RunPrincipal const& rp, EventSetup const& c,
                               ModuleCallingContext const*)=0;
-      virtual void doEndRun(RunPrincipal& rp, EventSetup const& c,
+      virtual void doEndRun(RunPrincipal const& rp, EventSetup const& c,
                             ModuleCallingContext const*)=0;
-      virtual void doBeginLuminosityBlock(LuminosityBlockPrincipal& lbp, EventSetup const& c,
+      virtual void doBeginLuminosityBlock(LuminosityBlockPrincipal const& lbp, EventSetup const& c,
                                           ModuleCallingContext const*)=0;
-      virtual void doEndLuminosityBlock(LuminosityBlockPrincipal& lbp, EventSetup const& c,
+      virtual void doEndLuminosityBlock(LuminosityBlockPrincipal const& lbp, EventSetup const& c,
                                         ModuleCallingContext const*)=0;
 
       void doPreForkReleaseResources();

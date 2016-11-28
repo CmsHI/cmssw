@@ -9,6 +9,8 @@
 #include "FWCore/Framework/interface/ESProducer.h"
 #include "FWCore/Framework/interface/EventSetupRecordIntervalFinder.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
+#include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
+#include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
 #include "Geometry/CaloTopology/interface/HcalTopology.h"
 #include "CondFormats/HcalObjects/interface/AllObjects.h"
 #include "HERecalibration.h"
@@ -21,6 +23,7 @@ class HcalPedestalWidthsRcd;
 class HcalGainsRcd;
 class HcalGainWidthsRcd;
 class HcalQIEDataRcd;
+class HcalQIETypesRcd;
 class HcalChannelQualityRcd;
 class HcalElectronicsMapRcd;
 class HcalRespCorrsRcd;
@@ -42,14 +45,14 @@ class HcalTimingParamsRcd;
 class HcalCholeskyMatricesRcd;
 class HcalCovarianceMatricesRcd;
 
-class HcalHardcodeCalibrations : public edm::ESProducer,
-		       public edm::EventSetupRecordIntervalFinder
-{
+class HcalHardcodeCalibrations : public edm::ESProducer, public edm::EventSetupRecordIntervalFinder {
+
 public:
   HcalHardcodeCalibrations (const edm::ParameterSet& );
   ~HcalHardcodeCalibrations ();
 
   void produce () {};
+  static void fillDescriptions(edm::ConfigurationDescriptions & descriptions);
   
 protected:
   virtual void setIntervalFor(const edm::eventsetup::EventSetupRecordKey&,
@@ -61,6 +64,7 @@ protected:
   std::auto_ptr<HcalGains> produceGains (const HcalGainsRcd& rcd);
   std::auto_ptr<HcalGainWidths> produceGainWidths (const HcalGainWidthsRcd& rcd);
   std::auto_ptr<HcalQIEData> produceQIEData (const HcalQIEDataRcd& rcd);
+  std::auto_ptr<HcalQIETypes> produceQIETypes (const HcalQIETypesRcd& rcd); 
   std::auto_ptr<HcalChannelQuality> produceChannelQuality (const HcalChannelQualityRcd& rcd);
   std::auto_ptr<HcalElectronicsMap> produceElectronicsMap (const HcalElectronicsMapRcd& rcd);
 
@@ -93,5 +97,9 @@ private:
   HERecalibration* he_recalibration;  
   HFRecalibration* hf_recalibration;  
   bool switchGainWidthsForTrigPrims; 
+  bool setHEdsegm;
+  bool setHBdsegm;
+  double SipmLumi;
+  bool testHFQIE10;
 };
 

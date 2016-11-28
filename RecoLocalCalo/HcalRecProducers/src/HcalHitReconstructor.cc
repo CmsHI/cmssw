@@ -10,7 +10,7 @@
 #include "RecoLocalCalo/HcalRecAlgos/interface/HcalSeverityLevelComputerRcd.h"
 #include "CalibCalorimetry/HcalAlgos/interface/HcalDbASCIIIO.h"
 #include "Geometry/CaloTopology/interface/HcalTopology.h"
-#include "Geometry/Records/interface/IdealGeometryRecord.h"
+#include "Geometry/Records/interface/HcalRecNumberingRecord.h"
 #include "CondFormats/DataRecord/interface/HcalOOTPileupCorrectionRcd.h"
 #include "CondFormats/DataRecord/interface/HcalOOTPileupCompatibilityRcd.h"
 #include "CondFormats/DataRecord/interface/HBHENegativeEFilterRcd.h"
@@ -47,7 +47,7 @@ HcalHitReconstructor::HcalHitReconstructor(edm::ParameterSet const& conf):
   mcOOTCorrectionCategory_("MC"),
   setPileupCorrection_(0),
   paramTS(0),
-  puCorrMethod_(conf.existsAs<int>("puCorrMethod") ? conf.getParameter<int>("puCorrMethod") : 0),
+  puCorrMethod_(conf.getParameter<int>("puCorrMethod")),
   cntprtCorrMethod_(0),
   first_(true)
 
@@ -139,6 +139,12 @@ HcalHitReconstructor::HcalHitReconstructor(edm::ParameterSet const& conf):
         hbhePulseShapeFlagSetter_ = new HBHEPulseShapeFlagSetter(
 								 psPulseShape.getParameter<double>("MinimumChargeThreshold"),
 								 psPulseShape.getParameter<double>("TS4TS5ChargeThreshold"),
+								 psPulseShape.getParameter<double>("TS3TS4ChargeThreshold"),
+								 psPulseShape.getParameter<double>("TS3TS4UpperChargeThreshold"),
+								 psPulseShape.getParameter<double>("TS5TS6ChargeThreshold"),
+								 psPulseShape.getParameter<double>("TS5TS6UpperChargeThreshold"),
+								 psPulseShape.getParameter<double>("R45PlusOneRange"),
+								 psPulseShape.getParameter<double>("R45MinusOneRange"),
 								 psPulseShape.getParameter<unsigned int>("TrianglePeakTS"),
 								 psPulseShape.getParameter<std::vector<double> >("LinearThreshold"),
 								 psPulseShape.getParameter<std::vector<double> >("LinearCut"),
@@ -163,12 +169,12 @@ HcalHitReconstructor::HcalHitReconstructor(edm::ParameterSet const& conf):
     produces<HBHERecHitCollection>();
   } else if (!strcasecmp(subd.c_str(),"HO")) {
     subdet_=HcalOuter;
-    setPileupCorrection_ = &HcalSimpleRecAlgo::setHOPileupCorrection;
+    // setPileupCorrection_ = &HcalSimpleRecAlgo::setHOPileupCorrection;
     setPileupCorrection_ = 0;
     produces<HORecHitCollection>();
   } else if (!strcasecmp(subd.c_str(),"HF")) {
     subdet_=HcalForward;
-    setPileupCorrection_ = &HcalSimpleRecAlgo::setHFPileupCorrection;
+    // setPileupCorrection_ = &HcalSimpleRecAlgo::setHFPileupCorrection;
     setPileupCorrection_ = 0;
     digiTimeFromDB_=conf.getParameter<bool>("digiTimeFromDB");
 
@@ -270,17 +276,16 @@ HcalHitReconstructor::HcalHitReconstructor(edm::ParameterSet const& conf):
                           conf.getParameter<int>   ("fitTimes")
 			  );
   }
-  if(puCorrMethod_ == 3) {
-    reco_.setMeth3Params(
-              conf.getParameter<int>     ("pedestalSubtractionType"),
-              conf.getParameter<double>  ("pedestalUpperLimit"),
-              conf.getParameter<int>     ("timeSlewParsType"),
-              conf.getParameter<std::vector<double> >("timeSlewPars"),
-              conf.getParameter<double>  ("respCorrM3")
-              );
-  }
-
+  reco_.setMeth3Params(
+            conf.getParameter<int>     ("pedestalSubtractionType"),
+            conf.getParameter<double>  ("pedestalUpperLimit"),
+            conf.getParameter<int>     ("timeSlewParsType"),
+            conf.getParameter<std::vector<double> >("timeSlewPars"),
+            conf.getParameter<double>  ("respCorrM3")
+            );
 }
+
+
 
 void HcalHitReconstructor::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
@@ -288,7 +293,7 @@ void HcalHitReconstructor::fillDescriptions(edm::ConfigurationDescriptions& desc
   desc.add<int>("pedestalSubtractionType", 1); 
   desc.add<double>("pedestalUpperLimit", 2.7); 
   desc.add<int>("timeSlewParsType",3);
-  desc.add<std::vector<double>>("timeSlewPars", {15.5, -3.2, 32, 15.5, -3.2, 32, 15.5, -3.2, 32});
+  desc.add<std::vector<double>>("timeSlewPars", { 12.2999, -2.19142, 0, 12.2999, -2.19142, 0, 12.2999, -2.19142, 0 });
   desc.add<double>("respCorrM3", 0.95);
   descriptions.add("hltHbhereco",desc);
 }
@@ -313,7 +318,7 @@ HcalHitReconstructor::~HcalHitReconstructor() {
 void HcalHitReconstructor::beginRun(edm::Run const&r, edm::EventSetup const & es){
 
   edm::ESHandle<HcalTopology> htopo;
-  es.get<IdealGeometryRecord>().get(htopo);
+  es.get<HcalRecNumberingRecord>().get(htopo);
 
   if ( tsFromDB_== true || recoParamsFromDB_ == true )
     {
@@ -337,7 +342,7 @@ void HcalHitReconstructor::beginRun(edm::Run const&r, edm::EventSetup const & es
       HFDigiTimeParams.reset( new HcalFlagHFDigiTimeParams( *p ) );
 
       edm::ESHandle<HcalTopology> htopo;
-      es.get<IdealGeometryRecord>().get(htopo);
+      es.get<HcalRecNumberingRecord>().get(htopo);
       HFDigiTimeParams->setTopo(htopo.product());
 
     }
@@ -362,7 +367,7 @@ void HcalHitReconstructor::produce(edm::Event& e, const edm::EventSetup& eventSe
 
   // get conditions
   edm::ESHandle<HcalTopology> topo;
-  eventSetup.get<IdealGeometryRecord>().get(topo);
+  eventSetup.get<HcalRecNumberingRecord>().get(topo);
 
   edm::ESHandle<HcalDbService> conditions;
   eventSetup.get<HcalDbRecord>().get(conditions);

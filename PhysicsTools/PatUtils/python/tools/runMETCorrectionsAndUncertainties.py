@@ -23,7 +23,7 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
     def __init__(self):
         ConfigToolBase.__init__(self)
         self.addParameter(self._defaultParameters, 'metType', "PF",
-                          "Type of considered MET (only PF supported so far)", Type=str)
+                          "Type of considered MET (only PF and Puppi supported so far)", Type=str)
         self.addParameter(self._defaultParameters, 'correctionLevel', [""],
                           "level of correction : available corrections for pfMet are T0, T1, T2, Txy and Smear; irrelevant entry for MVAMet)",
                           allowedValues=["T0","T1","T2","Txy","Smear",""])
@@ -40,8 +40,6 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
                           "Input muon collection", Type=cms.InputTag, acceptNoneValue=True)
 	self.addParameter(self._defaultParameters, 'tauCollection', cms.InputTag('selectedPatTaus'),
                           "Input tau collection", Type=cms.InputTag, acceptNoneValue=True)
-	self.addParameter(self._defaultParameters, 'jetCollection', cms.InputTag('selectedPatJets'),
-                          "Input jet collection", Type=cms.InputTag, acceptNoneValue=True)
 	self.addParameter(self._defaultParameters, 'jetCollectionUnskimmed', cms.InputTag('patJets'),
                           "Input unskimmed jet collection for T1 MET computation", Type=cms.InputTag, acceptNoneValue=True)
 	self.addParameter(self._defaultParameters, 'pfCandCollection', cms.InputTag('particleFlow'),
@@ -53,22 +51,28 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
         self.addParameter(self._defaultParameters, 'jetCorrectionType', 'L1L2L3-L1',
                           "Use L1L2L3-L1 for the standard L1 removal / L1L2L3-RC for the random-cone correction", Type=str)
 
-        self.addParameter(self._defaultParameters, 'jetCorLabelUpToL3', cms.InputTag('ak4PFCHSL1FastL2L3Corrector'), "Use ak4PFL1FastL2L3Corrector (ak4PFCHSL1FastL2L3Corrector) for PFJets with (without) charged hadron subtraction, ak4CaloL1FastL2L3Corrector for CaloJets", Type=cms.InputTag)
-        self.addParameter(self._defaultParameters, 'jetCorLabelL3Res', cms.InputTag('ak4PFCHSL1FastL2L3ResidualCorrector'), "Use ak4PFL1FastL2L3ResidualCorrector (ak4PFCHSL1FastL2L3ResidualCorrector) for PFJets with (without) charged hadron subtraction, ak4CaloL1FastL2L3ResidualCorrector for CaloJets", Type=cms.InputTag)
-        self.addParameter(self._defaultParameters, 'jecUncertaintyFile', 'CondFormats/JetMETObjects/data/Summer15_50nsV5_DATA_UncertaintySources_AK4PFchs.txt',
+        self.addParameter(self._defaultParameters, 'jetCorLabelUpToL3', "ak4PFCHSL1FastL2L3Corrector", "Use ak4PFL1FastL2L3Corrector (ak4PFCHSL1FastL2L3Corrector) for PFJets with (without) charged hadron subtraction, ak4CaloL1FastL2L3Corrector for CaloJets", Type=str)
+        self.addParameter(self._defaultParameters, 'jetCorLabelL3Res', "ak4PFCHSL1FastL2L3ResidualCorrector", "Use ak4PFL1FastL2L3ResidualCorrector (ak4PFCHSL1FastL2L3ResidualCorrector) for PFJets with (without) charged hadron subtraction, ak4CaloL1FastL2L3ResidualCorrector for CaloJets", Type=str)
+
+# the file is used only for local running
+        self.addParameter(self._defaultParameters, 'jecUncertaintyFile', '',
                           "Extra JES uncertainty file", Type=str)
-        self.addParameter(self._defaultParameters, 'jecUncertaintyTag', 'SubTotalMC',
-                          "JES uncertainty Tag", Type=str)
+        self.addParameter(self._defaultParameters, 'jecUncertaintyTag', None,
+                          "JES uncertainty Tag", acceptNoneValue=True) # Type=str,
         
         self.addParameter(self._defaultParameters, 'mvaMetLeptons',["Electrons","Muons"],
                           "Leptons to be used for recoil computation in the MVA MET, available values are: Electrons, Muons, Taus, Photons", allowedValues=["Electrons","Muons","Taus","Photons",""])
 
-        self.addParameter(self._defaultParameters, 'addToPatDefaultSequence', True,
+        self.addParameter(self._defaultParameters, 'addToPatDefaultSequence', False,
                           "Flag to enable/disable that metUncertaintySequence is inserted into patDefaultSequence", Type=bool)
         self.addParameter(self._defaultParameters, 'manualJetConfig', False,
                   "Enable jet configuration options", Type=bool)
+	self.addParameter(self._defaultParameters, 'jetSelection', 'pt>15 && abs(eta)<9.9',
+                          "Advanced jet kinematic selection", Type=str)
         self.addParameter(self._defaultParameters, 'recoMetFromPFCs', False,
                   "Recompute the MET from scratch using the pfCandidate collection", Type=bool)
+        self.addParameter(self._defaultParameters, 'reapplyJEC', True,
+                  "Flag to enable/disable JEC update", Type=bool)
         self.addParameter(self._defaultParameters, 'reclusterJets', False,
                   "Flag to enable/disable the jet reclustering", Type=bool)
         self.addParameter(self._defaultParameters, 'CHS', False,
@@ -77,10 +81,16 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
                           "Switch for data/MC processing", Type=bool)
         self.addParameter(self._defaultParameters, 'onMiniAOD', False,
                           "Switch on miniAOD configuration", Type=bool)
-        self.addParameter(self._defaultParameters, 'repro74X', False,
-                          "option for 74X miniAOD re-processing", Type=bool)          
         self.addParameter(self._defaultParameters, 'postfix', '',
                           "Technical parameter to identify the resulting sequence and its modules (allows multiple calls in a job)", Type=str)
+
+
+        #private parameters
+        self.addParameter(self._defaultParameters, 'Puppi', False,
+                          "Puppi algorithm (private)", Type=bool)
+
+
+
         self._parameters = copy.deepcopy(self._defaultParameters)
         self._comment = ""
 
@@ -97,7 +107,6 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
                  photonCollection        =None,
                  muonCollection          =None,
                  tauCollection           =None,
-                 jetCollection           =None,
                  jetCollectionUnskimmed  =None,
                  pfCandCollection        =None,
                  autoJetCleaning         =None,
@@ -110,18 +119,18 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
                  mvaMetLeptons           =None,
                  addToPatDefaultSequence =None,
                  manualJetConfig         =None,
+                 jetSelection            =None,
                  recoMetFromPFCs         =None,
+                 reapplyJEC              =None,
                  reclusterJets           =None,
                  CHS                     =None,
                  runOnData               =None,
                  onMiniAOD               =None,
-                 repro74X                =None,
                  postfix                 =None):
         electronCollection = self.initializeInputTag(electronCollection, 'electronCollection')
         photonCollection = self.initializeInputTag(photonCollection, 'photonCollection')
         muonCollection = self.initializeInputTag(muonCollection, 'muonCollection')
         tauCollection = self.initializeInputTag(tauCollection, 'tauCollection')
-        jetCollection = self.initializeInputTag(jetCollection, 'jetCollection')
         jetCollectionUnskimmed = self.initializeInputTag(jetCollectionUnskimmed, 'jetCollectionUnskimmed')
         pfCandCollection = self.initializeInputTag(pfCandCollection, 'pfCandCollection')
         if metType is None :
@@ -140,8 +149,6 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
             muonCollection = self._defaultParameters['muonCollection'].value
         if tauCollection is None :
             tauCollection = self._defaultParameters['tauCollection'].value
-        if jetCollection is None :
-            jetCollection = self._defaultParameters['jetCollection'].value
         if jetCollectionUnskimmed is None :
             jetCollectionUnskimmed = self._defaultParameters['jetCollectionUnskimmed'].value
         if pfCandCollection is None :
@@ -168,8 +175,12 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
             addToPatDefaultSequence = self._defaultParameters['addToPatDefaultSequence'].value
         if manualJetConfig is None :
             manualJetConfig =  self._defaultParameters['manualJetConfig'].value
+        if jetSelection is None :
+            jetSelection = self._defaultParameters['jetSelection'].value
         if recoMetFromPFCs is None :
             recoMetFromPFCs =  self._defaultParameters['recoMetFromPFCs'].value
+        if reapplyJEC is None :
+            reapplyJEC = self._defaultParameters['reapplyJEC'].value
         if reclusterJets is None :
             reclusterJets = self._defaultParameters['reclusterJets'].value
         if CHS is None :
@@ -178,8 +189,6 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
             runOnData = self._defaultParameters['runOnData'].value
         if onMiniAOD is None :
             onMiniAOD = self._defaultParameters['onMiniAOD'].value
-        if repro74X is None :
-            repro74X = self._defaultParameters['repro74X'].value
         if postfix is None :
             postfix = self._defaultParameters['postfix'].value
 
@@ -191,7 +200,6 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
         self.setParameter('photonCollection',photonCollection),
         self.setParameter('muonCollection',muonCollection),
         self.setParameter('tauCollection',tauCollection),
-        self.setParameter('jetCollection',jetCollection),
         self.setParameter('jetCollectionUnskimmed',jetCollectionUnskimmed),
         self.setParameter('pfCandCollection',pfCandCollection),
 
@@ -205,16 +213,22 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
         self.setParameter('mvaMetLeptons',mvaMetLeptons),
         
         self.setParameter('addToPatDefaultSequence',addToPatDefaultSequence),
+        self.setParameter('jetSelection',jetSelection),
         self.setParameter('recoMetFromPFCs',recoMetFromPFCs),
         self.setParameter('runOnData',runOnData),
         self.setParameter('onMiniAOD',onMiniAOD),
-        self.setParameter('repro74X',repro74X),
         self.setParameter('postfix',postfix),
 
-        #if mva MET, autoswitch to std jets
-        if metType == "MVA":
+        #if mva/puppi MET, autoswitch to std jets
+        if metType == "MVA" or metType == "Puppi":
             self.setParameter('CHS',False),
 
+        #enabling puppi flag
+        self.setParameter('Puppi',self._defaultParameters['Puppi'].value) 
+        if metType == "Puppi":
+            self.setParameter('metType',"PF") 
+            self.setParameter('Puppi',True) 
+            
         #jet energy scale uncertainty needs
         if manualJetConfig:
             self.setParameter('CHS',CHS)
@@ -226,13 +240,17 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
             self.jetConfiguration()
         
         #met reprocessing and jet reclustering
-        if recoMetFromPFCs: 
+        if recoMetFromPFCs:
             self.setParameter('reclusterJets',True)
         
-        #miniAOD
-        if onMiniAOD:
-            self.setParameter('reclusterJets',True)
-            self.setParameter('recoMetFromPFCs',True)
+        #ZD: puppi jet reclustering breaks the puppi jets
+        #overwriting of jet reclustering parameter for puppi
+        if self._parameters["Puppi"].value and not onMiniAOD:
+            self.setParameter('reclusterJets',False)
+
+        #jet collection overloading for automatic jet reclustering or JEC application
+        if reclusterJets:
+            self.setParameter('jetCollectionUnskimmed',cms.InputTag('patJets'))
             
         self.apply(process)
         
@@ -246,7 +264,6 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
         photonCollection        = self._parameters['photonCollection'].value
         muonCollection          = self._parameters['muonCollection'].value
         tauCollection           = self._parameters['tauCollection'].value
-        jetCollection           = self._parameters['jetCollection'].value
         jetCollectionUnskimmed  = self._parameters['jetCollectionUnskimmed'].value
         pfCandCollection        = self._parameters['pfCandCollection'].value
         autoJetCleaning         = self._parameters['autoJetCleaning'].value
@@ -258,17 +275,23 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
 
         mvaMetLeptons           = self._parameters['mvaMetLeptons'].value
         addToPatDefaultSequence = self._parameters['addToPatDefaultSequence'].value
+        jetSelection            = self._parameters['jetSelection'].value
         recoMetFromPFCs         = self._parameters['recoMetFromPFCs'].value
+        reapplyJEC              = self._parameters['reapplyJEC'].value
         reclusterJets           = self._parameters['reclusterJets'].value
         onMiniAOD               = self._parameters['onMiniAOD'].value
-        repro74X                = self._parameters['repro74X'].value
         postfix                 = self._parameters['postfix'].value
         
         #prepare jet configuration
         jetUncInfos = { "jCorrPayload":jetFlavor, "jCorLabelUpToL3":jetCorLabelUpToL3,
                         "jCorLabelL3Res":jetCorLabelL3Res, "jecUncFile":jecUncertaintyFile,
-                        "jecUncTag":jecUncertaintyTag }        
+                        "jecUncTag":"Uncertainty" }     
 
+        if (jecUncertaintyFile!="" and jecUncertaintyTag==None):
+            jetUncInfos[ "jecUncTag" ] = ""
+        elif(jecUncertaintyTag!=None):
+            jetUncInfos[ "jecUncTag" ] = jecUncertaintyTag
+            
         patMetModuleSequence = cms.Sequence()
 
         # recompute the MET (and thus the jets as well for correction) from scratch
@@ -278,74 +301,125 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
                                          onMiniAOD,
                                          patMetModuleSequence,
                                          postfix)
-            reclusterJets = True
+            
+        elif onMiniAOD: #raw MET extraction if running on miniAODs
+            self.extractMET(process, "raw", patMetModuleSequence, postfix)
+
+        #jet AK4 reclustering if needed for JECs
+        if reclusterJets:
+            jetCollectionUnskimmed = self.ak4JetReclustering(process, pfCandCollection, 
+                                                             patMetModuleSequence, postfix)
+
+        # or reapplication of jecs
+        if onMiniAOD:
+            if not reclusterJets and reapplyJEC:
+                jetCollectionUnskimmed = self.updateJECs(process, jetCollectionUnskimmed, patMetModuleSequence, postfix)
+
+        #getting the jet collection that will be used for corrections 
+        #and uncertainty computation
+        jetCollection = self.getJetCollectionForCorsAndUncs(process, 
+                                                            jetCollectionUnskimmed,
+                                                            jetSelection,
+                                                            autoJetCleaning,
+                                                            patMetModuleSequence,
+                                                            postfix)
 
         #default MET production
         self.produceMET(process, metType,patMetModuleSequence, postfix)
         
+            
+        
         #preparation to run over miniAOD (met reproduction) 
-        #-> could be extracted from the slimmedMET for a gain in CPU performances
         if onMiniAOD:
-            reclusterJets = True
             self.miniAODConfiguration(process, 
                                       pfCandCollection,
+                                      jetCollection,
                                       patMetModuleSequence,
-                                      repro74X,
                                       postfix
-                                      )
-            
-        #jet AK4 reclustering if needed for JECs
-        if reclusterJets:
-            jetCollection = self.ak4JetReclustering(process, pfCandCollection, 
-                                                    patMetModuleSequence, postfix)
-            
-        #jet ES configuration and jet cleaning
-        #self.jetConfiguration()
-        self.jetCleaning(process, autoJetCleaning, postfix)
-        
+                                      )        
 
         # correct the MET
         patMetCorrectionSequence, metModName = self.getCorrectedMET(process, metType, correctionLevel,
                                                                     produceIntermediateCorrections,
+                                                                    jetCollection,
                                                                     patMetModuleSequence, postfix )
-        
+
         #fix the default jets for the type1 computation to those used to compute the uncertainties
         #in order to be consistent with what is done in the correction and uncertainty step
         #particularly true for miniAODs
-        if isValidInputTag(jetCollectionUnskimmed) and "T1" in metModName:
-            getattr(process,"patPFMetT1T2Corr").src = jetCollectionUnskimmed
-            getattr(process,"patPFMetT2Corr").src = jetCollectionUnskimmed
-            
-            if postfix!="" and reclusterJets:
-                 getattr(process,"patPFMetT1T2Corr"+postfix).src = cms.InputTag(jetCollectionUnskimmed.value()+postfix)
-                 getattr(process,"patPFMetT2Corr"+postfix).src = cms.InputTag(jetCollectionUnskimmed.value()+postfix)
+        if "T1" in metModName:
+            getattr(process,"patPFMetT1T2Corr"+postfix).src = jetCollection
+            getattr(process,"patPFMetT2Corr"+postfix).src = jetCollection
+            #ZD:puppi currently doesn't have the L1 corrections in the GT
+            if self._parameters["Puppi"].value:
+                getattr(process,"patPFMetT1T2Corr"+postfix).offsetCorrLabel = cms.InputTag("")
+                getattr(process,"patPFMetT2Corr"+postfix).offsetCorrLabel = cms.InputTag("")
+        if "Smear" in metModName:
+            getattr(process,"patSmearedJets"+postfix).src = jetCollection
+            if self._parameters["Puppi"].value:
+                getattr(process,"patPFMetT1T2SmearCorr"+postfix).offsetCorrLabel = cms.InputTag("")
 
+ 
         #compute the uncertainty on the MET
         patMetUncertaintySequence = cms.Sequence()
+        tmpUncSequence =cms.Sequence()
+        if not hasattr(process, "patMetUncertaintySequence"+postfix):
+            patMetUncertaintySequence=cms.Sequence(getattr(process, "ak4PFCHSL1FastL2L3CorrectorChain")+getattr(process, "ak4PFCHSL1FastL2L3ResidualCorrectorChain"))
+        patShiftedModuleSequence = cms.Sequence()
         if computeUncertainties:
-            patMetUncertaintySequence =  self.getMETUncertainties(process, metType, metModName,
+            tmpUncSequence,patShiftedModuleSequence =  self.getMETUncertainties(process, metType, metModName,
                                                                   electronCollection,
                                                                   photonCollection,
                                                                   muonCollection,
                                                                   tauCollection,
+                                                                  pfCandCollection,
                                                                   jetCollection,
                                                                   jetUncInfos,
-                                                                  patMetModuleSequence,
                                                                   postfix)
-
-      
-        setattr(process, "patMetCorrectionSequence"+postfix, patMetCorrectionSequence)
-        setattr(process, "patMetUncertaintySequence"+postfix, patMetUncertaintySequence)
-        setattr(process, "patMetModuleSequence"+postfix, patMetModuleSequence)
+        
+        if not hasattr(process, "patMetCorrectionSequence"+postfix):
+            setattr(process, "patMetCorrectionSequence"+postfix, patMetCorrectionSequence)
+        if not hasattr(process, "patMetUncertaintySequence"+postfix):
+            patMetUncertaintySequence += tmpUncSequence
+            setattr(process, "patMetUncertaintySequence"+postfix, patMetUncertaintySequence)
+        else:
+            if not len(configtools.listModules(tmpUncSequence))==0:
+                setattr(process, metModName+"patMetUncertaintySequence"+postfix , tmpUncSequence)
+                tmpSeq = getattr(process, "patMetUncertaintySequence"+postfix)
+                tmpSeq += getattr(process, metModName+"patMetUncertaintySequence"+postfix)
+                
+        if not hasattr(process, "patShiftedModuleSequence"+postfix):
+            setattr(process, "patShiftedModuleSequence"+postfix, patShiftedModuleSequence)
+        else:
+            if not len(configtools.listModules(patShiftedModuleSequence))==0:
+                setattr(process, metModName+"patShiftedModuleSequence"+postfix , patShiftedModuleSequence)
+                tmpSeq = getattr(process, "patShiftedModuleSequence"+postfix)              
+                tmpSeq += getattr(process, metModName+"patShiftedModuleSequence"+postfix)
+                
+        if not hasattr(process, "patMetModuleSequence"+postfix):
+            setattr(process, "patMetModuleSequence"+postfix, patMetModuleSequence)
         
         #prepare and fill the final sequence containing all the sub-sequence
         fullPatMetSequence = cms.Sequence()
+        fullPatMetSequence += getattr(process, "patMetModuleSequence"+postfix)
         fullPatMetSequence += getattr(process, "patMetCorrectionSequence"+postfix)
         fullPatMetSequence += getattr(process, "patMetUncertaintySequence"+postfix)
-        fullPatMetSequence += getattr(process, "patMetModuleSequence"+postfix)
-                
+        fullPatMetSequence += getattr(process, "patShiftedModuleSequence"+postfix)
+        
+        #adding the slimmed MET
+        if hasattr(process, "patCaloMet"):
+            fullPatMetSequence +=getattr(process, "patCaloMet")
+        if hasattr(process, "slimmedMETs"+postfix):
+            fullPatMetSequence +=getattr(process, "slimmedMETs"+postfix)
+
         setattr(process,"fullPatMetSequence"+postfix,fullPatMetSequence)
 
+        #removing the non used jet selectors
+        configtools.removeIfInSequence(process, "selectedPatJetsForMetT1T2Corr", "patPFMetT1T2CorrSequence", postfix )
+
+        #last modification for miniAODs
+        self.miniAODConfigurationPost(process, postfix)
+        
         # insert the fullPatMetSequence into patDefaultSequence if needed
         if addToPatDefaultSequence:
             if not hasattr(process, "patDefaultSequence"):
@@ -358,10 +432,10 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
             process.load("PhysicsTools.PatUtils.patPFMETCorrections_cff")
             
         if postfix != "" and metType == "PF" and not hasattr(process, 'pat'+metType+'Met'+postfix):
-            configtools.cloneProcessingSnippet(process, getattr(process,"producePatPFMETCorrections"), postfix)
+            noClonesTmp = [ "particleFlowDisplacedVertex", "pfCandidateToVertexAssociation" ]
+            configtools.cloneProcessingSnippet(process, getattr(process,"producePatPFMETCorrections"), postfix, noClones = noClonesTmp)
             setattr(process, 'pat'+metType+'Met'+postfix, getattr(process,'patPFMet' ).clone() )
             getattr(process, "patPFMet"+postfix).metSource = cms.InputTag("pfMet"+postfix)
-            getattr(process, "patPFMet"+postfix).srcJets = cms.InputTag("selectedPatJets"+postfix)
             getattr(process, "patPFMet"+postfix).srcPFCands = self._parameters["pfCandCollection"].value
         
         if self._parameters["runOnData"].value:
@@ -381,26 +455,16 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
         metModuleSequence += getattr(process, 'pat'+metType+'Met'+postfix )
 
 #====================================================================================================
-    def getCorrectedMET(self, process, metType, correctionLevel,produceIntermediateCorrections, metModuleSequence, postfix ):
+    def getCorrectedMET(self, process, metType, correctionLevel,produceIntermediateCorrections, 
+                        jetCollection, metModuleSequence, postfix ):
         
         # default outputs
         patMetCorrectionSequence = cms.Sequence()
         metModName = "pat"+metType+"Met"+postfix
        
-        # loading correction file if not already here
-        #if not hasattr(process, 'patMetCorrectionSequence'):
-        #    process.load("PhysicsTools.PatUtils.patPFMETCorrections_cff")
-         #MM loaded at the production level in principle   
-
         if metType == "MVA": #corrections are irrelevant for the MVA MET (except jet smearing?)
             return patMetCorrectionSequence, metModName
-                
-     ## MM: FIXME, smearing procedure needs a lot of work, still 2010 recipes everywhere
-     ## ==> smearing disabled for all cases
-     #   if cor == "Smear":
-     #       #print "WARNING: smearing procedure still uses 2010 recipe, disabled per default for the moment"
-            
-
+                           
         corNames = { #not really needed but in case we have changes in the future....
             "T0":"T0pc",
             "T1":"T1",
@@ -411,7 +475,7 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
         
         
         #if empty correction level, no need to try something
-        for cor in correctionLevel: #MM to be changed!!!!!!
+        for cor in correctionLevel:
             if cor not in corNames.keys():
                 if cor != "":
                     print "ERROR : ",cor," is not a proper MET correction name! aborting the MET correction production"
@@ -427,26 +491,37 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
             }
 
         if postfix != "":
-            configtools.cloneProcessingSnippet(process, getattr(process,"patPFMetT0CorrSequence"), postfix)
-            configtools.cloneProcessingSnippet(process, getattr(process,"patPFMetT1T2CorrSequence"), postfix)
-            configtools.cloneProcessingSnippet(process, getattr(process,"patPFMetT2CorrSequence"), postfix)
-            configtools.cloneProcessingSnippet(process, getattr(process,"patPFMetTxyCorrSequence"), postfix)
-            configtools.cloneProcessingSnippet(process, getattr(process,"patPFMetSmearCorrSequence"), postfix)
-            configtools.cloneProcessingSnippet(process, getattr(process,"patPFMetT2SmearCorrSequence"), postfix)
+            noClonesTmp = [ "particleFlowDisplacedVertex", "pfCandidateToVertexAssociation" ]
+            if not hasattr(process, "patPFMetT0CorrSequence"+postfix):
+                configtools.cloneProcessingSnippet(process, getattr(process,"patPFMetT0CorrSequence"), postfix, noClones = noClonesTmp)
+            if not hasattr(process, "patPFMetT1T2CorrSequence"+postfix):
+                configtools.cloneProcessingSnippet(process, getattr(process,"patPFMetT1T2CorrSequence"), postfix)
+            if not hasattr(process, "patPFMetT2CorrSequence"+postfix):
+                configtools.cloneProcessingSnippet(process, getattr(process,"patPFMetT2CorrSequence"), postfix)
+            if not hasattr(process, "patPFMetTxyCorrSequence"+postfix):
+                configtools.cloneProcessingSnippet(process, getattr(process,"patPFMetTxyCorrSequence"), postfix)
+            if not hasattr(process, "patPFMetSmearCorrSequence"+postfix):
+                configtools.cloneProcessingSnippet(process, getattr(process,"patPFMetSmearCorrSequence"), postfix)
+            if not hasattr(process, "patPFMetT2SmearCorrSequence"+postfix):
+                configtools.cloneProcessingSnippet(process, getattr(process,"patPFMetT2SmearCorrSequence"), postfix)
            
-
         corModules = {}
         for mod in corModNames.keys():
             corModules[mod] = getattr(process, corModNames[mod] )
                   
         corTags = {
-            "T0":cms.InputTag('patPFMetT0Corr'+postfix),
-            "T1":cms.InputTag('patPFMetT1T2Corr'+postfix, 'type1'),
-            "T2":cms.InputTag('patPFMetT2Corr'+postfix,   'type2'),
-            "Txy": cms.InputTag('patPFMetTxyCorr'+postfix),
-            "Smear":cms.InputTag('patPFMetSmearCorr'+postfix, 'type1'),
-            "Smear":cms.InputTag('patPFMetT1T2SmearCorr'+postfix, 'type1'),
-            "T2Smear":cms.InputTag('patPFMetT2SmearCorr'+postfix, 'type2') 
+            #"T0":cms.InputTag('patPFMetT0Corr'+postfix),
+            #"T1":cms.InputTag('patPFMetT1T2Corr'+postfix, 'type1'),
+            #"T2":cms.InputTag('patPFMetT2Corr'+postfix,   'type2'),
+            #"Txy": cms.InputTag('patPFMetTxyCorr'+postfix),
+            #"Smear":cms.InputTag('patPFMetT1T2SmearCorr'+postfix, 'type1'),
+            #"T2Smear":cms.InputTag('patPFMetT2SmearCorr'+postfix, 'type2') 
+            "T0":['patPFMetT0Corr'+postfix,''],
+            "T1":['patPFMetT1T2Corr'+postfix, 'type1'],
+            "T2":['patPFMetT2Corr'+postfix,   'type2'],
+            "Txy": ['patPFMetTxyCorr'+postfix,''],
+            "Smear":['patPFMetT1T2SmearCorr'+postfix, 'type1'],
+            "T2Smear":['patPFMetT2SmearCorr'+postfix, 'type2'] 
             }
 
         corScheme=""
@@ -454,36 +529,61 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
         correctionSequence = []
         for cor in correctionLevel:
             corScheme += corNames[cor]
-            corrections.append(corTags[cor])
+            corrections.append(cms.InputTag(corTags[cor][0],corTags[cor][1]))
             correctionSequence.append(corModules[cor])
 
         #T2 and smearing corModuleTag switch, specific case
         if "T2" in correctionLevel and "Smear" in correctionLevel:
-            corrections.append(corTags["T2Smear"])
+            corrections.append(cms.InputTag(corTags["T2Smear"][0],corTags["T2Smear"][1]))
             correctionSequence.append(corModules["T2Smear"])
-          #  if not produceIntermediateCorrections:
-          #      #print "REMOVAL"
-         #   correctionSequence.remove( corModules["Smear"] )
-         #   corrections.remove(corTags["Smear"])
 
-
+        #if both are here, consider smeared corJets for the full T1+Smear correction
+        if "T1" in correctionLevel and "Smear" in correctionLevel:
+            corrections.remove(cms.InputTag(corTags["T1"][0],corTags["T1"][1]))
+            
         #Txy parameter tuning
         if "Txy" in correctionLevel:
             self.tuneTxyParameters(process, corScheme, postfix)
             getattr(process, "patPFMetTxyCorr"+postfix).srcPFlow = self._parameters["pfCandCollection"].value
+            
      
-        #Enable MET significance in the type1 MET is computed
-        #if "T1" in correctionLevel:
-        #    getattr(process, "pat"+metType+"Met"+postfix).computeMETSignificance = cms.bool(True)
+        #Enable MET significance if the type1 MET is computed
+        if "T1" in correctionLevel:
+            getattr(process, "pat"+metType+"Met"+postfix).computeMETSignificance = cms.bool(True)
+            getattr(process, "pat"+metType+"Met"+postfix).srcPFCands =  cms.InputTag("packedPFCandidates")
+            if postfix=="NoHF":
+                getattr(process, "pat"+metType+"Met"+postfix).computeMETSignificance = cms.bool(False)
+            if self._parameters["runOnData"].value:
+                getattr(process, "pat"+metType+"Met"+postfix).parameters = METSignificanceParams_Data
+            if self._parameters["Puppi"].value:
+                getattr(process, "pat"+metType+"Met"+postfix).srcPFCands = cms.InputTag('puppiForMET')
+                getattr(process, "pat"+metType+"Met"+postfix).srcJets = cms.InputTag('selectedPatJets'+postfix)
+                getattr(process, "pat"+metType+"Met"+postfix).srcJetSF = cms.string('AK4PFPuppi')
+                getattr(process, "pat"+metType+"Met"+postfix).srcJetResPt = cms.string('AK4PFPuppi_pt')
+                getattr(process, "pat"+metType+"Met"+postfix).srcJetResPhi = cms.string('AK4PFPuppi_phi')
+
+        #MET significance bypass for the patMETs from AOD
+        if not self._parameters["onMiniAOD"].value and not postfix=="NoHF":
+            getattr(process, "patMETs"+postfix).computeMETSignificance = cms.bool(True)
+            getattr(process, "patMETs"+postfix).srcPFCands=self._parameters["pfCandCollection"].value
 
         #T1 parameter tuning when CHS jets are not used
         if "T1" in correctionLevel and not self._parameters["CHS"].value:  
             setattr(process, "corrPfMetType1"+postfix, getattr(process, "corrPfMetType1" ).clone() )
             getattr(process, "corrPfMetType1"+postfix).src =  cms.InputTag("ak4PFJets"+postfix)
-            getattr(process, "corrPfMetType1"+postfix).jetCorrLabel = "ak4PFL1FastL2L3Corrector"
-            getattr(process, "corrPfMetType1"+postfix).jetCorrLabelRes = "ak4PFL1FastL2L3ResidualCorrector"
-            getattr(process, "corrPfMetType1"+postfix).offsetCorrLabel = "ak4PFL1FastjetCorrector"
+            getattr(process, "corrPfMetType1"+postfix).jetCorrLabel = cms.InputTag("ak4PFL1FastL2L3Corrector")
+            getattr(process, "corrPfMetType1"+postfix).jetCorrLabelRes = cms.InputTag("ak4PFL1FastL2L3ResidualCorrector")
+            getattr(process, "corrPfMetType1"+postfix).offsetCorrLabel = cms.InputTag("ak4PFL1FastjetCorrector")
+            getattr(process, "basicJetsForMet"+postfix).offsetCorrLabel = cms.InputTag("ak4PFL1FastjetCorrector")
         
+        if "T1" in correctionLevel and self._parameters["Puppi"].value:  
+            setattr(process, "corrPfMetType1"+postfix, getattr(process, "corrPfMetType1" ).clone() )
+            getattr(process, "corrPfMetType1"+postfix).src =  cms.InputTag("ak4PFJets"+postfix)
+            getattr(process, "corrPfMetType1"+postfix).jetCorrLabel = cms.InputTag("ak4PFPuppiL1FastL2L3Corrector")
+            getattr(process, "corrPfMetType1"+postfix).jetCorrLabelRes = cms.InputTag("ak4PFPuppiL1FastL2L3ResidualCorrector")
+            getattr(process, "corrPfMetType1"+postfix).offsetCorrLabel = cms.InputTag("ak4PFPuppiL1FastjetCorrector")
+            getattr(process, "basicJetsForMet"+postfix).offsetCorrLabel = cms.InputTag("ak4PFPuppiL1FastjetCorrector")
+
         if "T1" in correctionLevel and self._parameters["CHS"].value and self._parameters["reclusterJets"].value:
             getattr(process, "corrPfMetType1"+postfix).src =  cms.InputTag("ak4PFJetsCHS"+postfix)
 
@@ -509,20 +609,22 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
         
         # adding the full sequence only if it does not exist
         if not hasattr(process, sequenceName+postfix):
+            
             for corModule in correctionSequence:
                 patMetCorrectionSequence += corModule
+                
             setattr(process, sequenceName+postfix, patMetCorrectionSequence)
             
         else: #if it exists, only add the missing correction modules, no need to redo everything
-            patMetCorrectionSequence = cms.Sequence()
-            setattr(process, sequenceName+postfix,patMetCorrectionSequence)
-            for mod in corModNames.keys():
-                if not hasattr(process, corModNames[mod]):
-                    patMetCorrectionSequence += corModule
-
-
+            patMetCorrectionSequence = getattr(process, "patMetCorrectionSequence"+postfix)#cms.Sequence()
+            
+            #setattr(process, sequenceName+postfix,patMetCorrectionSequence)
+            for cor in corModNames.keys():
+                if not configtools.contains(patMetCorrectionSequence, corTags[cor][0]) and cor in correctionLevel:
+                    patMetCorrectionSequence += corModules[cor]
+                    
         #plug the main patMetproducer
-        metModuleSequence += getattr(process, metModName)
+        patMetCorrectionSequence += getattr(process, metModName)
         
         #create the intermediate MET steps
         #and finally add the met producers in the sequence for scheduled mode
@@ -530,7 +632,7 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
             interMets = self.addIntermediateMETs(process, metType, correctionLevel, corScheme, corTags,corNames, postfix)
             for met in interMets.keys():
                 setattr(process,met, interMets[met] )
-                metModuleSequence += getattr(process, met)
+                patMetCorrectionSequence += getattr(process, met)
 
         return patMetCorrectionSequence, metModName
                 
@@ -571,12 +673,15 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
                     continue
                 else :
                     corName += corNames[cKey]
-                    corrections.append( corTags[ cKey ] )
+                    corrections.append( cms.InputTag(corTags[ cKey ][0], corTags[ cKey ][1]) )
 
             if corName == corScheme:
                 continue
 
             corName='pat'+metType+'Met' + corName + postfix
+            if configtools.contains(getattr(process,"patMetCorrectionSequence"+postfix), corName ) and hasattr(process, corName):
+                continue
+            
             interMets[corName] =  cms.EDProducer("CorrectedPATMETProducer",
                  src = cms.InputTag('pat'+metType+'Met' + postfix),
                  srcCorrections = cms.VInputTag(corrections)
@@ -587,12 +692,15 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
 
                 
 #====================================================================================================
-    def getMETUncertainties(self, process, metType, metModName, electronCollection, photonCollection,
-                            muonCollection, tauCollection, jetCollection, jetUncInfos, patMetModuleSequence, postfix):
+    def getMETUncertainties(self, process, metType, metModName, electronCollection,
+                            photonCollection, muonCollection, tauCollection, 
+                            pfCandCollection, jetCollection, jetUncInfos, 
+                            postfix):
 
         
         # uncertainty sequence
         metUncSequence = cms.Sequence()
+        shiftedModuleSequence = cms.Sequence()
 
         #===================================================================================
         # jet energy resolution shifts
@@ -608,23 +716,61 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
             
             for mod in metJERUncModules.keys():
                 setattr(process, mod, metJERUncModules[mod] )
-                patMetModuleSequence += getattr(process, mod)
+                shiftedModuleSequence += getattr(process, mod)
 
         #===================================================================================
-        # Unclustered energy shifts
+        # Unclustered energy candidates
         #===================================================================================
-        metUnclEUncModules = self.getUnclusteredVariations(process, metModName, metUncSequence, postfix )
-        for mod in metUnclEUncModules.keys():
-            setattr(process, mod, metUnclEUncModules[mod] )
-            patMetModuleSequence += getattr(process, mod)
+        if not hasattr(process, "pfCandsForUnclusteredUnc"+postfix):
+
+            #Jet projection ==
+            pfCandsNoJets = cms.EDProducer("CandPtrProjector", 
+                                           src = pfCandCollection, 
+                                           veto = jetCollection
+                                           )
+            setattr(process, "pfCandsNoJets"+postfix, pfCandsNoJets)
+            metUncSequence += getattr(process, "pfCandsNoJets"+postfix)
+                
+            #electron projection ==
+            pfCandsNoJetsNoEle = cms.EDProducer("CandPtrProjector", 
+                                                src = cms.InputTag("pfCandsNoJets"+postfix),
+                                                veto = electronCollection
+                                                )
+            setattr(process, "pfCandsNoJetsNoEle"+postfix, pfCandsNoJetsNoEle)
+            metUncSequence += getattr(process, "pfCandsNoJetsNoEle"+postfix)
+        
+            #muon projection ==
+            pfCandsNoJetsNoEleNoMu = cms.EDProducer("CandPtrProjector", 
+                                              src = cms.InputTag("pfCandsNoJetsNoEle"+postfix),
+                                              veto = muonCollection
+                                              )
+            setattr(process, "pfCandsNoJetsNoEleNoMu"+postfix, pfCandsNoJetsNoEleNoMu)
+            metUncSequence += getattr(process, "pfCandsNoJetsNoEleNoMu"+postfix)
+
+            #tau projection ==
+            pfCandsNoJetsNoEleNoMuNoTau = cms.EDProducer("CandPtrProjector", 
+                                              src = cms.InputTag("pfCandsNoJetsNoEleNoMu"+postfix),
+                                              veto = tauCollection
+                                              )
+            setattr(process, "pfCandsNoJetsNoEleNoMuNoTau"+postfix, pfCandsNoJetsNoEleNoMuNoTau)
+            metUncSequence += getattr(process, "pfCandsNoJetsNoEleNoMuNoTau"+postfix)
+
+            #photon projection ==
+            pfCandsForUnclusteredUnc = cms.EDProducer("CandPtrProjector", 
+                                              src = cms.InputTag("pfCandsNoJetsNoEleNoMuNoTau"+postfix),
+                                              veto = tauCollection
+                                              )
+            setattr(process, "pfCandsForUnclusteredUnc"+postfix, pfCandsForUnclusteredUnc)
+            metUncSequence += getattr(process, "pfCandsForUnclusteredUnc"+postfix)
 
         #===================================================================================
-        # Other energy shifts
+        # energy shifts
         #===================================================================================
         objectCollections = { "Jet":jetCollection,
                               "Electron":electronCollection,
                               "Photon":photonCollection,
                               "Muon":muonCollection,
+                              "Unclustered":cms.InputTag("pfCandsForUnclusteredUnc"+postfix),
                               "Tau":tauCollection,
                               }
         
@@ -637,10 +783,10 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
                 #adding the shifted MET produced to the proper patMetModuleSequence
                 for mod in metObjUncModules.keys():
                     setattr(process, mod, metObjUncModules[mod] )
-                    patMetModuleSequence += getattr(process, mod)
-
+                    shiftedModuleSequence += getattr(process, mod)
+                    
         #return the sequence containing the shifted collections producers
-        return metUncSequence
+        return metUncSequence, shiftedModuleSequence
 
 #====================================================================================================
     def createEnergyScaleShiftedUpModule(self, process,identifier, objectCollection,
@@ -649,57 +795,61 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
         shiftedModuleUp = None
         
         if identifier == "Electron":
-            shiftedModuleUp = cms.EDProducer("ShiftedPATElectronProducer",
+            shiftedModuleUp = cms.EDProducer("ShiftedParticleProducer",
                                              src = objectCollection,
-                                             binning = cms.VPSet(
-                    cms.PSet(
-                        binSelection = cms.string('isEB'),
-                        binUncertainty = cms.double(0.006)
-                        ),
-                    cms.PSet(
-                        binSelection = cms.string('!isEB'),
-                        binUncertainty = cms.double(0.015)
-                        ),
-                    ),
+                                             uncertainty = cms.string('((abs(y)<1.479)?(0.006+0*x):(0.015+0*x))'),
                                              shiftBy = cms.double(+1.*varyByNsigmas)
                                              )
             
         if identifier == "Photon":
-            shiftedModuleUp = cms.EDProducer("ShiftedPATPhotonProducer",
+            shiftedModuleUp = cms.EDProducer("ShiftedParticleProducer",
                                              src = objectCollection,
-                                             binning = cms.VPSet(
-                    cms.PSet(
-                        binSelection = cms.string('isEB'),
-                        binUncertainty = cms.double(0.01)
-                        ),
-                    cms.PSet(
-                        binSelection = cms.string('!isEB'),
-                        binUncertainty = cms.double(0.025)
-                        ),
-                    ),
+                                             uncertainty = cms.string('((abs(y)<1.479)?(0.01+0*x):(0.025+0*x))'),
                                              shiftBy = cms.double(+1.*varyByNsigmas)
                                              )
 
         if identifier == "Muon":
-            shiftedModuleUp = cms.EDProducer("ShiftedPATMuonProducer",
+            shiftedModuleUp = cms.EDProducer("ShiftedParticleProducer",
                                              src = objectCollection,
-                                             binning = cms.VPSet(
-                    cms.PSet(
-                        binSelection = cms.string('pt < 100'),
-                        binUncertainty = cms.double(0.002)
-                        ),
-                    cms.PSet(
-                        binSelection = cms.string('pt >= 100'),
-                        binUncertainty = cms.double(0.05)
-                        ),
-                    ),
+                                             uncertainty = cms.string('((x<100)?(0.002+0*y):(0.05+0*y))'),
                                              shiftBy = cms.double(+1.*varyByNsigmas)
                                              )
             
         if identifier == "Tau":
-            shiftedModuleUp = cms.EDProducer("ShiftedPATTauProducer",
+            shiftedModuleUp = cms.EDProducer("ShiftedParticleProducer",
                                              src = objectCollection,
-                                             uncertainty = cms.double(0.03),
+                                             uncertainty = cms.string('0.03+0*x*y'),
+                                             shiftBy = cms.double(+1.*varyByNsigmas)
+                                             )
+
+        if identifier == "Unclustered":        
+            shiftedModuleUp = cms.EDProducer("ShiftedParticleProducer",
+                                             src = objectCollection,
+                                             binning = cms.VPSet(
+                    # charged PF hadrons - tracker resolution
+                    cms.PSet(
+                        binSelection = cms.string('charge!=0'),
+                        binUncertainty = cms.string('sqrt(pow(0.00009*x,2)+pow(0.0085/sqrt(sin(2*atan(exp(-y)))),2))')
+                        ),
+                    # neutral PF hadrons - HCAL resolution
+                    cms.PSet(
+                        binSelection = cms.string('pdgId==130'),
+                        energyDependency = cms.bool(True),
+                        binUncertainty = cms.string('((abs(y)<1.3)?(min(0.25,sqrt(0.64/x+0.0025))):(min(0.30,sqrt(1.0/x+0.0016))))')
+                        ),
+                    # photon - ECAL resolution
+                    cms.PSet(
+                        binSelection = cms.string('pdgId==22'),
+                        energyDependency = cms.bool(True),
+                        binUncertainty = cms.string('sqrt(0.0009/x+0.000001)+0*y')
+                        ),
+                    # HF particules - HF resolution
+                    cms.PSet(
+                        binSelection = cms.string('pdgId==1 || pdgId==2'),
+                        energyDependency = cms.bool(True),
+                        binUncertainty = cms.string('sqrt(1./x+0.0025)+0*y')
+                        ),
+                    ),
                                              shiftBy = cms.double(+1.*varyByNsigmas)
                                              )
 
@@ -708,20 +858,30 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
             #MM: FIXME MVA
             #if self._parameters["metType"].value == "MVA":
             #    moduleType="ShiftedPFJetProducer"
-                
-            shiftedModuleUp = cms.EDProducer(moduleType,
-                                             src = objectCollection,
-                                             jetCorrInputFileName = cms.FileInPath(jetUncInfos["jecUncFile"] ), #jecUncertaintyFile),
-                                             jetCorrUncertaintyTag = cms.string(jetUncInfos["jecUncTag"] ), #jecUncertaintyTag),
-                                             addResidualJES = cms.bool(True),
-                                             jetCorrLabelUpToL3 = cms.InputTag(jetUncInfos["jCorLabelUpToL3"].value() ), #jetCorrLabelUpToL3.value()),
-                                             jetCorrLabelUpToL3Res = cms.InputTag(jetUncInfos["jCorLabelL3Res"].value() ), #jetCorrLabelUpToL3Res.value()),
-                                      
-                                             jetCorrPayloadName =  cms.string(jetUncInfos["jCorrPayload"] ),
 
-                                             shiftBy = cms.double(+1.*varyByNsigmas),
-                                             )
-        
+            if jetUncInfos["jecUncFile"] == "":
+                shiftedModuleUp = cms.EDProducer(moduleType,
+                                                 src = objectCollection,
+                                                 jetCorrUncertaintyTag = cms.string(jetUncInfos["jecUncTag"] ),
+                                                 addResidualJES = cms.bool(True),
+                                                 jetCorrLabelUpToL3 = cms.InputTag(jetUncInfos["jCorLabelUpToL3"] ),
+                                                 jetCorrLabelUpToL3Res = cms.InputTag(jetUncInfos["jCorLabelL3Res"] ),
+                                                 jetCorrPayloadName =  cms.string(jetUncInfos["jCorrPayload"] ),
+                                                 shiftBy = cms.double(+1.*varyByNsigmas),
+                                                 )
+            else:
+                shiftedModuleUp = cms.EDProducer(moduleType,
+                                                 src = objectCollection,
+                                                 jetCorrInputFileName = cms.FileInPath(jetUncInfos["jecUncFile"] ),
+                                                 jetCorrUncertaintyTag = cms.string(jetUncInfos["jecUncTag"] ),
+                                                 addResidualJES = cms.bool(True),
+                                                 jetCorrLabelUpToL3 = cms.InputTag(jetUncInfos["jCorLabelUpToL3"] ),
+                                                 jetCorrLabelUpToL3Res = cms.InputTag(jetUncInfos["jCorLabelL3Res"] ),
+                                                 jetCorrPayloadName =  cms.string(jetUncInfos["jCorrPayload"] ),
+                                                 shiftBy = cms.double(+1.*varyByNsigmas),
+                                                 )
+
+
         return shiftedModuleUp
 
 
@@ -738,7 +898,7 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
         if baseName[-len(postfix):] == postfix:
             baseName = baseName[0:-len(postfix)]
         else:
-            raise StandardError("Tried to remove postfix %s from %s, but it wasn't there" % (postfix, baseName))
+            raise Exception("Tried to remove postfix %s from %s, but it wasn't there" % (postfix, baseName))
         
         return baseName
 
@@ -798,10 +958,10 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
                 smear=True
      
             shiftedCollModules['Up'] = self.createShiftedJetResModule(process, smear, objectCollection, +1.*varyByNsigmas,
-                                                                 "Up", metUncSequence, postfix)
+                                                                 "Up", postfix)
             shiftedCollModules['Down'] = self.createShiftedJetResModule(process, smear, objectCollection, -1.*varyByNsigmas,
-                                                                   "Down", metUncSequence, postfix)
-
+                                                                   "Down", postfix)
+       
         else:
             shiftedCollModules['Up'] = self.createEnergyScaleShiftedUpModule(process, identifier, objectCollection, varyByNsigmas, jetUncInfos, postfix)
             shiftedCollModules['Down'] = shiftedCollModules['Up'].clone( shiftBy = cms.double(-1.*varyByNsigmas) )
@@ -820,9 +980,9 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
         return shiftedMetProducers
 
 #========================================================================================
-    def createShiftedJetResModule(self, process, smear, objectCollection, varyByNsigmas, varDir, metUncSequence, postfix ):
+    def createShiftedJetResModule(self, process, smear, objectCollection, varyByNsigmas, varDir, postfix ):
         
-        smearedJetModule = self.createSmearedJetModule(process, objectCollection, smear, varyByNsigmas, varDir, metUncSequence, postfix)
+        smearedJetModule = self.createSmearedJetModule(process, objectCollection, smear, varyByNsigmas, varDir, postfix)
 
         return smearedJetModule
 
@@ -841,19 +1001,21 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
             #MM: FIXME MVA
             #if  "MVA" in metModName and identifier == "Jet": #dummy fix
             #    modName = "uncorrectedshiftedPat"+preId+identifier+varType+mod+postfix
-            setattr(process, modName, shiftedCollModules[mod])
-            metUncSequence += getattr(process, modName)
+            if not hasattr(process, modName):
+                setattr(process, modName, shiftedCollModules[mod])
+                metUncSequence += getattr(process, modName)
             
             #removing the uncorrected
             modName = "shiftedPat"+preId+identifier+varType+mod+postfix
-           
+
             #PF MET =================================================================================
             if "PF" in metModName:
                 #create the MET shifts and add them to the sequence
                 shiftedMETCorrModule = self.createShiftedMETModule(process, objectCollection, modName)
                 modMETShiftName = "shiftedPatMETCorr"+preId+identifier+varType+mod+postfix
-                setattr(process, modMETShiftName, shiftedMETCorrModule)
-                metUncSequence += getattr(process, modMETShiftName)
+                if not hasattr(process, modMETShiftName):
+                    setattr(process, modMETShiftName, shiftedMETCorrModule)
+                    metUncSequence += getattr(process, modMETShiftName)
                 
                 #and finally prepare the shifted MET producers
                 modName = baseName+identifier+varType+mod+postfix
@@ -954,73 +1116,13 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
 
 
         mvaMetProducer=getattr(process, "pfMVAMEt").clone( 
-            srcCorrJets = corJetCollection, #cms.InputTag("calibratedAK4PFJetsForPFMVAMEt"+postfix),
+            srcCorrJets = corJetCollection,
             srcUncorrJets = uncorJetCollection,
             srcPFCandidates = pfCandCollection,
             srcLeptons = leptons,
             )
         
         return mvaMetProducer
-        
-#========================================================================================
-    def getUnclusteredVariations(self, process, metModName, metUncSequence, postfix ):
-
-        varyByNsigmas=1
-
-        unclEnMETcorrectionsSrcs = [
-            [ 'pfCandMETcorr' + postfix, [ '' ] ],
-            [ 'patPFMetT1T2Corr' + postfix, [ 'type2', 'offset' ] ],
-            [ 'patPFMetT2Corr' + postfix, [ 'type2' ] ],
-            ]
-        
-        #MM missing protection against missing corrections needed to compute the uncertainties 
-        #for srcUnclEnMETcorr in unclEnMETcorrectionsSrcs:
-        #    if not hasattr(process, srcUnclEnMETcorr[0])
-        #    metUncSequence
-
-        shiftedMetProducers = {}
-
-        variations={"Up":1.,"Down":-1.}
-        for var in variations.keys():
-            
-            modName = self.removePostfix(metModName, postfix)
-            modName = modName+"UnclusteredEn"+var+postfix
-
-            #MM: FIXME MVA
-            ##MVA MET special case
-            #if "MVA" in metModName:
-            #    shiftedMetProducers[ modName ] = self.getUnclusteredVariationsForMVAMET(process, var, variations[var]*varyByNsigmas, metUncSequence, postfix )
-            #    continue
-
-         
-            for srcUnclEnMETcorr in unclEnMETcorrectionsSrcs:
-                moduleUnclEnMETcorr = cms.EDProducer("ShiftedMETcorrInputProducer",
-                                                       src = cms.VInputTag(
-                        [ cms.InputTag(srcUnclEnMETcorr[0], instanceLabel) for instanceLabel in srcUnclEnMETcorr[1] ]
-                        ),
-                                                     uncertainty = cms.double(0.10),
-                                                     shiftBy = cms.double(variations[var]*varyByNsigmas)
-                                                     )
-                
-                baseName = self.removePostfix(srcUnclEnMETcorr[0], postfix)
-              
-                moduleUnclEnMETcorrName = baseName+"UnclusteredEn"+var+postfix
-                setattr(process, moduleUnclEnMETcorrName, moduleUnclEnMETcorr)
-                metUncSequence += moduleUnclEnMETcorr
-                unclEnMETcorrections = ([ cms.InputTag(moduleUnclEnMETcorrName, instanceLabel)
-                                          for instanceLabel in srcUnclEnMETcorr[1] ] )
-
-
-            #and finally prepare the shifted MET producer
-            if "PF" in metModName:
-                shiftedMETModule = getattr(process, metModName).clone(
-                    src = cms.InputTag( metModName ),
-                    srcCorrections = cms.VInputTag( unclEnMETcorrections )
-                    )
-                shiftedMetProducers[ modName ] = shiftedMETModule
-       
-        return shiftedMetProducers
-
 
 #========================================================================================
     def getUnclusteredVariationsForMVAMET(self, process, var, val,  metUncSequence, postfix ):
@@ -1070,7 +1172,7 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
         return fullShiftedModule
 
 #========================================================================================
-    def createSmearedJetModule(self, process, jetCollection, smear, varyByNsigmas, varDir, metUncSequence, postfix):
+    def createSmearedJetModule(self, process, jetCollection, smear, varyByNsigmas, varDir, postfix):
         
         smearedJetModule = None
 
@@ -1091,16 +1193,15 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
         selJetModName += postfix
 
         if "PF" == self._parameters["metType"].value:
-            setattr(process, modName, getattr(process, "patSmearedJets"+postfix).clone(
-                    src = jetCollection,
-                    areSrcJetsSmeared = cms.bool(smear),
-                    shiftBy = cms.double(varyByNsigmas),
-                    ) )    
-            metUncSequence += getattr(process, modName)
-      
-            smearedJetModule = getattr(process, "selectedPatJetsForMetT1T2SmearCorr").clone(
-                src = cms.InputTag(modName)
-                )
+            smearedJetModule = getattr(process, "patSmearedJets"+postfix).clone(
+                src = jetCollection,
+                enabled = cms.bool(smear),
+                variation = cms.int32( int(varyByNsigmas) ),
+                )    
+
+        if self._parameters["Puppi"].value:
+            smearedJetModule.algo = cms.string('AK4PFPuppi')
+            smearedJetModule.algopt = cms.string('AK4PFPuppi_pt')
 
         #MM: FIXME MVA
         #if "MVA" == self._parameters["metType"].value:
@@ -1124,11 +1225,19 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
         #            shiftBy = cms.double(varyByNsigmas),
         #            #verbosity = cms.int32(1)
         #            )
-           
+
         return smearedJetModule
 
 
 ### Utilities ====================================================================
+    def labelsInSequence(process, sequenceLabel, postfix=""):
+        result = [ m.label()[:-len(postfix)] for m in listModules( getattr(process,sequenceLabel+postfix))]
+        result.extend([ m.label()[:-len(postfix)] for m in listSequences( getattr(process,sequenceLabel+postfix))]  )
+        if postfix == "":
+            result = [ m.label() for m in listModules( getattr(process,sequenceLabel+postfix))]
+            result.extend([ m.label() for m in listSequences( getattr(process,sequenceLabel+postfix))]  )
+        return result
+
     def initializeInputTag(self, input, default):
         retVal = None
         if input is None:
@@ -1141,7 +1250,6 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
 
 
     def recomputeRawMetFromPfcs(self, process, pfCandCollection, onMiniAOD, patMetModuleSequence,  postfix):
-        
         #RECO MET
         if not hasattr(process, "pfMet"+postfix) and self._parameters["metType"].value == "PF":
             #common to AOD/mAOD processing
@@ -1157,15 +1265,101 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
             configtools.cloneProcessingSnippet(process, getattr(process,"patMETCorrections"), postfix)
                   
             #T1 pfMet for AOD to mAOD only
-            if not onMiniAOD:
+            if not onMiniAOD or self._parameters["Puppi"].value:
                 #correction duplication needed
                 getattr(process, "pfMetT1"+postfix).src = cms.InputTag("pfMet"+postfix)
                 patMetModuleSequence += getattr(process, "pfMetT1"+postfix)
 
                 setattr(process, 'patMETs'+postfix, getattr(process,'patMETs' ).clone() )
                 getattr(process, "patMETs"+postfix).metSource = cms.InputTag("pfMetT1"+postfix)
+                getattr(process, "patMETs"+postfix).computeMETSignificance = cms.bool(True)
+                if postfix=="NoHF":
+                    getattr(process, "patMETs"+postfix).computeMETSignificance = cms.bool(False)
+                getattr(process, "patCaloMet").computeMETSignificance = cms.bool(False)
+                if self._parameters["Puppi"].value:
+                    getattr(process, 'patMETs'+postfix).srcPFCands = cms.InputTag('puppiForMET')
+                    getattr(process, 'patMETs'+postfix).srcJets = cms.InputTag('selectedPatJets'+postfix)
+                    getattr(process, 'patMETs'+postfix).srcJetSF = cms.string('AK4PFPuppi')
+                    getattr(process, 'patMETs'+postfix).srcJetResPt = cms.string('AK4PFPuppi_pt')
+                    getattr(process, 'patMETs'+postfix).srcJetResPhi = cms.string('AK4PFPuppi_phi')
 
+
+    def extractMET(self, process, correctionLevel, patMetModuleSequence, postfix):
+        pfMet = cms.EDProducer("RecoMETExtractor",
+                               metSource= cms.InputTag("slimmedMETs",processName=cms.InputTag.skipCurrentProcess()),
+                               correctionLevel = cms.string(correctionLevel)
+                               )
+        if(correctionLevel=="raw"):
+            setattr(process,"pfMet"+postfix ,pfMet)
+            patMetModuleSequence += getattr(process, "pfMet"+postfix)
+        else:
+            setattr(process,"met"+correctionLevel+postfix ,pfMet)
+            patMetModuleSequence += getattr(process, "met"+correctionLevel+postfix)
+   
+        if not hasattr(process, "genMetExtractor"+postfix) and not self._parameters["runOnData"].value:
+            genMetExtractor = cms.EDProducer("GenMETExtractor",
+                                             metSource= cms.InputTag("slimmedMETs",processName=cms.InputTag.skipCurrentProcess())
+                                             )
+            setattr(process, "genMetExtractor"+postfix ,genMetExtractor)
+            patMetModuleSequence += getattr(process, "genMetExtractor"+postfix)
+                                             
         
+    def updateJECs(self,process,jetCollection, patMetModuleSequence, postfix):
+        from PhysicsTools.PatAlgos.producersLayer1.jetUpdater_cff import updatedPatJetCorrFactors
+        
+        patJetCorrFactorsReapplyJEC = updatedPatJetCorrFactors.clone(
+            src = cms.InputTag("slimmedJets"),
+            levels = ['L1FastJet', 
+                      'L2Relative', 
+                      'L3Absolute'],
+            payload = 'AK4PFchs' if not self._parameters["Puppi"].value else 'AK4PFPuppi' ) # always CHS from miniAODs, except for puppi
+        
+        if self._parameters["runOnData"].value:
+            patJetCorrFactorsReapplyJEC.levels.append("L2L3Residual")
+
+        from PhysicsTools.PatAlgos.producersLayer1.jetUpdater_cff import updatedPatJets
+        patJetsReapplyJEC = updatedPatJets.clone(
+            jetSource = cms.InputTag("slimmedJets"),
+            jetCorrFactorsSource = cms.VInputTag(cms.InputTag("patJetCorrFactorsReapplyJEC"+postfix))
+            )
+        
+        setattr(process,"patJetCorrFactorsReapplyJEC"+postfix,patJetCorrFactorsReapplyJEC)
+        setattr(process,"patJetsReapplyJEC"+postfix,patJetsReapplyJEC.clone())
+        patMetModuleSequence += getattr(process,"patJetCorrFactorsReapplyJEC"+postfix)
+        patMetModuleSequence += getattr(process,"patJetsReapplyJEC"+postfix)
+        
+        return  cms.InputTag("patJetsReapplyJEC"+postfix)
+
+
+    def getJetCollectionForCorsAndUncs(self, process, jetCollectionUnskimmed, 
+                                       jetSelection, autoJetCleaning,patMetModuleSequence, postfix):
+
+        basicJetsForMet = cms.EDProducer("PATJetCleanerForType1MET",
+                                         src = jetCollectionUnskimmed,
+                                         jetCorrEtaMax = cms.double(9.9),
+                                         jetCorrLabel = cms.InputTag("L3Absolute"),
+                                         jetCorrLabelRes = cms.InputTag("L2L3Residual"),
+                                         offsetCorrLabel = cms.InputTag("L1FastJet"),
+                                         skipEM = cms.bool(True),
+                                         skipEMfractionThreshold = cms.double(0.9),
+                                         skipMuonSelection = cms.string('isGlobalMuon | isStandAloneMuon'),
+                                         skipMuons = cms.bool(True),
+                                         type1JetPtThreshold = cms.double(15.0)
+                                         )
+        setattr(process, "basicJetsForMet"+postfix, basicJetsForMet)
+        patMetModuleSequence += getattr(process, "basicJetsForMet"+postfix)
+        
+        from PhysicsTools.PatAlgos.selectionLayer1.jetSelector_cfi import selectedPatJets
+        jetSelector = selectedPatJets.clone(
+            src = cms.InputTag("basicJetsForMet"+postfix),
+            cut = cms.string(jetSelection)
+            )
+        setattr(process, "jetSelectorForMet"+postfix, jetSelector)
+        patMetModuleSequence += getattr(process, "jetSelectorForMet"+postfix)
+        
+        jetCollection = self.jetCleaning(process, "jetSelectorForMet"+postfix, autoJetCleaning, patMetModuleSequence, postfix)
+
+        return jetCollection
 
 
     def ak4JetReclustering(self,process, pfCandCollection, patMetModuleSequence, postfix):
@@ -1192,21 +1386,24 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
             if not hasattr(process, "pfCHS"+postfix):
                 setattr(process,"pfCHS"+postfix,pfCHS)
             pfCandColl = cms.InputTag("pfCHS"+postfix)
-            
+                   
 
         jetColName+=postfix
-
         if not hasattr(process, jetColName):
             process.load("RecoJets.JetProducers.ak4PFJets_cfi")
             
             #if chs:
             setattr(process, jetColName, getattr(process,"ak4PFJets").clone() )
-
             getattr(process, jetColName).src = pfCandColl 
             getattr(process, jetColName).doAreaFastjet = True
             
+            #puppi
+            #if "Puppi" in postfix:
+            #    getattr(process, jetColName).doAreaFastjet = cms.bool(True)
+            #    getattr(process, jetColName).src = cms.InputTag("puppiNoLep")
+
             patMetModuleSequence += getattr(process, jetColName)
-            
+
             corLevels=['L1FastJet', 'L2Relative', 'L3Absolute']
             if self._parameters["runOnData"].value:
                 corLevels.append("L2L3Residual")
@@ -1216,40 +1413,53 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
                                 jetCorrections = ('AK4PF'+CHSname, corLevels , ''),
                                 postfix=postfix
                                 )
-
+            
             getattr(process,"patJets"+postfix).addGenJetMatch = False 
             getattr(process,"patJets"+postfix).addGenPartonMatch = False 
             getattr(process,"patJets"+postfix).addPartonJetMatch = False 
+            getattr(process,"patJets"+postfix).embedGenPartonMatch = False 
+            getattr(process,"patJets"+postfix).embedGenJetMatch = False 
             if self._parameters['onMiniAOD'].value:
                 del getattr(process,"patJets"+postfix).JetFlavourInfoSource
                 del getattr(process,"patJets"+postfix).JetPartonMapSource
+                del getattr(process,"patJets"+postfix).genPartonMatch
+                del getattr(process,"patJets"+postfix).genJetMatch
             getattr(process,"patJets"+postfix).getJetMCFlavour = False
             
             getattr(process,"patJetCorrFactors"+postfix).src=cms.InputTag(jetColName)
             getattr(process,"patJetCorrFactors"+postfix).primaryVertices= cms.InputTag("offlineSlimmedPrimaryVertices")
+            if self._parameters["Puppi"].value:
+                getattr(process,"patJetCorrFactors"+postfix).payload=cms.string('AK4PFPuppi')
 
-            #if self._parameters["reclusterJets"].value:
-                
-         
-        return cms.InputTag("selectedPatJets"+postfix)
+        return cms.InputTag("patJets"+postfix)
         
 
-    def miniAODConfiguration(self, process, pfCandCollection, patMetModuleSequence, repro74X, postfix ):
-        
+
+    def miniAODConfigurationPost(self, process, postfix):
+
+        if self._parameters["metType"].value == "PF":
+            if hasattr(process, "patPFMetTxyCorr"+postfix):
+                getattr(process, "patPFMetTxyCorr"+postfix).vertexCollection = cms.InputTag("offlineSlimmedPrimaryVertices")
+
+
+
+    def miniAODConfiguration(self, process, pfCandCollection, jetCollection,
+                             patMetModuleSequence, postfix ):      
         if self._parameters["metType"].value == "PF": # not hasattr(process, "pfMet"+postfix)
-            
-            #getattr(process, "patPFMet"+postfix).metSource = cms.InputTag("pfMet"+postfix)
+            if "T1" in self._parameters['correctionLevel'].value:
+                getattr(process, "patPFMet"+postfix).srcJets = jetCollection
+                getattr(process, "patPFMet"+postfix).srcLeptons = cms.VInputTag(self._parameters["electronCollection"].value, 
+                                                                                self._parameters["muonCollection"].value,
+                                                                                self._parameters["photonCollection"].value,
+                                                                                )
             getattr(process, "patPFMet"+postfix).addGenMET  = False
             if not self._parameters["runOnData"].value:
                 getattr(process, "patPFMet"+postfix).addGenMET  = True
-                process.genMetExtractor = cms.EDProducer("GenMETExtractor",
-                                                         metSource= cms.InputTag("slimmedMETs","","PAT")
-                                                         )
-                patMetModuleSequence += getattr(process, "genMetExtractor")
-                getattr(process, "patPFMet"+postfix).genMETSource = cms.InputTag("genMetExtractor")
-     
-            if hasattr(process, "patPFMetTxyCorr"+postfix):
-                getattr(process, "patPFMetTxyCorr"+postfix).vertexCollection = cms.InputTag("offlineSlimmedPrimaryVertices")
+                getattr(process, "patPFMet"+postfix).genMETSource = cms.InputTag("genMetExtractor"+postfix)
+                   
+                
+        if "Smear" in self._parameters['correctionLevel'].value:
+            getattr(process, "patSmearedJets"+postfix).genJets = cms.InputTag("slimmedGenJets")
 
         #MM: FIXME MVA
         #if hasattr(process, "pfMVAMet"):
@@ -1259,12 +1469,6 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
         #    getattr(process, "patMVAMet").addGenMET  = False
 
         if not hasattr(process, "slimmedMETs"+postfix) and self._parameters["metType"].value == "PF":
-
-            from PhysicsTools.PatAlgos.selectionLayer1.jetSelector_cfi import selectedPatJets
-            setattr(process, "selectedPatJets"+postfix, selectedPatJets.clone() )
-              
-            getattr(process,"selectedPatJets"+postfix).src = cms.InputTag("patJets"+postfix)
-            getattr(process,"selectedPatJets"+postfix).cut = cms.string("pt > 10")
 
             from PhysicsTools.PatAlgos.slimming.slimmedMETs_cfi import slimmedMETs
             setattr(process, "slimmedMETs"+postfix, slimmedMETs.clone() )
@@ -1281,17 +1485,24 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
             getattr(process,"slimmedMETs"+postfix).tXYUncForT01Smear = cms.InputTag("patPFMetT0pcT1SmearTxy"+postfix)
 
             getattr(process,"slimmedMETs"+postfix).runningOnMiniAOD = True
-            getattr(process,"slimmedMETs"+postfix).t01Variation = cms.InputTag("slimmedMETs","","PAT")
+            getattr(process,"slimmedMETs"+postfix).t01Variation = cms.InputTag("slimmedMETs",processName=cms.InputTag.skipCurrentProcess())
          
+            #extractor for caloMET === temporary for the beginning of the data taking
+            self.extractMET(process,"rawCalo",patMetModuleSequence,postfix)
+            from PhysicsTools.PatAlgos.tools.metTools import addMETCollection
+            addMETCollection(process,
+                             labelName = "patCaloMet",
+                             metSource = "metrawCalo"+postfix
+                             )
+            getattr(process,"patCaloMet").addGenMET = False
+
             #smearing and type0 variations not yet supported in reprocessing
-            del getattr(process,"slimmedMETs"+postfix).t1SmearedVarsAndUncs
+            #del getattr(process,"slimmedMETs"+postfix).t1SmearedVarsAndUncs
+            del getattr(process,"slimmedMETs"+postfix).tXYUncForRaw
             del getattr(process,"slimmedMETs"+postfix).tXYUncForT01
             del getattr(process,"slimmedMETs"+postfix).tXYUncForT1Smear
             del getattr(process,"slimmedMETs"+postfix).tXYUncForT01Smear
-            del getattr(process,"slimmedMETs"+postfix).caloMET
-
-            if repro74X:
-                del getattr(process,"slimmedMETs"+postfix).t01Variation
+            #del getattr(process,"slimmedMETs"+postfix).caloMET
 
 
     def jetConfiguration(self):
@@ -1307,6 +1518,11 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
             self.setParameter("CHS",True)
             jetCorLabelUpToL3Name += "CHS" #chs
             jetCorLabelL3ResName += "CHS"
+        elif "Puppi" in jetFlavor:
+            self.setParameter("CHS",False)
+            jetCorLabelUpToL3Name += "Puppi"
+            jetCorLabelL3ResName += "Puppi"
+            
         else:
             self.setParameter("CHS",False)
 
@@ -1318,22 +1534,20 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
             jetCorLabelUpToL3Name += "L1FastL2L3Corrector"
             jetCorLabelL3ResName  += "L1FastL2L3ResidualCorrector"
 
-        self.setParameter("jetCorLabelUpToL3",cms.InputTag(jetCorLabelUpToL3Name) )
-        self.setParameter("jetCorLabelL3Res",cms.InputTag(jetCorLabelL3ResName) )
-
-
+        self.setParameter("jetCorLabelUpToL3",jetCorLabelUpToL3Name )
+        self.setParameter("jetCorLabelL3Res",jetCorLabelL3ResName )
+        
     # function enabling the auto jet cleaning for uncertainties ===============
-    def jetCleaning(self, process, autoJetCleaning, postfix ):
+    def jetCleaning(self, process, jetCollectionName, autoJetCleaning, jetProductionSequence, postfix ):
 
-        if autoJetCleaning != "None" or autoJetCleaning == "Manual" :
-            return self._parameters["jetCollection"].value
+        if autoJetCleaning == "None" or autoJetCleaning == "Manual" :
+            return cms.InputTag(jetCollectionName)
 
         #retrieve collections
         electronCollection = self._parameters["electronCollection"].value
         muonCollection = self._parameters["muonCollection"].value
         photonCollection = self._parameters["photonCollection"].value
         tauCollection = self._parameters["tauCollection"].value
-        jetCollection = self._parameters["jetCollection"].value
         
 
         if autoJetCleaning == "Full" : # auto clean taus, photons and jets
@@ -1341,11 +1555,11 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
                 process.load("PhysicsTools.PatAlgos.cleaningLayer1.tauCleaner_cfi")
                 cleanPatTauProducer = getattr(process, "cleanPatTaus").clone( 
                     src = tauCollection
-                  
                     )
                 cleanPatTauProducer.checkOverlaps.electrons.src = electronCollection
                 cleanPatTauProducer.checkOverlaps.muons.src = muonCollection
                 setattr(process, "cleanedPatTaus"+postfix, cleanPatTauProducer)
+                jetProductionSequence += getattr(process, "cleanedPatTaus"+postfix)
                 tauCollection = cms.InputTag("cleanedPatTaus"+postfix)
             
             if isValidInputTag(photonCollection): 
@@ -1355,13 +1569,18 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
                     )
                 cleanPatPhotonProducer.checkOverlaps.electrons.src = electronCollection
                 setattr(process, "cleanedPatPhotons"+postfix, cleanPatPhotonProducer)
+                jetProductionSequence += getattr(process, "cleanedPatPhotons"+postfix)
                 photonCollection = cms.InputTag("cleanedPatPhotons"+postfix)
 
         #jet cleaning
+        have_cleanPatJets = hasattr(process, "cleanPatJets")
         process.load("PhysicsTools.PatAlgos.cleaningLayer1.jetCleaner_cfi")
         cleanPatJetProducer = getattr(process, "cleanPatJets").clone( 
-                     src = jetCollection
+                     src = cms.InputTag(jetCollectionName)
             )
+        #do not leave it hanging
+        if not have_cleanPatJets:
+            del process.cleanPatJets
         cleanPatJetProducer.checkOverlaps.muons.src = muonCollection
         cleanPatJetProducer.checkOverlaps.electrons.src = electronCollection
         if isValidInputTag(photonCollection) and autoJetCleaning != "LepClean":
@@ -1373,9 +1592,12 @@ class RunMETCorrectionsAndUncertainties(ConfigToolBase):
             cleanPatJetProducer.checkOverlaps.taus.src = tauCollection
         else:
             del cleanPatJetProducer.checkOverlaps.taus
-            
+           
+        # not used at all and electrons are already cleaned
+        del cleanPatJetProducer.checkOverlaps.tkIsoElectrons
+
         setattr(process, "cleanedPatJets"+postfix, cleanPatJetProducer)
-        
+        jetProductionSequence += getattr(process, "cleanedPatJets"+postfix)
         return cms.InputTag("cleanedPatJets"+postfix)
 
 
@@ -1388,27 +1610,27 @@ runMETCorrectionsAndUncertainties = RunMETCorrectionsAndUncertainties()
 # miniAOD production ===========================
 def runMetCorAndUncForMiniAODProduction(process, metType="PF",
                                         jetCollUnskimmed="patJets",
-                                        jetColl="selectedPatJets",
                                         photonColl="selectedPatPhotons",
                                         electronColl="selectedPatElectrons",
                                         muonColl="selectedPatMuons",
                                         tauColl="selectedPatTaus",
                                         pfCandColl = "particleFlow",
                                         jetCleaning="LepClean",
-                                        jecUnFile="CondFormats/JetMETObjects/data/Summer15_50nsV5_DATA_UncertaintySources_AK4PFchs.txt",
-                                        recomputeMET=False,
+                                        jetSelection="pt>15 && abs(eta)<9.9",
+                                        jecUnFile="",
+                                        jetFlavor="AK4PFchs",
+                                        recoMetFromPFCs=False,
                                         postfix=""):
 
     runMETCorrectionsAndUncertainties = RunMETCorrectionsAndUncertainties()
     
     #MET flavors
-    runMETCorrectionsAndUncertainties(process, metType="PF",
+    runMETCorrectionsAndUncertainties(process, metType=metType,
                                       correctionLevel=["T0","T1","T2","Smear","Txy"],
                                       computeUncertainties=False,
                                       produceIntermediateCorrections=True,
                                       addToPatDefaultSequence=False,
                                       jetCollectionUnskimmed=jetCollUnskimmed,
-                                      jetCollection=jetColl,
                                       photonCollection=photonColl,
                                       electronCollection=electronColl,
                                       muonCollection=muonColl,
@@ -1416,18 +1638,19 @@ def runMetCorAndUncForMiniAODProduction(process, metType="PF",
                                       pfCandCollection =pfCandColl,
                                       autoJetCleaning=jetCleaning,
                                       jecUncertaintyFile=jecUnFile,
-                                      recoMetFromPFCs=recomputeMET,
+                                      jetSelection=jetSelection,
+                                      jetFlavor=jetFlavor,
+                                      recoMetFromPFCs=recoMetFromPFCs,
                                       postfix=postfix
                                       )
     
     #MET T1 uncertainties
-    runMETCorrectionsAndUncertainties(process, metType="PF",
+    runMETCorrectionsAndUncertainties(process, metType=metType,
                                       correctionLevel=["T1"],
                                       computeUncertainties=True,
                                       produceIntermediateCorrections=False,
                                       addToPatDefaultSequence=False,
                                       jetCollectionUnskimmed=jetCollUnskimmed,
-                                      jetCollection=jetColl,
                                       photonCollection=photonColl,
                                       electronCollection=electronColl,
                                       muonCollection=muonColl,
@@ -1435,18 +1658,19 @@ def runMetCorAndUncForMiniAODProduction(process, metType="PF",
                                       pfCandCollection =pfCandColl,
                                       autoJetCleaning=jetCleaning,
                                       jecUncertaintyFile=jecUnFile,
-                                      recoMetFromPFCs=recomputeMET,
+                                      jetSelection=jetSelection,
+                                      jetFlavor=jetFlavor,
+                                      recoMetFromPFCs=recoMetFromPFCs,
                                       postfix=postfix
                                       )
     
     #MET T1 Smeared JER uncertainties
-    runMETCorrectionsAndUncertainties(process, metType="PF",
+    runMETCorrectionsAndUncertainties(process, metType=metType,
                                       correctionLevel=["T1","Smear"],
                                       computeUncertainties=True,
                                       produceIntermediateCorrections=False,
                                       addToPatDefaultSequence=False,
                                       jetCollectionUnskimmed=jetCollUnskimmed,
-                                      jetCollection=jetColl,
                                       photonCollection=photonColl,
                                       electronCollection=electronColl,
                                       muonCollection=muonColl,
@@ -1454,7 +1678,9 @@ def runMetCorAndUncForMiniAODProduction(process, metType="PF",
                                       pfCandCollection =pfCandColl,
                                       autoJetCleaning=jetCleaning,
                                       jecUncertaintyFile=jecUnFile,
-                                      recoMetFromPFCs=recomputeMET,
+                                      jetSelection=jetSelection,
+                                      jetFlavor=jetFlavor,
+                                      recoMetFromPFCs=recoMetFromPFCs,
                                       postfix=postfix,
                                       )
 
@@ -1463,31 +1689,35 @@ def runMetCorAndUncForMiniAODProduction(process, metType="PF",
 
 # miniAOD reproduction ===========================
 def runMetCorAndUncFromMiniAOD(process, metType="PF",
-                               jetCollUnskimmed="patJets",
-                               jetColl="selectedPatJets",
+                               jetCollUnskimmed="slimmedJets",
                                photonColl="slimmedPhotons",
                                electronColl="slimmedElectrons",
                                muonColl="slimmedMuons",
                                tauColl="slimmedTaus",
                                pfCandColl = "packedPFCandidates",
-                               jetFlav="AK4PFchs",
+                               jetFlavor="AK4PFchs",
                                jetCleaning="LepClean",
                                isData=False,
-                               jetConfig=False,
-                               jetCorLabelL3=cms.InputTag('ak4PFCHSL1FastL2L3Corrector'),
-                               jetCorLabelRes=cms.InputTag('ak4PFCHSL1FastL2L3ResidualCorrector'),
-                               jecUncFile="CondFormats/JetMETObjects/data/Summer15_50nsV5_DATA_UncertaintySources_AK4PFchs.txt",
+                               manualJetConfig=False,
+                               reclusterJets=False,
+                               jetSelection="pt>15 && abs(eta)<9.9",
+                               recoMetFromPFCs=False,
+                               jetCorLabelL3="ak4PFCHSL1FastL2L3Corrector",
+                               jetCorLabelRes="ak4PFCHSL1FastL2L3ResidualCorrector",
+##                               jecUncFile="CondFormats/JetMETObjects/data/Summer15_50nsV5_DATA_UncertaintySources_AK4PFchs.txt",
+                               CHS=False,
+                               jecUncFile="",
                                postfix=""):
 
     runMETCorrectionsAndUncertainties = RunMETCorrectionsAndUncertainties()
 
     #MET T1 uncertainties
-    runMETCorrectionsAndUncertainties(process, metType="PF",
+    runMETCorrectionsAndUncertainties(process, metType=metType,
                                       correctionLevel=["T1"],
                                       computeUncertainties=True,
                                       produceIntermediateCorrections=False,
                                       addToPatDefaultSequence=False,
-                                      jetCollection=jetColl,
+                                      jetCollectionUnskimmed=jetCollUnskimmed,
                                       electronCollection=electronColl,
                                       muonCollection=muonColl,
                                       tauCollection=tauColl,
@@ -1495,22 +1725,26 @@ def runMetCorAndUncFromMiniAOD(process, metType="PF",
                                       pfCandCollection =pfCandColl,
                                       runOnData=isData,
                                       onMiniAOD=True,
+                                      reclusterJets=reclusterJets,
+                                      jetSelection=jetSelection,
+                                      recoMetFromPFCs=recoMetFromPFCs,
                                       autoJetCleaning=jetCleaning,
-                                      manualJetConfig=jetConfig,
-                                      jetFlavor=jetFlav,
+                                      manualJetConfig=manualJetConfig,
+                                      jetFlavor=jetFlavor,
                                       jetCorLabelUpToL3=jetCorLabelL3,
                                       jetCorLabelL3Res=jetCorLabelRes,
                                       jecUncertaintyFile=jecUncFile,
+                                      CHS=CHS,
                                       postfix=postfix,
                                       )
     
-    #MET T1+Txy
-    runMETCorrectionsAndUncertainties(process, metType="PF",
+    #MET T1+Txy / Smear
+    runMETCorrectionsAndUncertainties(process, metType=metType,
                                       correctionLevel=["T1","Txy"],
                                       computeUncertainties=False,
                                       produceIntermediateCorrections=True,
                                       addToPatDefaultSequence=False,
-                                      jetCollection=jetColl,
+                                      jetCollectionUnskimmed=jetCollUnskimmed,
                                       electronCollection=electronColl,
                                       muonCollection=muonColl,
                                       tauCollection=tauColl,
@@ -1518,11 +1752,41 @@ def runMetCorAndUncFromMiniAOD(process, metType="PF",
                                       pfCandCollection =pfCandColl,
                                       runOnData=isData,
                                       onMiniAOD=True,
+                                      reclusterJets=reclusterJets,
+                                      jetSelection=jetSelection,
+                                      recoMetFromPFCs=recoMetFromPFCs,
                                       autoJetCleaning=jetCleaning,
-                                      manualJetConfig=jetConfig,
-                                      jetFlavor=jetFlav,
+                                      manualJetConfig=manualJetConfig,
+                                      jetFlavor=jetFlavor,
                                       jetCorLabelUpToL3=jetCorLabelL3,
                                       jetCorLabelL3Res=jetCorLabelRes,
                                       jecUncertaintyFile=jecUncFile,
+                                      CHS=CHS,
+                                      postfix=postfix,
+                                      )
+    #MET T1+Smear + uncertainties
+    runMETCorrectionsAndUncertainties(process, metType=metType,
+                                      correctionLevel=["T1","Smear"],
+                                      computeUncertainties=True,
+                                      produceIntermediateCorrections=False,
+                                      addToPatDefaultSequence=False,
+                                      jetCollectionUnskimmed=jetCollUnskimmed,
+                                      electronCollection=electronColl,
+                                      muonCollection=muonColl,
+                                      tauCollection=tauColl,
+                                      photonCollection=photonColl,
+                                      pfCandCollection =pfCandColl,
+                                      runOnData=isData,
+                                      onMiniAOD=True,
+                                      reclusterJets=reclusterJets,
+                                      jetSelection=jetSelection,
+                                      recoMetFromPFCs=recoMetFromPFCs,
+                                      autoJetCleaning=jetCleaning,
+                                      manualJetConfig=manualJetConfig,
+                                      jetFlavor=jetFlavor,
+                                      jetCorLabelUpToL3=jetCorLabelL3,
+                                      jetCorLabelL3Res=jetCorLabelRes,
+                                      jecUncertaintyFile=jecUncFile,
+                                      CHS=CHS,
                                       postfix=postfix,
                                       )

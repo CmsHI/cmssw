@@ -23,13 +23,15 @@
 
 #include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
 #include "MagneticField/Engine/interface/MagneticField.h"
-#include "DataFormats/TrackerRecHit2D/interface/SiTrackerGSRecHit2DCollection.h"
-#include "DataFormats/TrackerRecHit2D/interface/SiTrackerGSMatchedRecHit2DCollection.h"
 #include "SimDataFormats/Track/interface/SimTrackContainer.h"
 
 #include "TrackingTools/TransientTrackingRecHit/interface/TransientTrackingRecHitBuilder.h"
 #include "RecoTracker/TransientTrackingRecHit/interface/TkTransientTrackingRecHitBuilder.h"
 #include "FWCore/Framework/interface/ConsumesCollector.h"
+
+#include "DataFormats/TrackerRecHit2D/interface/FastTrackerRecHitCollection.h"
+#include "DataFormats/TrackerRecHit2D/interface/FastTrackerRecHit.h"
+
 #include <memory>
 
 
@@ -44,14 +46,14 @@ class SimTrack;
 class TrackerGeometry;
 class TrackerTopology;
 
+
 class FastTSGFromPropagation : public TrackerSeedGenerator {
-
-public:
-  /// constructor
+    public:
+    /// constructor
   FastTSGFromPropagation(const edm::ParameterSet &pset,edm::ConsumesCollector& iC);
-
+  
   FastTSGFromPropagation(const edm::ParameterSet& par, const MuonServiceProxy*,edm::ConsumesCollector& iC);
-
+    
   /// destructor
   virtual ~FastTSGFromPropagation();
 
@@ -171,13 +173,13 @@ private:
 
   const edm::ParameterSet theConfig;
   edm::EDGetTokenT<edm::SimTrackContainer> theSimTrackCollectionToken_;
-  edm::EDGetTokenT<SiTrackerGSMatchedRecHit2DCollection>  theHitProducer;
+  edm::EDGetTokenT<FastTrackerRecHitCombinationCollection>  recHitCombinationsToken_;
   edm::EDGetTokenT<reco::BeamSpot> beamSpot_;
   edm::EDGetTokenT<MeasurementTrackerEvent> theMeasurementTrackerEventToken_;
 
   edm::Handle<reco::BeamSpot> theBeamSpot;
   edm::Handle<edm::SimTrackContainer> theSimTracks;
-  edm::Handle<SiTrackerGSMatchedRecHit2DCollection> theGSRecHits;
+  edm::Handle<FastTrackerRecHitCombinationCollection> recHitCombinations;
   edm::Handle<MeasurementTrackerEvent> theMeasTrackerEvent;
   edm::ESHandle<TransientTrackingRecHitBuilder> theTTRHBuilder;
 

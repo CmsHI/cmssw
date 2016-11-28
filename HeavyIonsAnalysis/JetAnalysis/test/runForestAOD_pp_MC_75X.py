@@ -46,7 +46,7 @@ process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_condD
 process.load('FWCore.MessageService.MessageLogger_cfi')
 
 from Configuration.AlCa.GlobalTag_condDBv2 import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, '75X_mcRun2_asymptotic_ppAt5TeV_v3', '')
+process.GlobalTag = GlobalTag(process.GlobalTag, '80X_mcRun2_asymptotic_v12', '')
 process.HiForest.GlobalTagLabel = process.GlobalTag.globaltag
 
 
@@ -143,15 +143,6 @@ my_id_modules = ['RecoEgamma.ElectronIdentification.Identification.cutBasedElect
 #add them to the VID producer
 for idmod in my_id_modules:
     setupAllVIDIdsInModule(process,idmod,setupVIDElectronSelection)
-####################################################################################
-
-
-#####################
-# tupel and necessary PAT sequences
-#####################
-
-process.load("HeavyIonsAnalysis.VectorBosonAnalysis.tupelSequence_pp_mc_cff")
-
 #####################################################################################
 
 #########################
@@ -167,8 +158,7 @@ process.ana_step = cms.Path(process.hltanalysis *
                             process.pfcandAnalyzer +
                             process.HiForest +
 			    process.trackSequencesPP +
-                            process.runAnalyzer +
-                            process.tupelPatSequence
+                            process.runAnalyzer
 )
 
 #####################################################################################

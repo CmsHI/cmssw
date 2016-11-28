@@ -286,5 +286,3 @@ void ZdcUnpacker::unpack(const FEDRawData& raw, const CastorElectronicsMap& emap
 		}
 	}//end of loop over spigots
 }
-
-

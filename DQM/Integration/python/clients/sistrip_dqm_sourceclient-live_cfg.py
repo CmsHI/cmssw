@@ -579,7 +579,6 @@ if (process.runType.getRunType() == process.runType.hi_run):
     process.multFilter.inputTag = cms.InputTag("siPixelClustersPreSplitting")
     process.SiStripMonitorTrack_hi.TrackProducer = cms.string('hiSelectedTracks')
     process.RecoForDQM_LocalReco = cms.Sequence(process.siPixelDigis*process.siStripDigis*process.siStripVRDigis*process.gtDigis*process.trackerlocalreco*process.pixeltrackerlocalreco)
-    #siPixelClusterShapeCachePreSplitting
     process.RecoForDQM_TrkReco = cms.Sequence(process.offlineBeamSpot*process.MeasurementTrackerEventPreSplitting*process.siPixelClusterShapeCachePreSplitting*process.hiBasicTracking*process.hiSelectedTracks)
     
     process.p = cms.Path(process.scalersRawToDigi*

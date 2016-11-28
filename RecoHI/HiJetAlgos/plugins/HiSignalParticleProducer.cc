@@ -30,12 +30,12 @@
 
 #include "DataFormats/Common/interface/View.h"
 #include "DataFormats/JetReco/interface/GenJetCollection.h"
-#include "DataFormats/GeometryVector/interface/VectorUtil.h"
+//#include "DataFormats/GeometryVector/interface/VectorUtil.h"
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
 #include "DataFormats/HepMCCandidate/interface/GenParticleFwd.h"
 
-#include "DataFormats/Math/interface/Point3D.h"
-#include "DataFormats/Math/interface/LorentzVector.h"
+//#include "DataFormats/Math/interface/Point3D.h"
+//#include "DataFormats/Math/interface/LorentzVector.h"
 
 using namespace std;
 using namespace edm;
