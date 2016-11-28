@@ -1,26 +1,10 @@
 import FWCore.ParameterSet.Config as cms
+from Configuration.StandardSequences.Eras import eras
 
-# moving to block.  Will delete this one
-# when transition is done
-# NO: must be completely removed, as the CFI is included at top level
-#     otherwise we get duplicate definitions
-# PSet RegionPSet = {
-#   double ptMin = 0.9
-#   double originRadius = 0.2
-#   double nSigmaZ = 3.0
-#   InputTag beamSpot = "offlineBeamSpot"
-#   bool precise = true
-# 
-#   bool useFoundVertices =  true
-#   string VertexCollection = "pixelVertices"
-# 
-#   double sigmaZVertex = 3.0
-#   bool useFixedError = true
-#   double fixedError = 0.2
-# }
 RegionPSetWithVerticesBlock = cms.PSet(
     RegionPSet = cms.PSet(
         precise = cms.bool(True),
+        useMultipleScattering = cms.bool(False),
         beamSpot = cms.InputTag("offlineBeamSpot"),
         useFixedError = cms.bool(True),
         originRadius = cms.double(0.2),
@@ -33,4 +17,6 @@ RegionPSetWithVerticesBlock = cms.PSet(
         nSigmaZ = cms.double(4.0)
     )
 )
-
+eras.trackingLowPU.toModify(RegionPSetWithVerticesBlock,
+    RegionPSet = dict(VertexCollection = "pixelVertices")
+)

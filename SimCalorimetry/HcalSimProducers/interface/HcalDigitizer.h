@@ -4,12 +4,14 @@
 #include "SimCalorimetry/HcalSimAlgos/interface/HcalDigitizerTraits.h"
 #include "SimCalorimetry/CaloSimAlgos/interface/CaloTDigitizer.h"
 #include "SimCalorimetry/HcalSimAlgos/interface/HcalUpgradeTraits.h"
+#include "SimCalorimetry/HcalSimAlgos/interface/HcalQIE10Traits.h"
 #include "SimCalorimetry/HcalSimAlgos/interface/HBHEHitFilter.h"
 #include "SimCalorimetry/HcalSimAlgos/interface/HFHitFilter.h"
 #include "SimCalorimetry/HcalSimAlgos/interface/HOHitFilter.h"
 #include "SimCalorimetry/HcalSimAlgos/interface/HcalHitFilter.h"
 #include "SimCalorimetry/HcalSimAlgos/interface/ZDCHitFilter.h"
 #include "SimCalorimetry/HcalSimProducers/interface/HcalHitRelabeller.h"
+#include "Geometry/HcalCommonData/interface/HcalDDDRecConstants.h"
 #include "Geometry/CaloGeometry/interface/CaloGeometry.h"
 #include "DataFormats/DetId/interface/DetId.h"
 #include "FWCore/Framework/interface/Frameworkfwd.h"
@@ -30,6 +32,7 @@ class HcalBaseSignalGenerator;
 class HcalShapes;
 class PCaloHit;
 class PileUpEventPrincipal;
+class HcalTopology;
 
 namespace edm {
   class ConsumesCollector;
@@ -60,7 +63,7 @@ public:
   void setZDCNoiseSignalGenerator(HcalBaseSignalGenerator * noiseGenerator);
 
 private:
-  void accumulateCaloHits(edm::Handle<std::vector<PCaloHit> > const& hcalHits, edm::Handle<std::vector<PCaloHit> > const& zdcHits, int bunchCrossing, CLHEP::HepRandomEngine*);
+  void accumulateCaloHits(edm::Handle<std::vector<PCaloHit> > const& hcalHits, edm::Handle<std::vector<PCaloHit> > const& zdcHits, int bunchCrossing, CLHEP::HepRandomEngine*, const HcalTopology *h);
 
   /// some hits in each subdetector, just for testing purposes
   void fillFakeHits();
@@ -68,9 +71,11 @@ private:
   /// exist in the geometry
   void checkGeometry(const edm::EventSetup& eventSetup);
   const CaloGeometry * theGeometry;
+  const HcalDDDRecConstants * theRecNumber;
   void updateGeometry(const edm::EventSetup& eventSetup);
 
   void buildHOSiPMCells(const std::vector<DetId>& allCells, const edm::EventSetup& eventSetup);
+  void buildHFQIECells(const std::vector<DetId>& allCells, const edm::EventSetup& eventSetup);
 
   //function to evaluate aging at the digi level
   void darkening(std::vector<PCaloHit>& hcalHits);
@@ -81,6 +86,7 @@ private:
   typedef CaloTDigitizer<HFDigitizerTraits>   HFDigitizer;
   typedef CaloTDigitizer<ZDCDigitizerTraits>  ZDCDigitizer;
   typedef CaloTDigitizer<HcalUpgradeDigitizerTraits> UpgradeDigitizer;
+  typedef CaloTDigitizer<HcalQIE10DigitizerTraits,CaloTDigitizerQIE10Run> QIE10Digitizer;
 
   HcalSimParameterMap * theParameterMap;
   HcalShapes * theShapes;
@@ -90,6 +96,7 @@ private:
   CaloHitResponse * theHOResponse;
   CaloHitResponse * theHOSiPMResponse;
   CaloHitResponse * theHFResponse;
+  CaloHitResponse * theHFQIE10Response;
   CaloHitResponse * theZDCResponse;
 
   // we need separate amplifiers (and electronicssims)
@@ -109,6 +116,7 @@ private:
   HcalElectronicsSim * theZDCElectronicsSim;
   HcalElectronicsSim * theUpgradeHBHEElectronicsSim;
   HcalElectronicsSim * theUpgradeHFElectronicsSim;
+  HcalElectronicsSim * theHFQIE10ElectronicsSim;
 
   HBHEHitFilter theHBHEHitFilter;
   HFHitFilter   theHFHitFilter;
@@ -129,6 +137,7 @@ private:
   ZDCDigitizer* theZDCDigitizer;
   UpgradeDigitizer * theHBHEUpgradeDigitizer;
   UpgradeDigitizer * theHFUpgradeDigitizer;
+  QIE10Digitizer * theHFQIE10Digitizer;
   HcalHitRelabeller* theRelabeller;
 
   // need to cache some DetIds for the digitizers,
@@ -136,6 +145,7 @@ private:
   std::vector<DetId> theHBHEDetIds;
   std::vector<DetId> theHOHPDDetIds;
   std::vector<DetId> theHOSiPMDetIds;
+  std::vector<DetId> theHFQIE8DetIds, theHFQIE10DetIds;
 
   bool isZDC,isHCAL,zdcgeo,hbhegeo,hogeo,hfgeo;
   bool relabel_;

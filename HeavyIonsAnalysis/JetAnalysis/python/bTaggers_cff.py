@@ -9,10 +9,10 @@ from PhysicsTools.PatAlgos.mcMatchLayer0.jetFlavourId_cff import *
 from RecoBTag.SecondaryVertex.secondaryVertexNegativeTagInfos_cfi import *
 from RecoBTag.SecondaryVertex.negativeSimpleSecondaryVertexHighEffBJetTags_cfi import *
 from RecoBTag.SecondaryVertex.negativeSimpleSecondaryVertexHighPurBJetTags_cfi import *
-from RecoBTag.SecondaryVertex.negativeCombinedSecondaryVertexComputer_cfi import *
-from RecoBTag.SecondaryVertex.negativeCombinedSecondaryVertexBJetTags_cfi import *
-from RecoBTag.SecondaryVertex.positiveCombinedSecondaryVertexComputer_cfi import *
-from RecoBTag.SecondaryVertex.positiveCombinedSecondaryVertexBJetTags_cfi import *
+#from RecoBTag.SecondaryVertex.negativeCombinedSecondaryVertexComputer_cfi import *
+#from RecoBTag.SecondaryVertex.negativeCombinedSecondaryVertexBJetTags_cfi import *
+#from RecoBTag.SecondaryVertex.positiveCombinedSecondaryVertexComputer_cfi import *
+#from RecoBTag.SecondaryVertex.positiveCombinedSecondaryVertexBJetTags_cfi import *
 from RecoBTag.SecondaryVertex.negativeCombinedSecondaryVertexV2Computer_cfi import *
 from RecoBTag.SecondaryVertex.negativeCombinedSecondaryVertexV2BJetTags_cfi import *
 from RecoBTag.SecondaryVertex.positiveCombinedSecondaryVertexV2Computer_cfi import *
@@ -42,7 +42,7 @@ class bTaggers:
         self.SecondaryVertexTagInfos.trackIPTagInfos     = cms.InputTag(jetname+"ImpactParameterTagInfos")
         #self.SimpleSecondaryVertexBJetTags               = simpleSecondaryVertexBJetTags.clone()
         #self.SimpleSecondaryVertexBJetTags.tagInfos      = cms.VInputTag(cms.InputTag(jetname+"SecondaryVertexTagInfos"))
-        self.CombinedSecondaryVertexBJetTags             = combinedSecondaryVertexBJetTags.clone()
+        self.CombinedSecondaryVertexBJetTags             = combinedSecondaryVertexV2BJetTags.clone()
         self.CombinedSecondaryVertexBJetTags.tagInfos    = cms.VInputTag(cms.InputTag(jetname+"ImpactParameterTagInfos"),
                 cms.InputTag(jetname+"SecondaryVertexTagInfos"))
         self.CombinedSecondaryVertexV2BJetTags          = combinedSecondaryVertexV2BJetTags.clone()
@@ -57,7 +57,7 @@ class bTaggers:
         self.SimpleSecondaryVertexHighEffBJetTags.tagInfos      = cms.VInputTag(cms.InputTag(jetname+"SecondaryVertexTagInfos"))
         self.SimpleSecondaryVertexHighPurBJetTags               = simpleSecondaryVertexHighPurBJetTags.clone()
         self.SimpleSecondaryVertexHighPurBJetTags.tagInfos      = cms.VInputTag(cms.InputTag(jetname+"SecondaryVertexTagInfos"))
-        self.CombinedSecondaryVertexBJetTags             = combinedSecondaryVertexBJetTags.clone()
+        self.CombinedSecondaryVertexBJetTags             = combinedSecondaryVertexV2BJetTags.clone()
         self.CombinedSecondaryVertexBJetTags.tagInfos    = cms.VInputTag(cms.InputTag(jetname+"ImpactParameterTagInfos"),
                 cms.InputTag(jetname+"SecondaryVertexTagInfos"))
         self.CombinedSecondaryVertexV2BJetTags          = combinedSecondaryVertexV2BJetTags.clone()
@@ -72,10 +72,10 @@ class bTaggers:
         self.NegativeSimpleSecondaryVertexHighPurBJetTags               = negativeSimpleSecondaryVertexHighPurBJetTags.clone()
         self.NegativeSimpleSecondaryVertexHighPurBJetTags.tagInfos      = cms.VInputTag(cms.InputTag(jetname+"SecondaryVertexNegativeTagInfos"))
 
-        self.NegativeCombinedSecondaryVertexBJetTags                    = negativeCombinedSecondaryVertexBJetTags.clone()
+        self.NegativeCombinedSecondaryVertexBJetTags                    = negativeCombinedSecondaryVertexV2BJetTags.clone()
         self.NegativeCombinedSecondaryVertexBJetTags.tagInfos    = cms.VInputTag(cms.InputTag(jetname+"ImpactParameterTagInfos"),
                                                                                  cms.InputTag(jetname+"SecondaryVertexNegativeTagInfos"))
-        self.PositiveCombinedSecondaryVertexBJetTags                    = positiveCombinedSecondaryVertexBJetTags.clone()
+        self.PositiveCombinedSecondaryVertexBJetTags                    = positiveCombinedSecondaryVertexV2BJetTags.clone()
         self.PositiveCombinedSecondaryVertexBJetTags.tagInfos    = cms.VInputTag(cms.InputTag(jetname+"ImpactParameterTagInfos"),
                                                                                  cms.InputTag(jetname+"SecondaryVertexTagInfos"))
 

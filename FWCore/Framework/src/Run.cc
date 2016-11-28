@@ -2,12 +2,13 @@
 
 #include "FWCore/Framework/interface/RunPrincipal.h"
 #include "FWCore/Utilities/interface/Algorithms.h"
+#include "FWCore/Utilities/interface/get_underlying_safe.h"
 
 namespace edm {
 
   std::string const Run::emptyString_;
 
-  Run::Run(RunPrincipal& rp, ModuleDescription const& md,
+  Run::Run(RunPrincipal const& rp, ModuleDescription const& md,
            ModuleCallingContext const* moduleCallingContext) :
         provRecorder_(rp, md),
         aux_(rp.aux()),
@@ -22,11 +23,6 @@ namespace edm {
 
   RunIndex Run::index() const { return runPrincipal().index();}
   
-  RunPrincipal&
-  Run::runPrincipal() {
-    return dynamic_cast<RunPrincipal&>(provRecorder_.principal());
-  }
-
   RunPrincipal const&
   Run::runPrincipal() const {
     return dynamic_cast<RunPrincipal const&>(provRecorder_.principal());
@@ -81,12 +77,12 @@ namespace edm {
 
   void
   Run::commit_() {
-    RunPrincipal& rp = runPrincipal();
+    RunPrincipal const& rp = runPrincipal();
     ProductPtrVec::iterator pit(putProducts().begin());
     ProductPtrVec::iterator pie(putProducts().end());
 
     while(pit != pie) {
-        rp.put(*pit->second, std::move(pit->first));
+        rp.put(*pit->second, std::move(get_underlying_safe(pit->first)));
         ++pit;
     }
 

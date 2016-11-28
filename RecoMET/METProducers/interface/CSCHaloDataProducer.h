@@ -115,7 +115,6 @@
 #include "MagneticField/Engine/interface/MagneticField.h"
 
 #include "RecoMuon/MuonIdentification/interface/TimeMeasurementSequence.h"
-#include "RecoMuon/TrackingTools/interface/MuonServiceProxy.h"
 #include "RecoMuon/TrackingTools/interface/MuonPatternRecoDumper.h"
 #include "RecoMuon/TrackingTools/interface/MuonSegmentMatcher.h"
 #include "RecoMuon/TransientTrackingRecHit/interface/MuonTransientTrackingRecHitBuilder.h"
@@ -152,16 +151,16 @@ class CSCHaloDataProducer : public edm::stream::EDProducer<> {
     std::vector< edm::InputTag > vIT_HLTBit  ;
 
     //Muon-Segment Matching
-    MuonServiceProxy* TheService;
     MuonSegmentMatcher *TheMatcher;
 
     //RecHit Level
     edm::InputTag IT_CSCRecHit;
 
-    //Calo rechits
+    //Calo rechits                                                                                                                               
     edm::InputTag IT_HBHErh;
     edm::InputTag IT_ECALBrh;
     edm::InputTag IT_ECALErh;
+
     //Higher Level Reco
     edm::InputTag IT_CosmicMuon;
     edm::InputTag IT_CSCSegment;
@@ -174,7 +173,7 @@ class CSCHaloDataProducer : public edm::stream::EDProducer<> {
     edm::EDGetTokenT<reco::MuonCollection> muon_token_;
     edm::EDGetTokenT<CSCSegmentCollection> cscsegment_token_;
     edm::EDGetTokenT<CSCRecHit2DCollection> cscrechit_token_;
-    edm::EDGetTokenT<HBHERecHitCollection> hbhereco_token_; 
+    edm::EDGetTokenT<HBHERecHitCollection> hbhereco_token_;
     edm::EDGetTokenT<EcalRecHitCollection> EcalRecHitsEB_token_;
     edm::EDGetTokenT<EcalRecHitCollection> EcalRecHitsEE_token_;
     edm::EDGetTokenT<CSCALCTDigiCollection> cscalct_token_;

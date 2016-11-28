@@ -7,7 +7,7 @@ process.MessageLogger = cms.Service("MessageLogger",
                                          #'siPixelClusters', 
                                          'SiPixelRawDataErrorSource', 
                                          'SiPixelDigiSource', 
-					 'sipixelEDAClient'),
+                                         'sipixelEDAClient'),
     cout = cms.untracked.PSet(threshold = cms.untracked.string('ERROR')),
     destinations = cms.untracked.vstring('cout')
 )
@@ -153,4 +153,3 @@ process = customise(process)
 #--------------------------------------------------
 
 print "Running with run type = ", process.runType.getRunType()
-

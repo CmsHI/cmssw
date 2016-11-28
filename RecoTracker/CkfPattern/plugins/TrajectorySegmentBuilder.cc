@@ -23,6 +23,7 @@
 #include <algorithm> 
 
 // #define DBG_TSB
+// #define STAT_TSB
 
 namespace {
 #ifdef STAT_TSB
@@ -74,7 +75,7 @@ TrajectorySegmentBuilder::segments (const TSOS startingState)
   // create empty trajectory
   //
   theLockedHits.clear();
-  TempTrajectory startingTrajectory(theFullPropagator.propagationDirection());
+  TempTrajectory startingTrajectory(theFullPropagator.propagationDirection(),0);
   //
   // get measurement groups
   //

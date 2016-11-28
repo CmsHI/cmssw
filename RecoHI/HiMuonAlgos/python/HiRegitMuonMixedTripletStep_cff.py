@@ -22,6 +22,7 @@ hiRegitMuMixedTripletStepClusters = RecoTracker.IterativeTracking.MixedTripletSt
     oldClusterRemovalInfo = cms.InputTag("hiRegitMuPixelPairStepClusters"),
     trajectories          = cms.InputTag("hiRegitMuPixelPairStepTracks"),
     overrideTrkQuals      = cms.InputTag('hiRegitMuPixelPairStepSelector','hiRegitMuPixelPairStep'),
+    trackClassifier       = cms.InputTag(''),
     TrackQuality          = cms.string('tight')
 )
 

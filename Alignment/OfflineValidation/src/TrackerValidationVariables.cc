@@ -76,6 +76,7 @@ TrackerValidationVariables::fillHitQuantities(const Trajectory* trajectory, std:
     if (!itTraj->updatedState().isValid()) continue;
     
     TrajectoryStateOnSurface tsos = tsoscomb( itTraj->forwardPredictedState(), itTraj->backwardPredictedState() );
+    if(!tsos.isValid()) continue;
     TransientTrackingRecHit::ConstRecHitPointer hit = itTraj->recHit();
     
     if(!hit->isValid() || hit->geographicalId().det() != DetId::Tracker) continue;
@@ -158,7 +159,7 @@ TrackerValidationVariables::fillHitQuantities(const Trajectory* trajectory, std:
 	  IntSubDetID == StripSubdetector::TIB || 
 	  IntSubDetID == StripSubdetector::TOB) {
 	
-	uOrientation = deltaPhi(gUDirection.phi(),gPModule.phi()) >= 0. ? +1.F : -1.F;
+	uOrientation = deltaPhi(gUDirection.barePhi(),gPModule.barePhi()) >= 0. ? +1.F : -1.F;
 	vOrientation = gVDirection.z() - gPModule.z() >= 0 ? +1.F : -1.F;
 	resXTopol = res.x();
 	resXatTrkYTopol = res.x();
@@ -181,7 +182,7 @@ TrackerValidationVariables::fillHitQuantities(const Trajectory* trajectory, std:
       } else if (IntSubDetID == PixelSubdetector::PixelEndcap) {
 	
 	uOrientation = gUDirection.perp() - gPModule.perp() >= 0 ? +1.F : -1.F;
-	vOrientation = deltaPhi(gVDirection.phi(),gPModule.phi()) >= 0. ? +1.F : -1.F;
+	vOrientation = deltaPhi(gVDirection.barePhi(),gPModule.barePhi()) >= 0. ? +1.F : -1.F;
 	resXTopol = res.x();
 	resXatTrkYTopol = res.x();
 	resYTopol = res.y();
@@ -203,7 +204,7 @@ TrackerValidationVariables::fillHitQuantities(const Trajectory* trajectory, std:
       } else if (IntSubDetID == StripSubdetector::TID ||
 		 IntSubDetID == StripSubdetector::TEC) {
 	
-	uOrientation = deltaPhi(gUDirection.phi(),gPModule.phi()) >= 0. ? +1.F : -1.F;
+	uOrientation = deltaPhi(gUDirection.barePhi(),gPModule.barePhi()) >= 0. ? +1.F : -1.F;
 	vOrientation = gVDirection.perp() - gPModule.perp() >= 0. ? +1.F : -1.F;
 	
 	if (!dynamic_cast<const RadialStripTopology*>(&detUnit.type().topology()))continue;
@@ -310,6 +311,18 @@ TrackerValidationVariables::fillTrackQuantities(const edm::Event& event,
                                                 const edm::EventSetup& eventSetup,
                                                 std::vector<AVTrackStruct> & v_avtrackout)
 {
+  fillTrackQuantities(event, 
+                      eventSetup,
+                      [](const reco::Track&) -> bool { return true; },
+                      v_avtrackout);
+}
+
+void
+TrackerValidationVariables::fillTrackQuantities(const edm::Event& event,
+                                                const edm::EventSetup& eventSetup,
+                                                std::function<bool(const reco::Track&)> trackFilter, 
+                                                std::vector<AVTrackStruct> & v_avtrackout)
+{
   edm::ESHandle<MagneticField> magneticField;
   eventSetup.get<IdealMagneticFieldRecord>().get(magneticField);
 
@@ -326,6 +339,8 @@ TrackerValidationVariables::fillTrackQuantities(const edm::Event& event,
     
     trajectory = &(*(*iPair).key);
     track = &(*(*iPair).val);
+    
+    if (!trackFilter(*track)) continue;
     
     AVTrackStruct trackStruct;
     
@@ -355,18 +370,3 @@ TrackerValidationVariables::fillTrackQuantities(const edm::Event& event,
   }
 }
 
-void
-TrackerValidationVariables::fillHitQuantities(const edm::Event& event, std::vector<AVHitStruct> & v_avhitout)
-{
-  edm::Handle<std::vector<Trajectory> > trajCollectionHandle;
-  event.getByToken(trajCollectionToken_, trajCollectionHandle);
-  
-  LogDebug("TrackerValidationVariables") << "trajColl->size(): " << trajCollectionHandle->size() ;
-
-  for (std::vector<Trajectory>::const_iterator it = trajCollectionHandle->begin(), itEnd = trajCollectionHandle->end(); 
-       it!=itEnd;
-       ++it) {
-    
-    fillHitQuantities(&(*it), v_avhitout);
-  }
-}

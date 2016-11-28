@@ -42,6 +42,8 @@ hiDetachedTripletStepPixelTracks = cms.EDProducer("PixelTrackProducer",
         ComponentName = cms.string('GlobalTrackingRegionWithVerticesProducer'),
         RegionPSet = cms.PSet(
             precise = cms.bool(True),
+            useMultipleScattering = cms.bool(False),
+            useFakeVertices       = cms.bool(False),            
             beamSpot = cms.InputTag("offlineBeamSpot"),
             useFixedError = cms.bool(True),
             nSigmaZ = cms.double(4.0),
@@ -113,8 +115,8 @@ hiDetachedTripletStepTrajectoryFilter = TrackingTools.TrajectoryFiltering.Trajec
     constantValueForLostHitsFractionFilter = cms.double(0.701)
     )
 
-import TrackingTools.KalmanUpdators.Chi2MeasurementEstimatorESProducer_cfi
-hiDetachedTripletStepChi2Est = TrackingTools.KalmanUpdators.Chi2MeasurementEstimatorESProducer_cfi.Chi2MeasurementEstimator.clone(
+import TrackingTools.KalmanUpdators.Chi2MeasurementEstimator_cfi
+hiDetachedTripletStepChi2Est = TrackingTools.KalmanUpdators.Chi2MeasurementEstimator_cfi.Chi2MeasurementEstimator.clone(
         ComponentName = cms.string('hiDetachedTripletStepChi2Est'),
             nSigma = cms.double(3.0),
             MaxChi2 = cms.double(9.0)

@@ -7,9 +7,9 @@
 #include "DataFormats/Provenance/interface/ProductRegistry.h"
 #include "DataFormats/Provenance/interface/BranchDescription.h"
 #include "DataFormats/Provenance/interface/ModuleDescription.h"
-#include "FWCore/Utilities/interface/DictionaryTools.h"
 #include "FWCore/Utilities/interface/EDMException.h"
 #include "FWCore/Utilities/interface/TypeWithDict.h"
+#include "FWCore/Utilities/interface/DictionaryTools.h"
 #include "TClass.h"
 
 namespace edm {
@@ -25,13 +25,13 @@ namespace edm {
                                        ModuleDescription const& iDesc,
                                        ProductRegistry& iReg,
                                        bool iIsListener) {
-    std::string const& prefix = dictionaryPlugInPrefix();
+    TypeSet missingTypes;
     for(TypeLabelList::const_iterator p = iBegin; p != iEnd; ++p) {
       // This should load the dictionary if not already loaded.
       TClass::GetClass(p->typeID_.typeInfo());
       if(!hasDictionary(p->typeID_.typeInfo())) {
         // a second attempt to load
-        edmplugin::PluginCapabilities::get()->tryToLoad(prefix + p->typeID_.userClassName());
+        TypeWithDict::byName(p->typeID_.userClassName());
       }
       if(!hasDictionary(p->typeID_.typeInfo())) {
         throw Exception(errors::DictionaryNotFound)
@@ -47,6 +47,7 @@ namespace edm {
            << "Also, if this class has any transient members,\n"
            << "you need to specify them in classes_def.xml.";
       }
+
       TypeWithDict type(p->typeID_.typeInfo());
       BranchDescription pdesc(p->branchType_,
                               iDesc.moduleLabel(),
@@ -57,8 +58,15 @@ namespace edm {
                               iDesc.moduleName(),
                               iDesc.parameterSetID(),
                               type);
+      if(pdesc.transient()) {
+        checkClassDictionaries(TypeID(pdesc.wrappedType().typeInfo()), missingTypes, false);
+      } else {
+        checkClassDictionaries(TypeID(pdesc.wrappedType().typeInfo()), missingTypes,true);
+      }
+
       if (!p->branchAlias_.empty()) pdesc.insertBranchAlias(p->branchAlias_);
       iReg.addProduct(pdesc, iIsListener);
     }//for
+    loadMissingDictionaries(missingTypes);
   }
 }

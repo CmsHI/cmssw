@@ -59,6 +59,7 @@ from RecoParticleFlow.Configuration.RecoParticleFlow_EventContent_cff import *
 from L1Trigger.Configuration.L1Trigger_EventContent_cff import *
 from RecoVertex.BeamSpotProducer.BeamSpot_EventContent_cff import *
 from CommonTools.ParticleFlow.EITopPAG_EventContent_cff import EITopPAGEventContent
+from RecoCTPPS.Configuration.RecoCTPPS_EventContent_cff import *
 
 # raw2digi that are already the final RECO/AOD products
 from EventFilter.ScalersRawToDigi.Scalers_EventContent_cff import *
@@ -92,6 +93,17 @@ from HLTrigger.Configuration.HLTrigger_EventContent_cff import *
 from DQMOffline.Configuration.DQMOffline_EventContent_cff import *
 #
 #
+# FastSim
+#
+#
+from FastSimulation.Configuration.EventContent_cff import FASTPUEventContent
+import FastSimulation.Configuration.EventContent_cff as fastSimEC
+from Configuration.StandardSequences.Eras import eras
+if eras.fastSim.isChosen():
+    RecoLocalTrackerRECO.outputCommands = fastSimEC.RecoLocalTracker.outputCommands
+    RecoLocalTrackerFEVT.outputCommands = fastSimEC.RecoLocalTracker.outputCommands
+    SimG4CoreRAW = fastSimEC.SimRAW
+    SimG4CoreRECO = fastSimEC.SimRECO
 
 #
 #
@@ -292,7 +304,7 @@ FEVTDEBUGEventContent = cms.PSet(
 FEVTDEBUGHLTEventContent = cms.PSet(
     outputCommands = cms.untracked.vstring('drop *'),
     splitLevel = cms.untracked.int32(0),
-    eventAutoFlushCompressedSize=cms.untracked.int32(1*1024*1024)
+    eventAutoFlushCompressedSize=cms.untracked.int32(10*1024*1024)
 )
 
 #
@@ -348,6 +360,7 @@ DATAMIXEREventContent = cms.PSet(
                                                'keep HBHEDataFramesSorted_hcalDigis_*_*',
                                                'keep HFDataFramesSorted_hcalDigis_*_*',
                                                'keep HODataFramesSorted_hcalDigis_*_*',
+                                               'keep QIE10DataFrameHcalDataFrameContainer_hcalDigis_*_*',
                                                'keep ZDCDataFramesSorted_hcalDigis_*_*',
                                                'keep CastorDataFramesSorted_castorDigis_*_*',
                                                'keep EBDigiCollection_ecalDigis_*_*',
@@ -434,7 +447,7 @@ RECOEventContent.outputCommands.extend(EvtScalersRECO.outputCommands)
 RECOEventContent.outputCommands.extend(TcdsEventContent.outputCommands)
 RECOEventContent.outputCommands.extend(CommonEventContent.outputCommands)
 RECOEventContent.outputCommands.extend(EITopPAGEventContent.outputCommands)
-RECOEventContent.outputCommands += ['keep int_bunchSpacingProducer_*_*']
+eras.ctpps_2016.toModify(RECOEventContent, outputCommands = RECOEventContent.outputCommands + RecoCTPPSRECO.outputCommands)
 
 RAWRECOEventContent.outputCommands.extend(RECOEventContent.outputCommands)
 RAWRECOEventContent.outputCommands.extend(cms.untracked.vstring(
@@ -465,7 +478,7 @@ AODEventContent.outputCommands.extend(EvtScalersAOD.outputCommands)
 AODEventContent.outputCommands.extend(TcdsEventContent.outputCommands)
 AODEventContent.outputCommands.extend(CommonEventContent.outputCommands)
 AODEventContent.outputCommands.extend(EITopPAGEventContent.outputCommands)
-AODEventContent.outputCommands += ['keep int_bunchSpacingProducer_*_*']
+eras.ctpps_2016.toModify(AODEventContent, outputCommands = AODEventContent.outputCommands + RecoCTPPSAOD.outputCommands)
 
 RAWSIMEventContent.outputCommands.extend(RAWEventContent.outputCommands)
 RAWSIMEventContent.outputCommands.extend(SimG4CoreRAW.outputCommands)
@@ -516,6 +529,8 @@ PREMIXEventContent.outputCommands.append('keep PixelDigiSimLinkedmDetSetVector_s
 PREMIXEventContent.outputCommands.append('keep StripDigiSimLinkedmDetSetVector_simMuonCSCDigis_*_*')
 PREMIXEventContent.outputCommands.append('keep RPCDigiSimLinkedmDetSetVector_*_*_*')
 PREMIXEventContent.outputCommands.append('keep DTLayerIdDTDigiSimLinkMuonDigiCollection_*_*_*')
+if eras.fastSim.isChosen():
+    PREMIXEventContent.outputCommands.extend(fastSimEC.extraPremixContent)
 
 PREMIXRAWEventContent.outputCommands.extend(RAWSIMEventContent.outputCommands)
 PREMIXRAWEventContent.outputCommands.append('keep CrossingFramePlaybackInfoNew_*_*_*')
@@ -527,7 +542,8 @@ PREMIXRAWEventContent.outputCommands.append('keep *_*_MuonCSCStripDigiSimLinks_*
 PREMIXRAWEventContent.outputCommands.append('keep *_*_MuonCSCWireDigiSimLinks_*')
 PREMIXRAWEventContent.outputCommands.append('keep *_*_RPCDigiSimLink_*')
 PREMIXRAWEventContent.outputCommands.append('keep DTLayerIdDTDigiSimLinkMuonDigiCollection_*_*_*')
-
+if eras.fastSim.isChosen():
+    PREMIXEventContent.outputCommands.extend(fastSimEC.extraPremixContent)
 
 REPACKRAWSIMEventContent.outputCommands.extend(REPACKRAWEventContent.outputCommands)
 REPACKRAWSIMEventContent.outputCommands.extend(SimG4CoreRAW.outputCommands)
@@ -606,7 +622,7 @@ FEVTEventContent.outputCommands.extend(EvtScalersRECO.outputCommands)
 FEVTEventContent.outputCommands.extend(TcdsEventContent.outputCommands)
 FEVTEventContent.outputCommands.extend(CommonEventContent.outputCommands)
 FEVTEventContent.outputCommands.extend(EITopPAGEventContent.outputCommands)
-FEVTEventContent.outputCommands += ['keep int_bunchSpacingProducer_*_*']
+eras.ctpps_2016.toModify(FEVTEventContent, outputCommands = FEVTEventContent.outputCommands + RecoCTPPSFEVT.outputCommands)
 
 FEVTHLTALLEventContent.outputCommands.extend(FEVTEventContent.outputCommands)
 FEVTHLTALLEventContent.outputCommands.append('keep *_*_*_HLT')
@@ -755,6 +771,50 @@ MINIAODSIMEventContent= cms.PSet(
 from PhysicsTools.PatAlgos.slimming.slimming_cff import MicroEventContent,MicroEventContentMC
 
 MINIAODEventContent.outputCommands.extend(MicroEventContent.outputCommands)
-MINIAODEventContent.outputCommands += ['keep int_bunchSpacingProducer_*_*']
 MINIAODSIMEventContent.outputCommands.extend(MicroEventContentMC.outputCommands)
-MINIAODSIMEventContent.outputCommands += ['keep int_bunchSpacingProducer_*_*']
+
+#### RAW+miniAOD
+
+RAWMINIAODEventContent= cms.PSet(
+    outputCommands = cms.untracked.vstring('drop *'),
+    eventAutoFlushCompressedSize=cms.untracked.int32(15*1024*1024),
+    compressionAlgorithm=cms.untracked.string("LZMA"),
+    compressionLevel=cms.untracked.int32(4)
+)
+
+RAWMINIAODSIMEventContent= cms.PSet(
+    outputCommands = cms.untracked.vstring('drop *'),
+    eventAutoFlushCompressedSize=cms.untracked.int32(15*1024*1024),
+    compressionAlgorithm=cms.untracked.string("LZMA"),
+    compressionLevel=cms.untracked.int32(4)
+)
+
+RAWMINIAODEventContent.outputCommands.extend(RAWEventContent.outputCommands)
+RAWMINIAODEventContent.outputCommands.extend(MicroEventContent.outputCommands)
+RAWMINIAODSIMEventContent.outputCommands.extend(RAWEventContent.outputCommands)
+RAWMINIAODSIMEventContent.outputCommands.extend(MicroEventContentMC.outputCommands)
+
+#
+#
+# RAWSIM Data Tier definition
+# Meant as means to temporarily hold the RAW + AODSIM information as to allow the
+# L1+HLT to be rerun at a later time.
+#
+RAWAODSIMEventContent = cms.PSet(
+    outputCommands = cms.untracked.vstring('drop *'),
+    eventAutoFlushCompressedSize=cms.untracked.int32(15*1024*1024),
+    compressionAlgorithm=cms.untracked.string("LZMA"),
+    compressionLevel=cms.untracked.int32(4)
+)
+
+RAWAODSIMEventContent.outputCommands.extend(AODSIMEventContent.outputCommands)
+RAWAODSIMEventContent.outputCommands.extend(L1TriggerRAW.outputCommands)
+RAWAODSIMEventContent.outputCommands.extend(HLTriggerRAW.outputCommands)
+
+
+# in fastsim, normal digis are edaliases of simdigis
+# drop the simdigis to avoid complaints from the outputmodule related to duplicated branches
+if eras.fastSim.isChosen():
+    for _entry in [FEVTDEBUGHLTEventContent,FEVTDEBUGEventContent,RECOSIMEventContent,AODSIMEventContent,RAWAODSIMEventContent]:
+        fastSimEC.dropSimDigis(_entry.outputCommands)
+    

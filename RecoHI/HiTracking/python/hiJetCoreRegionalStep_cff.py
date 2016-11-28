@@ -59,6 +59,8 @@ hiJetCoreRegionalStepSeeds.RegionFactoryPSet = cms.PSet(
       ComponentName = cms.string( "TauRegionalPixelSeedGenerator" ),#not so nice to depend on RecoTau...
       RegionPSet = cms.PSet(
         precise = cms.bool( True ),
+        useMultipleScattering = cms.bool(False),
+        useFakeVertices       = cms.bool(False),
         originRadius = cms.double( 0.2 ),
         ptMin = cms.double( 15. ),
         originHalfLength = cms.double( 0.2 ),
@@ -66,8 +68,8 @@ hiJetCoreRegionalStepSeeds.RegionFactoryPSet = cms.PSet(
         deltaEtaRegion = cms.double( 0.30 ), 
         JetSrc = cms.InputTag( "hiJetsForCoreTracking" ),
         vertexSrc = cms.InputTag( "hiFirstStepGoodPrimaryVertices" ),
-        measurementTrackerName = cms.string( "MeasurementTrackerEvent" ),
-        howToUseMeasurementTracker = cms.double( -1.0 )
+        measurementTrackerName = cms.InputTag( "MeasurementTrackerEvent" ),
+        howToUseMeasurementTracker = cms.string( "Never" )
       )
 )
 hiJetCoreRegionalStepSeeds.OrderedHitsFactoryPSet.SeedingLayers = 'hiJetCoreRegionalStepSeedLayers'
@@ -84,8 +86,8 @@ hiJetCoreRegionalStepTrajectoryFilter = TrackingTools.TrajectoryFiltering.Trajec
     minPt = 10.0
 )
 
-import TrackingTools.KalmanUpdators.Chi2MeasurementEstimatorESProducer_cfi
-hiJetCoreRegionalStepChi2Est = TrackingTools.KalmanUpdators.Chi2MeasurementEstimatorESProducer_cfi.Chi2MeasurementEstimator.clone(
+import TrackingTools.KalmanUpdators.Chi2MeasurementEstimator_cfi
+hiJetCoreRegionalStepChi2Est = TrackingTools.KalmanUpdators.Chi2MeasurementEstimator_cfi.Chi2MeasurementEstimator.clone(
     ComponentName = cms.string('hiJetCoreRegionalStepChi2Est'),
     nSigma = cms.double(3.0),
     MaxChi2 = cms.double(30.0)

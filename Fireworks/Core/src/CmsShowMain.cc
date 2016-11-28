@@ -55,6 +55,9 @@
 
 #include "Fireworks/Core/interface/ActionsList.h"
 
+#include "Fireworks/Core/interface/Context.h"
+#include "Fireworks/Core/interface/FWMagField.h"
+
 #include "Fireworks/Core/src/CmsShowTaskExecutor.h"
 #include "Fireworks/Core/interface/CmsShowMainFrame.h"
 #include "Fireworks/Core/interface/CmsShowSearchFiles.h"
@@ -697,8 +700,10 @@ CmsShowMain::setupDataHandling()
    {
       m_navigator->firstEvent();
       checkPosition();
-      draw();
-      setupConfiguration();
+      if (configurationManager()->getIgnore())
+         guiManager()->initEmpty();
+      else
+         setupConfiguration();
    }
    else {
       if (configFilename()[0] == '\0') {
@@ -708,7 +713,9 @@ CmsShowMain::setupDataHandling()
          setupConfiguration();
       }
 
-      if (m_monitor.get() == 0 && (configurationManager()->getIgnore() == false)) {
+      bool geoBrowser = (configFilename()[0] !='\0') && (eiManager()->begin() == eiManager()->end());
+
+      if (m_monitor.get() == 0 && (configurationManager()->getIgnore() == false) && ( !geoBrowser)) {
          if (m_inputFiles.empty())
             openDataViaURL();
          else

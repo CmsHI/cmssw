@@ -18,13 +18,13 @@
 //         Created:  Fri Jan 29 12:45:17 CST 2010
 //
 
-#if !defined(__CINT__) && !defined(__MAKECINT__)
 
 // user include files
 #include "DataFormats/Common/interface/EDProductGetter.h"
 #include "DataFormats/FWLite/interface/HistoryGetterBase.h"
 #include "DataFormats/FWLite/interface/InternalDataKey.h"
 #include "FWCore/FWLite/interface/BranchMapReader.h"
+#include "FWCore/Utilities/interface/propagate_const.h"
 
 #include "Rtypes.h"
 
@@ -80,11 +80,11 @@ namespace fwlite {
 
             // ---------- member functions ---------------------------
 
-            void setGetter(std::shared_ptr<edm::EDProductGetter> getter) {
+            void setGetter(std::shared_ptr<edm::EDProductGetter const> getter) {
                 getter_ = getter;
             }
 
-            edm::EDProductGetter* getter() {
+            edm::EDProductGetter const* getter() const {
                return getter_.get();
             }
 
@@ -96,7 +96,7 @@ namespace fwlite {
             typedef std::map<internal::DataKey, std::shared_ptr<internal::Data> > KeyToDataMap;
 
             internal::Data& getBranchDataFor(std::type_info const&, char const*, char const*, char const*) const;
-            void getBranchData(edm::EDProductGetter*, Long64_t, internal::Data&) const;
+            void getBranchData(edm::EDProductGetter const*, Long64_t, internal::Data&) const;
             bool getByBranchDescription(edm::BranchDescription const&, Long_t eventEntry, KeyToDataMap::iterator&) const;
             edm::WrapperBase const* getByBranchID(edm::BranchID const& bid, Long_t eventEntry) const;
             edm::WrapperBase const* wrapperBasePtr(edm::ObjectWithDict const&) const;
@@ -111,13 +111,11 @@ namespace fwlite {
 
             mutable std::map<std::pair<edm::ProductID, edm::BranchListIndex>,std::shared_ptr<internal::Data> > idToData_;
             mutable std::map<edm::BranchID, std::shared_ptr<internal::Data> > bidToData_;
-            std::shared_ptr<fwlite::HistoryGetterBase> historyGetter_;
-            std::shared_ptr<edm::EDProductGetter> getter_;
+            edm::propagate_const<std::shared_ptr<fwlite::HistoryGetterBase>> historyGetter_;
+            std::shared_ptr<edm::EDProductGetter const> getter_;
             mutable bool tcTrained_;
     };
 
 }
-
-#endif /*__CINT__ */
 
 #endif

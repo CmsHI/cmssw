@@ -5,13 +5,13 @@ photon_pathName = "HLT_Photon30_R9Id90_HE10_IsoM"
 photon_moduleName ="hltEG30R9Id90HE10IsoMTrackIsoFilter"
 
 muon_pathName = "HLT_IsoMu27"
-muon_moduleName = "hltL3crIsoL1sMu25L1f0L2f10QL3f27QL3trkIsoFiltered0p09"
+muon_moduleName = "hltL3crIsoL1sMu22Or25L1f0L2f10QL3f27QL3trkIsoFiltered0p09"
 
 l2muon_pathName = "HLT_L2Mu10"
-l2muon_moduleName = "hltL2fL1sMu16L1f0L2Filtered10Q"
+l2muon_moduleName = "hltL2fL1sMu22L1f0L2Filtered10Q"
 
-l2NoBPTXmuon_pathName = "HLT_L2Mu10_NoVertex_NoBPTX3BX_NoHalo"
-l2NoBPTXmuon_moduleName = "hltL2fL1sMuOpenNotBptxORL1f0NoVtxCosmicSeedMeanTimerL2Filtered10"
+l2NoBPTXmuon_pathName = "HLT_L2Mu10_NoVertex_NoBPTX3BX"
+l2NoBPTXmuon_moduleName = "hltL2fL1sMuOpenNotBptxORNoHaloMu3BXL1f0NoVtxCosmicSeedMeanTimerL2Filtered10"
 
 electron_pathName = "HLT_Ele23_WPLoose_Gsf"
 electron_moduleName = "hltEle23WPLooseGsfTrackIsoFilter"
@@ -28,10 +28,11 @@ jetAk8_moduleName = "hltAK8SinglePFJet360TrimModMass30"
 rsq_mr_pathName = "HLT_RsqMR240_Rsq0p09_MR200"
 rsq_mr_moduleName = "hltRsqMR240Rsq0p09MR200"
 
-bJet_pathNameCalo = "HLT_PFMET120_JetIdCleaned_BTagCSV0p72"
-bJet_moduleNameCalo = "hltBLifetimeL3FilterCSVsusy"
-bJet_pathNamePF = "HLT_QuadPFJet_SingleBTagCSV_VBF_Mqq500"
-bJet_moduleNamePF = "hltCSVPF0p78"
+bJet_pathNameCalo = "HLT_PFMET120_BTagCSV_p067"
+bJet_moduleNameCalo = "hltBTagCaloCSVp067Single"
+
+bJet_pathNamePF = "HLT_QuadPFJet_BTagCSV_p016_VBF_Mqq500"
+bJet_moduleNamePF = "hltBTagPFCSVp016SingleWithMatching"
 
 #To avoid booking histogram, set pathName = cms.string("")
 
@@ -382,6 +383,36 @@ hltObjectMonitor = cms.EDAnalyzer('HLTObjectMonitor',
         NbinsX = cms.int32(50),
         Xmin = cms.double(60),
         Xmax = cms.double(160)
+        ),
+    pAL1DoubleMuZMass = cms.PSet(
+        pathName = cms.string("HLT_PAL1DoubleMu10"),
+        moduleName = cms.string("hltL1fL1sDoubleMu10BptxANDL1Filtered0"),
+        plotLabel = cms.string("PAL1DoubleMu10_ZMass"),
+        axisLabel = cms.string("dimuon mass [GeV]"),
+        mainWorkspace = cms.bool(True),
+        NbinsX = cms.int32(50),
+        Xmin = cms.double(60.0),
+        Xmax = cms.double(160.0)
+        ),
+    pAL2DoubleMuZMass = cms.PSet(
+        pathName = cms.string("HLT_PAL2DoubleMu10"),
+        moduleName = cms.string("hltL2fL1sDoubleMu10BptxANDL1f0L2Filtered10"),
+        plotLabel = cms.string("PAL2DoubleMu10_ZMass"),
+        axisLabel = cms.string("dimuon mass [GeV]"),
+        mainWorkspace = cms.bool(True),
+        NbinsX = cms.int32(50),
+        Xmin = cms.double(60.0),
+        Xmax = cms.double(160.0)
+        ),
+    pAL3DoubleMuZMass = cms.PSet(
+        pathName = cms.string("HLT_PAL3DoubleMu10"),
+        moduleName = cms.string("hltL3fL1sDoubleMu10BptxANDL1f0L2f10L3Filtered10"),
+        plotLabel = cms.string("PAL3DoubleMu10_ZMass"),
+        axisLabel = cms.string("dimuon mass [GeV]"),
+        mainWorkspace = cms.bool(True),
+        NbinsX = cms.int32(50),
+        Xmin = cms.double(60.0),
+        Xmax = cms.double(160.0)
         ),
     diElecMass = cms.PSet(
         pathName = cms.string("HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL_DZ"),

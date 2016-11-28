@@ -9,6 +9,7 @@ import re
 import Configuration.Applications
 from Configuration.Applications.ConfigBuilder import ConfigBuilder, defaultOptions
 import traceback
+from functools import reduce
 
 
 def checkOptions():
@@ -258,6 +259,16 @@ def OptionsFromItems(items):
         for eraName in requestedEras : # Same loop, but had to make sure all the names existed first
             if eras.internalUseEras.count(getattr(eras,eraName)) > 0 :
                 print "WARNING: You have explicitly set '"+eraName+"' with the '--era' command. That is usually reserved for internal use only."
+    # If the "--fast" option was supplied automatically enable the fastSim era
+    if options.fast :
+        if options.era:
+            options.era+=",fastSim"
+        else :
+            options.era="fastSim"
+
+    # options incompatible with fastsim
+    if options.fast and not options.scenario == "pp":
+        raise Exception("ERROR: the --option fast is only compatible with the default scenario (--scenario=pp)")
 
     return options
 

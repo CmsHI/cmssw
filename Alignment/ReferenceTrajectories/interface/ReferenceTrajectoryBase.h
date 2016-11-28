@@ -88,6 +88,7 @@
  */
 
 #include "DataFormats/GeometrySurface/interface/ReferenceCounted.h"
+#include "DataFormats/TrajectorySeed/interface/PropagationDirection.h"
 
 // for AlgebraicVector, -Matrix and -SymMatrix:
 #include "DataFormats/CLHEP/interface/AlgebraicObjects.h"
@@ -99,7 +100,6 @@
 
 #include "Alignment/ReferenceTrajectories/interface/GblTrajectory.h"
 
-using namespace gbl;
 
 class ReferenceTrajectoryBase : public ReferenceCounted
 {
@@ -110,6 +110,27 @@ public:
 
   enum MaterialEffects { none, multipleScattering, energyLoss, combined, 
 			 breakPoints, brokenLinesCoarse, brokenLinesFine, localGBL, curvlinGBL };
+
+  struct Config {
+    Config(MaterialEffects matEff, PropagationDirection direction,
+	   double m = -std::numeric_limits<double>::infinity(),
+	   double est = -std::numeric_limits<double>::infinity()) :
+      materialEffects(matEff),
+      propDir(direction),
+      mass(m),
+      momentumEstimate(est)
+    {}
+
+    MaterialEffects materialEffects;
+    PropagationDirection propDir;
+    double mass;
+    double momentumEstimate;
+    bool useBeamSpot{false};
+    bool hitsAreReverse{false};
+    bool useRefittedState{false};
+    bool constructTsosWithErrors{false};
+    bool includeAPEs{false};
+  };
 
   virtual ~ReferenceTrajectoryBase() {}
 
@@ -146,7 +167,7 @@ public:
   
   /** Returns the GBL input
    */
-  std::vector<std::pair<std::vector<GblPoint>, TMatrixD> >& gblInput() { return theGblInput; }
+  std::vector<std::pair<std::vector<gbl::GblPoint>, TMatrixD> >& gblInput() { return theGblInput; }
 
   /** Returns the GBL external derivatives.
    */
@@ -230,7 +251,7 @@ protected:
 // CHK for TwoBodyD.  transformation local to trajectory parameter at refTsos
   AlgebraicMatrix     theInnerLocalToTrajectory;
 // CHK GBL input:     list of (list of points on trajectory and transformation at inner (first) point)
-  std::vector<std::pair<std::vector<GblPoint>, TMatrixD> > theGblInput;
+  std::vector<std::pair<std::vector<gbl::GblPoint>, TMatrixD> > theGblInput;
   int                           theNomField;
 // CHK GBL TBD:       virtual (mass) measurement
   TMatrixD            theGblExtDerivatives;

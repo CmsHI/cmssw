@@ -178,12 +178,13 @@ namespace pat {
       const CaloTopology * ecalTopology_;
 
   };
+}
   
-  template<typename T>
-  void PATElectronProducer::readIsolationLabels( const edm::ParameterSet & iConfig,
-                                                 const char* psetName,
-                                                 IsolationLabels& labels,
-                                                 std::vector<edm::EDGetTokenT<edm::ValueMap<T> > > & tokens) {
+template<typename T>
+void pat::PATElectronProducer::readIsolationLabels( const edm::ParameterSet & iConfig,
+						    const char* psetName,
+						    pat::PATElectronProducer::IsolationLabels& labels,
+						    std::vector<edm::EDGetTokenT<edm::ValueMap<T> > > & tokens) {
     
     labels.clear();
     
@@ -215,14 +216,13 @@ namespace pat {
       if (depconf.exists("user")) {
         std::vector<edm::InputTag> userdeps = depconf.getParameter<std::vector<edm::InputTag> >("user");
         std::vector<edm::InputTag>::const_iterator it = userdeps.begin(), ed = userdeps.end();
-        int key = UserBaseIso;
+        int key = pat::IsolationKeys::UserBaseIso;
         for ( ; it != ed; ++it, ++key) {
-          labels.push_back(std::make_pair(IsolationKeys(key), *it));
+          labels.push_back(std::make_pair(pat::IsolationKeys(key), *it));
         }
       }
     }
     tokens = edm::vector_transform(labels, [this](IsolationLabel const & label){return consumes<edm::ValueMap<T> >(label.second);});
-  }
 }
 
 #endif

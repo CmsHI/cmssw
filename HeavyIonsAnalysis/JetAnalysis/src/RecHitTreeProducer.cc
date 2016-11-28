@@ -251,22 +251,25 @@ private:
   const CentralityBins * cbins_;
   const CaloGeometry *geo;
 
-  edm::InputTag HcalRecHitHFSrc_;
-  edm::InputTag HcalRecHitHBHESrc_;
-  edm::InputTag zdcDigiSrc_;
-  edm::InputTag zdcRecHitSrc_;
+  edm::EDGetTokenT<HFRecHitCollection> HcalRecHitHFSrc_;
+  edm::EDGetTokenT<HBHERecHitCollection> HcalRecHitHBHESrc_;
+  edm::EDGetTokenT<ZDCDigiCollection> zdcDigiSrc_;
+  edm::EDGetTokenT<ZDCRecHitCollection> zdcRecHitSrc_;
 
-  edm::InputTag EBSrc_;
-  edm::InputTag EESrc_;
-  edm::InputTag BCSrc_;
-  edm::InputTag TowerSrc_;
-  edm::InputTag VtxSrc_;
+  edm::EDGetTokenT<edm::SortedCollection<EcalRecHit,edm::StrictWeakOrdering<EcalRecHit> > > EBSrc_;
+  edm::EDGetTokenT<edm::SortedCollection<EcalRecHit,edm::StrictWeakOrdering<EcalRecHit> > > EESrc_;
+  edm::EDGetTokenT<reco::BasicClusterCollection> BCSrc_;
+  edm::EDGetTokenT<CaloTowerCollection> TowerSrc_;
+  edm::EDGetTokenT<reco::CandidateView> TowerSrc_Candidates_;
+  edm::EDGetTokenT<reco::VertexCollection> VtxSrc_;
 
-  edm::InputTag JetSrc_;
+  edm::EDGetTokenT<reco::CaloJetCollection> JetSrc_;
 
-  edm::InputTag FastJetTag_;
+  edm::EDGetTokenT<std::vector<double>> FastJetTag_rhos_;
+  edm::EDGetTokenT<std::vector<double>> FastJetTag_sigmas_;
 
-  edm::InputTag srcVor_;
+  edm::EDGetTokenT<reco::VoronoiMap> srcVor_backgrounds_;
+  edm::EDGetTokenT<std::vector<float>> srcVor_vn_;
   int           fourierOrder_;
   int           etaBins_;
   bool   doUEraw_;
@@ -310,17 +313,18 @@ RecHitTreeProducer::RecHitTreeProducer(const edm::ParameterSet& iConfig) :
   geo(0)
 {
   //now do what ever initialization is needed
-  EBSrc_ = iConfig.getUntrackedParameter<edm::InputTag>("EBRecHitSrc",edm::InputTag("ecalRecHit","EcalRecHitsEB"));
-  EESrc_ = iConfig.getUntrackedParameter<edm::InputTag>("EERecHitSrc",edm::InputTag("ecalRecHit","EcalRecHitsEE"));
-  HcalRecHitHFSrc_ = iConfig.getUntrackedParameter<edm::InputTag>("hcalHFRecHitSrc",edm::InputTag("hfreco"));
-  HcalRecHitHBHESrc_ = iConfig.getUntrackedParameter<edm::InputTag>("hcalHBHERecHitSrc",edm::InputTag("hbhereco"));
-  zdcDigiSrc_ = iConfig.getUntrackedParameter<edm::InputTag>("zdcDigiSrc",edm::InputTag("castorDigis"));
-  zdcRecHitSrc_ = iConfig.getUntrackedParameter<edm::InputTag>("zdcRecHitSrc",edm::InputTag("nothing"));
+  EBSrc_ = consumes<edm::SortedCollection<EcalRecHit,edm::StrictWeakOrdering<EcalRecHit> > > (iConfig.getUntrackedParameter<edm::InputTag>("EBRecHitSrc",edm::InputTag("ecalRecHit","EcalRecHitsEB")));
+  EESrc_ = consumes<edm::SortedCollection<EcalRecHit,edm::StrictWeakOrdering<EcalRecHit> > > (iConfig.getUntrackedParameter<edm::InputTag>("EERecHitSrc",edm::InputTag("ecalRecHit","EcalRecHitsEE")));
+  HcalRecHitHFSrc_ = consumes<HFRecHitCollection> (iConfig.getUntrackedParameter<edm::InputTag>("hcalHFRecHitSrc",edm::InputTag("hfreco")));
+  HcalRecHitHBHESrc_ = consumes<HBHERecHitCollection> (iConfig.getUntrackedParameter<edm::InputTag>("hcalHBHERecHitSrc",edm::InputTag("hbhereco")));
+  zdcDigiSrc_ = consumes<ZDCDigiCollection> (iConfig.getUntrackedParameter<edm::InputTag>("zdcDigiSrc",edm::InputTag("castorDigis")));
+  zdcRecHitSrc_ = consumes<ZDCRecHitCollection> (iConfig.getUntrackedParameter<edm::InputTag>("zdcRecHitSrc",edm::InputTag("nothing")));
 
-  BCSrc_ = iConfig.getUntrackedParameter<edm::InputTag>("BasicClusterSrc1",edm::InputTag("ecalRecHit","EcalRecHitsEB","RECO"));
-  TowerSrc_ = iConfig.getUntrackedParameter<edm::InputTag>("towersSrc",edm::InputTag("towerMaker"));
-  VtxSrc_ = iConfig.getUntrackedParameter<edm::InputTag>("vtxSrc",edm::InputTag("hiSelectedVertex"));
-  JetSrc_ = iConfig.getUntrackedParameter<edm::InputTag>("JetSrc",edm::InputTag("iterativeConePu5CaloJets"));
+  BCSrc_ = consumes<reco::BasicClusterCollection> (iConfig.getUntrackedParameter<edm::InputTag>("BasicClusterSrc1",edm::InputTag("ecalRecHit","EcalRecHitsEB","RECO")));
+  TowerSrc_ = consumes<CaloTowerCollection> (iConfig.getUntrackedParameter<edm::InputTag>("towersSrc",edm::InputTag("towerMaker")));
+  TowerSrc_Candidates_ = consumes<reco::CandidateView> (iConfig.getUntrackedParameter<edm::InputTag>("towersSrc",edm::InputTag("towerMaker")));
+  VtxSrc_ = consumes<reco::VertexCollection> (iConfig.getUntrackedParameter<edm::InputTag>("vtxSrc",edm::InputTag("hiSelectedVertex")));
+  JetSrc_ = consumes<reco::CaloJetCollection> (iConfig.getUntrackedParameter<edm::InputTag>("JetSrc",edm::InputTag("iterativeConePu5CaloJets")));
   useJets_ = iConfig.getUntrackedParameter<bool>("useJets",true);
   doBasicClusters_ = iConfig.getUntrackedParameter<bool>("doBasicClusters",false);
   doTowers_ = iConfig.getUntrackedParameter<bool>("doTowers",true);
@@ -337,13 +341,15 @@ RecHitTreeProducer::RecHitTreeProducer(const edm::ParameterSet& iConfig) :
   etaBins_ = iConfig.getParameter<int>("etaBins");
   fourierOrder_ = iConfig.getParameter<int>("fourierOrder");
 
-  srcVor_ = iConfig.getParameter<edm::InputTag>("bkg");
+  srcVor_backgrounds_ = consumes<reco::VoronoiMap> (iConfig.getParameter<edm::InputTag>("bkg"));
+  srcVor_vn_ = consumes<std::vector<float>> (iConfig.getParameter<edm::InputTag>("bkg"));
 
   hasVtx_ = iConfig.getUntrackedParameter<bool>("hasVtx",true);
   saveBothVtx_ = iConfig.getUntrackedParameter<bool>("saveBothVtx",false);
 
   doFastJet_ = iConfig.getUntrackedParameter<bool>("doFastJet",true);
-  FastJetTag_ = iConfig.getUntrackedParameter<edm::InputTag>("FastJetTag",edm::InputTag("kt4CaloJets"));
+  FastJetTag_rhos_ = consumes<std::vector<double>> (iConfig.getUntrackedParameter<edm::InputTag>("FastJetTag",edm::InputTag("kt4CaloJets", "rhos")));
+  FastJetTag_sigmas_ = consumes<std::vector<double>> (iConfig.getUntrackedParameter<edm::InputTag>("FastJetTag",edm::InputTag("kt4CaloJets", "sigmas")));
   doEbyEonly_ = iConfig.getUntrackedParameter<bool>("doEbyEonly",false);
   hfTowerThreshold_ = iConfig.getUntrackedParameter<double>("HFtowerMin",3.);
   hfLongThreshold_ = iConfig.getUntrackedParameter<double>("HFlongMin",0.5);
@@ -389,34 +395,34 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
   if (hasVtx_) vtx = getVtx(ev);
 
   if(doEcal_){
-    ev.getByLabel(EBSrc_,ebHits);
-    ev.getByLabel(EESrc_,eeHits);
+    ev.getByToken(EBSrc_,ebHits);
+    ev.getByToken(EESrc_,eeHits);
   }
 
   if(doHcal_){
-    ev.getByLabel(HcalRecHitHBHESrc_,hbheHits);
+    ev.getByToken(HcalRecHitHBHESrc_,hbheHits);
   }
   if(doHF_){
-    ev.getByLabel(HcalRecHitHFSrc_,hfHits);
+    ev.getByToken(HcalRecHitHFSrc_,hfHits);
   }
 
   if(useJets_) {
-    ev.getByLabel(JetSrc_,jets);
+    ev.getByToken(JetSrc_,jets);
   }
 
   if(doBasicClusters_){
-    ev.getByLabel(BCSrc_,bClusters);
+    ev.getByToken(BCSrc_,bClusters);
   }
 
   if(doTowers_){
-    ev.getByLabel(TowerSrc_,towers);
+    ev.getByToken(TowerSrc_,towers);
 
   }
 
   if (doTowers_ && doVS_) {
-    ev.getByLabel(TowerSrc_,candidates_);
-    ev.getByLabel(srcVor_,backgrounds_);
-    ev.getByLabel(srcVor_,vn_);
+    ev.getByToken(TowerSrc_Candidates_,candidates_);
+    ev.getByToken(srcVor_backgrounds_,backgrounds_);
+    ev.getByToken(srcVor_vn_,vn_);
 
     UEParameters vnUE(vn_.product(),fourierOrder_,etaBins_);
     const std::vector<float>& vue = vnUE.get_raw();
@@ -436,8 +442,8 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
   }
 
   if(doFastJet_){
-    ev.getByLabel(edm::InputTag(FastJetTag_.label(),"rhos",FastJetTag_.process()),rhos);
-    ev.getByLabel(edm::InputTag(FastJetTag_.label(),"sigmas",FastJetTag_.process()),sigmas);
+    ev.getByToken(FastJetTag_rhos_,rhos);
+    ev.getByToken(FastJetTag_sigmas_,sigmas);
     bkg.n = rhos->size();
     for(unsigned int i = 0; i < rhos->size(); ++i){
       bkg.rho[i] = (*rhos)[i];
@@ -749,7 +755,7 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
 
     edm::Handle<ZDCRecHitCollection> zdcrechits;
 
-    try{ ev.getByLabel(zdcRecHitSrc_,zdcrechits); }
+    try{ ev.getByToken(zdcRecHitSrc_,zdcrechits); }
     catch(...) { edm::LogWarning(" ZDC ") << " Cannot get ZDC RecHits " << std::endl; }
 
     int nhits = 0;
@@ -782,7 +788,7 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
 
     edm::Handle<ZDCDigiCollection> zdcdigis;
 
-    try{ ev.getByLabel(zdcDigiSrc_,zdcdigis); }
+    try{ ev.getByToken(zdcDigiSrc_,zdcdigis); }
     catch(...) { edm::LogWarning(" ZDC ") << " Cannot get ZDC Digis " << std::endl; }
 
     int nhits = 0;
@@ -1049,7 +1055,7 @@ double RecHitTreeProducer::getPerp(const DetId &id, reco::Vertex::Point vtx){
 
 reco::Vertex::Point RecHitTreeProducer::getVtx(const edm::Event& ev)
 {
-  ev.getByLabel(VtxSrc_,vtxs);
+  ev.getByToken(VtxSrc_, vtxs);
   int greatestvtx = 0;
   int nVertex = vtxs->size();
 

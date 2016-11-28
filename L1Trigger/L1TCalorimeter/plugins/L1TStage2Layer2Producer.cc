@@ -35,9 +35,10 @@
 
 #include "L1Trigger/L1TCalorimeter/interface/Stage2Layer2FirmwareFactory.h"
 #include "L1Trigger/L1TCalorimeter/interface/Stage2MainProcessor.h"
+#include "L1Trigger/L1TCalorimeter/interface/CaloTools.h"
 
 #include "L1Trigger/L1TCalorimeter/interface/CaloParamsHelper.h"
-#include "CondFormats/DataRecord/interface/L1TCaloParamsRcd.h"
+#include "CondFormats/DataRecord/interface/L1TCaloStage2ParamsRcd.h"
 
 #include "DataFormats/L1TCalorimeter/interface/CaloTower.h"
 #include "DataFormats/L1Trigger/interface/EGamma.h"
@@ -110,6 +111,9 @@ L1TStage2Layer2Producer::L1TStage2Layer2Producer(const edm::ParameterSet& ps) {
   // set firmware version from python config for now
   m_fwv = ps.getParameter<int>("firmware");
 
+  //initialize
+  m_paramsCacheId=0;
+
 }
 
 L1TStage2Layer2Producer::~L1TStage2Layer2Producer() {
@@ -124,6 +128,8 @@ L1TStage2Layer2Producer::produce(edm::Event& iEvent, const edm::EventSetup& iSet
 {
   using namespace edm;
 
+  using namespace l1t;
+  
   LogDebug("l1t|stage 2") << "L1TStage2Layer2Producer::produce function called..." << std::endl;
 
 
@@ -150,7 +156,7 @@ L1TStage2Layer2Producer::produce(edm::Event& iEvent, const edm::EventSetup& iSet
 
   // loop over BX
   for(int ibx = bxFirst; ibx < bxLast+1; ++ibx) {
-    std::auto_ptr< std::vector<CaloTower> > localTowers (new std::vector<CaloTower>);
+    std::auto_ptr< std::vector<CaloTower> > localTowers (new std::vector<CaloTower>(CaloTools::caloTowerHashMax()+1));
     std::auto_ptr< std::vector<CaloTower> > localOutTowers (new std::vector<CaloTower>);
     std::auto_ptr< std::vector<CaloCluster> > localClusters (new std::vector<CaloCluster>);
     std::auto_ptr< std::vector<EGamma> > localMPEGammas (new std::vector<EGamma>);
@@ -167,7 +173,19 @@ L1TStage2Layer2Producer::produce(edm::Event& iEvent, const edm::EventSetup& iSet
     for(std::vector<CaloTower>::const_iterator tower = towers->begin(ibx);
 	tower != towers->end(ibx);
 	++tower) {
-      localTowers->push_back(*tower);
+
+      CaloTower tow(tower->p4(),
+		    tower->etEm(),
+		    tower->etHad(),
+		    tower->hwPt(),
+		    tower->hwEta(),
+		    tower->hwPhi(),
+		    tower->hwQual(),
+		    tower->hwEtEm(),
+		    tower->hwEtHad(),
+		    tower->hwEtRatio());
+      
+      localTowers->at(CaloTools::caloTowerHash(tow.hwEta(),tow.hwPhi())) = tow;
     }
 
     LogDebug("L1TDebug") << "BX=" << ibx << ", N(Towers)=" << localTowers->size() << std::endl;
@@ -183,19 +201,29 @@ L1TStage2Layer2Producer::produce(edm::Event& iEvent, const edm::EventSetup& iSet
 			      *localTaus,
 			      *localJets,
 			      *localEtSums);
+    
+    for( auto tow = localOutTowers->begin(); tow != localOutTowers->end(); ++tow)
+      outTowers->push_back(ibx, *tow);
+    for( auto clus = localClusters->begin(); clus != localClusters->end(); ++clus)
+      clusters->push_back(ibx, *clus);
+    for( auto eg = localMPEGammas->begin(); eg != localMPEGammas->end(); ++eg)
+      mpegammas->push_back(ibx, CaloTools::egP4MP(*eg));
+    for( auto tau = localMPTaus->begin(); tau != localMPTaus->end(); ++tau) 
+      mptaus->push_back(ibx, CaloTools::tauP4MP(*tau));
+    for( auto jet = localMPJets->begin(); jet != localMPJets->end(); ++jet) 
+      mpjets->push_back(ibx, CaloTools::jetP4MP(*jet));
+    for( auto etsum = localMPEtSums->begin(); etsum != localMPEtSums->end(); ++etsum)
+      mpsums->push_back(ibx, CaloTools::etSumP4MP(*etsum));
+    for( auto eg = localEGammas->begin(); eg != localEGammas->end(); ++eg)
+      egammas->push_back(ibx, CaloTools::egP4Demux(*eg));
+    for( auto tau = localTaus->begin(); tau != localTaus->end(); ++tau)
+      taus->push_back(ibx, CaloTools::tauP4Demux(*tau));
+    for( auto jet = localJets->begin(); jet != localJets->end(); ++jet)
+      jets->push_back(ibx, CaloTools::jetP4Demux(*jet));
+    for( auto etsum = localEtSums->begin(); etsum != localEtSums->end(); ++etsum) 
+      etsums->push_back(ibx, CaloTools::etSumP4Demux(*etsum));
 
-    for(std::vector<CaloTower>::const_iterator tow = localOutTowers->begin(); tow != localOutTowers->end(); ++tow) outTowers->push_back(ibx, *tow);
-    for(std::vector<CaloCluster>::const_iterator clus = localClusters->begin(); clus != localClusters->end(); ++clus) clusters->push_back(ibx, *clus);
-    for(std::vector<EGamma>::const_iterator eg = localMPEGammas->begin(); eg != localMPEGammas->end(); ++eg) mpegammas->push_back(ibx, *eg);
-    for(std::vector<Tau>::const_iterator tau = localMPTaus->begin(); tau != localMPTaus->end(); ++tau) mptaus->push_back(ibx, *tau);
-    for(std::vector<Jet>::const_iterator jet = localMPJets->begin(); jet != localMPJets->end(); ++jet) mpjets->push_back(ibx, *jet);
-    for(std::vector<EtSum>::const_iterator etsum = localMPEtSums->begin(); etsum != localMPEtSums->end(); ++etsum) mpsums->push_back(ibx, *etsum);
-    for(std::vector<EGamma>::const_iterator eg = localEGammas->begin(); eg != localEGammas->end(); ++eg) egammas->push_back(ibx, *eg);
-    for(std::vector<Tau>::const_iterator tau = localTaus->begin(); tau != localTaus->end(); ++tau) taus->push_back(ibx, *tau);
-    for(std::vector<Jet>::const_iterator jet = localJets->begin(); jet != localJets->end(); ++jet) jets->push_back(ibx, *jet);
-    for(std::vector<EtSum>::const_iterator etsum = localEtSums->begin(); etsum != localEtSums->end(); ++etsum) etsums->push_back(ibx, *etsum);
-
-
+  
     LogDebug("L1TDebug") << "BX=" << ibx << ", N(Cluster)=" << localClusters->size() << ", N(EG)=" << localEGammas->size() << ", N(Tau)=" << localTaus->size() << ", N(Jet)=" << localJets->size() << ", N(Sums)=" << localEtSums->size() << std::endl;
 
   }
@@ -234,14 +262,14 @@ L1TStage2Layer2Producer::beginRun(edm::Run const& iRun, edm::EventSetup const& i
 
   // parameters
 
-  unsigned long long id = iSetup.get<L1TCaloParamsRcd>().cacheIdentifier();
+  unsigned long long id = iSetup.get<L1TCaloStage2ParamsRcd>().cacheIdentifier();
 
   if (id != m_paramsCacheId) {
 
     m_paramsCacheId = id;
 
     edm::ESHandle<CaloParams> paramsHandle;
-    iSetup.get<L1TCaloParamsRcd>().get(paramsHandle);
+    iSetup.get<L1TCaloStage2ParamsRcd>().get(paramsHandle);
 
     // replace our local copy of the parameters with a new one using placement new
     m_params->~CaloParamsHelper();

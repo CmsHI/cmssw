@@ -78,8 +78,8 @@ class DTLocalTriggerSynchTask: public DQMEDAnalyzer{
 
   int nevents;
 
-  int phCodeBestDCC[6][5][13];
-  int phCodeBXDCC[6][5][13][3];
+  int phCodeBestTM[6][5][13];
+  int phCodeBXTM[6][5][13][3];
   int phCodeBestDDU[6][5][13];
   int thCodeBestDDU[6][5][13];
   int segHitBest[6][5][13];
@@ -98,9 +98,9 @@ class DTLocalTriggerSynchTask: public DQMEDAnalyzer{
   edm::ParameterSet parameters;
   edm::ESHandle<DTGeometry> muonGeom;
   std::map<uint32_t, std::map<std::string, MonitorElement*> > triggerHistos;
-  MonitorElement* dcc_IDDataErrorPlot;
+  MonitorElement* tm_IDDataErrorPlot;
 
-  edm::EDGetTokenT<L1MuDTChambPhContainer>   dcc_Token_;
+  edm::EDGetTokenT<L1MuDTChambPhContainer>   tm_Token_;
   edm::EDGetTokenT<DTLocalTriggerCollection> ddu_Token_;
   edm::EDGetTokenT<DTRecSegment4DCollection> seg_Token_;
 };

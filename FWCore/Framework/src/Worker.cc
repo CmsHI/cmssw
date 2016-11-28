@@ -17,7 +17,7 @@ public:
         if(a_) a_->postModuleBeginJobSignal_(*md_);
       }
 private:
-      ActivityRegistry* a_;
+      ActivityRegistry* a_; // We do not use propagate_const because the registry itself is mutable.
       ModuleDescription const* md_;
     };
 
@@ -30,7 +30,7 @@ public:
         if(a_) a_->postModuleEndJobSignal_(*md_);
       }
 private:
-      ActivityRegistry* a_;
+      ActivityRegistry* a_; // We do not use propagate_const because the registry itself is mutable.
       ModuleDescription const* md_;
     };
 
@@ -45,7 +45,7 @@ private:
         if(a_) a_->postModuleBeginStreamSignal_(sc_, mcc_);
       }
     private:
-      ActivityRegistry* a_;
+      ActivityRegistry* a_; // We do not use propagate_const because the registry itself is mutable.
       StreamContext const& sc_;
       ModuleCallingContext const& mcc_;
     };
@@ -61,7 +61,7 @@ private:
         if(a_) a_->postModuleEndStreamSignal_(sc_, mcc_);
       }
     private:
-      ActivityRegistry* a_;
+      ActivityRegistry* a_; // We do not use propagate_const because the registry itself is mutable.
       StreamContext const& sc_;
       ModuleCallingContext const& mcc_;
     };
@@ -181,12 +181,12 @@ private:
     }
   }
 
-  void Worker::pathFinished(EventPrincipal& iEvent) {
+  void Worker::pathFinished(EventPrincipal const& iEvent) {
     if(earlyDeleteHelper_) {
       earlyDeleteHelper_->pathFinished(iEvent);
     }
   }
-  void Worker::postDoEvent(EventPrincipal& iEvent) {
+  void Worker::postDoEvent(EventPrincipal const& iEvent) {
     if(earlyDeleteHelper_) {
       earlyDeleteHelper_->moduleRan(iEvent);
     }

@@ -1,7 +1,7 @@
 #include "DataFormats/Provenance/interface/Provenance.h"
+#include "DataFormats/Provenance/interface/ProductProvenanceRetriever.h"
 #include "DataFormats/Provenance/interface/ProcessConfiguration.h"
 #include "DataFormats/Provenance/interface/ProcessHistoryRegistry.h"
-#include "DataFormats/Provenance/interface/ProductProvenance.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/ParameterSet/interface/Registry.h"
 
@@ -21,24 +21,15 @@ namespace edm {
     branchDescription_(p),
     productID_(pid),
     processHistory_(),
-    productProvenanceValid_(false),
-    productProvenancePtr_(new ProductProvenance),
     store_() {
   }
 
-  ProductProvenance*
-  Provenance::resolve() const {
+  ProductProvenance const*
+  Provenance::productProvenance() const {
     if(!store_) {
       return nullptr;
     }
-    if (!productProvenanceValid_) {
-      ProductProvenance const* prov  = store_->branchIDToProvenance(branchDescription_->branchID());
-      if (prov) {
-        *productProvenancePtr_ = *prov;
-        productProvenanceValid_ = true;
-      }
-    }
-    return productProvenancePtr_.get();
+    return store_->branchIDToProvenance(branchDescription_->branchID());
   }
 
   bool
@@ -58,7 +49,7 @@ namespace edm {
     // This is grossly inadequate, but it is not critical for the
     // first pass.
     product().write(os);
-    ProductProvenance* pp = productProvenance();
+    auto pp = productProvenance();
     if (pp != nullptr) {
       pp->write(os);
     }
@@ -68,25 +59,12 @@ namespace edm {
     return a.product() == b.product();
   }
 
-  void
-  Provenance::resetProductProvenance() const {
-    *productProvenancePtr_ = ProductProvenance();
-    productProvenanceValid_ = false;
-  }
-
-  void
-  Provenance::setProductProvenance(ProductProvenance const& prov) const {
-    *productProvenancePtr_ = prov;
-    productProvenanceValid_ = true;
-  }
 
   void
   Provenance::swap(Provenance& iOther) {
     branchDescription_.swap(iOther.branchDescription_);
     productID_.swap(iOther.productID_);
     std::swap(processHistory_, iOther.processHistory_);
-    std::swap(productProvenanceValid_, iOther.productProvenanceValid_);
-    productProvenancePtr_.swap(iOther.productProvenancePtr_);
-    store_.swap(iOther.store_);
+    std::swap(store_,iOther.store_);
  }
 }

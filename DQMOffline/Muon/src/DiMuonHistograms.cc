@@ -43,11 +43,11 @@ DiMuonHistograms::DiMuonHistograms(const edm::ParameterSet& pSet){
   etaBin = parameters.getParameter<int>("etaBin");
   etaBBin = parameters.getParameter<int>("etaBBin");
   etaEBin = parameters.getParameter<int>("etaEBin");
- 
+
   etaBinLM = parameters.getParameter<int>("etaBinLM");
   etaBBinLM = parameters.getParameter<int>("etaBBinLM");
   etaEBinLM = parameters.getParameter<int>("etaEBinLM");
-   
+ 
   etaBMin = parameters.getParameter<double>("etaBMin");
   etaBMax = parameters.getParameter<double>("etaBMax");
   etaECMin = parameters.getParameter<double>("etaECMin");
@@ -74,7 +74,8 @@ void DiMuonHistograms::bookHistograms(DQMStore::IBooker & ibooker,
     if (iEtaRegion==0) { EtaName = "";         nBin = etaBin;} 
     if (iEtaRegion==1) { EtaName = "_Barrel";  nBin = etaBBin;}
     if (iEtaRegion==2) { EtaName = "_EndCap";  nBin = etaEBin;}
-    
+
+
     if (etaBinLM == 0) { nBinLM = nBin;} //for HeavyIons
     else{
     if (iEtaRegion==0) { EtaName = "";         nBinLM = etaBinLM;}

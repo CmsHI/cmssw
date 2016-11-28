@@ -1,4 +1,5 @@
 import FWCore.ParameterSet.Config as cms
+from Configuration.StandardSequences.Eras import eras
 
 from RecoLuminosity.LumiProducer.lumiProducer_cff import *
 from RecoLuminosity.LumiProducer.bunchSpacingProducer_cfi import *
@@ -33,6 +34,7 @@ from RecoBTag.Configuration.RecoBTag_cff import *
 #local reconstruction
 from RecoLocalTracker.Configuration.RecoLocalTracker_cff import *
 from RecoParticleFlow.Configuration.RecoParticleFlow_cff import *
+from RecoCTPPS.TotemRPLocal.totemRPLocalReconstruction_cff import *
 #
 # new tau configuration
 #
@@ -42,8 +44,19 @@ from RecoVertex.BeamSpotProducer.BeamSpot_cff import *
 
 from RecoLocalCalo.CastorReco.CastorSimpleReconstructor_cfi import *
 
+# Cosmic During Collisions
+from RecoTracker.SpecialSeedGenerators.cosmicDC_cff import *
+
 localreco = cms.Sequence(trackerlocalreco+muonlocalreco+calolocalreco+castorreco)
 localreco_HcalNZS = cms.Sequence(trackerlocalreco+muonlocalreco+calolocalrecoNZS+castorreco)
+
+_ctpps_2016_localreco = localreco.copy()
+_ctpps_2016_localreco += totemRPLocalReconstruction
+eras.ctpps_2016.toReplaceWith(localreco, _ctpps_2016_localreco)
+
+_ctpps_2016_localreco_HcalNZS = localreco_HcalNZS.copy()
+_ctpps_2016_localreco_HcalNZS += totemRPLocalReconstruction
+eras.ctpps_2016.toReplaceWith(localreco_HcalNZS, _ctpps_2016_localreco_HcalNZS)
 
 #
 # temporarily switching off recoGenJets; since this are MC and wil be moved to a proper sequence
@@ -52,12 +65,17 @@ localreco_HcalNZS = cms.Sequence(trackerlocalreco+muonlocalreco+calolocalrecoNZS
 from RecoLocalCalo.Castor.Castor_cff import *
 from RecoLocalCalo.Configuration.hcalGlobalReco_cff import *
 
-globalreco = cms.Sequence(offlineBeamSpot*
+globalreco_tracking = cms.Sequence(offlineBeamSpot*
                           MeasurementTrackerEventPreSplitting* # unclear where to put this
                           siPixelClusterShapeCachePreSplitting* # unclear where to put this
                           standalonemuontracking*
                           trackingGlobalReco*
-                          vertexreco*
+                          vertexreco)
+_globalreco_trackingLowPU = globalreco_tracking.copy()
+_globalreco_trackingLowPU.replace(trackingGlobalReco, recopixelvertexing+trackingGlobalReco)
+eras.trackingLowPU.toReplaceWith(globalreco_tracking, _globalreco_trackingLowPU)
+
+globalreco = cms.Sequence(globalreco_tracking*
                           hcalGlobalRecoSequence*
                           particleFlowCluster*
                           ecalClusters*
@@ -85,7 +103,8 @@ highlevelreco = cms.Sequence(egammaHighLevelRecoPrePF*
                              btagging*
                              recoPFMET*
                              PFTau*
-                             reducedRecHits
+                             reducedRecHits*
+                             cosmicDCTracksSeq
                              )
 
 
@@ -93,6 +112,8 @@ from FWCore.Modules.logErrorHarvester_cfi import *
 
 # "Export" Section
 reconstruction         = cms.Sequence(bunchSpacingProducer*localreco*globalreco*highlevelreco*logErrorHarvester)
+
+reconstruction_trackingOnly = cms.Sequence(bunchSpacingProducer*localreco*globalreco_tracking)
 
 #need a fully expanded sequence copy
 modulesToRemove = list() # copy does not work well
@@ -114,6 +135,9 @@ noTrackingAndDependent.append(siPixelClusters)
 noTrackingAndDependent.append(clusterSummaryProducer)
 noTrackingAndDependent.append(siPixelRecHitsPreSplitting)
 noTrackingAndDependent.append(MeasurementTrackerEventPreSplitting)
+noTrackingAndDependent.append(PixelLayerTriplets)
+noTrackingAndDependent.append(pixelTracks)
+noTrackingAndDependent.append(pixelVertices)
 modulesToRemove.append(dt1DRecHits)
 modulesToRemove.append(dt1DCosmicRecHits)
 modulesToRemove.append(csc2DRecHits)

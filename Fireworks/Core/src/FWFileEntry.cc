@@ -15,10 +15,7 @@
 #include "FWCore/Utilities/interface/WrappedClassName.h"
 #include "FWCore/Common/interface/TriggerNames.h"
 
-#define private public
 #include "Fireworks/Core/interface/FWEventItem.h"
-#undef private
-
 #include "Fireworks/Core/interface/FWFileEntry.h"
 #include "Fireworks/Core/interface/FWEventItemsManager.h"
 #include "Fireworks/Core/interface/fwLog.h"
@@ -274,14 +271,14 @@ void FWFileEntry::runFilter(Filter* filter, const FWEventItemsManager* eiMng)
            end = eiMng->end(); i != end; ++i)
    {
       FWEventItem *item = *i;
-      if (item == 0) 
+      if (item == nullptr)
          continue;
       // FIXME: hack to get full branch name filled
-      if (item->m_event == 0) 
+      if (!item->hasEvent())
       {
-         item->m_event = m_event;
+         item->setEvent(m_event);
          item->getPrimaryData();
-         item->m_event = 0;
+         item->setEvent(nullptr);
       }
 
       boost::regex re(std::string("\\$") + (*i)->name());

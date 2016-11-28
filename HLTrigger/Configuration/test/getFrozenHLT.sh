@@ -1,18 +1,11 @@
 #! /bin/bash
 
 # ConfDB configurations to use
-TABLES="Fake 50ns_5e33_v1 25ns14e33_v1 50ns_5e33_v3 25ns14e33_v3 25ns14e33_v4 HIon_2015_v2 pp5TeV_2015_v2"
-#TABLES="Fake 50ns_5e33_v1 25ns14e33_v1"
-# Do not update the frozen menus in 74X
-# TABLES="Fake Fake"
-HLT_Fake="/dev/CMSSW_7_4_0/Fake"
-HLT_25ns14e33_v4="/frozen/2015/25ns14e33/v4.4/HLT"
-HLT_50ns_5e33_v3="/frozen/2015/50ns_5e33/v3.0/HLT"
-HLT_25ns14e33_v3="/frozen/2015/25ns14e33/v3.3/HLT"
-HLT_50ns_5e33_v1="/frozen/2015/50ns_5e33/v1.2/HLT"
-HLT_25ns14e33_v1="/frozen/2015/25ns14e33/v1.2/HLT"
-HLT_HIon_2015_v2="/frozen/2015/HIon/v2.0/HLT"
-HLT_pp5TeV_2015_v2="/frozen/2015/pp5TeV/v2.0/HLT"
+TABLES="Fake Fake1 25ns10e33_v2 25ns15e33_v4"
+HLT_Fake="/dev/CMSSW_8_0_0/Fake"
+HLT_Fake1="/dev/CMSSW_8_0_0/Fake1"
+HLT_25ns10e33_v2="/frozen/2016/25ns10e33/v2.1/HLT"
+HLT_25ns15e33_v4="/frozen/2016/25ns15e33/v4.0/HLT"
 
 # print extra messages ?
 VERBOSE=false
@@ -54,9 +47,12 @@ hash -r
 
 # cff python dumps, in CVS under HLTrigger/Configuration/pyhon
 log "Extracting cff python dumps"
+echo "Extracting cff python dumps"
 FILES=$(eval echo HLT_{$TABLES_}_cff.py)
 rm -f $FILES
 for TABLE in $TABLES; do
+  log "$TABLE"
+  echo "$TABLE"
   CONFIG=$(eval echo \$$(echo HLT_$TABLE))
   getConfigForCVS    $CONFIG $TABLE
 done
@@ -67,9 +63,12 @@ log
 
 # full config dumps, in CVS under HLTrigger/Configuration/test
 log "Extracting full configuration dumps"
+echo "Extracting full configuration dumps"
 FILES=$(eval echo OnLine_HLT_{$TABLES_}.py)
 rm -f $FILES
 for TABLE in $TABLES; do
+  log "$TABLE"
+  echo "$TABLE"
   CONFIG=$(eval echo \$$(echo HLT_$TABLE))
   getConfigForOnline $CONFIG $TABLE
 done

@@ -90,9 +90,7 @@ namespace edm {
 
     void put(
         BranchDescription const& bd,
-        std::unique_ptr<WrapperBase> edp);
-
-    void readImmediate() const;
+        std::unique_ptr<WrapperBase> edp) const;
 
     void setComplete() {
       complete_ = true;
@@ -103,13 +101,12 @@ namespace edm {
     virtual bool isComplete_() const override {return complete_;}
 
     virtual bool unscheduledFill(std::string const&,
+                                 SharedResourcesAcquirer* sra,
                                  ModuleCallingContext const*) const override {return false;}
 
     virtual unsigned int transitionIndex_() const override;
 
-    void resolveProductImmediate(ProductHolderBase const& phb) const;
-
-    std::shared_ptr<RunAuxiliary> aux_;
+    edm::propagate_const<std::shared_ptr<RunAuxiliary>> aux_;
     ProcessHistoryID m_reducedHistoryID;
     RunIndex index_;
 

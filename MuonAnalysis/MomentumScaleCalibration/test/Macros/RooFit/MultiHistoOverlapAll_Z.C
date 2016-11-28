@@ -1,20 +1,21 @@
-#include <vector>
 #include <string>
-#include "TROOT.h"
-#include "TH1F.h"
-#include "TH1D.h"
+#include <vector>
 #include "TF1.h"
-#include "TMath.h"
-#include "TNtuple.h"
-#include "TLegend.h"
+#include "TH1D.h"
+#include "TH1F.h"
+#include "TH2.h"
 #include "TCanvas.h"
 #include "TCutG.h"
 #include "TFile.h"
-#include "TString.h"
-#include "TH2.h"
+#include "TLegend.h"
+#include "TMath.h"
+#include "TNtuple.h"
 #include "TPad.h"
 #include "TPaveText.h"
-#include "tdrstyle.C"
+#include "TROOT.h"
+#include "TString.h"
+#include "TSystem.h"
+#include "Alignment/OfflineValidation/plugins/TkAlStyle.cc"
 
 
 using namespace ROOT::Math;
@@ -41,34 +42,37 @@ void splitOptionRecursive(string rawoption, vector<string>& splitoptions, char d
   }
   if (remnant!="") splitoptions.push_back(remnant);
 }
-void MultiHistoOverlapAll_Z(string files, string labels, bool switchONfitEta = false, bool switchONfit = false){
+void MultiHistoOverlapAll_Z(string files, string labels, string colors = "", string linestyles = "", TString directory = ".", bool switchONfit = false){
+  gSystem->mkdir(directory, true);
   gROOT->Reset();
-  setTDRStyle();
+  if (TkAlStyle::status() == NO_STATUS)
+    TkAlStyle::set(INTERNAL);
+  gROOT->ForceStyle();
 
   vector<string> strValidation_file;
   vector<string> strValidation_label;
+  vector<string> strValidation_color;
+  vector<string> strValidation_linestyle;
   splitOptionRecursive(files, strValidation_file, ',');
   splitOptionRecursive(labels, strValidation_label, ',');
+  splitOptionRecursive(colors, strValidation_color, ',');
+  splitOptionRecursive(linestyles, strValidation_linestyle, ',');
   int nfiles = strValidation_file.size();
   int nlabels = strValidation_label.size();
+  int ncolors = strValidation_color.size();
+  int nlinestyles = strValidation_linestyle.size();
   if (nlabels!=nfiles){
     cout << "nlabels!=nfiles" << endl;
     return;
   }
-
-  TPaveText *cmsPlotTitle = new TPaveText(0.15, 0.93, 0.85, 1, "brNDC");
-  cmsPlotTitle->SetBorderSize(0);
-  cmsPlotTitle->SetFillStyle(0);
-  cmsPlotTitle->SetTextAlign(12);
-  cmsPlotTitle->SetTextFont(42);
-  cmsPlotTitle->SetTextSize(0.045);
-  TText* text = cmsPlotTitle->AddText(0.025, 0.45, "#font[61]{CMS}");
-  text->SetTextSize(0.044);
-  text = cmsPlotTitle->AddText(0.165, 0.42, "#font[52]{Preliminary}");
-  text->SetTextSize(0.0315);
-  TString cErgTev = "#font[42]{      TkAl Z#rightarrow#mu#mu (|#eta_{#mu}|<2.4) 13 TeV}";
-  text = cmsPlotTitle->AddText(0.537, 0.40, cErgTev);
-  text->SetTextSize(0.0315);
+  if (ncolors!=0 && ncolors!=nfiles){
+    cout << "ncolors!=nfiles" << endl;
+    return;
+  }
+  if (nlinestyles!=0 && nlinestyles!=nfiles){
+    cout << "nlinestyles!=nfiles" << endl;
+    return;
+  }
 
   TH1D** histo[7];
   TF1** hfit[7];
@@ -78,7 +82,7 @@ void MultiHistoOverlapAll_Z(string files, string labels, bool switchONfitEta = f
     hfit[c] = new TF1*[nfiles];
   }
 
-  for (int f=0; f<nfiles; f++) file[f] = new TFile((strValidation_file[f]).c_str(), "read");
+  for (int f=0; f<nfiles; f++) file[f] = TFile::Open((strValidation_file[f]).c_str(), "read");
 
   double minmax_plot[7][2]={ { 0 } };
   int pIndex;
@@ -86,35 +90,9 @@ void MultiHistoOverlapAll_Z(string files, string labels, bool switchONfitEta = f
   for (int i=0; i<7; i++){
     TString cname = Form("c%i", i);
     c[i] = new TCanvas(cname, cname, 8, 30, 800, 800);
-    gStyle->SetOptStat(0);
-    c[i]->SetFillColor(0);
-    c[i]->SetBorderMode(0);
-    c[i]->SetBorderSize(2);
-    c[i]->SetTickx(1);
-    c[i]->SetTicky(1);
-    c[i]->SetLeftMargin(0.17);
-    c[i]->SetRightMargin(0.05);
-    c[i]->SetTopMargin(0.07);
-    c[i]->SetBottomMargin(0.13);
-    c[i]->SetFrameFillStyle(0);
-    c[i]->SetFrameBorderMode(0);
-    c[i]->SetFrameFillStyle(0);
-    c[i]->SetFrameBorderMode(0);
   }
 
-  float lxmin = 0.22, lxwidth = 0.38;
-  float lymax = 0.9, lywidth = 0.15*nfiles/3;
-  float lxmax = lxmin + lxwidth;
-  float lymin = lymax - lywidth;
-  TLegend* leg = new TLegend(lxmin, lymin, lxmax, lymax);
-  leg->SetBorderSize(0);
-  leg->SetTextFont(42);
-  leg->SetTextSize(0.04);
-  leg->SetLineColor(1);
-  leg->SetLineStyle(1);
-  leg->SetLineWidth(1);
-  leg->SetFillColor(0);
-  leg->SetFillStyle(0);
+  TLegend *leg = TkAlStyle::legend("topleft", nfiles);
 
   //----------------- CANVAS C0 --------------//
   pIndex=0;
@@ -187,19 +165,6 @@ void MultiHistoOverlapAll_Z(string files, string labels, bool switchONfitEta = f
       histo[iP][f]=(TH1D*)file[f]->Get(histoName[iP]);
 
       histo[iP][f]->SetTitle("");
-      histo[iP][f]->GetXaxis()->SetLabelFont(42);
-      histo[iP][f]->GetXaxis()->SetLabelOffset(0.007);
-      histo[iP][f]->GetXaxis()->SetLabelSize(0.04);
-      histo[iP][f]->GetXaxis()->SetTitleSize(0.06);
-      histo[iP][f]->GetXaxis()->SetTitleOffset(0.9);
-      histo[iP][f]->GetXaxis()->SetTitleFont(42);
-      histo[iP][f]->GetYaxis()->SetNdivisions(505);
-      histo[iP][f]->GetYaxis()->SetLabelFont(42);
-      histo[iP][f]->GetYaxis()->SetLabelOffset(0.007);
-      histo[iP][f]->GetYaxis()->SetLabelSize(0.04);
-      histo[iP][f]->GetYaxis()->SetTitleSize(0.06);
-      histo[iP][f]->GetYaxis()->SetTitleOffset(1.2);
-      histo[iP][f]->GetYaxis()->SetTitleFont(42);
 
       histo[iP][f]->GetYaxis()->SetTitle("M_{#mu#mu} (GeV)");
       histo[iP][f]->SetLineWidth(1);
@@ -208,7 +173,12 @@ void MultiHistoOverlapAll_Z(string files, string labels, bool switchONfitEta = f
       if (strValidation_label.at(f).find("reference")!=string::npos || strValidation_label.at(f).find("Reference")!=string::npos) histo[iP][f]->SetMarkerStyle(1);
       else histo[iP][f]->SetMarkerStyle(20);
 
-      if (f==0){
+      if (ncolors!=0){
+        int color = stoi(strValidation_color[f]);
+        histo[iP][f]->SetLineColor(color);
+        histo[iP][f]->SetMarkerColor(color);
+      }
+      else if (f==0){
         histo[iP][f]->SetLineColor(kBlack);
         histo[iP][f]->SetMarkerColor(kBlack);
       }
@@ -253,6 +223,13 @@ void MultiHistoOverlapAll_Z(string files, string labels, bool switchONfitEta = f
         histo[iP][f]->SetMarkerColor(kGreen+3);
       }
 
+      if (nlinestyles!=0){
+        int linestyle = stoi(strValidation_linestyle[f]);
+        histo[iP][f]->SetLineStyle(linestyle % 100);
+        if (linestyle > 100)
+          histo[iP][f]->SetMarkerStyle(linestyle / 100);
+      }
+
       if (iP==0) leg->AddEntry(histo[iP][f], (strValidation_label.at(f)).c_str(), "lp");
 
       for (int bin=1; bin<=histo[iP][f]->GetNbinsX(); bin++){
@@ -279,7 +256,7 @@ void MultiHistoOverlapAll_Z(string files, string labels, bool switchONfitEta = f
 
     minmax_plot[iP][0] = absMin/rangeFactor[0];
     minmax_plot[iP][1] = absMax*(rangeFactor[1]+dampingFactorEff-rangeMaxReduction);
-    for (int f=0; f<2; f++) histo[iP][f]->GetYaxis()->SetRangeUser(minmax_plot[iP][0], minmax_plot[iP][1]);
+    for (int f=0; f<2 && f<nfiles; f++) histo[iP][f]->GetYaxis()->SetRangeUser(minmax_plot[iP][0], minmax_plot[iP][1]);
   }
 
   for (int pIndex=0; pIndex<7; pIndex++){
@@ -291,7 +268,7 @@ void MultiHistoOverlapAll_Z(string files, string labels, bool switchONfitEta = f
       c[pIndex]->cd();
       histo[pIndex][f]->GetXaxis()->SetTitle(xtitle[pIndex]);
       histo[pIndex][f]->GetXaxis()->SetRangeUser(-plot_xmax[pIndex], plot_xmax[pIndex]);
-      if (f==0) histo[pIndex][f]->Draw(); 
+      if (f==0) histo[pIndex][f]->Draw();
       else histo[pIndex][f]->Draw("same");
 
       hfit[pIndex][f] = new TF1(Form("fit_%i_%i", pIndex, f), fitFormula[pIndex], -plot_xmax[pIndex], plot_xmax[pIndex]);
@@ -305,12 +282,12 @@ void MultiHistoOverlapAll_Z(string files, string labels, bool switchONfitEta = f
       }
     }
     leg->Draw("same");
-    cmsPlotTitle->Draw("same");
+    TkAlStyle::drawStandardTitle();
     c[pIndex]->RedrawAxis();
     c[pIndex]->Modified();
     c[pIndex]->Update();
-    c[pIndex]->SaveAs(Form("%s%s", plotname[pIndex].Data(), ".png"));
-    c[pIndex]->SaveAs(Form("%s%s", plotname[pIndex].Data(), ".pdf"));
+    c[pIndex]->SaveAs(Form("%s/%s%s", directory.Data(), plotname[pIndex].Data(), ".png"));
+    c[pIndex]->SaveAs(Form("%s/%s%s", directory.Data(), plotname[pIndex].Data(), ".pdf"));
 
     for (int f=0; f<nfiles; f++) delete hfit[pIndex][f];
     c[pIndex]->Close();

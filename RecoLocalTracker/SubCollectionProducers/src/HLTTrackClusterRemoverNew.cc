@@ -1,5 +1,5 @@
 #include "FWCore/Framework/interface/Frameworkfwd.h"
-#include "FWCore/Framework/interface/EDProducer.h"
+#include "FWCore/Framework/interface/stream/EDProducer.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/ESHandle.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
@@ -36,7 +36,7 @@
 // class decleration
 //
 
-class HLTTrackClusterRemoverNew final : public edm::EDProducer {
+class HLTTrackClusterRemoverNew final : public edm::stream::EDProducer<> {
     public:
         HLTTrackClusterRemoverNew(const edm::ParameterSet& iConfig) ;
         ~HLTTrackClusterRemoverNew() ;
@@ -419,7 +419,7 @@ HLTTrackClusterRemoverNew::produce(Event& iEvent, const EventSetup& iSetup)
 	
 	//	std::cout << " i: " << i << " --> detid: " << detid << " --> subdet: " << subdet << std::endl;
 	
-	for (auto i = item.offset; i<item.offset+int(item.size); ++i) {
+	for (int i = item.offset; i<item.offset+int(item.size); ++i) {
 	  int clusCharge=0;
 	  for ( auto cAmp : clusters[i].amplitudes() ) clusCharge+=cAmp;
 	  

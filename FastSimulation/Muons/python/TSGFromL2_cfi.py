@@ -167,7 +167,7 @@ def makeOIHitSet():
       ErrorRescaling = cms.double(3.0),
       SigmaZ = cms.double(25.0),       
       SimTrackCollectionLabel = cms.InputTag("famosSimHits"),
-      HitProducer = cms.InputTag("siTrackerGaussianSmearingRecHits","TrackerGSMatchedRecHits"),
+      HitProducer = cms.InputTag("fastMatchedTrackerRecHitCombinations"),
       UseVertexState = cms.bool( True ),
       UpdateState = cms.bool( True ), #fixme
       SelectState = cms.bool( False )
@@ -191,10 +191,11 @@ def makeIOHitSet():
         PtCut = cms.double(1.0),
         # The Tracks from which seeds are looked for
         SeedCollectionLabels = cms.VInputTag(
-        cms.InputTag("pixelTripletSeeds"),
-        cms.InputTag("globalPixelSeeds")),
+            cms.InputTag("initialStepSeeds"),
+            cms.InputTag("detachedTripletStepSeeds"),
+            cms.InputTag("lowPtTripletStepSeeds"),
+            cms.InputTag("pixelPairStepSeeds")),
         SimTrackCollectionLabel = cms.InputTag("famosSimHits"),
-        #Propagator = cms.string( "hltESPSmartPropagatorAnyOpposite" ),
         )
 
 def makeOIHitCascadeSet():
@@ -213,7 +214,7 @@ def makeIOHitCascadeSet():
         PSetNames = cms.vstring('skipTSG','iterativeTSG'),
         skipTSG = cms.PSet(    ),
         iterativeTSG = makeIOHitSet(),
-        L3TkCollectionA = cms.InputTag('hltL3MuonsOICombined'),
+        L3TkCollectionA = cms.InputTag('hltL3TkFromL2OICombination'),
         )
 
 def l3seeds(tsg = "old"):

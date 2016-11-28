@@ -17,6 +17,9 @@
 #include "DataFormats/METReco/interface/HcalHaloData.h" 
 #include "DataFormats/METReco/interface/GlobalHaloData.h" 
 
+#include "DataFormats/DetId/interface/DetId.h"
+#include "DataFormats/CaloTowers/interface/CaloTowerDetId.h"
+
 namespace reco {
   class BeamHaloInfoProducer;
   
@@ -44,6 +47,8 @@ namespace reco {
     
     const bool GlobalLooseHaloId() const { return GlobalHaloReport.size() ? GlobalHaloReport[0] : false ; }
     const bool GlobalTightHaloId() const { return GlobalHaloReport.size() > 1 ? GlobalHaloReport[1] : false ; }
+    const bool GlobalTightHaloId2016() const { return GlobalHaloReport.size() > 2 ? GlobalHaloReport[2] : false ; }
+    const bool GlobalSuperTightHaloId2016() const { return GlobalHaloReport.size() > 3 ? GlobalHaloReport[3] : false ; }
 
     const bool EventSmellsLikeHalo() const { return HcalLooseHaloId() || EcalLooseHaloId() || CSCLooseHaloId() || GlobalLooseHaloId() ; }
     const bool LooseId() const { return EventSmellsLikeHalo(); }
@@ -71,7 +76,10 @@ namespace reco {
 
     std::vector<int>& GetGlobaliPhiSuspects() { return GlobaliPhiSuspects ;}
     const std::vector<int>& GetGlobaliPhiSuspects() const { return GlobaliPhiSuspects ;}
-
+    
+    std::vector<HaloTowerStrip>& getProblematicStrips() { return problematicStrips ;}
+    const std::vector<HaloTowerStrip>& getProblematicStrips() const { return problematicStrips ;}
+    
   private: 
     std::vector<char>  HcalHaloReport;
     std::vector<char>  EcalHaloReport;
@@ -82,6 +90,8 @@ namespace reco {
     std::vector<int>  EcaliPhiSuspects;
     std::vector<int>  GlobaliPhiSuspects;
 
+    std::vector<HaloTowerStrip> problematicStrips;
+    
   };
   
 }

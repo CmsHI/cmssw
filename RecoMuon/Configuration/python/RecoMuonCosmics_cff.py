@@ -23,9 +23,22 @@ muons.inputCollectionLabels = ['ctfWithMaterialTracksP5LHCNavigation', 'globalCo
 muons.inputCollectionTypes = ['inner tracks', 'links', 'outer tracks', 'tev firstHit', 'tev picky', 'tev dyt']
 muons.fillIsolation = True
 muons.fillGlobalTrackQuality = True
+muons.TimingFillerParameters.DTTimingParameters.PruneCut = 9999
+muons.TimingFillerParameters.CSCTimingParameters.PruneCut = 9999
 # need to modify track selection as well (not clear to what)
 muons.TrackExtractorPSet.inputTrackCollection = 'ctfWithMaterialTracksP5LHCNavigation'
 muons.CaloExtractorPSet.CenterConeOnCalIntersection = True
+
+#similar to what's in pp configuration
+muonsFromCosmics = muons1stStep.clone()
+muonsFromCosmics.inputCollectionLabels = ['cosmicMuons']
+muonsFromCosmics.inputCollectionTypes = ['outer tracks']
+muonsFromCosmics.TrackExtractorPSet.inputTrackCollection = 'cosmicMuons'
+muonsFromCosmics.TimingFillerParameters.DTTimingParameters.PruneCut = 9999
+muonsFromCosmics.TimingFillerParameters.CSCTimingParameters.PruneCut = 9999
+muonsFromCosmics.fillIsolation = False
+muonsFromCosmics.fillGlobalTrackQuality = False
+muonsFromCosmics.fillGlobalTrackRefits = False
 
 from RecoMuon.MuonIdentification.calomuons_cfi import *
 calomuons.inputTracks = 'ctfWithMaterialTracksP5LHCNavigation'
@@ -65,7 +78,7 @@ glbTrackQual.InputCollection = "globalCosmicMuons"
 allmuons = cms.Sequence(glbTrackQual*tevMuons*muons*muIsolation*calomuons)
 
 # Final sequence
-muonrecoforcosmics = cms.Sequence(muontrackingforcosmics*allmuons)
+muonrecoforcosmics = cms.Sequence(muontrackingforcosmics*allmuons*muonsFromCosmics)
 muonRecoAllGR = cms.Sequence(muonrecoforcosmics)
 
 # 1 leg mode
@@ -87,6 +100,8 @@ muons1Leg.inputCollectionTypes = ['inner tracks', 'links', 'outer tracks']
 muons1Leg.fillIsolation = False
 muons1Leg.fillGlobalTrackQuality = False
 muons1Leg.fillGlobalTrackRefits = False
+muons1Leg.TimingFillerParameters.DTTimingParameters.PruneCut = 9999
+muons1Leg.TimingFillerParameters.CSCTimingParameters.PruneCut = 9999
 # Sequences
 
 # Stand Alone Tracking
@@ -130,7 +145,7 @@ muonsWitht0Correction.inputCollectionTypes = ['inner tracks', 'links', 'outer tr
 muonsWitht0Correction.fillIsolation = True
 muonsWitht0Correction.fillGlobalTrackQuality = False
 muonsWitht0Correction.TimingFillerParameters.DTTimingParameters.UseSegmentT0 = True
-muonsWitht0Correction.TimingFillerParameters.DTTimingParameters.MatchParameters.DTsegments = 'dt4DSegmentsT0Seg'
+muonsWitht0Correction.TimingFillerParameters.MatchParameters.DTsegments = 'dt4DSegmentsT0Seg'
 muonsWitht0Correction.TrackExtractorPSet.inputTrackCollection = 'ctfWithMaterialTracksP5'
 muonsWitht0Correction.CaloExtractorPSet.CenterConeOnCalIntersection = True
 muonsWitht0Correction.fillGlobalTrackRefits = False

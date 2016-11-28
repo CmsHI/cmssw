@@ -9,6 +9,19 @@ skimRecoContent.outputCommands.append("drop *_*_*_SKIM")
 
 #####################
 
+from Configuration.Skimming.PDWG_BPHSkim_cff import *
+BPHSkimPath = cms.Path(BPHSkimSequence)
+SKIMStreamBPHSkim = cms.FilteredStream(
+    responsible = 'PDWG',
+    name = 'BPHSkim',
+    paths = (BPHSkimPath),
+    content = BPHSkim_EventContent.outputCommands,
+    selectEvents = cms.untracked.PSet(),
+    dataTier = cms.untracked.string('USER')
+    )
+
+#####################
+
 from Configuration.Skimming.PDWG_DiJetAODSkim_cff import *
 diJetAveSkimPath = cms.Path(DiJetAveSkim_Trigger)
 SKIMStreamDiJet = cms.FilteredStream(
@@ -142,9 +155,13 @@ SKIMStreamEXOHPTE = cms.FilteredStream(
 
 #####################
 # For the Data on Data Mixing in TSG
-from HLTrigger.Configuration.HLT_FULL_cff import fragment as _fragment
-hltGtDigis = _fragment.hltGtDigis.clone()
-hltGtDigisPath = cms.Path(hltGtDigis)
+from HLTrigger.Configuration.HLT_Fake1_cff import fragment as _fragment
+if "hltGtDigis" in _fragment.__dict__:
+    hltGtDigis = _fragment.hltGtDigis.clone()
+    hltGtDigisPath = cms.Path(hltGtDigis)
+else:
+    hltBoolEnd = _fragmet.hltBoolEnd.clone()
+    hltGtDigisPath = cms.Path(hltBoolEnd)
 
 # The events to be used as PileUp
 from Configuration.Skimming.PDWG_HLTZEROBIASPU_SD_cff import *

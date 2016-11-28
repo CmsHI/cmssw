@@ -145,6 +145,15 @@ bool MuonTransientTrackingRecHit::isCSC() const{
   return  (geographicalId().subdetId() == MuonSubdetId::CSC);
 }
 
+bool MuonTransientTrackingRecHit::isGEM() const{
+  return  (geographicalId().subdetId() == MuonSubdetId::GEM);
+}
+
+bool MuonTransientTrackingRecHit::isME0() const{
+  return  (geographicalId().subdetId() == MuonSubdetId::ME0);
+  
+}
+
 bool MuonTransientTrackingRecHit::isRPC() const{
   return  (geographicalId().subdetId() == MuonSubdetId::RPC);
 }

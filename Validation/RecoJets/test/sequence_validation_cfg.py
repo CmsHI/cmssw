@@ -1,72 +1,63 @@
 import os
 import FWCore.ParameterSet.Config as cms
 
-#from JetMETCorrections.Configuration.JetCorrectionsRecord_cfi import *
-#from RecoJets.Configuration.RecoJetAssociations_cff import *
+process = cms.Process("METVALIDATION")
 
-process = cms.Process("JETVALIDATION")
-
-#process.load("Configuration.StandardSequences.Reconstruction_cff")
-#process.load("Configuration/StandardSequences/MagneticField_cff")
-process.load("Configuration.StandardSequences.GeometryRecoDB_cff")
-process.load('Configuration/StandardSequences/FrontierConditions_GlobalTag_cff')
+process.load('Configuration.StandardSequences.GeometryRecoDB_cff')
+process.load('Configuration.StandardSequences.MagneticField_38T_PostLS1_cff')
+process.load('Configuration.StandardSequences.Reconstruction_cff')
+process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_condDBv2_cff')
 
 #process.GlobalTag.globaltag = 'START42_V17::All'
 ##process.GlobalTag.globaltag = 'MC_38Y_V14::All'
 ## for 6_2_0 QCD
-process.GlobalTag.globaltag = 'MCRUN2_74_V7::All'
+process.GlobalTag.globaltag = '76X_mcRun2_asymptotic_v4'
 
-#process.load("Configuration.StandardSequences.Services_cff")
-#process.load("Configuration.StandardSequences.Simulation_cff")
-#process.load("Configuration.StandardSequences.MixingNoPileUp_cff")
-#process.load("Configuration.StandardSequences.VtxSmearedGauss_cff")
-#process.load("Configuration.StandardSequences.GeometryRecoDB_cff")
-#process.load("Configuration.StandardSequences.MagneticField_cff")
 process.load("FWCore.MessageLogger.MessageLogger_cfi")
 process.MessageLogger.cerr.FwkReport.reportEvery = 1000
+#
+#
+# DQM
+#
+
+process.load("Validation.RecoJets.JetValidation_cff")
+process.load("Validation.RecoJets.JetPostProcessor_cff")
+
 
 readFiles = cms.untracked.vstring()
 secFiles = cms.untracked.vstring() 
 process.source = cms.Source ("PoolSource",fileNames = readFiles, secondaryFileNames = secFiles)
 readFiles.extend( [
-       #for RECO
-       '/store/relval/CMSSW_7_4_0_pre8/RelValTTbar_13/GEN-SIM-RECO/MCRUN2_74_V7-v1/00000/48E3FDFE-3DBD-E411-9B99-0025905A613C.root',
-       '/store/relval/CMSSW_7_4_0_pre8/RelValTTbar_13/GEN-SIM-RECO/MCRUN2_74_V7-v1/00000/706A960F-54BD-E411-8561-00261894384F.root',
-       '/store/relval/CMSSW_7_4_0_pre8/RelValTTbar_13/GEN-SIM-RECO/MCRUN2_74_V7-v1/00000/E4EF6410-54BD-E411-8838-002590593920.root',
-       '/store/relval/CMSSW_7_4_0_pre8/RelValTTbar_13/GEN-SIM-RECO/MCRUN2_74_V7-v1/00000/FA18AB00-3EBD-E411-AAE8-0025905A608A.root'
-       #for MINIAODtests 
-       #'/store/relval/CMSSW_7_3_0_pre1/RelValTTbar_13/MINIAODSIM/PU50ns_PRE_LS172_V16-v1/00000/9886ACB4-F45E-E411-9E5D-02163E00F01E.root' 
-       #test HI sequence for jets
-       #'/store/relval/CMSSW_7_3_0_pre1/RelValQCD_Pt_80_120_13_HI/GEN-SIM-RECO/PRE_LS172_V15-v1/00000/5C15CC80-0B5A-E411-AF4B-02163E00ECD2.root',
-       #'/store/relval/CMSSW_7_3_0_pre1/RelValQCD_Pt_80_120_13_HI/GEN-SIM-RECO/PRE_LS172_V15-v1/00000/FC51FED6-B559-E411-9131-02163E006D72.root' 
+       '/store/relval/CMSSW_7_6_0_pre7/RelValQCD_FlatPt_15_3000HS_13/MINIAODSIM/76X_mcRun2_asymptotic_v5-v1/00000/7E692CF1-2971-E511-9609-0025905A497A.root',
+       '/store/relval/CMSSW_7_6_0_pre7/RelValQCD_FlatPt_15_3000HS_13/MINIAODSIM/76X_mcRun2_asymptotic_v5-v1/00000/B4DD46D7-2971-E511-B4DD-0025905A4964.root' 
+       #'/store/relval/CMSSW_7_6_0_pre6/RelValTTbar_13/GEN-SIM-RECO/PU25ns_76X_mcRun2_asymptotic_v4-v1/00000/5C506D9D-AA6B-E511-8AB0-003048FFD732.root',
+       #'/store/relval/CMSSW_7_6_0_pre6/RelValTTbar_13/GEN-SIM-RECO/PU25ns_76X_mcRun2_asymptotic_v4-v1/00000/5E68FFC6-B66B-E511-9085-0025905A6084.root',
+       #'/store/relval/CMSSW_7_6_0_pre6/RelValTTbar_13/GEN-SIM-RECO/PU25ns_76X_mcRun2_asymptotic_v4-v1/00000/724E805D-816C-E511-A163-0025905B8562.root',
+       #'/store/relval/CMSSW_7_6_0_pre6/RelValTTbar_13/GEN-SIM-RECO/PU25ns_76X_mcRun2_asymptotic_v4-v1/00000/88117A83-A76B-E511-9A30-002590596490.root'
+        #'/store/relval/CMSSW_7_6_0_pre6/RelValTTbar_13/MINIAODSIM/PU25ns_76X_mcRun2_asymptotic_v4-v1/00000/0847033F-706C-E511-8170-0025905A60CE.root',
+       #'/store/relval/CMSSW_7_6_0_pre6/RelValTTbar_13/MINIAODSIM/PU25ns_76X_mcRun2_asymptotic_v4-v1/00000/98244E0E-C56C-E511-A5AF-0025905B85EE.root',
+       #'/store/relval/CMSSW_7_6_0_pre6/RelValTTbar_13/MINIAODSIM/PU25ns_76X_mcRun2_asymptotic_v4-v1/00000/B6EB8FF6-C46C-E511-911A-0025905B8592.root',
+       #'/store/relval/CMSSW_7_6_0_pre6/RelValTTbar_13/MINIAODSIM/PU25ns_76X_mcRun2_asymptotic_v4-v1/00000/FABE0A3D-6F6C-E511-A404-0025905A6076.root' 
 ] );
 
-# Validation module
-process.load("Validation.RecoJets.JetValidation_cff")
-process.load("Validation.RecoJets.JetPostProcessor_cff")
-#process.load("Validation.RecoHI.JetValidationHeavyIons_cff")
-
-process.maxEvents = cms.untracked.PSet(
-       input = cms.untracked.int32(-1)
-)
-                       
 process.load('Configuration/StandardSequences/EDMtoMEAtJobEnd_cff')
 process.dqmSaver.referenceHandling = cms.untracked.string('all')
 #
 cmssw_version = os.environ.get('CMSSW_VERSION','CMSSW_X_Y_Z')
-Workflow = '/JetMET/'+str(cmssw_version)+'/JETValidation'
+Workflow = '/JetMET/'+str(cmssw_version)+'/JetValidation'
 process.dqmSaver.workflow = Workflow
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
 
+process.dump = cms.EDAnalyzer("EventContentAnalyzer")
 
-process.p1 = cms.Path(
-                      #--- Standard sequence
-                      #process.hiJetValidation
-                      #first part issued to take care of JEC
-                      process.jetPreValidSeq*
-                      process.JetValidation
-                      #for MiniAOD
-                      #process.JetValidationMiniAOD
-                      *process.JetPostProcessor
-                      *process.dqmSaver
+process.p = cms.Path(#process.dump*
+                     #for RECO
+                     #process.jetPreValidSeq*
+                     #process.JetValidation*
+                     #for MiniAOD
+                     process.JetValidationMiniAOD*
+                     process.JetPostProcessor
+                     *process.dqmSaver
 )
+
 

@@ -63,8 +63,8 @@ highPtTripletStepTrajectoryFilter = TrackingTools.TrajectoryFiltering.Trajectory
     minPt = 0.2
     )
 
-import TrackingTools.KalmanUpdators.Chi2MeasurementEstimatorESProducer_cfi
-highPtTripletStepChi2Est = TrackingTools.KalmanUpdators.Chi2MeasurementEstimatorESProducer_cfi.Chi2MeasurementEstimator.clone(
+import TrackingTools.KalmanUpdators.Chi2MeasurementEstimator_cfi
+highPtTripletStepChi2Est = TrackingTools.KalmanUpdators.Chi2MeasurementEstimator_cfi.Chi2MeasurementEstimator.clone(
     ComponentName = cms.string('highPtTripletStepChi2Est'),
     nSigma = cms.double(3.0),
     MaxChi2 = cms.double(30.0)
@@ -100,10 +100,7 @@ highPtTripletStepTrackCandidates = RecoTracker.CkfPattern.CkfTrackCandidates_cfi
 import RecoTracker.TrackProducer.TrackProducer_cfi
 highPtTripletStepTracks = RecoTracker.TrackProducer.TrackProducer_cfi.TrackProducer.clone(
     src = 'highPtTripletStepTrackCandidates',
-    # Algorithm name changed from highPtTripletStep (was iter1) to lowPtTripletStep in order
-    # to keep backward compatibility as detachedQuadStep would be unknown.
-    # In the future, a new enum or alias may be added to support iteration name aliases.
-    AlgorithmName = cms.string('lowPtTripletStep'),
+    AlgorithmName = cms.string('highPtTripletStep'),
     Fitter = cms.string('FlexibleKFFittingSmoother'),
     TTRHBuilder=cms.string('WithTrackAngle')
     )

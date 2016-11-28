@@ -1,4 +1,3 @@
-#include "FWCore/ServiceRegistry/interface/SystemBounds.h"
 #include "DQMServices/Core/interface/Standalone.h"
 #include "DQMServices/Core/interface/DQMStore.h"
 #include "DQMServices/Core/interface/QReport.h"
@@ -20,7 +19,10 @@
 #include <iterator>
 #include <cerrno>
 #include <boost/algorithm/string.hpp>
+
 #include <fstream>
+#include <sstream>
+#include <exception>
 
 /** @var DQMStore::verbose_
     Universal verbose flag for DQM. */
@@ -303,6 +305,20 @@ MonitorElement * DQMStore::IGetter::get(const std::string &path) {
   return owner_->get(path);
 }
 
+MonitorElement * DQMStore::IGetter::getElement(const std::string &path) {
+    MonitorElement *ptr = this->get(path);
+    if (ptr == nullptr) {
+      std::stringstream msg;
+      msg << "DQM object not found";
+        
+      msg << ": " << path;
+
+      // can't use cms::Exception inside DQMStore
+      throw std::out_of_range(msg.str());
+    }
+    return ptr;
+}
+
 std::vector<std::string> DQMStore::IGetter::getSubdirs(void) {
   return owner_->getSubdirs();
 }
@@ -392,8 +408,10 @@ void DQMStore::mergeAndResetMEsRunSummaryCache(uint32_t run,
 	      std::cout << "mergeAndResetMEsRunSummaryCache: Failed to merge DQM element "<<me->getFullname();
 	    }
 	  }
-	  else
-	    me->getTH1()->Add(i->getTH1());
+	  else {
+            if (i->getTH1()->GetEntries())
+	      me->getTH1()->Add(i->getTH1());
+          }
 	}
     } else {
       if (verbose_ > 1)
@@ -458,8 +476,10 @@ void DQMStore::mergeAndResetMEsLuminositySummaryCache(uint32_t run,
 	      std::cout << "mergeAndResetMEsLuminositySummaryCache: Failed to merge DQM element "<<me->getFullname();
 	    }
 	  }
-	  else
-	    me->getTH1()->Add(i->getTH1());
+	  else {
+            if (i->getTH1()->GetEntries())
+	      me->getTH1()->Add(i->getTH1());
+          }
 	}
     } else {
       if (verbose_ > 1)
@@ -829,17 +849,24 @@ DQMStore::book(const std::string &dir, const std::string &name,
                 me->addQReport(qi->second);
     }
 
-    // Assign reference if we have one.
+    // If we just booked a (plain) MonitorElement, and there is a reference
+    // MonitorElement with the same name, link the two together.
+    // The other direction is handled by the extract method.
     std::string refdir;
-    refdir.reserve(s_referenceDirName.size() + dir.size() + 2);
+    refdir.reserve(s_referenceDirName.size() + dir.size() + 1);
     refdir += s_referenceDirName;
     refdir += '/';
     refdir += dir;
-
-    if (findObject(refdir, name))
-    {
+    MonitorElement* referenceME = findObject(refdir, name); 
+    if (referenceME) {
+      // We have booked a new MonitorElement with a specific dir and name.
+      // Then, if we can find the corresponding MonitorElement in the reference
+      // dir we assign the object_ of the reference MonitorElement to the 
+      // reference_ property of our new MonitorElement.
       me->data_.flags |= DQMNet::DQM_PROP_HAS_REFERENCE;
+      me->reference_ = referenceME->object_;
     }
+
     // Return the monitor element.
     return me;
   }
@@ -2409,14 +2436,19 @@ DQMStore::extract(TObject *obj, const std::string &dir,
     return false;
   }
 
-  // If we just read in a reference monitor element, and there is a
-  // monitor element with the same name, link the two together. The
-  // other direction is handled by the initialise() method.
+  // If we just read in a reference MonitorElement, and there is a
+  // MonitorElement with the same name, link the two together.
+  // The other direction is handled by the book() method.
   if (refcheck && isSubdirectory(s_referenceDirName, dir))
   {
     std::string mdir(dir, s_referenceDirName.size()+1, std::string::npos);
     if (MonitorElement *master = findObject(mdir, obj->GetName()))
     {
+      // We have extracted a MonitorElement, and it's located in the reference
+      // dir. Then we find the corresponding MonitorElement in the
+      // non-reference dir and assign the object_ of the reference
+      // MonitorElement to the reference_ property of the corresponding
+      // non-reference MonitorElement.
       master->data_.flags |= DQMNet::DQM_PROP_HAS_REFERENCE;
       master->reference_ = refcheck->object_;
     }
@@ -2578,7 +2610,7 @@ void DQMStore::savePB(const std::string &filename,
   FileOutputStream file_stream(filedescriptor);
   GzipOutputStream::Options options;
   options.format = GzipOutputStream::GZIP;
-  options.compression_level = 6;
+  options.compression_level = 1;
   GzipOutputStream gzip_stream(&file_stream,
                                options);
   dqmstore_message.SerializeToZeroCopyStream(&gzip_stream);

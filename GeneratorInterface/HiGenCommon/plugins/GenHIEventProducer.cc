@@ -53,12 +53,11 @@ class GenHIEventProducer : public edm::EDProducer {
 
     private:
         virtual void produce(edm::Event&, const edm::EventSetup&) override;
-
         edm::EDGetTokenT<CrossingFrame<edm::HepMCProduct> > hepmcSrc_;
         edm::ESHandle < ParticleDataTable > pdt;
 
-        double ptCut_;
-        bool doParticleInfo_;
+  double ptCut_;
+  bool doParticleInfo_;
 };
 
 //
@@ -76,9 +75,7 @@ class GenHIEventProducer : public edm::EDProducer {
 GenHIEventProducer::GenHIEventProducer(const edm::ParameterSet& iConfig)
 {
     produces<edm::GenHIEvent>();
-
     hepmcSrc_ = consumes<CrossingFrame<edm::HepMCProduct> >(iConfig.getParameter<edm::InputTag>("src"));
-
     doParticleInfo_ = iConfig.getUntrackedParameter<bool>("doParticleInfo",false);
     if(doParticleInfo_){
       ptCut_ = iConfig.getParameter<double> ("ptCut");
@@ -125,19 +122,17 @@ GenHIEventProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
     double TotEnergy = 0; // Total energy bym
 
     Handle<CrossingFrame<edm::HepMCProduct> > hepmc;
-
     iEvent.getByToken(hepmcSrc_,hepmc);
     MixCollection<HepMCProduct> mix(hepmc.product());
+    
+    if(mix.size() < 1){
+      throw cms::Exception("MatchVtx")
+	<<"Mixing has "<<mix.size()<<" sub-events, should have been at least 1"
+	<<endl;
+    }
 
-	if(mix.size() < 1){
-	   throw cms::Exception("MatchVtx")
-	      <<"Mixing has "<<mix.size()<<" sub-events, should have been at least 1"
-	      <<endl;
-	}
-
-	// use the last event, bkg for embedding, signal in non-embedded
-	const HepMCProduct& hievt = mix.getObject(mix.size()-1);
-        const HepMC::GenEvent* evt = hievt.GetEvent();
+    const HepMCProduct& hievt = mix.getObject(mix.size()-1);
+    const HepMC::GenEvent* evt = hievt.GetEvent();
 	if(doParticleInfo_){
 	  HepMC::GenEvent::particle_const_iterator begin = evt->particles_begin();
 	  HepMC::GenEvent::particle_const_iterator end = evt->particles_end();
@@ -197,7 +192,7 @@ GenHIEventProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
         meanPt /= nCharged;
     }
 
-    std::auto_ptr<edm::GenHIEvent> pGenHI(new edm::GenHIEvent(b,
+    std::unique_ptr<edm::GenHIEvent> pGenHI(new edm::GenHIEvent(b,
 							      npart,
 							      ncoll,
 							      nhard,
@@ -212,7 +207,7 @@ GenHIEventProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
 							      nChargedPtCutMR
 							      ));
 
-    iEvent.put(pGenHI);
+    iEvent.put(std::move(pGenHI));
 
 }
 

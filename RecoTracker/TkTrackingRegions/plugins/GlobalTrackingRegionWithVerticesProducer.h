@@ -26,22 +26,23 @@ public:
     theNSigmaZ          = regionPSet.getParameter<double>("nSigmaZ");
     token_beamSpot      = iC.consumes<reco::BeamSpot>(regionPSet.getParameter<edm::InputTag>("beamSpot"));
     thePrecise          = regionPSet.getParameter<bool>("precise"); 
+    theUseMS            = regionPSet.getParameter<bool>("useMultipleScattering");
 
     theSigmaZVertex     = regionPSet.getParameter<double>("sigmaZVertex");
     theFixedError       = regionPSet.getParameter<double>("fixedError");
 
     theUseFoundVertices = regionPSet.getParameter<bool>("useFoundVertices");
-    theUseFakeVertices  = regionPSet.existsAs<bool>("useFakeVertices") ? regionPSet.getParameter<bool>("useFakeVertices") : false;
+    theUseFakeVertices  = regionPSet.getParameter<bool>("useFakeVertices");
     theUseFixedError    = regionPSet.getParameter<bool>("useFixedError");
     token_vertex      = iC.consumes<reco::VertexCollection>(regionPSet.getParameter<edm::InputTag>("VertexCollection"));
   }   
 
   virtual ~GlobalTrackingRegionWithVerticesProducer(){}
 
-  virtual std::vector<TrackingRegion* > regions
-    (const edm::Event& ev, const edm::EventSetup&) const
+  virtual std::vector<std::unique_ptr<TrackingRegion> > regions
+    (const edm::Event& ev, const edm::EventSetup&) const override
   {
-    std::vector<TrackingRegion* > result;
+    std::vector<std::unique_ptr<TrackingRegion> > result;
 
     GlobalPoint theOrigin;
     edm::Handle<reco::BeamSpot> bsHandle;
@@ -65,17 +66,17 @@ public:
           if (iV->isFake() && !(theUseFakeVertices && theUseFixedError)) continue;
 	  GlobalPoint theOrigin_       = GlobalPoint(iV->x(),iV->y(),iV->z());
 	  double theOriginHalfLength_ = (theUseFixedError ? theFixedError : (iV->zError())*theSigmaZVertex); 
-	  result.push_back( new GlobalTrackingRegion(thePtMin, theOrigin_, theOriginRadius, theOriginHalfLength_, thePrecise) );
+	  result.push_back( std::make_unique<GlobalTrackingRegion>(thePtMin, theOrigin_, theOriginRadius, theOriginHalfLength_, thePrecise, theUseMS) );
       }
       
       if (result.empty()) {
-        result.push_back( new GlobalTrackingRegion(thePtMin, theOrigin, theOriginRadius, bsSigmaZ, thePrecise) );
+        result.push_back( std::make_unique<GlobalTrackingRegion>(thePtMin, theOrigin, theOriginRadius, bsSigmaZ, thePrecise, theUseMS) );
       }
     }
     else
     {
       result.push_back(
-        new GlobalTrackingRegion(thePtMin, theOrigin, theOriginRadius, bsSigmaZ, thePrecise) );
+        std::make_unique<GlobalTrackingRegion>(thePtMin, theOrigin, theOriginRadius, bsSigmaZ, thePrecise, theUseMS) );
     }
 
     return result;
@@ -90,6 +91,7 @@ private:
   double theSigmaZVertex;
   double theFixedError;
   bool thePrecise;
+  bool theUseMS;
   
   bool theUseFoundVertices;
   bool theUseFakeVertices;

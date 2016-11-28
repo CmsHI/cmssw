@@ -8,10 +8,8 @@ output stream.
 
 ----------------------------------------------------------------------*/
 
-#include "DataFormats/Provenance/interface/BranchChildren.h"
 #include "DataFormats/Provenance/interface/BranchID.h"
 #include "DataFormats/Provenance/interface/BranchIDList.h"
-#include "DataFormats/Provenance/interface/ParentageID.h"
 #include "DataFormats/Provenance/interface/ModuleDescription.h"
 #include "DataFormats/Provenance/interface/SelectedProducts.h"
 
@@ -26,6 +24,7 @@ output stream.
 #include "FWCore/ParameterSet/interface/ParameterSetfwd.h"
 
 #include "FWCore/Utilities/interface/EDGetToken.h"
+#include "FWCore/Utilities/interface/propagate_const.h"
 
 #include <array>
 #include <memory>
@@ -82,11 +81,9 @@ namespace edm {
     static const std::string& baseType();
     static void prevalidate(ConfigurationDescriptions& );
 
-    BranchChildren const& branchChildren() const {return branchChildren_;}
-
     bool wantAllEvents() const {return wantAllEvents_;}
 
-    BranchIDLists const* branchIDLists() const;
+    BranchIDLists const* branchIDLists();
 
     ThinnedAssociationsHelper const* thinnedAssociationsHelper() const;
 
@@ -167,16 +164,11 @@ namespace edm {
     // needed because of possible EDAliases.
     // filled in only if key and value are different.
     std::map<BranchID::value_type, BranchID::value_type> droppedBranchIDToKeptBranchID_;
-    std::unique_ptr<BranchIDLists> branchIDLists_;
+    edm::propagate_const<std::unique_ptr<BranchIDLists>> branchIDLists_;
     BranchIDLists const* origBranchIDLists_;
 
-    std::unique_ptr<ThinnedAssociationsHelper> thinnedAssociationsHelper_;
+    edm::propagate_const<std::unique_ptr<ThinnedAssociationsHelper>> thinnedAssociationsHelper_;
     std::map<BranchID, bool> keepAssociation_;
-
-    typedef std::map<BranchID, std::set<ParentageID> > BranchParents;
-    BranchParents branchParents_;
-
-    BranchChildren branchChildren_;
 
     SharedResourcesAcquirer resourceAcquirer_;
     std::mutex mutex_;
@@ -241,9 +233,6 @@ namespace edm {
     void setModuleDescription(ModuleDescription const& md) {
       moduleDescription_ = md;
     }
-
-    void updateBranchParents(EventPrincipal const& ep);
-    void fillDependencyGraph();
 
     bool limitReached() const {return remainingEvents_ == 0;}
   };

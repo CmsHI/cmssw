@@ -1,4 +1,5 @@
 import FWCore.ParameterSet.Config as cms
+from Configuration.StandardSequences.Eras import eras
 
 from RecoTracker.TkSeedingLayers.seedingLayersEDProducer_cfi import *
 
@@ -12,7 +13,7 @@ convClusters = trackClusterRemover.clone(
   pixelClusters         = cms.InputTag("siPixelClusters"),
   stripClusters         = cms.InputTag("siStripClusters"),
   oldClusterRemovalInfo = cms.InputTag("tobTecStepClusters"),
-  overrideTrkQuals      = cms.InputTag('tobTecStepSelector','tobTecStep'),
+  trackClassifier       = cms.InputTag('tobTecStep',"QualityMasks"),
   TrackQuality          = cms.string('highPurity'),
 )
 
@@ -207,6 +208,7 @@ photonConvTrajSeedFromSingleLeg.TrackRefitter = cms.InputTag('generalTracks')
 photonConvTrajSeedFromSingleLeg.primaryVerticesTag = cms.InputTag('firstStepPrimaryVertices')
 #photonConvTrajSeedFromQuadruplets.TrackRefitter = cms.InputTag('generalTracks')
 #photonConvTrajSeedFromQuadruplets.primaryVerticesTag = cms.InputTag('pixelVertices')
+eras.trackingLowPU.toModify(photonConvTrajSeedFromSingleLeg, primaryVerticesTag   = "pixelVertices")
 
 
 # TRACKER DATA CONTROL
@@ -220,11 +222,13 @@ convCkfTrajectoryFilter = TrackingTools.TrajectoryFiltering.TrajectoryFilter_cff
     )
 
 
-import RecoTracker.MeasurementDet.Chi2ChargeMeasurementEstimatorESProducer_cfi
-convStepChi2Est = RecoTracker.MeasurementDet.Chi2ChargeMeasurementEstimatorESProducer_cfi.Chi2ChargeMeasurementEstimator.clone(
+import RecoTracker.MeasurementDet.Chi2ChargeMeasurementEstimator_cfi
+convStepChi2Est = RecoTracker.MeasurementDet.Chi2ChargeMeasurementEstimator_cfi.Chi2ChargeMeasurementEstimator.clone(
     ComponentName = cms.string('convStepChi2Est'),
     nSigma = cms.double(3.0),
     MaxChi2 = cms.double(30.0),
+    MaxDisplacement = cms.double(100),
+    MaxSagitta = cms.double(-1.),
     clusterChargeCut = cms.PSet(refToPSet_ = cms.string('SiStripClusterChargeCutTight'))
 )
 

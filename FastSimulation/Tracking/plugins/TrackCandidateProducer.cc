@@ -1,184 +1,263 @@
+// system
 #include <memory>
+#include <vector>
+#include <map>
 
+// framework
+#include "FWCore/Framework/interface/stream/EDProducer.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
-#include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Framework/interface/ESHandle.h"
+#include "FWCore/ParameterSet/interface/ParameterSet.h"
+#include "FWCore/Utilities/interface/InputTag.h"
+#include "FWCore/MessageLogger/interface/MessageLogger.h"
 
+// data format
 #include "DataFormats/Common/interface/Handle.h"
 #include "DataFormats/Common/interface/OwnVector.h"
 #include "DataFormats/TrackCandidate/interface/TrackCandidateCollection.h"
 #include "DataFormats/TrajectorySeed/interface/TrajectorySeedCollection.h"
-#include "DataFormats/TrackerRecHit2D/interface/SiTrackerGSRecHit2DCollection.h" 
-#include "DataFormats/TrackerRecHit2D/interface/SiTrackerGSMatchedRecHit2DCollection.h" 
-#include "DataFormats/TrackReco/interface/TrackFwd.h"
-#include "DataFormats/TrackReco/interface/TrackExtraFwd.h"
+#include "DataFormats/TrackerRecHit2D/interface/FastTrackerRecHit.h"
+#include "DataFormats/TrackerRecHit2D/interface/FastTrackerRecHitCollection.h"
+#include "SimDataFormats/Track/interface/SimTrack.h"
+#include "SimDataFormats/Track/interface/SimTrackContainer.h"
 
+// geometry / magnetic field / propagation
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
 #include "Geometry/Records/interface/TrackerDigiGeometryRecord.h"
 #include "Geometry/Records/interface/TrackerTopologyRcd.h"
-
-#include "FastSimulation/Tracking/interface/TrajectorySeedHitCandidate.h"
-//#include "FastSimulation/Tracking/interface/TrackerRecHitSplit.h"
-
-#include "FastSimulation/Tracking/plugins/TrackCandidateProducer.h"
-
-#include <vector>
-#include <map>
-
-#include "TrackingTools/TrajectoryState/interface/TrajectoryStateTransform.h"
-#include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
-#include "MagneticField/Engine/interface/MagneticField.h"
-
-#include "SimDataFormats/Track/interface/SimTrack.h"
+#include "TrackingTools/TrajectoryState/interface/TrajectoryStateTransform.h"
 #include "TrackingTools/TrajectoryState/interface/TrajectoryStateOnSurface.h"
 #include "TrackingTools/TrajectoryState/interface/FreeTrajectoryState.h"
 #include "TrackingTools/GeomPropagators/interface/Propagator.h"
 #include "TrackingTools/Records/interface/TrackingComponentsRecord.h"
 
-//Propagator withMaterial
-#include "TrackingTools/MaterialEffects/interface/PropagatorWithMaterial.h"
+// fastsim
+#include "FastSimulation/Tracking/interface/TrackingLayer.h"
+#include "FastSimulation/Tracking/interface/FastTrackingUtilities.h"
+#include "FastSimulation/Tracking/interface/FastTrackerRecHitSplitter.h"
+#include "FastSimulation/Tracking/interface/SeedMatcher.h"
+
+class TrackCandidateProducer : public edm::stream::EDProducer <>
+{
+public:
+  
+    explicit TrackCandidateProducer(const edm::ParameterSet& conf);
+  
+    virtual void produce(edm::Event& e, const edm::EventSetup& es) override;
+  
+private:
+
+    // tokens & labels
+    edm::EDGetTokenT<edm::View<TrajectorySeed> > seedToken;
+    edm::EDGetTokenT<FastTrackerRecHitCombinationCollection> recHitCombinationsToken;
+    edm::EDGetTokenT<std::vector<bool> > hitMasksToken;
+    edm::EDGetTokenT<edm::SimTrackContainer> simTrackToken;
+    std::string propagatorLabel;
+    
+    // other data
+    bool rejectOverlaps;
+    bool splitHits;
+    FastTrackerRecHitSplitter hitSplitter;
+    double maxSeedMatchEstimator;
+};
 
 TrackCandidateProducer::TrackCandidateProducer(const edm::ParameterSet& conf)
+    : hitSplitter()
 {  
-  // products
-  produces<TrackCandidateCollection>();
-  
-  // general parameters
-  minNumberOfCrossedLayers = conf.getParameter<unsigned int>("MinNumberOfCrossedLayers");
-  rejectOverlaps = conf.getParameter<bool>("OverlapCleaning");
-  splitHits = conf.getParameter<bool>("SplitHits");
-
-  // input tags, labels, tokens
-  edm::InputTag simTrackLabel = conf.getParameter<edm::InputTag>("simTracks");
-  simVertexToken = consumes<edm::SimVertexContainer>(simTrackLabel);
-  simTrackToken = consumes<edm::SimTrackContainer>(simTrackLabel);
-
-  edm::InputTag seedLabel = conf.getParameter<edm::InputTag>("src");
-  seedToken = consumes<edm::View<TrajectorySeed> >(seedLabel);
-
-  edm::InputTag recHitLabel = conf.getParameter<edm::InputTag>("recHits");
-  recHitToken = consumes<SiTrackerGSMatchedRecHit2DCollection>(recHitLabel);
-  
-  propagatorLabel = conf.getParameter<std::string>("propagator");
+    // produces
+    produces<TrackCandidateCollection>();
+    
+    // consumes
+    if (conf.exists("hitMasks")){
+	hitMasksToken = consumes<std::vector<bool> >(conf.getParameter<edm::InputTag>("hitMasks"));
+    }
+    seedToken = consumes<edm::View<TrajectorySeed> >(conf.getParameter<edm::InputTag>("src"));
+    recHitCombinationsToken = consumes<FastTrackerRecHitCombinationCollection>(conf.getParameter<edm::InputTag>("recHitCombinations"));
+    simTrackToken = consumes<edm::SimTrackContainer>(conf.getParameter<edm::InputTag>("simTracks"));
+    
+    // other parameters
+    maxSeedMatchEstimator = conf.getUntrackedParameter<double>("maxSeedMatchEstimator",0);
+    rejectOverlaps = conf.getParameter<bool>("OverlapCleaning");
+    splitHits = conf.getParameter<bool>("SplitHits");
+    propagatorLabel = conf.getParameter<std::string>("propagator");
 }
   
 void 
 TrackCandidateProducer::produce(edm::Event& e, const edm::EventSetup& es) {        
 
-  // get services
-  edm::ESHandle<MagneticField>          magneticField;
-  es.get<IdealMagneticFieldRecord>().get(magneticField);
+    // get records
+    edm::ESHandle<MagneticField>          magneticField;
+    es.get<IdealMagneticFieldRecord>().get(magneticField);
 
-  edm::ESHandle<TrackerGeometry>        trackerGeometry;
-  es.get<TrackerDigiGeometryRecord>().get(trackerGeometry);
+    edm::ESHandle<TrackerGeometry>        trackerGeometry;
+    es.get<TrackerDigiGeometryRecord>().get(trackerGeometry);
 
-  edm::ESHandle<TrackerTopology>        trackerTopology;
-  es.get<TrackerTopologyRcd>().get(trackerTopology);
+    edm::ESHandle<TrackerTopology>        trackerTopology;
+    es.get<TrackerTopologyRcd>().get(trackerTopology);
 
-  edm::ESHandle<Propagator>             propagator;
-  es.get<TrackingComponentsRecord>().get(propagatorLabel,propagator);
+    edm::ESHandle<Propagator>             propagator;
+    es.get<TrackingComponentsRecord>().get(propagatorLabel,propagator);
+
+    // get products
+    edm::Handle<edm::View<TrajectorySeed> > seeds;
+    e.getByToken(seedToken,seeds);
+
+    edm::Handle<FastTrackerRecHitCombinationCollection> recHitCombinations;
+    e.getByToken(recHitCombinationsToken, recHitCombinations);
+
+    edm::Handle<edm::SimTrackContainer> simTracks;
+    e.getByToken(simTrackToken,simTracks);
+
+    const std::vector<bool> * hitMasks = 0;
+    if (!hitMasksToken.isUninitialized()){
+	edm::Handle<std::vector<bool> > hitMasksHandle;
+	e.getByToken(hitMasksToken,hitMasksHandle);
+	hitMasks = &(*hitMasksHandle);
+    }
     
-  // get products
-  edm::Handle<edm::View<TrajectorySeed> > seeds;
-  e.getByToken(seedToken,seeds);
+    // output collection
+    std::unique_ptr<TrackCandidateCollection> output(new TrackCandidateCollection);    
+    
+    // loop over the seeds
+    for (unsigned seedIndex = 0; seedIndex < seeds->size(); ++seedIndex){
 
-  edm::Handle<SiTrackerGSMatchedRecHit2DCollection> recHits;
-  e.getByToken(recHitToken, recHits);
+	const TrajectorySeed seed = (*seeds)[seedIndex];
+	std::vector<int32_t> recHitCombinationIndices;
 
-  edm::Handle<edm::SimVertexContainer> simVertices;
-  e.getByToken(simVertexToken,simVertices);
+	// match hitless seeds to simTracks and find corresponding recHitCombination
+	if(seed.nHits()==0){
+	    recHitCombinationIndices = SeedMatcher::matchRecHitCombinations(
+		seed,
+		*recHitCombinations,
+		*simTracks,
+		maxSeedMatchEstimator,
+		*propagator,
+		*magneticField,
+		*trackerGeometry);
+	}
+	// for normal seeds, retrieve the corresponding recHitCombination from the seed hits
+	else
+	{
+	    int32_t icomb = fastTrackingUtilities::getRecHitCombinationIndex(seed);
+	    recHitCombinationIndices.push_back(icomb);
+	}
 
-  edm::Handle<edm::SimTrackContainer> simTracks;
-  e.getByToken(simTrackToken,simTracks);
+	// loop over the matched recHitCombinations
+	for(auto icomb : recHitCombinationIndices)
+	{
+	    if(icomb < 0 || unsigned(icomb) >= recHitCombinations->size())
+	    {
+		throw cms::Exception("TrackCandidateProducer") << " found seed with recHitCombination out or range: " << icomb << std::endl;
+	    }
+	    const FastTrackerRecHitCombination & recHitCombination = (*recHitCombinations)[icomb];
+	    
+	    // container for select hits
+	    std::vector<const FastTrackerRecHit *> selectedRecHits;
+
+	    // add the seed hits
+	    TrajectorySeed::range seedHitRange = seed.recHits();//Hits in a seed
+	    for (TrajectorySeed::const_iterator ihit = seedHitRange.first; ihit != seedHitRange.second; ++ihit) 
+	    {
+		selectedRecHits.push_back(static_cast<const FastTrackerRecHit*>(&*ihit));
+	    }
+
+	    // prepare to skip seed hits
+	    const FastTrackerRecHit * lastHitToSkip = 0;
+	    if(selectedRecHits.size() > 0)
+	    {
+		lastHitToSkip = selectedRecHits.back();
+	    }
+
+	    // inOut or outIn tracking ?
+	    bool hitsAlongMomentum = (seed.direction()== alongMomentum);
+
+	    // add hits from combination to hit selection
+	    for (unsigned hitIndex = hitsAlongMomentum ? 0 : recHitCombination.size() - 1;
+		 hitIndex < recHitCombination.size();
+		 hitsAlongMomentum ? ++hitIndex : --hitIndex) 
+	    {
+		
+		const FastTrackerRecHit * selectedRecHit = recHitCombination[hitIndex].get();
+		
+		// skip seed hits
+		if(lastHitToSkip)
+		{
+		    if(lastHitToSkip->sameId(selectedRecHit))     
+		    {
+			lastHitToSkip=0;
+		    }
+		    continue;
+		}
+
+		// apply hit masking
+		if(hitMasks && fastTrackingUtilities::hitIsMasked(selectedRecHit,hitMasks))
+		{
+		    continue;
+		}
+
+
+		//  if overlap rejection is not switched on, accept all hits
+		//  always accept the first hit
+		//  also accept a hit if it is not on the layer of the previous hit
+		if( !  rejectOverlaps
+		    || selectedRecHits.size() == 0 
+		    || ( TrackingLayer::createFromDetId(selectedRecHits.back()->geographicalId(),*trackerTopology.product())
+			 != TrackingLayer::createFromDetId(selectedRecHit->geographicalId(),*trackerTopology.product())))
+		{
+		    selectedRecHits.push_back(selectedRecHit);
+		}
+		//  else:
+		//    overlap rejection is switched on
+		//    the hit is on the same layer as the previous hit
+		//  accept the one with smallest error
+		else if ( fastTrackingUtilities::hitLocalError(selectedRecHit) 
+			  < fastTrackingUtilities::hitLocalError(selectedRecHits.back()) )
+		{
+		    selectedRecHits.back() = selectedRecHit;
+		}
+	    }
+	    
+	    // split hits / store copies for the track candidate
+	    edm::OwnVector<TrackingRecHit> hitsForTrackCandidate;
+	    for ( unsigned index = 0; index<selectedRecHits.size(); ++index ) 
+	    {
+		if(splitHits)
+		{
+		    // add split hits to splitSelectedRecHits
+		    hitSplitter.split(*selectedRecHits[index],hitsForTrackCandidate,hitsAlongMomentum);
+		}
+		else 
+		{
+		    hitsForTrackCandidate.push_back(selectedRecHits[index]->clone());
+		}
+	    }
+	
+	    // set the recHitCombinationIndex
+	    fastTrackingUtilities::setRecHitCombinationIndex(hitsForTrackCandidate,icomb);
+	    
+	    // create track candidate state
+	    //   1. get seed state (defined on the surface of the most outer hit)
+	    DetId seedDetId(seed.startingState().detId());
+	    const GeomDet* gdet = trackerGeometry->idToDet(seedDetId);
+	    TrajectoryStateOnSurface seedTSOS = trajectoryStateTransform::transientState(seed.startingState(), &(gdet->surface()),magneticField.product());
+	    //   2. backPropagate the seedState to the surfuce of the most inner hit
+	    const GeomDet* initialLayer = trackerGeometry->idToDet(hitsForTrackCandidate.front().geographicalId());
+	    const TrajectoryStateOnSurface initialTSOS = propagator->propagate(seedTSOS,initialLayer->surface()) ;
+	    //   3. check validity and transform
+	    if (!initialTSOS.isValid()) continue; 
+	    PTrajectoryStateOnDet PTSOD = trajectoryStateTransform::persistentState(initialTSOS,hitsForTrackCandidate.front().geographicalId().rawId()); 
+	    
+	    // add track candidate to output collection
+	    output->push_back(TrackCandidate(hitsForTrackCandidate,seed,PTSOD,edm::RefToBase<TrajectorySeed>(seeds,seedIndex)));
+	}
+    }
   
-  // output collection
-  std::auto_ptr<TrackCandidateCollection> output(new TrackCandidateCollection);    
-
-  // loop over the seeds
-  for (unsigned seednr = 0; seednr < seeds->size(); ++seednr){
+    // Save the track candidates
+    e.put(std::move(output));
     
-    const BasicTrajectorySeed seed = seeds->at(seednr);
-    if(seed.nHits()==0){
-      edm::LogError("TrackCandidateProducer") << "empty trajectory seed in TrajectorySeedCollection" << std::endl;
-      return;
-    }
-
-    // Get all the rechits associated to this track
-    int simTrackId =  ((const SiTrackerGSMatchedRecHit2D*) (&*(seed.recHits().first)))->simtrackId();
-    SiTrackerGSMatchedRecHit2DCollection::range recHitRange = recHits->get(simTrackId);
-    SiTrackerGSMatchedRecHit2DCollection::const_iterator recHitIter = recHitRange.first;
-    SiTrackerGSMatchedRecHit2DCollection::const_iterator recHitEnd  = recHitRange.second;
-
-    // Count number of crossed layers, apply overlap rejection
-    std::vector<TrajectorySeedHitCandidate> recHitCandidates;
-    TrajectorySeedHitCandidate recHitCandidate;
-    unsigned numberOfCrossedLayers = 0;      
-    for ( ; recHitIter != recHitEnd; ++recHitIter) {
-      recHitCandidate = TrajectorySeedHitCandidate(&(*recHitIter),trackerGeometry.product(),trackerTopology.product());
-      if ( recHitCandidates.size() == 0 || !recHitCandidate.isOnTheSameLayer(recHitCandidates.back()) ) {
-	++numberOfCrossedLayers;
-      }
-
-      if( recHitCandidates.size() == 0 ||                                                // add the first seeding hit in any case
-	  !rejectOverlaps ||                                                             // without overlap rejection:   add each hit
-	  recHitCandidate.subDetId()    != recHitCandidates.back().subDetId() ||         // with overlap rejection:      only add if hits are not on the same layer
-	  recHitCandidate.layerNumber() != recHitCandidates.back().layerNumber() ){
-	recHitCandidates.push_back(recHitCandidate);
-      }
-      else if ( recHitCandidate.localError() < recHitCandidates.back().localError() ){
-	recHitCandidates.back() = recHitCandidate;
-      }
-    }
-    if ( numberOfCrossedLayers < minNumberOfCrossedLayers ) {
-      continue;
-    }
-
-    // Convert TrajectorySeedHitCandidate to TrackingRecHit and split hits
-    edm::OwnVector<TrackingRecHit> trackRecHits;
-    for ( unsigned index = 0; index<recHitCandidates.size(); ++index ) {
-      if(splitHits && recHitCandidates[index].matchedHit()->isMatched()){
-	trackRecHits.push_back(recHitCandidates[index].matchedHit()->firstHit()->clone());
-	trackRecHits.push_back(recHitCandidates[index].matchedHit()->secondHit()->clone());
-      }
-      else {
-	trackRecHits.push_back(recHitCandidates[index].hit()->clone());
-      }
-    }
-    // reverse order if needed
-    // when is this relevant? perhaps for the cases when track finding goes backwards?
-    if (seed.direction()==oppositeToMomentum){
-      LogDebug("FastTracking")<<"reversing the order of the hits";
-      std::reverse(recHitCandidates.begin(),recHitCandidates.end());
-    }
-    
-    // initial track candidate parameters parameters
-    int vertexIndex = simTracks->at(simTrackId).vertIndex();
-    GlobalPoint  position(simVertices->at(vertexIndex).position().x(),
-			  simVertices->at(vertexIndex).position().y(),
-			  simVertices->at(vertexIndex).position().z());
-    GlobalVector momentum( simTracks->at(simTrackId).momentum().x() , 
-			   simTracks->at(simTrackId).momentum().y() , 
-			   simTracks->at(simTrackId).momentum().z() );
-    float        charge   = simTracks->at(simTrackId).charge();
-    GlobalTrajectoryParameters initialParams(position,momentum,(int)charge,magneticField.product());
-    AlgebraicSymMatrix55 errorMatrix= AlgebraicMatrixID();    
-    CurvilinearTrajectoryError initialError(errorMatrix);
-    FreeTrajectoryState initialFTS(initialParams, initialError);      
-
-    // create track candidate
-    const GeomDet* initialLayer = trackerGeometry->idToDet(trackRecHits.front().geographicalId());
-    const TrajectoryStateOnSurface initialTSOS = propagator->propagate(initialFTS,initialLayer->surface()) ;
-    if (!initialTSOS.isValid()) continue; 
-    PTrajectoryStateOnDet PTSOD = trajectoryStateTransform::persistentState(initialTSOS,trackRecHits.front().geographicalId().rawId()); 
-    TrackCandidate newTrackCandidate(trackRecHits,seed,PTSOD,edm::RefToBase<TrajectorySeed>(seeds,seednr));
-
-    // add track candidate to output collection
-    output->push_back(newTrackCandidate);
-    
-  }
-  
-  // Save the track candidates
-  e.put(output);
 }
+
+#include "FWCore/Framework/interface/MakerMacros.h"
+DEFINE_FWK_MODULE(TrackCandidateProducer);

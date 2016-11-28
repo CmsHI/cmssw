@@ -81,6 +81,7 @@
 #include "FWCore/Utilities/interface/ConvertException.h"
 #include "FWCore/Utilities/interface/Exception.h"
 #include "FWCore/Utilities/interface/StreamID.h"
+#include "FWCore/Utilities/interface/get_underlying_safe.h"
 
 #include <map>
 #include <memory>
@@ -129,7 +130,7 @@ namespace edm {
 
     private:
       // We own none of these resources.
-      ActivityRegistry* a_;
+      ActivityRegistry* a_; // We do not use propagate_const because the registry itself is mutable.
       typename T::Context const* context_;
       bool allowThrow_;
     };
@@ -141,9 +142,9 @@ namespace edm {
     typedef std::vector<Path> TrigPaths;
     typedef std::vector<Path> NonTrigPaths;
     typedef std::shared_ptr<HLTGlobalStatus> TrigResPtr;
+    typedef std::shared_ptr<HLTGlobalStatus const> TrigResConstPtr;
     typedef std::shared_ptr<Worker> WorkerPtr;
     typedef std::vector<Worker*> AllWorkers;
-    typedef std::vector<std::shared_ptr<OutputModuleCommunicator> > AllOutputModuleCommunicators;
 
     typedef std::vector<Worker*> Workers;
 
@@ -276,7 +277,7 @@ namespace edm {
         reg_ = nullptr;
       }
     private:
-      edm::ActivityRegistry* reg_;
+      edm::ActivityRegistry* reg_; // We do not use propagate_const because the registry itself is mutable.
       StreamContext const* context_;
     };
 
@@ -289,10 +290,10 @@ namespace edm {
     void resetAll();
 
     template <typename T>
-    bool runTriggerPaths(typename T::MyPrincipal&, EventSetup const&, typename T::Context const*);
+    bool runTriggerPaths(typename T::MyPrincipal const&, EventSetup const&, typename T::Context const*);
 
     template <typename T>
-    void runEndPaths(typename T::MyPrincipal&, EventSetup const&, typename T::Context const*);
+    void runEndPaths(typename T::MyPrincipal const&, EventSetup const&, typename T::Context const*);
 
     void reportSkipped(EventPrincipal const& ep) const;
 
@@ -322,15 +323,18 @@ namespace edm {
                                edm::ProductRegistry const& preg, 
                                bool allowEarlyDelete);
 
+    TrigResConstPtr results() const {return get_underlying_safe(results_);}
+    TrigResPtr& results() {return get_underlying_safe(results_);}
+
     WorkerManager            workerManager_;
-    std::shared_ptr<ActivityRegistry>           actReg_;
+    std::shared_ptr<ActivityRegistry> actReg_; // We do not use propagate_const because the registry itself is mutable.
 
     vstring                  trig_name_list_;
     vstring                  end_path_name_list_;
 
-    TrigResPtr               results_;
+    edm::propagate_const<TrigResPtr> results_;
 
-    WorkerPtr                results_inserter_;
+    edm::propagate_const<WorkerPtr> results_inserter_;
     TrigPaths                trig_paths_;
     TrigPaths                end_paths_;
     std::vector<int>         empty_trig_paths_;
@@ -471,7 +475,7 @@ namespace edm {
 
   template <typename T>
   bool
-  StreamSchedule::runTriggerPaths(typename T::MyPrincipal& ep, EventSetup const& es, typename T::Context const* context) {
+  StreamSchedule::runTriggerPaths(typename T::MyPrincipal const& ep, EventSetup const& es, typename T::Context const* context) {
     for(auto& p : trig_paths_) {
       p.processOneOccurrence<T>(ep, es, streamID_, context);
     }
@@ -480,7 +484,7 @@ namespace edm {
 
   template <typename T>
   void
-  StreamSchedule::runEndPaths(typename T::MyPrincipal& ep, EventSetup const& es, typename T::Context const* context) {
+  StreamSchedule::runEndPaths(typename T::MyPrincipal const& ep, EventSetup const& es, typename T::Context const* context) {
     // Note there is no state-checking safety controlling the
     // activation/deactivation of endpaths.
     for(auto& p : end_paths_) {

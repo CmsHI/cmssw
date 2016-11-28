@@ -37,6 +37,7 @@ V00-03-25
 #include <TMath.h>
 #include <iostream>
 #include <TStyle.h>
+#include <ctime>
 
 using namespace std;
 using namespace edm;
@@ -45,17 +46,28 @@ void BeamMonitor::formatFitTime(char *ts, const time_t & t )  {
 #define CET (+1)
 #define CEST (+2)
 
+  //tm * ptm;
+  //ptm = gmtime ( &t );
+  //int year = ptm->tm_year;
+ 
+  //get correct year from ctime
+  time_t currentTime;
+  struct tm *localTime;
+  time( &currentTime );                   // Get the current time
+  localTime = localtime( &currentTime );  // Convert the current time to the local time
+  int year   = localTime->tm_year + 1900;
+
   tm * ptm;
   ptm = gmtime ( &t );
-  int year = ptm->tm_year;
+
  //check if year is ok
  if (year <= 37) year += 2000;                                                        
  if (year >= 70 && year <= 137) year += 1900;                                         
              
   if (year < 1995){                                                                   
         edm::LogError("BadTimeStamp") << "year reported is " << year <<" !!"<<std::endl;
-        year = 2015; //overwritten later by BeamFitter.cc for fits but needed here for TH1
-        edm::LogError("BadTimeStamp") << "Resetting to " <<year<<std::endl;
+        //year = 2015; //overwritten later by BeamFitter.cc for fits but needed here for TH1
+        //edm::LogError("BadTimeStamp") << "Resetting to " <<year<<std::endl;
       } 
   sprintf( ts, "%4d-%02d-%02d %02d:%02d:%02d", year,ptm->tm_mon+1,ptm->tm_mday,(ptm->tm_hour+CEST)%24, ptm->tm_min, ptm->tm_sec);
 
@@ -497,8 +509,7 @@ if(nthlumi > nextlumi_){
      mapBeginPVLS.erase(itpv);
      mapBeginBSTime.erase(itbstime);
      mapBeginPVTime.erase(itpvtime);
-     }
-
+     } 
             /*//not sure if want this or not ??
             map<int, int>::iterator itgapb=mapBeginBSLS.begin();
             map<int, int>::iterator itgape=mapBeginBSLS.end(); itgape--;
@@ -1179,12 +1190,12 @@ void BeamMonitor::FitAndFill(const LuminosityBlock& lumiSeg,int &lastlumi,int &n
       if (nthBSTrk_ >= 2*min_Ntrks_) {
 	double amp = std::sqrt(bs.x0()*bs.x0()+bs.y0()*bs.y0());
 	double alpha = std::atan2(bs.y0(),bs.x0());
-	TF1 *f1 = new TF1("f1","[0]*sin(x-[1])",-3.14,3.14);
+	std::unique_ptr<TF1> f1{ new TF1("f1","[0]*sin(x-[1])",-3.14,3.14) };
 	f1->SetParameters(amp,alpha);
 	f1->SetParLimits(0,amp-0.1,amp+0.1);
 	f1->SetParLimits(1,alpha-0.577,alpha+0.577);
 	f1->SetLineColor(4);
-	h_d0_phi0->getTProfile()->Fit("f1","QR");
+	h_d0_phi0->getTProfile()->Fit(f1.get(),"QR");
 
 	double mean = bs.z0();
 	double width = bs.sigmaZ();

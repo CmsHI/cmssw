@@ -26,7 +26,7 @@
 namespace edm {
   class ConsumesCollector;
   template<typename T> class Handle;
-  namespace one {
+  namespace stream {
     class EDProducerBase;
   }
   class StreamID;
@@ -36,33 +36,30 @@ namespace edm {
 class RecoTrackAccumulator : public DigiAccumulatorMixMod 
 {
  public:
-  explicit RecoTrackAccumulator(const edm::ParameterSet& conf, edm::one::EDProducerBase& mixMod, edm::ConsumesCollector& iC);
+  explicit RecoTrackAccumulator(const edm::ParameterSet& conf, edm::stream::EDProducerBase& mixMod, edm::ConsumesCollector& iC);
   virtual ~RecoTrackAccumulator();
   
   virtual void initializeEvent(edm::Event const& e, edm::EventSetup const& c);
   virtual void accumulate(edm::Event const& e, edm::EventSetup const& c);
   virtual void accumulate(PileUpEventPrincipal const& e, edm::EventSetup const& c, edm::StreamID const&) override;
   virtual void finalizeEvent(edm::Event& e, edm::EventSetup const& c);
+
   
  private:
-  template<class T> void accumulateEvent(const T& e, edm::EventSetup const& c,const edm::InputTag & label,const edm::InputTag & MVALabel);
+  template<class T> void accumulateEvent(const T& e, edm::EventSetup const& c,const edm::InputTag & label);
 
   std::auto_ptr<reco::TrackCollection>  newTracks_;
   std::auto_ptr<reco::TrackExtraCollection> newTrackExtras_;
   std::auto_ptr<TrackingRecHitCollection> newHits_;
-  std::vector<float> newMVAVals_;
 
   reco::TrackRefProd rNewTracks;
   reco::TrackExtraRefProd rNewTrackExtras;
   TrackingRecHitRefProd rNewHits;
 
   edm::InputTag signalTracksTag;
-  edm::InputTag signalMVAValuesTag;
   edm::InputTag pileUpTracksTag;
-  edm::InputTag pileUpMVAValuesTag;
 
   std::string outputLabel;
-  std::string MVAOutputLabel;
   
 };
 

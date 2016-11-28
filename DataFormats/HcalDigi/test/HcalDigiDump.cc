@@ -3,6 +3,7 @@
 #include "DataFormats/Common/interface/Handle.h"
 #include "DataFormats/HcalDigi/interface/HcalDigiCollections.h"
 #include "DataFormats/HcalDigi/interface/HcalUpgradeDataFrame.h"
+#include "DataFormats/HcalDigi/interface/HcalUMNioDigi.h"
 #include <iostream>
 
 using namespace std;
@@ -34,6 +35,7 @@ HcalDigiDump::HcalDigiDump(edm::ParameterSet const& conf) {
   consumesMany<HcalUpgradeDigiCollection>();
   consumesMany<QIE10DigiCollection>();
   consumesMany<QIE11DigiCollection>();
+  consumesMany<HcalUMNioDigi>();
 }
 
 void HcalDigiDump::analyze(edm::Event const& e, edm::EventSetup const& c) {
@@ -51,6 +53,7 @@ void HcalDigiDump::analyze(edm::Event const& e, edm::EventSetup const& c) {
   std::vector<edm::Handle<HcalUpgradeDigiCollection> > hup;
   std::vector<edm::Handle<QIE10DigiCollection> > qie10s;
   std::vector<edm::Handle<QIE11DigiCollection> > qie11s;
+  std::vector<edm::Handle<HcalUMNioDigi> > umnio;
 
   try {
     e.getManyByType(hbhe);
@@ -225,13 +228,22 @@ void HcalDigiDump::analyze(edm::Event const& e, edm::EventSetup const& c) {
   }
 
   try {
+    e.getManyByType(umnio);
+    std::vector<edm::Handle<HcalUMNioDigi> >::iterator i;
+    for (i=umnio.begin(); i!=umnio.end(); i++) {
+      cout << *(*i) << std::endl;
+    }
+  } catch (...) {
+  }
+  
+  try {
     e.getManyByType(qie10s);
     std::vector<edm::Handle<QIE10DigiCollection> >::iterator i;
     for (i=qie10s.begin(); i!=qie10s.end(); i++) {
       const QIE10DigiCollection& c=*(*i);
       
-      for (int j=0; j < c.size(); j++)
-	cout << c[j] << std::endl;
+      for (unsigned j=0; j < c.size(); j++)
+	cout << QIE10DataFrame(c[j]) << std::endl;
     }
   } catch (...) {
   }
@@ -242,8 +254,8 @@ void HcalDigiDump::analyze(edm::Event const& e, edm::EventSetup const& c) {
     for (i=qie11s.begin(); i!=qie11s.end(); i++) {
       const QIE11DigiCollection& c=*(*i);
       
-      for (int j=0; j < c.size(); j++)
-	cout << c[j] << std::endl;
+      for (unsigned j=0; j < c.size(); j++)
+	cout << QIE11DataFrame(c[j]) << std::endl;
     }
   } catch (...) {
   }

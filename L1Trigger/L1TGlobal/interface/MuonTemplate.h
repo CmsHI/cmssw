@@ -24,12 +24,12 @@
 // user include files
 
 //   base class
-#include "L1Trigger/L1TGlobal/interface/GtCondition.h"
+#include "L1Trigger/L1TGlobal/interface/GlobalCondition.h"
 
 // forward declarations
 
 // class declaration
-class MuonTemplate : public GtCondition
+class MuonTemplate : public GlobalCondition
 {
 
 public:
@@ -70,15 +70,15 @@ public:
 
 	int charge;
 
-      unsigned int etaWindowLower;
-      unsigned int etaWindowUpper;
-      unsigned int etaWindowVetoLower;
-      unsigned int etaWindowVetoUpper;
+      unsigned int etaWindow1Lower;
+      unsigned int etaWindow1Upper;
+      unsigned int etaWindow2Lower;
+      unsigned int etaWindow2Upper;
 
-      unsigned int phiWindowLower;
-      unsigned int phiWindowUpper;
-      unsigned int phiWindowVetoLower;
-      unsigned int phiWindowVetoUpper;
+      unsigned int phiWindow1Lower;
+      unsigned int phiWindow1Upper;
+      unsigned int phiWindow2Lower;
+      unsigned int phiWindow2Upper;
     };
 
     // typedef for correlation parameters

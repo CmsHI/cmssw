@@ -1533,14 +1533,9 @@ void JetAnalyzer_HeavyIons::analyze(const edm::Event& mEvent, const edm::EventSe
 
           mPFVsPtDeltaR_pTCorrected->Fill(pfDeltaR,numbers[iii][4]/recoJets[ijet].pt()); //MZ
 
-          //if(pfDeltaR < 1.0)         
-          // mPFDeltaR ->Fill(pfDeltaR,numbers[iii][0]/recoJets[ijet].pt()); //MZ
           mPFDeltaR ->Fill(pfDeltaR); //MZ
           mPFDeltaR_Scaled_R->Fill(pfDeltaR,1. / pow(pfDeltaR,2)); //MZ
-          //mPFDeltaR_pTCorrected->Fill(pfDeltaR,numbers[iii][0]/recoJets[ijet].pt()); //MZ
           mPFDeltaR_pTCorrected->Fill(pfDeltaR,numbers[iii][0]/recoJets[ijet].pt()); //MZ
-
-          //mPFVsPtInitialDeltaR_pTCorrected->Fill(pfDeltaR,numbers[iii][3]/recoJets[ijet].pt()); //MZ
 
           if(recoJets[ijet].pt() > 20 && recoJets[ijet].pt() < 30)
 	    {

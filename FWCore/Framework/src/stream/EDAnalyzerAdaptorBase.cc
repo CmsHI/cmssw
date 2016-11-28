@@ -114,10 +114,12 @@ EDAnalyzerAdaptorBase::consumer() const {
 }
 
 void
-EDAnalyzerAdaptorBase::modulesDependentUpon(const std::string& iProcessName,
-                                            std::vector<const char*>& oModuleLabels) const {
+EDAnalyzerAdaptorBase::modulesDependentUpon(std::string const& iProcessName,
+                                            std::string const& iModuleLabel,
+                                            bool iPrint,
+                                            std::vector<char const*>& oModuleLabels) const {
   assert(not m_streamModules.empty());
-  return m_streamModules[0]->modulesDependentUpon(iProcessName, oModuleLabels);
+  return m_streamModules[0]->modulesDependentUpon(iProcessName, iModuleLabel, iPrint, oModuleLabels);
 }
 
 void
@@ -136,7 +138,7 @@ EDAnalyzerAdaptorBase::consumesInfo() const {
 }
 
 bool
-EDAnalyzerAdaptorBase::doEvent(EventPrincipal& ep, EventSetup const& c,
+EDAnalyzerAdaptorBase::doEvent(EventPrincipal const& ep, EventSetup const& c,
                                ActivityRegistry* act,
                                ModuleCallingContext const* mcc) {
   assert(ep.streamID()<m_streamModules.size());
@@ -163,7 +165,7 @@ EDAnalyzerAdaptorBase::doEndStream(StreamID id) {
 
 void
 EDAnalyzerAdaptorBase::doStreamBeginRun(StreamID id,
-                                        RunPrincipal& rp,
+                                        RunPrincipal const& rp,
                                         EventSetup const& c,
                                         ModuleCallingContext const* mcc)
 {
@@ -178,7 +180,7 @@ EDAnalyzerAdaptorBase::doStreamBeginRun(StreamID id,
 
 void
 EDAnalyzerAdaptorBase::doStreamEndRun(StreamID id,
-                    RunPrincipal& rp,
+                    RunPrincipal const& rp,
                     EventSetup const& c,
                     ModuleCallingContext const* mcc)
 {
@@ -191,7 +193,7 @@ EDAnalyzerAdaptorBase::doStreamEndRun(StreamID id,
 
 void
 EDAnalyzerAdaptorBase::doStreamBeginLuminosityBlock(StreamID id,
-                                                    LuminosityBlockPrincipal& lbp,
+                                                    LuminosityBlockPrincipal const& lbp,
                                                     EventSetup const& c,
                                                     ModuleCallingContext const* mcc) {
   auto mod = m_streamModules[id];
@@ -203,7 +205,7 @@ EDAnalyzerAdaptorBase::doStreamBeginLuminosityBlock(StreamID id,
 }
 void
 EDAnalyzerAdaptorBase::doStreamEndLuminosityBlock(StreamID id,
-                                LuminosityBlockPrincipal& lbp,
+                                LuminosityBlockPrincipal const& lbp,
                                 EventSetup const& c,
                                 ModuleCallingContext const* mcc)
 {

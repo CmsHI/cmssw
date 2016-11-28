@@ -2,15 +2,15 @@
 #include "FWCore/ServiceRegistry/interface/Service.h"
 #include "FWCore/ServiceRegistry/interface/SystemBounds.h"
 #include "FWCore/ServiceRegistry/interface/GlobalContext.h"
+#include "FWCore/ServiceRegistry/interface/ProcessContext.h"
 #include "FWCore/Utilities/interface/StreamID.h"
-#include "FWCore/ParameterSet/interface/Registry.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
 #include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
 
 #include "EventFilter/Utilities/interface/EvFDaqDirector.h"
 #include "EventFilter/Utilities/interface/FastMonitoringService.h"
-#include "EventFilter/Utilities/plugins/FedRawDataInputSource.h"
+#include "EventFilter/Utilities/interface/FedRawDataInputSource.h"
 #include "EventFilter/Utilities/interface/DataPointDefinition.h"
 #include "EventFilter/Utilities/interface/DataPoint.h"
 
@@ -25,7 +25,13 @@
 
 //#define DEBUG
 
+using namespace jsoncollector;
+
+
 namespace evf {
+
+  //for enum MergeType
+  const std::vector<std::string> EvFDaqDirector::MergeTypeNames_ = {"","DAT","PB","JSNDATA"};
 
   namespace {
     struct flock make_flock(short type, short whence, off_t start, off_t len, pid_t pid)
@@ -49,7 +55,9 @@ namespace evf {
     selectedTransferMode_(pset.getUntrackedParameter<std::string>("selectedTransferMode","")),
     hltSourceDirectory_(pset.getUntrackedParameter<std::string>("hltSourceDirectory","")),
     fuLockPollInterval_(pset.getUntrackedParameter<unsigned int>("fuLockPollInterval",2000)),
-    emptyLumisectionMode_(pset.getUntrackedParameter<bool>("emptyLumisectionMode",false)),
+    emptyLumisectionMode_(pset.getUntrackedParameter<bool>("emptyLumisectionMode",true)),
+    microMergeDisabled_(pset.getUntrackedParameter<bool>("microMergeDisabled",true)),
+    mergeTypePset_(pset.getUntrackedParameter<std::string>("mergeTypePset","")),
     hostname_(""),
     bu_readlock_fd_(-1),
     bu_writelock_fd_(-1),
@@ -84,15 +92,11 @@ namespace evf {
   {
 
     reg.watchPreallocate(this, &EvFDaqDirector::preallocate);
+    reg.watchPreBeginJob(this, &EvFDaqDirector::preBeginJob);
     reg.watchPreGlobalBeginRun(this, &EvFDaqDirector::preBeginRun);
     reg.watchPostGlobalEndRun(this, &EvFDaqDirector::postEndRun);
     reg.watchPreSourceEvent(this, &EvFDaqDirector::preSourceEvent);
     reg.watchPreGlobalEndLumi(this,&EvFDaqDirector::preGlobalEndLumi);
-
-    std::stringstream ss;
-    ss << "run" << std::setfill('0') << std::setw(6) << run_;
-    run_string_ = ss.str();
-    run_dir_ = base_dir_+"/"+run_string_;
 
     //save hostname for later
     char hostname[33];
@@ -103,17 +107,33 @@ namespace evf {
     if (fuLockPollIntervalPtr) {
       try {
         fuLockPollInterval_=boost::lexical_cast<unsigned int>(std::string(fuLockPollIntervalPtr));
-        edm::LogInfo("Setting fu lock poll interval by environment string: ") << fuLockPollInterval_ << " us";
+        edm::LogInfo("EvFDaqDirector") << "Setting fu lock poll interval by environment string: " << fuLockPollInterval_ << " us";
       }
-      catch (...) {edm::LogWarning("Unable to parse environment string: ") << std::string(fuLockPollIntervalPtr);}
+      catch( boost::bad_lexical_cast const& ) {
+        edm::LogWarning("EvFDaqDirector") << "Bad lexical cast in parsing: " << std::string(fuLockPollIntervalPtr);
+      }
     }
 
     char * emptyLumiModePtr = getenv("FFF_EMPTYLSMODE");
     if (emptyLumiModePtr) {
         emptyLumisectionMode_ = true;
-        edm::LogInfo("Setting empty lumisection mode");
+        edm::LogInfo("EvFDaqDirector") << "Setting empty lumisection mode";
     }
- 
+
+    char * microMergeDisabledPtr = getenv("FFF_MICROMERGEDISABLED");
+    if (microMergeDisabledPtr) {
+        microMergeDisabled_ = true;
+        edm::LogInfo("EvFDaqDirector") << "Disabling dat file micro-merge by the HLT process (delegated to the hlt daemon)";
+    }
+  }
+
+  void EvFDaqDirector::initRun()
+  {
+    std::stringstream ss;
+    ss << "run" << std::setfill('0') << std::setw(6) << run_;
+    run_string_ = ss.str();
+    run_dir_ = base_dir_+"/"+run_string_;
+
     // check if base dir exists or create it accordingly
     int retval = mkdir(base_dir_.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
     if (retval != 0 && errno != EEXIST) {
@@ -198,12 +218,12 @@ namespace evf {
 	    std::string hltdir=bu_run_dir_+"/hlt";
 	    std::string tmphltdir=bu_run_open_dir_+"/hlt";
 	    retval = mkdir(tmphltdir.c_str(),S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+	    if (retval != 0 && errno != EEXIST)
+	      throw cms::Exception("DaqDirector")
+	        << " Error creating bu run dir -: " << hltdir
+	        << " mkdir error:" << strerror(errno) << "\n";
 
             boost::filesystem::copy_file(hltSourceDirectory_+"/HltConfig.py",tmphltdir+"/HltConfig.py");
-            try {
-              boost::filesystem::copy_file(hltSourceDirectory_+"/CMSSW_VERSION",tmphltdir+"/CMSSW_VERSION");
-              boost::filesystem::copy_file(hltSourceDirectory_+"/SCRAM_ARCH",tmphltdir+"/SCRAM_ARCH");
-            } catch (...) {}
 
             boost::filesystem::copy_file(hltSourceDirectory_+"/fffParameters.jsn",tmphltdir+"/fffParameters.jsn");
 
@@ -232,6 +252,9 @@ namespace evf {
     pthread_mutex_init(&init_lock_,NULL);
 
     stopFilePath_ = run_dir_+"/CMSSW_STOP";
+    std::stringstream sstp;
+    sstp << stopFilePath_ << "_pid" << getpid();
+    stopFilePathPid_ = sstp.str();
   }
 
   EvFDaqDirector::~EvFDaqDirector()
@@ -248,6 +271,18 @@ namespace evf {
 
   }
 
+
+  void EvFDaqDirector::preallocate(edm::service::SystemBounds const& bounds) {
+
+    initRun();
+
+    for (unsigned int i=0;i<bounds.maxNumberOfStreams();i++){
+      streamFileTracker_.push_back(-1);
+    }
+    nThreads_=bounds.maxNumberOfStreams();
+    nStreams_=bounds.maxNumberOfThreads();
+  }
+
   void EvFDaqDirector::fillDescriptions(edm::ConfigurationDescriptions& descriptions)
   {
     edm::ParameterSetDescription desc;
@@ -259,29 +294,17 @@ namespace evf {
     desc.addUntracked<bool>("requireTransfersPSet",false)->setComment("Require complete transferSystem PSet in the process configuration");
     desc.addUntracked<std::string>("selectedTransferMode","")->setComment("Selected transfer mode (choice in Lvl0 propagated as Python parameter");
     desc.addUntracked<unsigned int>("fuLockPollInterval",2000)->setComment("Lock polling interval in microseconds for the input directory file lock");
-    desc.addUntracked<bool>("emptyLumisectionMode",false)->setComment("Enables writing stream output metadata even when no events are processed in a lumisection");
+    desc.addUntracked<bool>("emptyLumisectionMode",true)->setComment("Enables writing stream output metadata even when no events are processed in a lumisection");
+    desc.addUntracked<bool>("microMergeDisabled",true)->setComment("Disabled micro-merging by the Output Module, so it is later done by hltd service");
+    desc.addUntracked<std::string>("mergingPset","")->setComment("Name of merging PSet to look for merging type definitions for streams");
     desc.setAllowAnything();
     descriptions.add("EvFDaqDirector", desc);
   }
 
-  void EvFDaqDirector::postEndRun(edm::GlobalContext const& globalContext) {
-    close(bu_readlock_fd_);
-    close(bu_writelock_fd_);
-    if (directorBu_) {
-      std::string filename = bu_run_dir_ + "/bu.lock";
-      removeFile(filename);
-    }
-  }
-
-  void EvFDaqDirector::preallocate(edm::service::SystemBounds const& bounds) {
-
-    for (unsigned int i=0;i<bounds.maxNumberOfStreams();i++){
-      streamFileTracker_.push_back(-1);
-    }
-    nThreads_=bounds.maxNumberOfStreams();
-    nStreams_=bounds.maxNumberOfThreads();
-
-    checkTransferSystemPSet();
+  void EvFDaqDirector::preBeginJob(edm::PathsAndConsumesOfModulesBase const&,
+                                   edm::ProcessContext const& pc) {
+    checkTransferSystemPSet(pc);
+    checkMergeTypePSet(pc);
   }
 
   void EvFDaqDirector::preBeginRun(edm::GlobalContext const& globalContext) {
@@ -293,6 +316,15 @@ namespace evf {
       edm::LogWarning("EvFDaqDirector") << "WARNING - checking run dir -: "
 					<< run_dir_ << ". This is not the highest run "
 					<< dirManager_.findHighestRunDir();
+    }
+  }
+
+  void EvFDaqDirector::postEndRun(edm::GlobalContext const& globalContext) {
+    close(bu_readlock_fd_);
+    close(bu_writelock_fd_);
+    if (directorBu_) {
+      std::string filename = bu_run_dir_ + "/bu.lock";
+      removeFile(filename);
     }
   }
 
@@ -322,7 +354,7 @@ namespace evf {
           try {
             boost::filesystem::remove(filePath);
           }
-            catch (...) {/*file gets deleted first time but exception is still thrown*/}
+            catch (const boost::filesystem::filesystem_error&) {/*file gets deleted first time but exception is still thrown*/}
         }
         catch (std::exception& ex)
         {
@@ -330,7 +362,7 @@ namespace evf {
           usleep(10000);
           try {
 	    boost::filesystem::remove(filePath);
-          } catch (...) {/*file gets deleted first time but exception is still thrown*/}
+          } catch (std::exception&) {/*file gets deleted first time but exception is still thrown*/}
         }
         
         delete it->second;
@@ -360,6 +392,10 @@ namespace evf {
 
   std::string EvFDaqDirector::getOpenInputJsonFilePath(const unsigned int ls, const unsigned int index) const {
     return bu_run_dir_ + "/open/" + fffnaming::inputJsonFileName(run_,ls,index);
+  }
+
+  std::string EvFDaqDirector::getDatFilePath(const unsigned int ls, std::string const& stream) const {
+    return run_dir_ + "/" + fffnaming::streamerDataFileNameWithPid(run_,ls,stream);
   }
 
   std::string EvFDaqDirector::getOpenDatFilePath(const unsigned int ls, std::string const& stream) const {
@@ -454,11 +490,23 @@ namespace evf {
 
     struct stat buf;
     int stopFileLS = -1;
-    if (stat(stopFilePath_.c_str(),&buf)==0) {
-        stopFileLS = readLastLSEntry(stopFilePath_);
+    int stopFileCheck = stat(stopFilePath_.c_str(),&buf);
+    int stopFilePidCheck = stat(stopFilePathPid_.c_str(),&buf);
+    if (stopFileCheck==0 || stopFilePidCheck==0) {
+        if (stopFileCheck==0)
+          stopFileLS = readLastLSEntry(stopFilePath_);
+        else
+          stopFileLS = 1;//stop without drain if only pid is stopped
+        if (!stop_ls_override_) {
+          //if lumisection is higher than in stop file, should quit at next from current
+          if (stopFileLS>=0 && (int)ls>=stopFileLS) stopFileLS = stop_ls_override_ = ls;
+        }
+        else stopFileLS = stop_ls_override_;
         edm::LogWarning("EvFDaqDirector") << "Detected stop request from hltd. Ending run for this process after LS -: " << stopFileLS;
         //return runEnded;
     }
+    else //if file was removed before reaching stop condition, reset this
+      stop_ls_override_ = 0;
 
     timeval ts_lockbegin;
     gettimeofday(&ts_lockbegin,0);
@@ -679,11 +727,7 @@ namespace evf {
 
     if (previousFileSize_ != 0) {
       if (!fms_) {
-        try {
           fms_ = (FastMonitoringService *) (edm::Service<evf::MicroStateService>().operator->());
-        } catch (...) {
-	        edm::LogError("EvFDaqDirector") <<" FastMonitoringService not found";
-        }
       }
       if (fms_) fms_->accumulateFileSize(ls, previousFileSize_);
       previousFileSize_ = 0;
@@ -865,12 +909,15 @@ namespace evf {
   }
 
   //if transferSystem PSet is present in the menu, we require it to be complete and consistent for all specified streams
-  void EvFDaqDirector::checkTransferSystemPSet()
+  void EvFDaqDirector::checkTransferSystemPSet(edm::ProcessContext const& pc)
   {
+    if(transferSystemJson_) return;
+
     transferSystemJson_.reset(new Json::Value);
-    if (edm::getProcessParameterSet().existsAs<edm::ParameterSet>("transferSystem",true))
+    edm::ParameterSet const& topPset = edm::getParameterSet(pc.parameterSetID());
+    if (topPset.existsAs<edm::ParameterSet>("transferSystem",true))
     {
-      const edm::ParameterSet& tsPset(edm::getProcessParameterSet().getParameterSet("transferSystem"));
+      const edm::ParameterSet& tsPset(topPset.getParameterSet("transferSystem"));
 
       Json::Value destinationsVal(Json::arrayValue);
       std::vector<std::string> destinations = tsPset.getParameter<std::vector<std::string>>("destinations");
@@ -963,6 +1010,34 @@ namespace evf {
       ret+=(*it).asString();
     }
     return ret;
+  }
+
+  void EvFDaqDirector::checkMergeTypePSet(edm::ProcessContext const& pc)
+  {
+    if (mergeTypePset_.empty()) return;
+    if(mergeTypeMap_.size()) return;
+    edm::ParameterSet const& topPset = edm::getParameterSet(pc.parameterSetID());
+    if (topPset.existsAs<edm::ParameterSet>(mergeTypePset_,true))
+    {
+      const edm::ParameterSet& tsPset(topPset.getParameterSet(mergeTypePset_));
+      for (std::string pname : tsPset.getParameterNames()) {
+          std::string streamType = tsPset.getParameter<std::string>(pname); 
+          mergeTypeMap_[pname]=streamType;
+      }
+    }
+  }
+ 
+  std::string EvFDaqDirector::getStreamMergeType(std::string const& stream, MergeType defaultType)
+  {
+    auto mergeTypeItr = mergeTypeMap_.find(stream.c_str());
+    if (mergeTypeItr == mergeTypeMap_.end()) {
+           edm::LogInfo("EvFDaqDirector") << " No merging type specified for stream " << stream << ". Using default value";
+           assert(defaultType<MergeTypeNames_.size());
+           std::string defaultName = MergeTypeNames_[defaultType];
+           mergeTypeMap_[stream] =  defaultName;
+           return defaultName;
+    }
+    return mergeTypeItr->second;
   }
 
   void EvFDaqDirector::createProcessingNotificationMaybe() const {

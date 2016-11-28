@@ -31,7 +31,7 @@
 #include "DataFormats/TrackReco/interface/TrackBase.h"
 
 // #define VI_DEBUG
-
+// #define STAT_TSB
 
 namespace {
 #ifdef STAT_TSB
@@ -41,18 +41,18 @@ namespace {
     long long totGsfTrack=0;
     long long totFound=0;
     long long totLost=0;
-    long long totAlgo[12];
+    long long totAlgo[15];
     void track(int l) {
       if (l>0) ++totLoop; else ++totTrack;
     }
     void hits(int f, int l) { totFound+=f; totLost+=l;} 
     void gsf() {++totGsfTrack;}
-    void algo(int a) { if (a>=0 && a<12) ++totAlgo[a];}
+    void algo(int a) { if (a>=0 && a<15) ++totAlgo[a];}
 
 
     void print() const {
-      std::cout << "TrackProducer stat\nTrack/Loop/Gsf/FoundHits/LostHits/algos "
-    		<<  totTrack <<'/'<< totLoop <<'/'<< totGsfTrack  <<'/'<< totFound  <<'/'<< totLost;
+      std::cout << "TrackProducer stat\nTrack/Loop/Gsf/FoundHits/LostHits//algos "
+    		<<  totTrack <<'/'<< totLoop <<'/'<< totGsfTrack  <<'/'<< totFound  <<'/'<< totLost<<'/';
       for (auto a : totAlgo) std::cout << '/'<< a;
 	std::cout  << std::endl;
     }
@@ -87,7 +87,7 @@ TrackProducerAlgorithm<reco::Track>::buildTrack (const TrajectoryFitter * theFit
 						 float ndof,
 						 const reco::BeamSpot& bs,
 						 SeedRef seedRef,
-						 int qualityMask,signed char nLoops)						 
+						 int qualityMask,signed char nLoops)
 {
   //variable declarations
 
@@ -211,14 +211,17 @@ std::cout << algo_ << ": " <<  hits.size() <<'|' <<theTraj->measurements().size(
 			     tscbl.trackStateAtPCA().curvilinearError(),
 			     algo_);
   
+  if(originalAlgo_ != reco::TrackBase::undefAlgorithm) theTrack->setOriginalAlgorithm(originalAlgo_);
+  if(algoMask_.any())                                  theTrack->setAlgoMask(algoMask_);
   theTrack->setQualityMask(qualityMask);
   theTrack->setNLoops(nLoops);
-  
+  theTrack->setStopReason(stopReason_);
+
   LogDebug("TrackProducer") << "theTrack->pt()=" << theTrack->pt();
   
   LogDebug("TrackProducer") <<"track done\n";
   
-  AlgoProduct aProduct(theTraj,std::make_pair(theTrack,seedDir));
+  AlgoProduct aProduct{theTraj,theTrack,seedDir,0};
   algoResults.push_back(aProduct);
   
   statCount.track(nLoops);
@@ -340,10 +343,15 @@ TrackProducerAlgorithm<reco::GsfTrack>::buildTrack (const TrajectoryFitter * the
 				//			       theTraj->lostHits(),//FIXME to be fixed in Trajectory.h
 				pos, mom, tscbl.trackStateAtPCA().charge(), tscbl.trackStateAtPCA().curvilinearError());    
   theTrack->setAlgorithm(algo_);
-  
+  if(originalAlgo_ != reco::TrackBase::undefAlgorithm) theTrack->setOriginalAlgorithm(originalAlgo_);
+  if(algoMask_.any())                                  theTrack->setAlgoMask(algoMask_);
+
+  theTrack->setStopReason(stopReason_);
+
   LogDebug("GsfTrackProducer") <<"track done\n";
   
-  AlgoProduct aProduct(theTraj,std::make_pair(theTrack,seedDir));
+  AlgoProduct aProduct{theTraj,theTrack,seedDir,0};
+
   LogDebug("GsfTrackProducer") <<"track done1\n";
   algoResults.push_back(aProduct);
   LogDebug("GsfTrackProducer") <<"track done2\n";

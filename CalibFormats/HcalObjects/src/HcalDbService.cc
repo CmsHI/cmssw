@@ -17,6 +17,7 @@ HcalDbService::HcalDbService (const edm::ParameterSet& cfg):
   mPedestals (0), mPedestalWidths (0),
   mGains (0), mGainWidths (0),  
   mQIEData(0),
+  mQIETypes(0),
   mElectronicsMap(0),
   mRespCorrs(0),
   mL1TriggerObjects(0),
@@ -31,6 +32,7 @@ const HcalTopology* HcalDbService::getTopologyUsed() const {
   if (mPedestals && mPedestals->topo()) return mPedestals->topo();
   if (mGains && mGains->topo()) return mGains->topo();
   if (mRespCorrs && mRespCorrs->topo()) return mRespCorrs->topo();
+  if (mQIETypes && mQIETypes->topo()) return mQIETypes->topo();
   if (mL1TriggerObjects && mL1TriggerObjects->topo()) return mL1TriggerObjects->topo();
   if (mLutMetadata && mLutMetadata->topo()) return mLutMetadata->topo();
   return 0;
@@ -51,7 +53,7 @@ const HcalCalibrationWidths& HcalDbService::getHcalCalibrationWidths(const HcalG
 
 void HcalDbService::buildCalibrations() const {
   // we use the set of ids for pedestals as the master list
-  if ((!mPedestals) || (!mGains) || (!mQIEData) || (!mRespCorrs) || (!mTimeCorrs) || (!mLUTCorrs) ) return;
+  if ((!mPedestals) || (!mGains) || (!mQIEData) || (!mQIETypes) || (!mRespCorrs) || (!mTimeCorrs) || (!mLUTCorrs) ) return;
 
   if (!mCalibSet.load(std::memory_order_acquire)) {
 
@@ -180,6 +182,12 @@ bool HcalDbService::makeHcalCalibrationWidth (const HcalGenericDetId& fId,
   return false;
 }  
 
+const HcalQIEType* HcalDbService::getHcalQIEType (const HcalGenericDetId& fId) const {
+  if (mQIETypes) {
+    return mQIETypes->getValues (fId);
+  }
+  return 0;
+}
 
 const HcalRespCorr* HcalDbService::getHcalRespCorr (const HcalGenericDetId& fId) const {
   if (mRespCorrs) {
@@ -224,19 +232,20 @@ const HcalQIECoder* HcalDbService::getHcalCoder (const HcalGenericDetId& fId) co
 }
 
 const HcalQIEShape* HcalDbService::getHcalShape (const HcalGenericDetId& fId) const {
-  if (mQIEData) {
-    return &mQIEData->getShape (fId);
+  if (mQIEData && mQIETypes) {
+    //currently 3 types of QIEs exist: QIE8, QIE10, QIE11
+    int qieType = mQIETypes->getValues(fId)->getValue();
+    //QIE10 and QIE11 have same shape (ADC ladder)
+    if(qieType>0) qieType = 1;
+    return &mQIEData->getShape(qieType);
   }
   return 0;
 }
 
 const HcalQIEShape* HcalDbService::getHcalShape (const HcalQIECoder *coder) const {
-  if (mQIEData) {
-    return &mQIEData->getShape(coder);
-  }
-  return 0;
+  HcalGenericDetId fId(coder->rawId());
+  return getHcalShape(fId);
 }
-
 
 const HcalElectronicsMap* HcalDbService::getHcalMapping () const {
   return mElectronicsMap;

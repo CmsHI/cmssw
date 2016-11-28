@@ -11,8 +11,13 @@
 #include "DetectorDescription/Core/interface/DDFilteredView.h"
 #include "DetectorDescription/Core/interface/DDValue.h"
 #include "FWCore/Framework/interface/ESTransientHandle.h"
+#include "FWCore/Framework/interface/ESHandle.h"
 #include "Geometry/Records/interface/IdealGeometryRecord.h"
+#include "Geometry/Records/interface/HcalSimNumberingRecord.h"
+#include "Geometry/HcalCommonData/interface/HcalDDDSimConstants.h"
 #include "FWCore/Utilities/interface/Exception.h"
+#include "DataFormats/HcalDetId/interface/HcalDetId.h"
+#include "DataFormats/HcalDetId/interface/HcalSubdetector.h"
 
 #include "Randomize.hh"
 #include "CLHEP/Units/GlobalSystemOfUnits.h"
@@ -32,8 +37,7 @@
 //#define DebugLog
 
 FastHFShowerLibrary::FastHFShowerLibrary(edm::ParameterSet const & p) 
-  : fast(p)
-{
+  : fast(p) {
   edm::ParameterSet m_HS   = p.getParameter<edm::ParameterSet>("HFShowerLibrary");
   applyFidCut              = m_HS.getParameter<bool>("ApplyFiducialCut");
 }
@@ -45,9 +49,13 @@ void const FastHFShowerLibrary::initHFShowerLibrary(const edm::EventSetup& iSetu
   edm::ESTransientHandle<DDCompactView> cpv;
   iSetup.get<IdealGeometryRecord>().get(cpv);
 
+  edm::ESHandle<HcalDDDSimConstants>    hdc;
+  iSetup.get<HcalSimNumberingRecord>().get(hdc);
+  hcalConstants = (HcalDDDSimConstants*)(&(*hdc));
+
   std::string name = "HcalHits";
+  numberingFromDDD.reset(new HcalNumberingFromDDD(hcalConstants));  
   hfshower.reset(new HFShowerLibrary(name,*cpv,fast));
-  numberingFromDDD.reset(new HcalNumberingFromDDD(name, *cpv));  
   
   // Geant4 particles
   G4DecayPhysics decays;
@@ -55,7 +63,7 @@ void const FastHFShowerLibrary::initHFShowerLibrary(const edm::EventSetup& iSetu
   G4ParticleTable* partTable = G4ParticleTable::GetParticleTable();
   partTable->SetReadiness();
 
-  hfshower->initRun(partTable); // init particle code
+  hfshower->initRun(partTable, hcalConstants); // init particle code
 }
 
 void FastHFShowerLibrary::recoHFShowerLibrary(const FSimTrack& myTrack) {
@@ -112,4 +120,19 @@ void FastHFShowerLibrary::recoHFShowerLibrary(const FSimTrack& myTrack) {
     }  // end of isItinFidVolume check 
   } // end loop over hits
 
+}
+
+void FastHFShowerLibrary::modifyDepth(uint32_t &id) {
+
+  HcalDetId hid(id);
+  if (hid.subdet() == HcalForward) {
+    int eta = hid.ieta();
+    int phi = hid.iphi();
+    if (hcalConstants->maxHFDepth(eta,phi) > 2) {
+      if (hid.depth() <= 2) {
+	int dep = (G4UniformRand() > 0.5) ? (2+hid.depth()) : hid.depth();
+	id = HcalDetId(HcalForward,eta,phi,dep).rawId();
+      }
+    }
+  }
 }

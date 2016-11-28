@@ -10,7 +10,7 @@ pixelPairStepClusters = trackClusterRemover.clone(
     pixelClusters                            = cms.InputTag("siPixelClusters"),
     stripClusters                            = cms.InputTag("siStripClusters"),
     oldClusterRemovalInfo                    = cms.InputTag("lowPtTripletStepClusters"),
-    overrideTrkQuals                         = cms.InputTag('lowPtTripletStepSelector','lowPtTripletStep'),
+    overrideTrkQuals                         = cms.InputTag('lowPtTripletStepSelector','QualityMasks'),
     TrackQuality                             = cms.string('highPurity'),
     minNumberOfLayersWithMeasBeforeFiltering = cms.int32(0),
 )
@@ -58,8 +58,8 @@ pixelPairStepTrajectoryFilter = TrackingTools.TrajectoryFiltering.TrajectoryFilt
     minPt = 0.1
     )
 
-import TrackingTools.KalmanUpdators.Chi2MeasurementEstimatorESProducer_cfi
-pixelPairStepChi2Est = TrackingTools.KalmanUpdators.Chi2MeasurementEstimatorESProducer_cfi.Chi2MeasurementEstimator.clone(
+import TrackingTools.KalmanUpdators.Chi2MeasurementEstimator_cfi
+pixelPairStepChi2Est = TrackingTools.KalmanUpdators.Chi2MeasurementEstimator_cfi.Chi2MeasurementEstimator.clone(
     ComponentName = cms.string('pixelPairStepChi2Est'),
     nSigma = cms.double(3.0),
     MaxChi2 = cms.double(9.0),
@@ -114,7 +114,7 @@ pixelPairStepSelector = RecoTracker.FinalTrackSelectors.multiTrackSelector_cfi.m
             preFilterName = 'pixelPairStepLoose',
             ),
         RecoTracker.FinalTrackSelectors.multiTrackSelector_cfi.highpurityMTS.clone(
-            name = 'pixelPairStep',
+            name = 'QualityMasks',
             preFilterName = 'pixelPairStepTight',
             ),
         ),

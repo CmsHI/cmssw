@@ -1,7 +1,7 @@
 import FWCore.ParameterSet.Config as cms
 
 hiFJRhoAnalyzer = cms.EDAnalyzer('HiFJRhoAnalyzer',
-                                 etaMap             = cms.InputTag('hiFJRhoProducer','mapEtaEdges','HiForest'),
+                                 etaMap             = cms.InputTag('hiFJRhoProducer','mapEtaEdges'),
                                  rho                = cms.InputTag('hiFJRhoProducer','mapToRho'),
                                  rhom               = cms.InputTag('hiFJRhoProducer','mapToRhoM'),
                                  rhoCorr            = cms.InputTag('hiFJGridEmptyAreaCalculator','mapToRhoCorr'),

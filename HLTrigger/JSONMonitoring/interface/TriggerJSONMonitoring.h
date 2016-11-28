@@ -30,48 +30,50 @@
 #include "DataFormats/Common/interface/TriggerResults.h"
 
 #include "HLTrigger/HLTcore/interface/HLTConfigProvider.h"
-#include "HLTrigger/HLTcore/interface/HLTPrescaleProvider.h"
 
 #include "FWCore/Framework/interface/ESHandle.h"          
 #include "CondFormats/L1TObjects/interface/L1GtTriggerMenu.h"  
 #include "CondFormats/DataRecord/interface/L1GtTriggerMenuRcd.h"  
 #include "DataFormats/L1GlobalTrigger/interface/L1GlobalTriggerReadoutRecord.h"  
+#include "DataFormats/L1TGlobal/interface/GlobalAlgBlk.h"
 #include "CondFormats/L1TObjects/interface/L1GtTriggerMask.h"
 #include "CondFormats/DataRecord/interface/L1GtTriggerMaskAlgoTrigRcd.h"
 #include "CondFormats/DataRecord/interface/L1GtTriggerMaskTechTrigRcd.h"
 
 #include <atomic>
 
-namespace hltJson {
+namespace trigJson {
   //Struct for storing variables that must be written and reset every lumi section 
   struct lumiVars {
-    HistoJ<unsigned int> *processed; // # of events processed
-    HistoJ<unsigned int> *hltWasRun; // # of events where HLT[i] was run 
-    HistoJ<unsigned int> *hltL1s;    // # of events after L1 seed
-    HistoJ<unsigned int> *hltPre;    // # of events after HLT prescale 
-    HistoJ<unsigned int> *hltAccept; // # of events accepted by HLT[i]
-    HistoJ<unsigned int> *hltReject; // # of events rejected by HLT[i] 
-    HistoJ<unsigned int> *hltErrors; // # of events with error in HLT[i]
-    HistoJ<unsigned int> *hltDatasets; // # of events accepted by each dataset 
+    jsoncollector::HistoJ<unsigned int> *processed; // # of events processed
+    jsoncollector::HistoJ<unsigned int> *hltWasRun; // # of events where HLT[i] was run 
+    jsoncollector::HistoJ<unsigned int> *hltL1s;    // # of events after L1 seed
+    jsoncollector::HistoJ<unsigned int> *hltPre;    // # of events after HLT prescale 
+    jsoncollector::HistoJ<unsigned int> *hltAccept; // # of events accepted by HLT[i]
+    jsoncollector::HistoJ<unsigned int> *hltReject; // # of events rejected by HLT[i] 
+    jsoncollector::HistoJ<unsigned int> *hltErrors; // # of events with error in HLT[i]
+    jsoncollector::HistoJ<unsigned int> *hltDatasets; // # of events accepted by each dataset 
 
     unsigned int prescaleIndex; // Prescale index for each lumi section
 
     std::string baseRunDir; //Base directory from EvFDaqDirector 
     std::string stHltJsd;   //Definition file name for JSON with rates  
 
-    HistoJ<unsigned int> *L1AlgoAccept;            // # of events accepted by L1T[i]  
-    HistoJ<unsigned int> *L1TechAccept;            // # of events accepted by L1 Technical Triggers[i]  
-    HistoJ<unsigned int> *L1AlgoAcceptPhysics;     // # of Physics events accepted by L1T[i]  
-    HistoJ<unsigned int> *L1TechAcceptPhysics;     // # of Physics events accepted by L1 Technical Triggers[i]  
-    HistoJ<unsigned int> *L1AlgoAcceptCalibration; // # of Calibration events accepted by L1T[i]  
-    HistoJ<unsigned int> *L1TechAcceptCalibration; // # of Calibration events accepted by L1 Technical Triggers[i]  
-    HistoJ<unsigned int> *L1AlgoAcceptRandom;      // # of Random events accepted by L1T[i]  
-    HistoJ<unsigned int> *L1TechAcceptRandom;      // # of Random events accepted by L1 Technical Triggers[i]  
-    HistoJ<unsigned int> *L1Global;                // Global # of Phyics, Cailibration and Random L1 triggers 
+    jsoncollector::HistoJ<unsigned int> *L1AlgoAccept;            // # of events accepted by L1T[i]  
+    jsoncollector::HistoJ<unsigned int> *L1TechAccept;            // # of events accepted by L1 Technical Triggers[i]  
+    jsoncollector::HistoJ<unsigned int> *L1AlgoAcceptPhysics;     // # of Physics events accepted by L1T[i]  
+    jsoncollector::HistoJ<unsigned int> *L1TechAcceptPhysics;     // # of Physics events accepted by L1 Technical Triggers[i]  
+    jsoncollector::HistoJ<unsigned int> *L1AlgoAcceptCalibration; // # of Calibration events accepted by L1T[i]  
+    jsoncollector::HistoJ<unsigned int> *L1TechAcceptCalibration; // # of Calibration events accepted by L1 Technical Triggers[i]  
+    jsoncollector::HistoJ<unsigned int> *L1AlgoAcceptRandom;      // # of Random events accepted by L1T[i]  
+    jsoncollector::HistoJ<unsigned int> *L1TechAcceptRandom;      // # of Random events accepted by L1 Technical Triggers[i]  
+    jsoncollector::HistoJ<unsigned int> *L1Global;                // Global # of Phyics, Cailibration and Random L1 triggers 
     
     std::string stL1Jsd;                 //Definition file name for JSON with L1 rates            
     std::string streamL1Destination;
     std::string streamHLTDestination;
+    std::string streamL1MergeType;
+    std::string streamHLTMergeType;
   };
   //End lumi struct
   //Struct for storing variable written once per run
@@ -79,13 +81,15 @@ namespace hltJson {
     mutable std::atomic<bool> wroteFiles;
     mutable std::string streamL1Destination;
     mutable std::string streamHLTDestination;
+    mutable std::string streamL1MergeType;
+    mutable std::string streamHLTMergeType;
   };
-}//End hltJson namespace   
+}//End trigJson namespace   
 
 // 
 // class declaration
 // 
-class TriggerJSONMonitoring : public edm::stream::EDAnalyzer <edm::RunCache<hltJson::runVars>, edm::LuminosityBlockSummaryCache<hltJson::lumiVars>>
+class TriggerJSONMonitoring : public edm::stream::EDAnalyzer <edm::RunCache<trigJson::runVars>, edm::LuminosityBlockSummaryCache<trigJson::lumiVars>>
 {
  public:
   explicit TriggerJSONMonitoring(const edm::ParameterSet&);
@@ -98,11 +102,15 @@ class TriggerJSONMonitoring : public edm::stream::EDAnalyzer <edm::RunCache<hltJ
   void beginRun(edm::Run const&,
                 edm::EventSetup const&);
 
-  static std::shared_ptr<hltJson::runVars> globalBeginRun(edm::Run const&, edm::EventSetup const&, void const*){
-    std::shared_ptr<hltJson::runVars> rv(new hltJson::runVars);
+  static std::shared_ptr<trigJson::runVars> globalBeginRun(edm::Run const&, edm::EventSetup const&, void const*){
+    std::shared_ptr<trigJson::runVars> rv(new trigJson::runVars);
     if (edm::Service<evf::EvFDaqDirector>().isAvailable()) {
       rv->streamHLTDestination = edm::Service<evf::EvFDaqDirector>()->getStreamDestinations("streamHLTRates");
       rv->streamL1Destination = edm::Service<evf::EvFDaqDirector>()->getStreamDestinations("streamL1Rates");
+      std::string mergeType;
+      rv->streamHLTMergeType = edm::Service<evf::EvFDaqDirector>()->getStreamMergeType("streamHLTRates",evf::MergeTypeJSNDATA);
+      rv->streamL1MergeType = edm::Service<evf::EvFDaqDirector>()->getStreamMergeType("streamL1Rates",evf::MergeTypeJSNDATA);
+
     }
     rv->wroteFiles = false;
     return rv;
@@ -112,19 +120,19 @@ class TriggerJSONMonitoring : public edm::stream::EDAnalyzer <edm::RunCache<hltJ
 
   void beginLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&);
 
-  static std::shared_ptr<hltJson::lumiVars> globalBeginLuminosityBlockSummary(edm::LuminosityBlock const&,
+  static std::shared_ptr<trigJson::lumiVars> globalBeginLuminosityBlockSummary(edm::LuminosityBlock const&,
                                                                               edm::EventSetup const&,
                                                                               LuminosityBlockContext const*);
 
   void endLuminosityBlockSummary(edm::LuminosityBlock const&,
                                  edm::EventSetup const&,
-                                 hltJson::lumiVars*) const;
+                                 trigJson::lumiVars*) const;
 
 
   static void globalEndLuminosityBlockSummary(edm::LuminosityBlock const&,
                                               edm::EventSetup const&,
                                               LuminosityBlockContext const*,
-                                              hltJson::lumiVars*);
+                                              trigJson::lumiVars*);
 
   void resetRun(bool changed);   //Reset run-related info
   void resetLumi();              //Reset all counters 
@@ -137,11 +145,10 @@ class TriggerJSONMonitoring : public edm::stream::EDAnalyzer <edm::RunCache<hltJ
   edm::InputTag triggerResults_;                               // Input tag for TriggerResults 
   edm::EDGetTokenT<edm::TriggerResults> triggerResultsToken_;  // Token for TriggerResults
 
-  edm::InputTag level1Results_;                                 // Input tag for L1 GT Readout Record   
-  edm::EDGetTokenT<L1GlobalTriggerReadoutRecord> m_l1t_results; // Token for L1 GT Readout Record
+  edm::InputTag level1Results_;                                 // Input tag for L1 Global collection   
+  edm::EDGetTokenT<GlobalAlgBlkBxCollection> m_l1t_results; // Token for L1 Global collection 
 
   //Variables that change at most once per run 
-  HLTPrescaleProvider hltPrescaleProvider_; // To get at HLTConfigProvider
   HLTConfigProvider hltConfig_;         // to get configuration for HLT
   const L1GtTriggerMenu* m_l1GtMenu;    // L1 trigger menu   
   AlgorithmMap algorithmMap;            // L1 algorithm map  

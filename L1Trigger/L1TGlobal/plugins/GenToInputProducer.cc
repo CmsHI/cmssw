@@ -33,6 +33,7 @@
 #include "DataFormats/L1Trigger/interface/Tau.h"
 #include "DataFormats/L1Trigger/interface/Jet.h"
 #include "DataFormats/L1Trigger/interface/EtSum.h"
+#include "DataFormats/L1TGlobal/interface/GlobalExtBlk.h"
 
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
 #include "DataFormats/JetReco/interface/GenJet.h"
@@ -132,6 +133,11 @@ namespace l1t {
     std::vector<l1t::EtSum> etsumVec_bxm1;
     std::vector<l1t::EtSum> etsumVec_bx0;
     std::vector<l1t::EtSum> etsumVec_bxp1;
+    
+    GlobalExtBlk extCond_bxm2;
+    GlobalExtBlk extCond_bxm1;
+    GlobalExtBlk extCond_bx0;
+    GlobalExtBlk extCond_bxp1;    
 
   };
 
@@ -146,6 +152,7 @@ namespace l1t {
     produces<BXVector<l1t::Tau>>();
     produces<BXVector<l1t::Jet>>();
     produces<BXVector<l1t::EtSum>>();
+    produces<GlobalExtBlkBxCollection>();
 
     // Setup parameters
     bxFirst_ = iConfig.getParameter<int>("bxFirst");
@@ -194,7 +201,7 @@ GenToInputProducer::produce(Event& iEvent, const EventSetup& iSetup)
 
   eventCnt_++;
 
-  LogDebug("l1t|Global") << "GenToInputProducer::produce function called...\n";
+  LogDebug("GtGenToInputProducer") << "GenToInputProducer::produce function called...\n";
 
   // Setup vectors
   std::vector<l1t::Muon> muonVec;
@@ -202,6 +209,7 @@ GenToInputProducer::produce(Event& iEvent, const EventSetup& iSetup)
   std::vector<l1t::Tau> tauVec;
   std::vector<l1t::Jet> jetVec;
   std::vector<l1t::EtSum> etsumVec;
+  GlobalExtBlk extCond_bx;
 
   // Set the range of BX....TO DO...move to Params or determine from param set.
   int bxFirst = bxFirst_;
@@ -233,6 +241,7 @@ GenToInputProducer::produce(Event& iEvent, const EventSetup& iSetup)
   std::auto_ptr<l1t::TauBxCollection> taus (new l1t::TauBxCollection(0, bxFirst, bxLast));
   std::auto_ptr<l1t::JetBxCollection> jets (new l1t::JetBxCollection(0, bxFirst, bxLast));
   std::auto_ptr<l1t::EtSumBxCollection> etsums (new l1t::EtSumBxCollection(0, bxFirst, bxLast));
+  std::auto_ptr<GlobalExtBlkBxCollection> extCond( new GlobalExtBlkBxCollection(0,bxFirst,bxLast));
 
   std::vector<int> mu_cands_index;
   std::vector<int> eg_cands_index;
@@ -259,7 +268,7 @@ GenToInputProducer::produce(Event& iEvent, const EventSetup& iSetup)
     }
   }
   else {
-    LogTrace("l1t|Global") << ">>> GenParticles collection not found!" << std::endl;
+    LogTrace("GtGenToInputProducer") << ">>> GenParticles collection not found!" << std::endl;
   }
 
 
@@ -430,49 +439,90 @@ GenToInputProducer::produce(Event& iEvent, const EventSetup& iSetup)
     }
   }
   else {
-    LogTrace("l1t|Global") << ">>> GenJets collection not found!" << std::endl;
-  }
-
-
-  edm::Handle<reco::GenMETCollection> genMet;
-  // Make sure that you can get genMET
-  if( iEvent.getByToken(genMetToken, genMet) ){
-    int pt  = convertPtToHW( genMet->front().pt(), MaxEt_, PtStep_ );
-    int phi = convertPhiToHW( genMet->front().phi(), PhiStepCalo_ );
-
-    ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<double> > *p4 = new ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<double> >();
-
-    // Missing Et
-    l1t::EtSum etmiss(*p4, l1t::EtSum::EtSumType::kMissingEt,pt, 0,phi, 0); 
-    etsumVec.push_back(etmiss);
-
-    // Make Missing Ht slightly smaller and rotated (These are all fake inputs anyway...not supposed to be realistic)
-    pt  = convertPtToHW( genMet->front().pt()*0.9, MaxEt_, PtStep_ );
-    phi = convertPhiToHW( genMet->front().phi()+ 3.14/5., PhiStepCalo_ );
-
-    l1t::EtSum htmiss(*p4, l1t::EtSum::EtSumType::kMissingHt,pt, 0,phi, 0); 
-    etsumVec.push_back(htmiss);
-
-
-  }
-  else {
-    LogTrace("l1t|Global") << ">>> GenMet collection not found!" << std::endl;
+    LogTrace("GtGenToInputProducer") << ">>> GenJets collection not found!" << std::endl;
   }
 
 
 // Put the total Et into EtSums  (Make HTT slightly smaller to tell them apart....not supposed to be realistic) 
    int pt  = convertPtToHW( sumEt, 2047, PtStep_ );
    ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<double> > *p4 = new ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<double> >();
-   l1t::EtSum etTotal(*p4, l1t::EtSum::EtSumType::kTotalEt,pt, 0, 0, 0); 
-   etsumVec.push_back(etTotal);
+   l1t::EtSum etTotal(*p4, l1t::EtSum::EtSumType::kTotalEt,pt, 0, 0, 0);    
+
+// Scale down ETTem as an estimate
+   pt  = convertPtToHW( sumEt*0.6, 2047, PtStep_ );
+   l1t::EtSum etEmTotal(*p4, l1t::EtSum::EtSumType::kTotalEtEm,pt, 0, 0, 0); 
 
    pt  = convertPtToHW( sumEt*0.9, 2047, PtStep_ );
    l1t::EtSum htTotal(*p4, l1t::EtSum::EtSumType::kTotalHt,pt, 0, 0, 0); 
-   etsumVec.push_back(htTotal);
 
+// Add EtSums for testing the MinBias Trigger (use some random numbers)   
+   int hfP0val  = gRandom->Poisson(4.);
+   if(hfP0val>15) hfP0val = 15;
+   l1t::EtSum hfP0(*p4, l1t::EtSum::EtSumType::kMinBiasHFP0,hfP0val, 0, 0, 0); 
+
+   int hfM0val  = gRandom->Poisson(4.);
+   if(hfM0val>15) hfM0val = 15;
+   l1t::EtSum hfM0(*p4, l1t::EtSum::EtSumType::kMinBiasHFM0,hfM0val, 0, 0, 0); 
+
+   int hfP1val  = gRandom->Poisson(4.);
+   if(hfP1val>15) hfP1val = 15;
+   l1t::EtSum hfP1(*p4, l1t::EtSum::EtSumType::kMinBiasHFP1,hfP1val, 0, 0, 0); 
+
+   int hfM1val  = gRandom->Poisson(4.);
+   if(hfM1val>15) hfM1val = 15;
+   l1t::EtSum hfM1(*p4, l1t::EtSum::EtSumType::kMinBiasHFM1,hfM1val, 0, 0, 0); 
+
+
+   int mpt = 0;
+   int mphi= 0;
+   int mptHf = 0;
+   int mphiHf= 0;   
+   int mhpt = 0;
+   int mhphi= 0;  
+   edm::Handle<reco::GenMETCollection> genMet;
+   // Make sure that you can get genMET
+   if( iEvent.getByToken(genMetToken, genMet) ){
+     mpt  = convertPtToHW( genMet->front().pt(), MaxEt_, PtStep_ );
+     mphi = convertPhiToHW( genMet->front().phi(), PhiStepCalo_ );
+
+     // Make Missing Et with HF slightly largeer and rotated (These are all fake inputs anyway...not supposed to be realistic)
+     mptHf  = convertPtToHW( genMet->front().pt()*1.1, MaxEt_, PtStep_ );
+     mphiHf = convertPhiToHW( genMet->front().phi()+ 3.14/7., PhiStepCalo_ );
+
+     // Make Missing Ht slightly smaller and rotated (These are all fake inputs anyway...not supposed to be realistic)
+     mhpt  = convertPtToHW( genMet->front().pt()*0.9, MaxEt_, PtStep_ );
+     mhphi = convertPhiToHW( genMet->front().phi()+ 3.14/5., PhiStepCalo_ );
+   }
+   else {
+     LogTrace("GtGenToInputProducer") << ">>> GenMet collection not found!" << std::endl;
+   }
+
+// Missing Et and missing htt
+   l1t::EtSum etmiss(*p4, l1t::EtSum::EtSumType::kMissingEt,mpt, 0,mphi, 0); 
+   l1t::EtSum etmissHF(*p4, l1t::EtSum::EtSumType::kMissingEtHF,mptHf, 0,mphiHf, 0);    
+   l1t::EtSum htmiss(*p4, l1t::EtSum::EtSumType::kMissingHt,mhpt, 0,mhphi, 0); 
+
+// Fill the EtSums in the Correct order
+   etsumVec.push_back(etTotal);
+   etsumVec.push_back(etEmTotal);
+   etsumVec.push_back(hfP0);
+   etsumVec.push_back(htTotal);
+   etsumVec.push_back(hfM0); 
+   etsumVec.push_back(etmiss);
+   etsumVec.push_back(hfP1);
+   etsumVec.push_back(htmiss);
+   etsumVec.push_back(hfM1);
+   etsumVec.push_back(etmissHF);
+ 
+// Fill in some external conditions for testing
+   if((iEvent.id().event())%2 == 0 ) {
+     for(int i=0; i<255; i=i+2) extCond_bx.setExternalDecision(i,true); 
+   } else {
+     for(int i=1; i<255; i=i+2) extCond_bx.setExternalDecision(i,true);
+   }
  
    // Insert all the bx into the L1 Collections
-   printf("Event %i  EmptyBxEvt %i emptyBxTrailer %i diff %i \n",eventCnt_,emptyBxEvt_,emptyBxTrailer_,(emptyBxEvt_ - eventCnt_));
+   //printf("Event %i  EmptyBxEvt %i emptyBxTrailer %i diff %i \n",eventCnt_,emptyBxEvt_,emptyBxTrailer_,(emptyBxEvt_ - eventCnt_));
 
    // Fill Muons
    for( int iMu=0; iMu<int(muonVec_bxm2.size()); iMu++ ){
@@ -584,12 +634,25 @@ GenToInputProducer::produce(Event& iEvent, const EventSetup& iSetup)
      etsumVec.clear();  
    }  
 
+   // Fill Externals
+   extCond->push_back(-2, extCond_bxm2);
+   extCond->push_back(-1, extCond_bxm1);
+   extCond->push_back(0,  extCond_bx0);
+   extCond->push_back(1,  extCond_bxp1);
+   if(emptyBxTrailer_<=(emptyBxEvt_ - eventCnt_)) {
+     extCond->push_back(2,  extCond_bx);
+   } else {
+      // this event is part of the empty trailer...clear out data
+      extCond_bx.reset();
+   }     
+   
 
   iEvent.put(egammas);
   iEvent.put(muons);
   iEvent.put(taus);
   iEvent.put(jets);
   iEvent.put(etsums);
+  iEvent.put(extCond);
 
   // Now shift the bx data by one to prepare for next event.
   muonVec_bxm2 = muonVec_bxm1;
@@ -597,25 +660,28 @@ GenToInputProducer::produce(Event& iEvent, const EventSetup& iSetup)
   tauVec_bxm2 = tauVec_bxm1;
   jetVec_bxm2 = jetVec_bxm1;
   etsumVec_bxm2 = etsumVec_bxm1;
+  extCond_bxm2 = extCond_bxm1;
 
   muonVec_bxm1 = muonVec_bx0;
   egammaVec_bxm1 = egammaVec_bx0;
   tauVec_bxm1 = tauVec_bx0;
   jetVec_bxm1 = jetVec_bx0;
   etsumVec_bxm1 = etsumVec_bx0;
+  extCond_bxm1 = extCond_bx0;
 
   muonVec_bx0 = muonVec_bxp1;
   egammaVec_bx0 = egammaVec_bxp1;
   tauVec_bx0 = tauVec_bxp1;
   jetVec_bx0 = jetVec_bxp1;
   etsumVec_bx0 = etsumVec_bxp1;
+  extCond_bx0 = extCond_bxp1;
 
   muonVec_bxp1 = muonVec;
   egammaVec_bxp1 = egammaVec;
   tauVec_bxp1 = tauVec;
   jetVec_bxp1 = jetVec;
   etsumVec_bxp1 = etsumVec;
-
+  extCond_bxp1 = extCond_bx;
 }
 
 // ------------ method called once each job just before starting event loop ------------
@@ -633,7 +699,7 @@ GenToInputProducer::endJob() {
 
 void GenToInputProducer::beginRun(Run const&iR, EventSetup const&iE){
 
-  LogDebug("l1t|Global") << "GenToInputProducer::beginRun function called...\n";
+  LogDebug("GtGenToInputProducer") << "GenToInputProducer::beginRun function called...\n";
 
   counter_ = 0;
   srand( 0 );

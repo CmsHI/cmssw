@@ -748,6 +748,48 @@ def overrideJEC_MC_Pbp5020(process):
         ])
     return process
 
+####
+####
+
+def overrideJEC_pPb8TeV(process):
+    process.GlobalTag.toGet.extend([
+## no PU
+       cms.PSet(record = cms.string("JetCorrectionsRecord"),
+                 tag = cms.string("JetCorrectorParametersCollection_Spring16_25nsV6_MC_AK4Calo"),
+                 connect = cms.string("frontier://FrontierProd/CMS_CONDITIONS"),
+                 label = cms.untracked.string("AK4Calo")
+             ),
+        cms.PSet(record = cms.string("JetCorrectionsRecord"),
+                 tag = cms.string("JetCorrectorParametersCollection_Spring16_25nsV6_MC_AK4PF"),
+                 connect = cms.string("frontier://FrontierProd/CMS_CONDITIONS"),
+                 label = cms.untracked.string("AK4PF")
+             ),
+##adding PU = nonPU TEMPORARILY
+	    cms.PSet(record = cms.string("JetCorrectionsRecord"),
+                 tag = cms.string("JetCorrectorParametersCollection_Spring16_25nsV6_MC_AK4Calo"),
+                 connect = cms.string("frontier://FrontierProd/CMS_CONDITIONS"),
+                 label = cms.untracked.string("AK4Calo_offline")
+             ),
+        cms.PSet(record = cms.string("JetCorrectionsRecord"),
+                 tag = cms.string("JetCorrectorParametersCollection_Spring16_25nsV6_MC_AK4PF"),
+                 connect = cms.string("frontier://FrontierProd/CMS_CONDITIONS"),
+                 label = cms.untracked.string("AK4PF_offline")
+             ),
+	cms.PSet(record = cms.string("JetCorrectionsRecord"),
+                 tag = cms.string("JetCorrectorParametersCollection_Spring16_25nsV6_MC_AK4Calo"),
+                 connect = cms.string("frontier://FrontierProd/CMS_CONDITIONS"),
+                 label = cms.untracked.string("AKPu4Calo_offline")
+             ),
+        cms.PSet(record = cms.string("JetCorrectionsRecord"),
+                 tag = cms.string("JetCorrectorParametersCollection_Spring16_25nsV6_MC_AK4PF"),
+                 connect = cms.string("frontier://FrontierProd/CMS_CONDITIONS"),
+                 label = cms.untracked.string("AKPu4PF_offline")
+	     )
+    ])
+    return process
+
+####
+####
 
 def overrideJEC_pp5020(process):
     process.load("CondCore.DBCommon.CondDBCommon_cfi")

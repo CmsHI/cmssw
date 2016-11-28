@@ -15,6 +15,8 @@
 #include "DataFormats/EcalDetId/interface/EBDetId.h"
 #include "DataFormats/EcalDetId/interface/EEDetId.h"
 
+#include "RecoEgamma/EgammaTools/interface/EcalClusterLocal.h"
+
 #include <vdt/vdtMath.h>
 
 namespace {
@@ -63,7 +65,11 @@ public:
   void setEventContent(const edm::EventSetup&) override final;
   void setConsumes(edm::ConsumesCollector&) override final;
   
-  void modifyObject(pat::Electron&) const override final;
+  void modifyObject(reco::GsfElectron&) const override final;
+  void modifyObject(reco::Photon&) const override final;
+  
+  // just calls reco versions
+  void modifyObject(pat::Electron&) const override final; 
   void modifyObject(pat::Photon&) const override final;
 
 private:
@@ -87,6 +93,9 @@ private:
   edm::InputTag vtxTag_;
   edm::EDGetTokenT<reco::VertexCollection> vtxToken_;
   edm::Handle<reco::VertexCollection> vtxH_;
+  bool applyExtraHighEnergyProtection_;
+
+  const edm::EventSetup* iSetup_;
 
   std::vector<const GBRForestD*> ph_forestH_mean_;
   std::vector<const GBRForestD*> ph_forestH_sigma_; 
@@ -104,6 +113,7 @@ EGExtraInfoModifierFromDB::EGExtraInfoModifierFromDB(const edm::ParameterSet& co
 
   bunchspacing_ = 450;
   autoDetectBunchSpacing_ = conf.getParameter<bool>("autoDetectBunchSpacing");
+  applyExtraHighEnergyProtection_ = conf.getParameter<bool>("applyExtraHighEnergyProtection");
 
   rhoTag_ = conf.getParameter<edm::InputTag>("rhoCollection");
   vtxTag_ = conf.getParameter<edm::InputTag>("vertexCollection");
@@ -259,6 +269,8 @@ void EGExtraInfoModifierFromDB::setEvent(const edm::Event& evt) {
 
 void EGExtraInfoModifierFromDB::setEventContent(const edm::EventSetup& evs) {
 
+  iSetup_ = &evs;
+
   edm::ESHandle<GBRForestD> forestDEH;
   edm::ESHandle<GBRForest> forestEH;
 
@@ -291,15 +303,15 @@ void EGExtraInfoModifierFromDB::setEventContent(const edm::EventSetup& evs) {
 
 namespace {
   template<typename T, typename U, typename V>
-  inline void make_consumes(T& tag,U& tok,V& sume) {
-    if(!(empty_tag == tag))
-      tok = sume.template consumes<edm::ValueMap<float> >(tag);
+  inline void make_consumes(T& tag,U& tok,V& sume) { 
+    if(!(empty_tag == tag)) 
+      tok = sume.template consumes<edm::ValueMap<float> >(tag); 
   }
 
   template<typename T, typename U, typename V>
-  inline void make_int_consumes(T& tag,U& tok,V& sume) {
-    if(!(empty_tag == tag))
-      tok = sume.template consumes<edm::ValueMap<int> >(tag);
+  inline void make_int_consumes(T& tag,U& tok,V& sume) { 
+    if(!(empty_tag == tag)) 
+      tok = sume.template consumes<edm::ValueMap<int> >(tag); 
   }
 }
 
@@ -351,102 +363,110 @@ namespace {
   }
 }
 
-void EGExtraInfoModifierFromDB::modifyObject(pat::Electron& ele) const {
-  // we encounter two cases here, either we are running AOD -> MINIAOD
-  // and the value maps are to the reducedEG object, can use original object ptr
-  // or we are running MINIAOD->MINIAOD and we need to fetch the pat objects to reference
+void EGExtraInfoModifierFromDB::modifyObject(reco::GsfElectron& ele) const {
+  // regression calculation needs no additional valuemaps
 
-  edm::Ptr<reco::Candidate> ptr(ele.originalObjectRef());
-  if( !e_conf.tok_electron_src.isUninitialized() ) {
-    auto key = eles_by_oop.find(ele.originalObjectRef().key());
-    if( key != eles_by_oop.end() ) {
-      ptr = key->second;
-    } else {
-      throw cms::Exception("BadElectronKey")
-        << "Original object pointer with key = " << ele.originalObjectRef().key() 
-        << " not found in cache!";
-    }
-  }
-  std::array<float, 33> eval;
+  const reco::SuperClusterRef& the_sc = ele.superCluster();
+  const edm::Ptr<reco::CaloCluster>& theseed = the_sc->seed();
+  const int numberOfClusters =  the_sc->clusters().size();
+  const bool missing_clusters = !the_sc->clusters()[numberOfClusters-1].isAvailable();
+
+  if( missing_clusters ) return ; // do not apply corrections in case of missing info (slimmed MiniAOD electrons)
   
-  reco::SuperClusterRef sc = ele.superCluster();
-  edm::Ptr<reco::CaloCluster> theseed = sc->seed();
+  std::array<float, 33> eval;  
+  const double raw_energy = the_sc->rawEnergy(); 
+  const auto& ess = ele.showerShape();
 
   // SET INPUTS
   eval[0]  = nVtx_;  
-  eval[1]  = sc->rawEnergy();
-  eval[2]  = sc->eta();
-  eval[3]  = sc->phi();
-  eval[4]  = sc->etaWidth();
-  eval[5]  = sc->phiWidth(); 
-  eval[6]  = ele.r9();
-  eval[7]  = theseed->energy()/sc->rawEnergy();
+  eval[1]  = raw_energy;
+  eval[2]  = the_sc->eta();
+  eval[3]  = the_sc->phi();
+  eval[4]  = the_sc->etaWidth();
+  eval[5]  = the_sc->phiWidth(); 
+  eval[6]  = ess.r9;
+  eval[7]  = theseed->energy()/raw_energy;
+  eval[8]  = ess.eMax/raw_energy;
+  eval[9]  = ess.e2nd/raw_energy;
+  eval[10] = (ess.eLeft + ess.eRight != 0.f  ? (ess.eLeft-ess.eRight)/(ess.eLeft+ess.eRight) : 0.f);
+  eval[11] = (ess.eTop  + ess.eBottom != 0.f ? (ess.eTop-ess.eBottom)/(ess.eTop+ess.eBottom) : 0.f);
+  eval[12] = ess.sigmaIetaIeta;
+  eval[13] = ess.sigmaIetaIphi;
+  eval[14] = ess.sigmaIphiIphi;
+  eval[15] = std::max(0,numberOfClusters-1);
   
-  float sieip=0, cryPhi=0, cryEta=0; 
-  int iPhi=0, iEta=0;
-  float eMax=0, e2nd=0, eTop=0, eBottom=0, eLeft=0, eRight=0;
-  float clusterMaxDR=0, clusterMaxDRDPhi=0, clusterMaxDRDEta=0, clusterMaxDRRawEnergy=0;
-  float clusterRawEnergy0=0, clusterRawEnergy1=0, clusterRawEnergy2=0;
-  float clusterDPhiToSeed0=0, clusterDPhiToSeed1=0, clusterDPhiToSeed2=0;
-  float clusterDEtaToSeed0=0, clusterDEtaToSeed1=0, clusterDEtaToSeed2=0;
+  // calculate sub-cluster variables
+  std::vector<float> clusterRawEnergy;
+  clusterRawEnergy.resize(std::max(3, numberOfClusters), 0);
+  std::vector<float> clusterDEtaToSeed;
+  clusterDEtaToSeed.resize(std::max(3, numberOfClusters), 0);
+  std::vector<float> clusterDPhiToSeed;
+  clusterDPhiToSeed.resize(std::max(3, numberOfClusters), 0);
+  float clusterMaxDR     = 999.;
+  float clusterMaxDRDPhi = 999.;
+  float clusterMaxDRDEta = 999.;
+  float clusterMaxDRRawEnergy = 0.;
   
-  assignValue(ptr, e_conf.tag_float_token_map.find(std::string("sigmaIetaIphi"))->second.second, ele_vmaps, sieip);
-  assignValue(ptr, e_conf.tag_float_token_map.find(std::string("eMax"))->second.second, ele_vmaps, eMax);
-  assignValue(ptr, e_conf.tag_float_token_map.find(std::string("e2nd"))->second.second, ele_vmaps, e2nd);
-  assignValue(ptr, e_conf.tag_float_token_map.find(std::string("eTop"))->second.second, ele_vmaps, eTop);
-  assignValue(ptr, e_conf.tag_float_token_map.find(std::string("eBottom"))->second.second, ele_vmaps, eBottom);
-  assignValue(ptr, e_conf.tag_float_token_map.find(std::string("eLeft"))->second.second, ele_vmaps, eLeft);
-  assignValue(ptr, e_conf.tag_float_token_map.find(std::string("eRight"))->second.second, ele_vmaps, eRight);
-  assignValue(ptr, e_conf.tag_float_token_map.find(std::string("clusterMaxDR"))->second.second, ele_vmaps, clusterMaxDR);
-  assignValue(ptr, e_conf.tag_float_token_map.find(std::string("clusterMaxDRDPhi"))->second.second, ele_vmaps, clusterMaxDRDPhi);
-  assignValue(ptr, e_conf.tag_float_token_map.find(std::string("clusterMaxDRDEta"))->second.second, ele_vmaps, clusterMaxDRDEta);
-  assignValue(ptr, e_conf.tag_float_token_map.find(std::string("clusterMaxDRRawEnergy"))->second.second, ele_vmaps, clusterMaxDRRawEnergy); 
-  assignValue(ptr, e_conf.tag_float_token_map.find(std::string("clusterRawEnergy0"))->second.second, ele_vmaps, clusterRawEnergy0);	    
-  assignValue(ptr, e_conf.tag_float_token_map.find(std::string("clusterRawEnergy1"))->second.second, ele_vmaps, clusterRawEnergy1);	    
-  assignValue(ptr, e_conf.tag_float_token_map.find(std::string("clusterRawEnergy2"))->second.second, ele_vmaps, clusterRawEnergy2);	    
-  assignValue(ptr, e_conf.tag_float_token_map.find(std::string("clusterDPhiToSeed0"))->second.second, ele_vmaps, clusterDPhiToSeed0); 
-  assignValue(ptr, e_conf.tag_float_token_map.find(std::string("clusterDPhiToSeed1"))->second.second, ele_vmaps, clusterDPhiToSeed1); 
-  assignValue(ptr, e_conf.tag_float_token_map.find(std::string("clusterDPhiToSeed2"))->second.second, ele_vmaps, clusterDPhiToSeed2); 
-  assignValue(ptr, e_conf.tag_float_token_map.find(std::string("clusterDEtaToSeed0"))->second.second, ele_vmaps, clusterDEtaToSeed0); 
-  assignValue(ptr, e_conf.tag_float_token_map.find(std::string("clusterDEtaToSeed1"))->second.second, ele_vmaps, clusterDEtaToSeed1); 
-  assignValue(ptr, e_conf.tag_float_token_map.find(std::string("clusterDEtaToSeed2"))->second.second, ele_vmaps, clusterDEtaToSeed2); 
-  assignValue(ptr, e_conf.tag_int_token_map.find(std::string("iPhi"))->second.second, ele_int_vmaps, iPhi);
-  assignValue(ptr, e_conf.tag_int_token_map.find(std::string("iEta"))->second.second, ele_int_vmaps, iEta);
-  assignValue(ptr, e_conf.tag_float_token_map.find(std::string("cryPhi"))->second.second, ele_vmaps, cryPhi);
-  assignValue(ptr, e_conf.tag_float_token_map.find(std::string("cryEta"))->second.second, ele_vmaps, cryEta);
-
-  eval[8]  = eMax/sc->rawEnergy();
-  eval[9]  = e2nd/sc->rawEnergy();
-  eval[10] = (eLeft+eRight!=0. ? (eLeft-eRight)/(eLeft+eRight) : 0.);
-  eval[11] = (eTop+eBottom!=0. ? (eTop-eBottom)/(eTop+eBottom) : 0.);
-  eval[12] = ele.sigmaIetaIeta();
-  eval[13] = sieip;
-  eval[14] = ele.sigmaIphiIphi();
-  const int N_ECAL = sc->clustersEnd() - sc->clustersBegin();
-  eval[15] = std::max(0,N_ECAL - 1);
+  size_t iclus = 0;
+  float maxDR = 0;
+  edm::Ptr<reco::CaloCluster> pclus;
+  // loop over all clusters that aren't the seed  
+  auto clusend = the_sc->clustersEnd();
+  for( auto clus = the_sc->clustersBegin(); clus != clusend; ++clus ) {
+    pclus = *clus;
+    
+    if(theseed == pclus ) 
+      continue;
+    clusterRawEnergy[iclus]  = pclus->energy();
+    clusterDPhiToSeed[iclus] = reco::deltaPhi(pclus->phi(),theseed->phi());
+    clusterDEtaToSeed[iclus] = pclus->eta() - theseed->eta();
+    
+    // find cluster with max dR
+    const auto the_dr = reco::deltaR(*pclus, *theseed);
+    if(the_dr > maxDR) {
+      maxDR = the_dr;
+      clusterMaxDR = maxDR;
+      clusterMaxDRDPhi = clusterDPhiToSeed[iclus];
+      clusterMaxDRDEta = clusterDEtaToSeed[iclus];
+      clusterMaxDRRawEnergy = clusterRawEnergy[iclus];
+    }      
+    ++iclus;
+  }
+  
   eval[16] = clusterMaxDR;
   eval[17] = clusterMaxDRDPhi;
   eval[18] = clusterMaxDRDEta;
-  eval[19] = clusterMaxDRRawEnergy/sc->rawEnergy();
-  eval[20] = clusterRawEnergy0/sc->rawEnergy();
-  eval[21] = clusterRawEnergy1/sc->rawEnergy();
-  eval[22] = clusterRawEnergy2/sc->rawEnergy();
-  eval[23] = clusterDPhiToSeed0;
-  eval[24] = clusterDPhiToSeed1;
-  eval[25] = clusterDPhiToSeed2;
-  eval[26] = clusterDEtaToSeed0;
-  eval[27] = clusterDEtaToSeed1;
-  eval[28] = clusterDEtaToSeed2;
+  eval[19] = clusterMaxDRRawEnergy/raw_energy;
+  eval[20] = clusterRawEnergy[0]/raw_energy;
+  eval[21] = clusterRawEnergy[1]/raw_energy;
+  eval[22] = clusterRawEnergy[2]/raw_energy;
+  eval[23] = clusterDPhiToSeed[0];
+  eval[24] = clusterDPhiToSeed[1];
+  eval[25] = clusterDPhiToSeed[2];
+  eval[26] = clusterDEtaToSeed[0];
+  eval[27] = clusterDEtaToSeed[1];
+  eval[28] = clusterDEtaToSeed[2];
   
-  bool iseb = ele.isEB();
-  
+  // calculate coordinate variables
+  const bool iseb = ele.isEB();  
+  float dummy;
+  int iPhi;
+  int iEta;
+  float cryPhi;
+  float cryEta;
+  EcalClusterLocal _ecalLocal;
+  if (ele.isEB()) 
+    _ecalLocal.localCoordsEB(*theseed, *iSetup_, cryEta, cryPhi, iEta, iPhi, dummy, dummy);
+  else 
+    _ecalLocal.localCoordsEE(*theseed, *iSetup_, cryEta, cryPhi, iEta, iPhi, dummy, dummy);
+
   if (iseb) {
     eval[29] = cryEta;
     eval[30] = cryPhi;
     eval[31] = iEta;
     eval[32] = iPhi;
   } else {
-    eval[29] = sc->preshowerEnergy()/sc->rawEnergy();
+    eval[29] = the_sc->preshowerEnergy()/the_sc->rawEnergy();
   }
 
   //magic numbers for MINUIT-like transformation of BDT output onto limited range
@@ -477,7 +497,7 @@ void EGExtraInfoModifierFromDB::modifyObject(pat::Electron& ele) const {
   //so corrected energy is ecor=exp(mean)*e, uncertainty is exp(mean)*eraw*sigma=ecor*sigma
   double ecor = mean*(eval[1]);
   if (!iseb)  
-    ecor = mean*(eval[1]+sc->preshowerEnergy());
+    ecor = mean*(eval[1]+the_sc->preshowerEnergy());
   const double sigmacor = sigma*ecor;
   
   ele.setCorrectedEcalEnergy(ecor);
@@ -488,7 +508,7 @@ void EGExtraInfoModifierFromDB::modifyObject(pat::Electron& ele) const {
   float eval_ep[11];
 
   const float ep = ele.trackMomentumAtVtx().R();
-  const float tot_energy = sc->rawEnergy()+sc->preshowerEnergy();
+  const float tot_energy = the_sc->rawEnergy()+the_sc->preshowerEnergy();
   const float momentumError = ele.trackMomentumError();
   const float trkMomentumRelError = ele.trackMomentumError()/ep;
   const float eOverP = tot_energy*mean/ep;
@@ -513,7 +533,9 @@ void EGExtraInfoModifierFromDB::modifyObject(pat::Electron& ele) const {
   // CODE FOR STANDARD BDT
   double weight = 0.;
   if ( eOverP > 0.025 && 
-       std::abs(ep-ecor) < 15.*std::sqrt( momentumError*momentumError + sigmacor*sigmacor ) ) {
+       std::abs(ep-ecor) < 15.*std::sqrt( momentumError*momentumError + sigmacor*sigmacor ) &&
+       (!applyExtraHighEnergyProtection_ || ((momentumError < 10.*ep) || (ecor < 200.)))
+       ) {
     // protection against crazy track measurement
     weight = ep_forestH_weight_->GetResponse(eval_ep);
     if(weight>1.) 
@@ -535,80 +557,74 @@ void EGExtraInfoModifierFromDB::modifyObject(pat::Electron& ele) const {
   ele.correctMomentum(newMomentum, ele.trackMomentumError(), combinedMomentumError);
 }
 
-void EGExtraInfoModifierFromDB::modifyObject(pat::Photon& pho) const {
-  // we encounter two cases here, either we are running AOD -> MINIAOD
-  // and the value maps are to the reducedEG object, can use original object ptr
-  // or we are running MINIAOD->MINIAOD and we need to fetch the pat objects to reference
-  edm::Ptr<reco::Candidate> ptr(pho.originalObjectRef());
+void EGExtraInfoModifierFromDB::modifyObject(pat::Electron& ele) const {
+  modifyObject(static_cast<reco::GsfElectron&>(ele));
+}
 
-  if(!ph_conf.tok_photon_src.isUninitialized()) {
-    auto key = phos_by_oop.find(pho.originalObjectRef().key());
-    if( key != phos_by_oop.end() ) {
-      ptr = key->second;
-    } else {
-      throw cms::Exception("BadPhotonKey")
-        << "Original object pointer with key = " << pho.originalObjectRef().key() << " not found in cache!";
-    }
-  }
+void EGExtraInfoModifierFromDB::modifyObject(reco::Photon& pho) const {
+  // regression calculation needs no additional valuemaps
   
-  std::array<float, 31> eval;
-  reco::SuperClusterRef sc = pho.superCluster();
-  edm::Ptr<reco::CaloCluster> theseed = sc->seed();
+  std::array<float, 35> eval;
+  const reco::SuperClusterRef& the_sc = pho.superCluster();
+  const edm::Ptr<reco::CaloCluster>& theseed = the_sc->seed();
   
+  const int numberOfClusters =  the_sc->clusters().size();
+  const bool missing_clusters = !the_sc->clusters()[numberOfClusters-1].isAvailable();
+
+  if( missing_clusters ) return ; // do not apply corrections in case of missing info (slimmed MiniAOD electrons)
+
+  const double raw_energy = the_sc->rawEnergy(); 
+  const auto& ess = pho.showerShapeVariables();
+
   // SET INPUTS
-  eval[0]  = sc->rawEnergy();
-  //eval[1]  = sc->position().Eta();
-  //eval[2]  = sc->position().Phi();
+  eval[0]  = raw_energy;
   eval[1]  = pho.r9();
-  eval[2]  = sc->etaWidth();
-  eval[3]  = sc->phiWidth(); 
-  const int N_ECAL = sc->clustersEnd() - sc->clustersBegin();
-  eval[4]  = std::max(0,N_ECAL - 1);
+  eval[2]  = the_sc->etaWidth();
+  eval[3]  = the_sc->phiWidth(); 
+  eval[4]  = std::max(0,numberOfClusters - 1);
   eval[5]  = pho.hadronicOverEm();
   eval[6]  = rhoValue_;
   eval[7]  = nVtx_;  
-  eval[8] = theseed->eta()-sc->position().Eta();
-  eval[9] = reco::deltaPhi(theseed->phi(),sc->position().Phi());
-  eval[10] = pho.seedEnergy()/sc->rawEnergy();
-  eval[11] = pho.e3x3()/pho.e5x5();
-  const float sieie = pho.sigmaIetaIeta();
-  eval[12] = sieie;
+  eval[8] = theseed->eta()-the_sc->position().Eta();
+  eval[9] = reco::deltaPhi(theseed->phi(),the_sc->position().Phi());
+  eval[10] = theseed->energy()/raw_energy;
+  eval[11] = ess.e3x3/ess.e5x5;
+  eval[12] = ess.sigmaIetaIeta;  
+  eval[13] = ess.sigmaIphiIphi;
+  eval[14] = ess.sigmaIetaIphi/(ess.sigmaIphiIphi*ess.sigmaIetaIeta);
+  eval[15] = ess.maxEnergyXtal/ess.e5x5;
+  eval[16] = ess.e2nd/ess.e5x5;
+  eval[17] = ess.eTop/ess.e5x5;
+  eval[18] = ess.eBottom/ess.e5x5;
+  eval[19] = ess.eLeft/ess.e5x5;
+  eval[20] = ess.eRight/ess.e5x5;  
+  eval[21] = ess.e2x5Max/ess.e5x5;
+  eval[22] = ess.e2x5Left/ess.e5x5;
+  eval[23] = ess.e2x5Right/ess.e5x5;
+  eval[24] = ess.e2x5Top/ess.e5x5;
+  eval[25] = ess.e2x5Bottom/ess.e5x5;
 
-  float sipip=0, sieip=0, e2x5Max=0, e2x5Left=0, e2x5Right=0, e2x5Top=0, e2x5Bottom=0;
-  assignValue(ptr, ph_conf.tag_float_token_map.find(std::string("sigmaIetaIphi"))->second.second, pho_vmaps, sieip);
-  assignValue(ptr, ph_conf.tag_float_token_map.find(std::string("sigmaIphiIphi"))->second.second, pho_vmaps, sipip);
-  assignValue(ptr, ph_conf.tag_float_token_map.find(std::string("e2x5Max"))->second.second, pho_vmaps, e2x5Max);
-  assignValue(ptr, ph_conf.tag_float_token_map.find(std::string("e2x5Left"))->second.second, pho_vmaps, e2x5Left);
-  assignValue(ptr, ph_conf.tag_float_token_map.find(std::string("e2x5Right"))->second.second, pho_vmaps, e2x5Right);
-  assignValue(ptr, ph_conf.tag_float_token_map.find(std::string("e2x5Top"))->second.second, pho_vmaps, e2x5Top);
-  assignValue(ptr, ph_conf.tag_float_token_map.find(std::string("e2x5Bottom"))->second.second, pho_vmaps, e2x5Bottom);
-  
-  eval[13] = sipip;
-  eval[14] = sieip/(sieie*sipip);
-  eval[15] = pho.maxEnergyXtal()/pho.e5x5();
-  eval[16] = pho.e2nd()/pho.e5x5();
-  eval[17] = pho.eTop()/pho.e5x5();
-  eval[18] = pho.eBottom()/pho.e5x5();
-  eval[19] = pho.eLeft()/pho.e5x5();
-  eval[20] = pho.eRight()/pho.e5x5();  
-  eval[21] = e2x5Max/pho.e5x5();
-  eval[22] = e2x5Left/pho.e5x5();
-  eval[23] = e2x5Right/pho.e5x5();
-  eval[24] = e2x5Top/pho.e5x5();
-  eval[25] = e2x5Bottom/pho.e5x5();
-
-  bool iseb = pho.isEB();
-
+  const bool iseb = pho.isEB();
   if (iseb) {
     EBDetId ebseedid(theseed->seed());
-    eval[26] = pho.e5x5()/pho.seedEnergy();
-    eval[27] = ebseedid.ieta();
-    eval[28] = ebseedid.iphi();
+    eval[26] = pho.e5x5()/theseed->energy();
+    int ieta = ebseedid.ieta();
+    int iphi = ebseedid.iphi();
+    eval[27] = ieta;
+    eval[28] = iphi;
+    int signieta = ieta > 0 ? +1 : -1; /// this is 1*abs(ieta)/ieta in original training
+    eval[29] = (ieta-signieta)%5;
+    eval[30] = (iphi-1)%2;
+    //    eval[31] = (abs(ieta)<=25)*((ieta-signieta)%25) + (abs(ieta)>25)*((ieta-26*signieta)%20); //%25 is unnescessary in this formula
+    eval[31] = (abs(ieta)<=25)*((ieta-signieta)) + (abs(ieta)>25)*((ieta-26*signieta)%20);  
+    eval[32] = (iphi-1)%20;
+    eval[33] = ieta;  /// duplicated variables but this was trained like that
+    eval[34] = iphi;  /// duplicated variables but this was trained like that
   } else {
     EEDetId eeseedid(theseed->seed());
-    eval[26] = sc->preshowerEnergy()/sc->rawEnergy();
-    eval[27] = sc->preshowerEnergyPlane1()/sc->rawEnergy();
-    eval[28] = sc->preshowerEnergyPlane2()/sc->rawEnergy();
+    eval[26] = the_sc->preshowerEnergy()/raw_energy;
+    eval[27] = the_sc->preshowerEnergyPlane1()/raw_energy;
+    eval[28] = the_sc->preshowerEnergyPlane2()/raw_energy;
     eval[29] = eeseedid.ix();
     eval[30] = eeseedid.iy();
   }
@@ -640,8 +656,12 @@ void EGExtraInfoModifierFromDB::modifyObject(pat::Photon& pho) const {
   //so corrected energy is ecor=exp(mean)*e, uncertainty is exp(mean)*eraw*sigma=ecor*sigma
   double ecor = mean*eval[0];
   if (!iseb) 
-    ecor = mean*(eval[0]+sc->preshowerEnergy());
+    ecor = mean*(eval[0]+the_sc->preshowerEnergy());
 
   double sigmacor = sigma*ecor;
   pho.setCorrectedEnergy(reco::Photon::P4type::regression2, ecor, sigmacor, true);     
+}
+
+void EGExtraInfoModifierFromDB::modifyObject(pat::Photon& pho) const {
+  modifyObject(static_cast<reco::Photon&>(pho));
 }

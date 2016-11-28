@@ -3,6 +3,8 @@
 #include "DataFormats/Common/interface/Handle.h"
 #include "FWCore/Framework/interface/ESHandle.h"
 #include "FWCore/Framework/interface/EventSetup.h"
+#include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
+#include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
 #include "CalibFormats/HcalObjects/interface/HcalCoderDb.h"
 #include "CalibFormats/HcalObjects/interface/HcalCalibrations.h"
 #include "CalibFormats/HcalObjects/interface/HcalDbService.h"
@@ -22,13 +24,23 @@ HcalSimpleReconstructor::HcalSimpleReconstructor(edm::ParameterSet const& conf):
   tsFromDB_(conf.getParameter<bool>("tsFromDB")),
   upgradeHBHE_(false),
   upgradeHF_(false),
+  HFQIE10_(false),
   paramTS(0),
   theTopology(0)
 {
+  // Intitialize "method 3"
+  reco_.setMeth3Params(
+            conf.getParameter<int>     ("pedestalSubtractionType"),
+            conf.getParameter<double>  ("pedestalUpperLimit"),
+            conf.getParameter<int>     ("timeSlewParsType"),
+            conf.getParameter<std::vector<double> >("timeSlewPars"),
+            conf.getParameter<double>  ("respCorrM3")
+      );
 
   // register for data access
   tok_hbheUp_ = consumes<HBHEUpgradeDigiCollection>(inputLabel_);
   tok_hfUp_ = consumes<HFUpgradeDigiCollection>(inputLabel_);
+  tok_hfQIE10_ = consumes<QIE10DigiCollection>(inputLabel_);
 
   tok_hbhe_ = consumes<HBHEDigiCollection>(inputLabel_);
   tok_hf_ = consumes<HFDigiCollection>(inputLabel_);
@@ -42,6 +54,10 @@ HcalSimpleReconstructor::HcalSimpleReconstructor(edm::ParameterSet const& conf):
   }
   else if (!strcasecmp(subd.c_str(),"upgradeHF")) {
      upgradeHF_ = true;
+     produces<HFRecHitCollection>();
+  }
+  else if (!strcasecmp(subd.c_str(),"HFQIE10")) {
+     HFQIE10_ = true;
      produces<HFRecHitCollection>();
   }
   else if (!strcasecmp(subd.c_str(),"HO")) {
@@ -66,6 +82,17 @@ HcalSimpleReconstructor::HcalSimpleReconstructor(edm::ParameterSet const& conf):
   
 }
 
+void HcalSimpleReconstructor::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+  edm::ParameterSetDescription desc;
+  desc.setAllowAnything();
+  desc.add<int>("pedestalSubtractionType", 1); 
+  desc.add<double>("pedestalUpperLimit", 2.7); 
+  desc.add<int>("timeSlewParsType",3);
+  desc.add<std::vector<double>>("timeSlewPars", { 12.2999, -2.19142, 0, 12.2999, -2.19142, 0, 12.2999, -2.19142, 0 });
+  desc.add<double>("respCorrM3", 0.95);
+  descriptions.add("simpleHbhereco",desc);
+}
+
 HcalSimpleReconstructor::~HcalSimpleReconstructor() { 
   delete paramTS;
   delete theTopology;
@@ -78,7 +105,7 @@ void HcalSimpleReconstructor::beginRun(edm::Run const&r, edm::EventSetup const &
     paramTS = new HcalRecoParams(*p.product());
 
     edm::ESHandle<HcalTopology> htopo;
-    es.get<IdealGeometryRecord>().get(htopo);
+    es.get<HcalRecNumberingRecord>().get(htopo);
     theTopology=new HcalTopology(*htopo);
     paramTS->setTopo(theTopology);
 
@@ -218,6 +245,47 @@ void HcalSimpleReconstructor::processUpgrade(edm::Event& e, const edm::EventSetu
     e.put(rec); // put results
   }// End of upgradeHF
 
+  if(HFQIE10_){
+
+    edm::Handle<QIE10DigiCollection> digi;
+    e.getByToken(tok_hfQIE10_, digi);
+
+    // create empty output
+    std::auto_ptr<HFRecHitCollection> rec(new HFRecHitCollection);
+    rec->reserve(digi->size()); 
+
+    // run the algorithm
+    int first = firstSample_;
+    int toadd = samplesToAdd_;
+    for (QIE10DigiCollection::const_iterator i=digi->begin(); i!=digi->end(); i++) {
+      HcalDetId cell = i->id();
+      DetId detcell=(DetId)cell;
+	  
+      //make dataframe
+      QIE10DataFrame frame(*i);
+	  
+      // rof 27.03.09: drop ZS marked and passed digis:
+      if (dropZSmarkedPassed_){
+        if (frame.zsMarkAndPass()) continue;
+      }
+
+      const HcalCalibrations& calibrations=conditions->getHcalCalibrations(cell);
+      const HcalQIECoder* channelCoder = conditions->getHcalCoder (cell);
+      const HcalQIEShape* shape = conditions->getHcalShape (channelCoder); 
+      HcalCoderDb coder (*channelCoder, *shape);
+
+      //>>> firstSample & samplesToAdd
+      if(tsFromDB_) {
+	const HcalRecoParam* param_ts = paramTS->getValues(detcell.rawId());
+	first = param_ts->firstSample();
+	toadd = param_ts->samplesToAdd();
+      }
+      rec->push_back(reco_.reconstructQIE10(frame,first,toadd,coder,calibrations));
+
+    }  
+    e.put(rec); // put results
+  }// End of upgradeHF
+  
 }
 
 
@@ -229,7 +297,7 @@ void HcalSimpleReconstructor::produce(edm::Event& e, const edm::EventSetup& even
  
   // What to produce, better to avoid the same subdet Upgrade and regular 
   // rechits "clashes"
-  if(upgradeHBHE_ || upgradeHF_) {
+  if(upgradeHBHE_ || upgradeHF_ || HFQIE10_) {
       processUpgrade(e, eventSetup);
   } else if (det_==DetId::Hcal) {
     if ((subdet_==HcalBarrel || subdet_==HcalEndcap) && !upgradeHBHE_) {

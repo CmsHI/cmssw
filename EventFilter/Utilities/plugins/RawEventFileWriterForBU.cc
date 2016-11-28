@@ -19,6 +19,9 @@
 #include <signal.h>
 #include <boost/filesystem/fstream.hpp>
 
+using namespace jsoncollector;
+
+
 //TODO:get run directory information from DaqDirector
 
 RawEventFileWriterForBU* RawEventFileWriterForBU::instance = 0;
@@ -242,7 +245,7 @@ void RawEventFileWriterForBU::finishFileWrite(int ls)
     std::string path = source.replace_extension(".jsn").string();
 
     fileMon_->snap(ls);
-    fileMon_->outputFullJSON(path, ls, false);
+    fileMon_->outputFullJSON(path, ls);
     fileMon_->discardCollected(ls);
 
     //move the json file from open

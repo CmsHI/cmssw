@@ -17,7 +17,6 @@
 // Original Author:  Eric Vaandering
 //         Created:  Wed Jan 13 15:01:20 EDT 2007
 //
-#if !defined(__CINT__) && !defined(__MAKECINT__)
 // system include files
 #include <typeinfo>
 #include <map>
@@ -128,8 +127,8 @@ namespace fwlite {
          mutable std::vector<std::string> procHistoryNames_;
          mutable edm::LuminosityBlockAuxiliary aux_;
          mutable EntryFinder entryFinder_;
-         edm::LuminosityBlockAuxiliary* pAux_;
-         edm::LuminosityBlockAux* pOldAux_;
+         edm::LuminosityBlockAuxiliary const* pAux_;
+         edm::LuminosityBlockAux const* pOldAux_;
          TBranch* auxBranch_;
          int fileVersion_;
 
@@ -138,5 +137,4 @@ namespace fwlite {
    };
 
 }
-#endif /*__CINT__ */
 #endif

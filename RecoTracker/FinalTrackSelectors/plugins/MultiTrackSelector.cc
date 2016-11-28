@@ -10,48 +10,7 @@
 #include <TMath.h>
 #include <TFile.h>
 
-namespace {
- // not a generic solution (wrong for N negative for instance)
- template<int N> 
- struct PowN {
-   template<typename T>
-   static T op(T t) { return PowN<N/2>::op(t)*PowN<(N+1)/2>::op(t);}
- };
- template<> 
- struct PowN<0> {
-   template<typename T>
-   static T op(T t) { return T(1);}
- };
- template<>
- struct PowN<1> {
-   template<typename T>
-   static T op(T t) { return t;}
- };
- template<>
- struct PowN<2> {
-   template<typename T>
-   static T op(T t) { return t*t;}
- };
-
- template<typename T>
- T powN(T t, int n) {
-  switch(n) {
-  case 4: return PowN<4>::op(t); // the only one that matters
-  case 3: return PowN<3>::op(t); // and this
-  case 8: return PowN<8>::op(t); // used in conversion????
-  case 2: return PowN<2>::op(t);
-  case 5: return PowN<5>::op(t);
-  case 6: return PowN<6>::op(t);
-  case 7: return PowN<7>::op(t);
-  case 0: return PowN<0>::op(t);
-  case 1: return PowN<1>::op(t);
-  default : return std::pow(t,T(n)); 
-  }
- }
-
-
-}
-
+#include "powN.h"
 
 using namespace reco;
 
@@ -122,6 +81,10 @@ MultiTrackSelector::MultiTrackSelector( const edm::ParameterSet & cfg ) :
   forest_.reserve(trkSelectors.size());
 
   produces<edm::ValueMap<float> >("MVAVals");
+  
+  //foward compatibility
+  produces<MVACollection>("MVAValues");
+
 
   for ( unsigned int i=0; i<trkSelectors.size(); i++) {
 
@@ -203,6 +166,7 @@ MultiTrackSelector::MultiTrackSelector( const edm::ParameterSet & cfg ) :
 
     //    produces<std::vector<int> >(name_[i]).setBranchAlias( name_[i] + "TrackQuals");
     produces<edm::ValueMap<int> >(name_[i]).setBranchAlias( name_[i] + "TrackQuals");
+    produces<QualityMaskCollection>(name_[i]).setBranchAlias( name_[i] + "QualityMasks");
     if(useAnyMVA_){
       bool thisMVA = false;
       if(trkSelectors[i].exists("useMVA"))thisMVA = trkSelectors[i].getParameter<bool>("useMVA");
@@ -360,6 +324,9 @@ void MultiTrackSelector::run( edm::Event& evt, const edm::EventSetup& es ) const
 
     //    evt.put(selTracks,name_[i]);
     evt.put(selTracksValueMap,name_[i]);
+    for (auto & q : selTracks) q=std::max(q,0);
+    auto quals = std::make_unique<QualityMaskCollection>(selTracks.begin(),selTracks.end());
+    evt.put(std::move(quals),name_[i]);
   }
 }
 
@@ -572,6 +539,8 @@ void MultiTrackSelector::processMVA(edm::Event& evt, const edm::EventSetup& es, 
     mvaFiller.insert(hSrcTrack,mvaVals_.begin(),mvaVals_.end());
     mvaFiller.fill();
     evt.put(mvaValValueMap,"MVAVals");
+    auto mvas = std::make_unique<MVACollection>(mvaVals_.begin(),mvaVals_.end());
+    evt.put(std::move(mvas),"MVAValues");
     return;
   }
 
@@ -658,6 +627,8 @@ void MultiTrackSelector::processMVA(edm::Event& evt, const edm::EventSetup& es, 
     mvaFiller.insert(hSrcTrack,mvaVals_.begin(),mvaVals_.end());
     mvaFiller.fill();
     evt.put(mvaValValueMap,"MVAVals");
+    auto mvas = std::make_unique<MVACollection>(mvaVals_.begin(),mvaVals_.end());
+    evt.put(std::move(mvas),"MVAValues");
   }
 
 }

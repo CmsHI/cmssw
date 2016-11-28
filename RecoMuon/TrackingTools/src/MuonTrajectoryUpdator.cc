@@ -9,6 +9,9 @@
  *
  *  \author R. Bellan - INFN Torino <riccardo.bellan@cern.ch>
  *  \author S. Lacaprara - INFN Legnaro
+ *
+ *  Modified by C. Calabria: GEM Implementation
+ *  Modified by D. Nash: ME0 Implementation
  */
 
 
@@ -262,6 +265,24 @@ void MuonTrajectoryUpdator::sort(TransientTrackingRecHit::ConstRecHitContainer& 
   }
 
   else if(detLayer->subDetector()==GeomDetEnumerators::CSC){
+    if(fitDirection() == insideOut)
+      stable_sort(recHitsForFit.begin(),recHitsForFit.end(), ZedComparatorInOut() );
+    else if(fitDirection() == outsideIn)
+      stable_sort(recHitsForFit.begin(),recHitsForFit.end(), ZedComparatorOutIn() );  
+    else
+      LogError("Muon|RecoMuon|MuonTrajectoryUpdator") <<"MuonTrajectoryUpdator::sort: Wrong propagation direction!!";
+  }
+
+  else if(detLayer->subDetector()==GeomDetEnumerators::GEM){
+    if(fitDirection() == insideOut)
+      stable_sort(recHitsForFit.begin(),recHitsForFit.end(), ZedComparatorInOut() );
+    else if(fitDirection() == outsideIn)
+      stable_sort(recHitsForFit.begin(),recHitsForFit.end(), ZedComparatorOutIn() );  
+    else
+      LogError("Muon|RecoMuon|MuonTrajectoryUpdator") <<"MuonTrajectoryUpdator::sort: Wrong propagation direction!!";
+  }
+  else if(detLayer->subDetector()==GeomDetEnumerators::ME0){
+      LogError("Muon|RecoMuon|MuonTrajectoryUpdator") <<"ME0s are sorted";
     if(fitDirection() == insideOut)
       stable_sort(recHitsForFit.begin(),recHitsForFit.end(), ZedComparatorInOut() );
     else if(fitDirection() == outsideIn)

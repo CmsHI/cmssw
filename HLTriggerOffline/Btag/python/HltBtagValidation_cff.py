@@ -4,10 +4,10 @@ from HLTriggerOffline.Btag.hltBtagJetMCTools_cff import *
 #denominator trigger
 hltBtagTriggerSelection = cms.EDFilter( "TriggerResultsFilter",
     triggerConditions = cms.vstring(
-      "HLT_PFMET120_NoiseCleaned_BTagCSV0p72_* OR HLT_CaloMHTNoPU90_PFMET90_PFMHT90_IDTight_* OR HLT_QuadPFJet_VBF* OR HLT_Ele32_eta2p1_* OR HLT_IsoMu24_eta2p1_*"),
+      "HLT_PFMET120_* OR HLT_CaloMHTNoPU90_PFMET90_PFMHT90_IDTight_* OR HLT_QuadPFJet_VBF* OR HLT_Ele27_eta2p1_* OR HLT_IsoMu22_*"),
     hltResults = cms.InputTag( "TriggerResults", "", "HLT" ),
 #    l1tResults = cms.InputTag( "simGtDigis" ),
-    l1tResults = cms.InputTag( "gtDigis" ),
+    l1tResults = cms.InputTag( "" ),
     throw = cms.bool( False )
 )
 
@@ -19,17 +19,17 @@ HltVertexValidationVertices= cms.EDAnalyzer("HLTVertexPerformanceAnalyzer",
         SimVertexCollection = cms.InputTag("g4SimHits"),
 	TriggerResults = cms.InputTag('TriggerResults','',"HLT"),
 	HLTPathNames =cms.vstring(
-	'HLT_PFMET120_NoiseCleaned_BTagCSV0p72_v',
-	'HLT_PFMET120_NoiseCleaned_BTagCSV0p72_v',
-	'HLT_PFMET120_NoiseCleaned_BTagCSV0p72_v',
+	'HLT_PFMET120_',
+	'HLT_PFMET120_',
+	'HLT_PFMET120_',
 	'HLT_CaloMHTNoPU90_PFMET90_PFMHT90_IDTight_',
 	'HLT_CaloMHTNoPU90_PFMET90_PFMHT90_IDTight_',
 	'HLT_CaloMHTNoPU90_PFMET90_PFMHT90_IDTight_',
 	'HLT_QuadPFJet_VBF',
 	'HLT_QuadPFJet_VBF',
 	'HLT_QuadPFJet_VBF',
-	'HLT_Ele32_eta2p1_',
-	'HLT_IsoMu24_eta2p1_'
+	'HLT_Ele27_eta2p1_',
+	'HLT_IsoMu22_'
 	),
 	Vertex = cms.VInputTag(
 		cms.InputTag("hltVerticesL3"), 
@@ -43,11 +43,11 @@ HltVertexValidationVertices= cms.EDAnalyzer("HLTVertexPerformanceAnalyzer",
 hltbTagValidation = cms.EDAnalyzer("HLTBTagPerformanceAnalyzer",
 	TriggerResults = cms.InputTag('TriggerResults','','HLT'),
 	HLTPathNames =cms.vstring(
-	'HLT_PFMET120_NoiseCleaned_BTagCSV0p72_v',
+	'HLT_PFMET120_',
 	'HLT_CaloMHTNoPU90_PFMET90_PFMHT90_IDTight_',
 	'HLT_QuadPFJet_VBF',
-	'HLT_Ele32_eta2p1_',
-	'HLT_IsoMu24_eta2p1_'
+	'HLT_Ele27_eta2p1_',
+	'HLT_IsoMu22_'
 	),
 	JetTag = cms.VInputTag(
 		cms.InputTag("hltCombinedSecondaryVertexBJetTagsCalo"),
@@ -74,4 +74,24 @@ hltbtagValidationSequence = cms.Sequence(
 	HltVertexValidationVertices +
 	hltbTagValidation
 )
+
+# fastsim customs
+from Configuration.StandardSequences.Eras import eras
+if eras.fastSim.isChosen():
+    HltVertexValidationVertices.SimVertexCollection = cms.InputTag("famosSimHits")
+    # are these customs actually needed?
+    #HltVertexValidationVertices.HLTPathNames =cms.vstring(
+    #'HLT_PFMET120_NoiseCleaned_BTagCSV07_v',
+    #'HLT_PFMET120_NoiseCleaned_BTagCSV07_v',
+    #	'HLT_CaloMHTNoPU90_PFMET90_PFMHT90_IDLoose_',
+    #	'HLT_CaloMHTNoPU90_PFMET90_PFMHT90_IDLoose_',
+    #	'HLT_QuadPFJet_VBF',
+    #	'HLT_QuadPFJet_VBF',
+    #	'HLT_Ele32_eta2p1_',
+    #	'HLT_IsoMu24_eta2p1_')
+    #HltVertexValidationVertices.Vertex = cms.VInputTag(
+    #    cms.InputTag("hltVerticesL3"), 
+    #    cms.InputTag("hltFastPVPixelVertices"),
+    #    cms.InputTag("hltVerticesPF"), 
+    #)
 

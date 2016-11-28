@@ -54,6 +54,7 @@ HcalDbProducer::HcalDbProducer( const edm::ParameterSet& fConfig)
 			  &HcalDbProducer::PFCorrsCallback &
 			  &HcalDbProducer::timeCorrsCallback &
 			  &HcalDbProducer::QIEDataCallback &
+                          &HcalDbProducer::QIETypesCallback &
 			  &HcalDbProducer::gainWidthsCallback &
 			  &HcalDbProducer::channelQualityCallback &
 			  &HcalDbProducer::zsThresholdsCallback &
@@ -100,7 +101,7 @@ void HcalDbProducer::pedestalsCallback (const HcalPedestalsRcd& fRecord) {
   mPedestals.reset( new HcalPedestals(*item) );
   
   edm::ESHandle<HcalTopology> htopo;
-  fRecord.getRecord<IdealGeometryRecord>().get(htopo);
+  fRecord.getRecord<HcalRecNumberingRecord>().get(htopo);
   const HcalTopology* topo=&(*htopo);
   mPedestals->setTopo(topo);
   
@@ -120,7 +121,7 @@ boost::shared_ptr<HcalChannelQuality> HcalDbProducer::produceChannelQualityWithT
   boost::shared_ptr<HcalChannelQuality> channelQuality( new HcalChannelQuality(*item) );
 
   edm::ESHandle<HcalTopology> htopo;
-  fRecord.getRecord<IdealGeometryRecord>().get(htopo);
+  fRecord.getRecord<HcalRecNumberingRecord>().get(htopo);
   const HcalTopology* topo=&(*htopo);
   channelQuality->setTopo(topo);
 
@@ -134,7 +135,7 @@ void HcalDbProducer::pedestalWidthsCallback (const HcalPedestalWidthsRcd& fRecor
   mPedestalWidths.reset( new HcalPedestalWidths(*item));
 
   edm::ESHandle<HcalTopology> htopo;
-  fRecord.getRecord<IdealGeometryRecord>().get(htopo);
+  fRecord.getRecord<HcalRecNumberingRecord>().get(htopo);
   const HcalTopology* topo=&(*htopo);
   mPedestalWidths->setTopo(topo);
 
@@ -152,7 +153,7 @@ void HcalDbProducer::gainsCallback (const HcalGainsRcd& fRecord) {
 
   mGains.reset( new HcalGains(*item) );
   edm::ESHandle<HcalTopology> htopo;
-  fRecord.getRecord<IdealGeometryRecord>().get(htopo);
+  fRecord.getRecord<HcalRecNumberingRecord>().get(htopo);
   const HcalTopology* topo=&(*htopo);
   mGains->setTopo(topo);
 
@@ -171,7 +172,7 @@ void HcalDbProducer::gainWidthsCallback (const HcalGainWidthsRcd& fRecord) {
 
   mGainWidths.reset( new HcalGainWidths(*item));
   edm::ESHandle<HcalTopology> htopo;
-  fRecord.getRecord<IdealGeometryRecord>().get(htopo);
+  fRecord.getRecord<HcalRecNumberingRecord>().get(htopo);
   const HcalTopology* topo=&(*htopo);
   mGainWidths->setTopo(topo);
 
@@ -191,7 +192,7 @@ void HcalDbProducer::QIEDataCallback (const HcalQIEDataRcd& fRecord) {
 
 
   edm::ESHandle<HcalTopology> htopo;
-  fRecord.getRecord<IdealGeometryRecord>().get(htopo);
+  fRecord.getRecord<HcalRecNumberingRecord>().get(htopo);
   const HcalTopology* topo=&(*htopo);
   mQIEData->setTopo(topo);
 
@@ -199,6 +200,24 @@ void HcalDbProducer::QIEDataCallback (const HcalQIEDataRcd& fRecord) {
   if (std::find (mDumpRequest.begin(), mDumpRequest.end(), std::string ("QIEData")) != mDumpRequest.end()) {
     *mDumpStream << "New HCAL QIEData set" << std::endl;
     HcalDbASCIIIO::dumpObject (*mDumpStream, *(mQIEData));
+  }
+}
+
+void HcalDbProducer::QIETypesCallback (const HcalQIETypesRcd& fRecord) {
+  edm::ESTransientHandle <HcalQIETypes> item;
+  fRecord.get (item);
+
+  mQIETypes.reset( new HcalQIETypes(*item) );
+
+  edm::ESHandle<HcalTopology> htopo;
+  fRecord.getRecord<HcalRecNumberingRecord>().get(htopo);
+  const HcalTopology* topo=&(*htopo);
+  mQIETypes->setTopo(topo);
+
+  mService->setData (mQIETypes.get());
+  if (std::find (mDumpRequest.begin(), mDumpRequest.end(), std::string ("QIETypes")) != mDumpRequest.end()) {
+    *mDumpStream << "New HCAL QIETypes set" << std::endl;
+    HcalDbASCIIIO::dumpObject (*mDumpStream, *(mQIETypes));
   }
 }
 
@@ -220,7 +239,7 @@ void HcalDbProducer::respCorrsCallback (const HcalRespCorrsRcd& fRecord) {
   mRespCorrs.reset( new HcalRespCorrs(*item) );
 
   edm::ESHandle<HcalTopology> htopo;
-  fRecord.getRecord<IdealGeometryRecord>().get(htopo);
+  fRecord.getRecord<HcalRecNumberingRecord>().get(htopo);
   const HcalTopology* topo=&(*htopo);
   mRespCorrs->setTopo(topo);
   
@@ -238,7 +257,7 @@ void HcalDbProducer::LUTCorrsCallback (const HcalLUTCorrsRcd& fRecord) {
   mLUTCorrs.reset( new HcalLUTCorrs(*item) );
 
   edm::ESHandle<HcalTopology> htopo;
-  fRecord.getRecord<IdealGeometryRecord>().get(htopo);
+  fRecord.getRecord<HcalRecNumberingRecord>().get(htopo);
   const HcalTopology* topo=&(*htopo);
   mLUTCorrs->setTopo(topo);
 
@@ -256,7 +275,7 @@ void HcalDbProducer::PFCorrsCallback (const HcalPFCorrsRcd& fRecord) {
   mPFCorrs.reset( new HcalPFCorrs(*item) );
 
   edm::ESHandle<HcalTopology> htopo;
-  fRecord.getRecord<IdealGeometryRecord>().get(htopo);
+  fRecord.getRecord<HcalRecNumberingRecord>().get(htopo);
   const HcalTopology* topo=&(*htopo);
   mPFCorrs->setTopo(topo);
 
@@ -274,7 +293,7 @@ void HcalDbProducer::timeCorrsCallback (const HcalTimeCorrsRcd& fRecord) {
   mTimeCorrs.reset( new HcalTimeCorrs(*item) );
 
   edm::ESHandle<HcalTopology> htopo;
-  fRecord.getRecord<IdealGeometryRecord>().get(htopo);
+  fRecord.getRecord<HcalRecNumberingRecord>().get(htopo);
   const HcalTopology* topo=&(*htopo);
   mTimeCorrs->setTopo(topo);
 
@@ -292,7 +311,7 @@ void HcalDbProducer::zsThresholdsCallback (const HcalZSThresholdsRcd& fRecord) {
   mZSThresholds.reset( new HcalZSThresholds(*item) );
 
   edm::ESHandle<HcalTopology> htopo;
-  fRecord.getRecord<IdealGeometryRecord>().get(htopo);
+  fRecord.getRecord<HcalRecNumberingRecord>().get(htopo);
   const HcalTopology* topo=&(*htopo);
   mZSThresholds->setTopo(topo);
 
@@ -310,7 +329,7 @@ void HcalDbProducer::L1triggerObjectsCallback (const HcalL1TriggerObjectsRcd& fR
   mL1TriggerObjects.reset( new HcalL1TriggerObjects(*item) );
 
   edm::ESHandle<HcalTopology> htopo;
-  fRecord.getRecord<IdealGeometryRecord>().get(htopo);
+  fRecord.getRecord<HcalRecNumberingRecord>().get(htopo);
   const HcalTopology* topo=&(*htopo);
   mL1TriggerObjects->setTopo(topo);
 
@@ -338,7 +357,7 @@ void HcalDbProducer::lutMetadataCallback (const HcalLutMetadataRcd& fRecord) {
   mLutMetadata.reset( new HcalLutMetadata(*item) );
 
   edm::ESHandle<HcalTopology> htopo;
-  fRecord.getRecord<IdealGeometryRecord>().get(htopo);
+  fRecord.getRecord<HcalRecNumberingRecord>().get(htopo);
   const HcalTopology* topo=&(*htopo);
   mLutMetadata->setTopo(topo);
 

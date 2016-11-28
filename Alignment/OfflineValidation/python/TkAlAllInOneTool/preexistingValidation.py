@@ -1,11 +1,12 @@
 import os
 from genericValidation import GenericValidation, GenericValidationData
-from offlineValidation import OfflineValidation
-from trackSplittingValidation import TrackSplittingValidation
-from monteCarloValidation import MonteCarloValidation
-from zMuMuValidation import ZMuMuValidation
 from geometryComparison import GeometryComparison
+from helperFunctions import getCommandOutput2, parsecolor, parsestyle
+from monteCarloValidation import MonteCarloValidation
+from offlineValidation import OfflineValidation
 from TkAlExceptions import AllInOneError
+from trackSplittingValidation import TrackSplittingValidation
+from zMuMuValidation import ZMuMuValidation
 
 class PreexistingValidation(GenericValidation):
     """
@@ -19,7 +20,7 @@ class PreexistingValidation(GenericValidation):
         self.config = config
         self.filesToCompare = {}
 
-        defaults = {"title": self.name}
+        defaults = {"title": self.name, "jobid": ""}
         defaults.update(addDefaults)
         mandatories = ["file", "color", "style"]
         mandatories += addMandatories
@@ -34,6 +35,14 @@ class PreexistingValidation(GenericValidation):
             msg = "The characters '|', '\"', and ',' cannot be used in the alignment title!"
             raise AllInOneError(msg)
 
+        self.jobid = self.general["jobid"]
+        if self.jobid:
+            try:  #make sure it's actually a valid jobid
+                output = getCommandOutput2("bjobs %(jobid)s 2>&1"%self.general)
+                if "is not found" in output: raise RuntimeError
+            except RuntimeError:
+                raise AllInOneError("%s is not a valid jobid.\nMaybe it finished already?"%self.jobid)
+
         self.filesToCompare[GenericValidationData.defaultReferenceName] = \
             self.general["file"]
 
@@ -46,6 +55,10 @@ class PreexistingValidation(GenericValidation):
 
     def getRepMap(self):
         result = self.general
+        result.update({
+                       "color": str(parsecolor(result["color"])),
+                       "style": str(parsestyle(result["style"])),
+                      })
         return result
 
     def getCompareStrings( self, requestId = None, plain = False ):
@@ -84,16 +97,22 @@ class PreexistingValidation(GenericValidation):
 class PreexistingOfflineValidation(PreexistingValidation):
     def __init__(self, valName, config,
                  addDefaults = {}, addMandatories=[]):
-        defaults = {
-            "DMRMethod":"median,rmsNorm",
-            "DMRMinimum":"30",
+        defaults = {}
+        deprecateddefaults = {
+            "DMRMethod":"",
+            "DMRMinimum":"",
             "DMROptions":"",
-            "OfflineTreeBaseDir":"TrackHitFilter",
-            "SurfaceShapes":"coarse",
+            "OfflineTreeBaseDir":"",
+            "SurfaceShapes":""
             }
+        defaults.update(deprecateddefaults)
         defaults.update(addDefaults)
         PreexistingValidation.__init__(self, valName, config, "offline",
                                        defaults, addMandatories)
+        for option in deprecateddefaults:
+            if self.general[option]:
+                raise AllInOneError("The '%s' option has been moved to the [plots:offline] section.  Please specify it there."%option)
+
     def appendToExtendedValidation( self, validationsSoFar = "" ):
         """
         if no argument or "" is passed a string with an instantiation is
@@ -103,7 +122,7 @@ class PreexistingOfflineValidation(PreexistingValidation):
         repMap["file"] = self.getCompareStrings("OfflineValidation", plain = True)
         if validationsSoFar == "":
             validationsSoFar = ('PlotAlignmentValidation p("%(file)s",'
-                                '"%(title)s", %(color)s, %(style)s);\n')%repMap
+                                '"%(title)s", %(color)s, %(style)s, .oO[bigtext]Oo.);\n')%repMap
         else:
             validationsSoFar += ('  p.loadFileList("%(file)s", "%(title)s",'
                                  '%(color)s, %(style)s);\n')%repMap
@@ -112,8 +131,10 @@ class PreexistingOfflineValidation(PreexistingValidation):
 class PreexistingTrackSplittingValidation(PreexistingValidation):
     def __init__(self, valName, config,
                  addDefaults = {}, addMandatories=[]):
+        defaults = {"subdetector": "BPIX"}
+        defaults.update(addDefaults)
         PreexistingValidation.__init__(self, valName, config, "split",
-                                       addDefaults, addMandatories)
+                                       defaults, addMandatories)
     def appendToExtendedValidation( self, validationsSoFar = "" ):
         """
         if no argument or "" is passed a string with an instantiation is

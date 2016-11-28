@@ -51,6 +51,7 @@ private:
   // ----------member data ---------------------------
 
   std::string   processName_;
+  bool loadTriggersFromHLT_;
   std::vector<std::string>   triggerNames_;
   edm::InputTag triggerResultsTag_;
   edm::InputTag triggerEventTag_;
@@ -71,6 +72,7 @@ private:
   vector<TTree*> nt_;
   int verbose_;
 
+  int evtCounter;
   std::map<std::string, bool> triggerInMenu;
 
   vector<double> id[500];
@@ -93,20 +95,22 @@ private:
 //
 TriggerObjectAnalyzer::TriggerObjectAnalyzer(const edm::ParameterSet& ps):
   processName_(ps.getParameter<std::string>("processName")),
+  loadTriggersFromHLT_(ps.getUntrackedParameter<bool>("loadTriggersFromHLT",false)),
   triggerNames_(ps.getParameter<std::vector<std::string> >("triggerNames")),
   triggerResultsTag_(ps.getParameter<edm::InputTag>("triggerResults")),
   triggerEventTag_(ps.getParameter<edm::InputTag>("triggerEvent")),
   triggerResultsToken_(consumes<edm::TriggerResults>(triggerResultsTag_)),
   triggerEventToken_(consumes<trigger::TriggerEvent>(triggerEventTag_))
 {
-  //now do what ever initialization is needed
-  nt_.reserve(triggerNames_.size());
-  for(unsigned int isize=0; isize<triggerNames_.size(); isize++){
-  nt_[isize] = fs->make<TTree>(triggerNames_.at(isize).c_str(),Form("trigger %d",isize));
-  }
-
-
-  verbose_ = 0;
+	//now do what ever initialization is needed
+	if(!loadTriggersFromHLT_){	
+		nt_.reserve(triggerNames_.size());
+		for(unsigned int isize=0; isize<triggerNames_.size(); isize++){
+			nt_[isize] = fs->make<TTree>(triggerNames_.at(isize).c_str(),Form("trigger %d",isize));
+		}
+	}
+	verbose_ = 0;
+	evtCounter = 0;
 }
 
 
@@ -127,7 +131,8 @@ TriggerObjectAnalyzer::~TriggerObjectAnalyzer()
 void
 TriggerObjectAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
-  if(hltConfig_.size() > 0){
+
+	if(hltConfig_.size() > 0){
 
     //float id = -99,pt=-99,eta=-99,phi=-99,mass=-99;
 
@@ -212,20 +217,32 @@ TriggerObjectAnalyzer::beginRun(edm::Run const& iRun, edm::EventSetup const& iSe
       std::vector<std::string> activeHLTPathsInThisEvent = hltConfig_.triggerNames();
      
       triggerInMenu.clear(); 
-      for(unsigned int itrig=0; itrig<triggerNames_.size(); itrig++){
-	for (std::vector<std::string>::const_iterator iHLT = activeHLTPathsInThisEvent.begin(); iHLT != activeHLTPathsInThisEvent.end(); ++iHLT){
-              //matching with regexp filter name. More than 1 matching filter is allowed so trig versioning is transparent to analyzer
-              if (TString(*iHLT).Contains(TRegexp(TString(triggerNames_[itrig])))){
-                  triggerInMenu[*iHLT] = true;
-                  triggerNames_[itrig] = TString(*iHLT);
-              }
-          }
+
+      if(loadTriggersFromHLT_){
+	      triggerNames_ = hltConfig_.triggerNames(); 
+	      if(!evtCounter) nt_.reserve(triggerNames_.size());
+	      for(unsigned int isize=0; isize<triggerNames_.size(); isize++){
+		      std::size_t versionLoc = triggerNames_.at(isize).find_last_of("_v");
+		      std::string genericTrg = triggerNames_.at(isize).substr(0,versionLoc+1);
+		      if(versionLoc < triggerNames_.at(isize).size()) triggerNames_.at(isize) = genericTrg;
+ 		      if(!evtCounter) nt_[isize] = fs->make<TTree>(triggerNames_.at(isize).c_str(),Form("trigger %d",isize));
+	      }
+	      evtCounter++;
       }
       for(unsigned int itrig=0; itrig<triggerNames_.size(); itrig++){
-        std::map<std::string,bool>::iterator inMenu = triggerInMenu.find(triggerNames_[itrig]);
-	if (inMenu==triggerInMenu.end()) {
-            cout << "<HLT Object Analyzer> Warning! Trigger " << triggerNames_[itrig] << " not found in HLTMenu. Skipping..." << endl;
-        }
+	      for (std::vector<std::string>::const_iterator iHLT = activeHLTPathsInThisEvent.begin(); iHLT != activeHLTPathsInThisEvent.end(); ++iHLT){
+		      //matching with regexp filter name. More than 1 matching filter is allowed so trig versioning is transparent to analyzer
+		      if (TString(*iHLT).Contains(TRegexp(TString(triggerNames_[itrig])))){
+			      triggerInMenu[*iHLT] = true;
+			      triggerNames_[itrig] = TString(*iHLT);
+		      }
+	      }
+      }
+      for(unsigned int itrig=0; itrig<triggerNames_.size(); itrig++){
+	      std::map<std::string,bool>::iterator inMenu = triggerInMenu.find(triggerNames_[itrig]);
+	      if (inMenu==triggerInMenu.end()) {
+		      cout << "<HLT Object Analyzer> Warning! Trigger " << triggerNames_[itrig] << " not found in HLTMenu. Skipping..." << endl;
+	      }
       }
       if(verbose_){
 	hltConfig_.dump("ProcessName");

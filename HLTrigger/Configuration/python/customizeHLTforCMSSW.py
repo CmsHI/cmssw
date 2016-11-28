@@ -1,135 +1,208 @@
 import FWCore.ParameterSet.Config as cms
 
-# Update to replace old jet corrector mechanism
-from HLTrigger.Configuration.customizeHLTforNewJetCorrectors import customizeHLTforNewJetCorrectors
+#
+# reusable functions
+def producers_by_type(process, *types):
+    return (module for module in process._Process__producers.values() if module._TypedParameterizable__type in types)
+def filters_by_type(process, *types):
+    return (filter for filter in process._Process__filters.values() if filter._TypedParameterizable__type in types)
+def analyzers_by_type(process, *types):
+    return (analyzer for analyzer in process._Process__analyzers.values() if analyzer._TypedParameterizable__type in types)
 
-# Possibility to put different ring dependent cut on ADC (PR #9232)
-def customiseFor9232(process):
-    if hasattr(process,'hltEcalPhiSymFilter'):
-        if hasattr(process.hltEcalPhiSymFilter,'ampCut_barrel'):
-            delattr(process.hltEcalPhiSymFilter,'ampCut_barrel')
-        if hasattr(process.hltEcalPhiSymFilter,'ampCut_endcap'):
-            delattr(process.hltEcalPhiSymFilter,'ampCut_endcap')
+def esproducers_by_type(process, *types):
+    return (module for module in process._Process__esproducers.values() if module._TypedParameterizable__type in types)
+
+#
+# one action function per PR - put the PR number into the name of the function
+
+# example:
+# def customiseFor12718(process):
+#     for pset in process._Process__psets.values():
+#         if hasattr(pset,'ComponentType'):
+#             if (pset.ComponentType == 'CkfBaseTrajectoryFilter'):
+#                 if not hasattr(pset,'minGoodStripCharge'):
+#                     pset.minGoodStripCharge = cms.PSet(refToPSet_ = cms.string('HLTSiStripClusterChargeCutNone'))
+#     return process
+
+# Module restructuring for PR #15439
+def customiseFor15439(process):
+    for producer in producers_by_type(process, "EgammaHLTBcHcalIsolationProducersRegional", "EgammaHLTEcalPFClusterIsolationProducer", "EgammaHLTHcalPFClusterIsolationProducer", "MuonHLTEcalPFClusterIsolationProducer", "MuonHLTHcalPFClusterIsolationProducer"):
+        if hasattr(producer, "effectiveAreaBarrel") and hasattr(producer, "effectiveAreaEndcap"):
+            if not hasattr(producer, "effectiveAreas") and not hasattr(producer, "absEtaLowEdges"):
+                producer.absEtaLowEdges = cms.vdouble( 0.0, 1.479 )
+                producer.effectiveAreas = cms.vdouble( producer.effectiveAreaBarrel.value(), producer.effectiveAreaEndcap.value() )
+                del producer.effectiveAreaBarrel
+                del producer.effectiveAreaEndcap
     return process
 
-# upgrade RecoTrackSelector to allow BTV-like cuts (PR #8679)
-def customiseFor8679(process):
-    if hasattr(process,'hltBSoftMuonMu5L3') :
-       if hasattr(process.hltBSoftMuonMu5L3,'min3DHit') :
-          delattr(process.hltBSoftMuonMu5L3,'min3DHit')
-       setattr(process.hltBSoftMuonMu5L3,'minLayer', cms.int32(0))
-       setattr(process.hltBSoftMuonMu5L3,'min3DLayer', cms.int32(0))
-       setattr(process.hltBSoftMuonMu5L3,'minPixelHit', cms.int32(0))
-       setattr(process.hltBSoftMuonMu5L3,'usePV', cms.bool(False))
-       setattr(process.hltBSoftMuonMu5L3,'vertexTag', cms.InputTag(''))
+# Add quadruplet-specific pixel track duplicate cleaning mode (PR #13753)
+def customiseFor13753(process):
+    for producer in producers_by_type(process, "PixelTrackProducer"):
+        if producer.CleanerPSet.ComponentName.value() == "PixelTrackCleanerBySharedHits" and not hasattr(producer.CleanerPSet, "useQuadrupletAlgo"):
+            producer.CleanerPSet.useQuadrupletAlgo = cms.bool(False)
     return process
 
-
-# Updating the config (PR #8356)
-def customiseFor8356(process):
-    MTRBPSet = cms.PSet(
-        Rescale_eta = cms.double( 3.0 ),
-        Rescale_phi = cms.double( 3.0 ),
-        Rescale_Dz = cms.double( 3.0 ),
-        EtaR_UpperLimit_Par1 = cms.double( 0.25 ),
-        EtaR_UpperLimit_Par2 = cms.double( 0.15 ),
-        PhiR_UpperLimit_Par1 = cms.double( 0.6 ),
-        PhiR_UpperLimit_Par2 = cms.double( 0.2 ),
-        UseVertex = cms.bool( False ),
-        Pt_fixed = cms.bool( False ),
-        Z_fixed = cms.bool( True ),
-        Phi_fixed = cms.bool( False ),
-        Eta_fixed = cms.bool( False ),
-        Pt_min = cms.double( 1.5 ),
-        Phi_min = cms.double( 0.1 ),
-        Eta_min = cms.double( 0.1 ),
-        DeltaZ = cms.double( 15.9 ),
-        DeltaR = cms.double( 0.2 ),
-        DeltaEta = cms.double( 0.2 ),
-        DeltaPhi = cms.double( 0.2 ),
-        maxRegions = cms.int32( 2 ),
-        precise = cms.bool( True ),
-        OnDemand = cms.int32( -1 ),
-        MeasurementTrackerName = cms.InputTag( "hltESPMeasurementTracker" ),
-        beamSpot = cms.InputTag( "hltOnlineBeamSpot" ),
-        vertexCollection = cms.InputTag( "pixelVertices" ),
-        input = cms.InputTag( 'hltL2Muons','UpdatedAtVtx' )
-    )
-
-    def producers_by_type(process, type):
-    	return (module for module in process._Process__producers.values() if module._TypedParameterizable__type == type)
-
-    for l3MPModule in producers_by_type(process, 'L3MuonProducer'):
-	if hasattr(l3MPModule, 'GlbRefitterParameters'):
-            l3MPModule.GlbRefitterParameters.RefitFlag = cms.bool(True)
-        if hasattr(l3MPModule, 'L3TrajBuilderParameters'):
-            if hasattr(l3MPModule.L3TrajBuilderParameters, 'MuonTrackingRegionBuilder'):
-                l3MPModule.L3TrajBuilderParameters.MuonTrackingRegionBuilder = MTRBPSet
-
-    listL3seedingModule = ['hltL3TrajSeedIOHit','hltL3NoFiltersNoVtxTrajSeedIOHit','hltHIL3TrajSeedIOHit']
-    for l3IOTrajModule in listL3seedingModule:
-	if hasattr(process, l3IOTrajModule):
-	    if hasattr(getattr(process, l3IOTrajModule), 'MuonTrackingRegionBuilder'):
-                setattr(getattr(process, l3IOTrajModule), 'MuonTrackingRegionBuilder', MTRBPSet)
-
+# Add pixel seed extension (PR #14356)
+def customiseFor14356(process):
+    for name, pset in process.psets_().iteritems():
+        if hasattr(pset, "ComponentType") and pset.ComponentType.value() == "CkfBaseTrajectoryFilter" and not hasattr(pset, "pixelSeedExtension"):
+            pset.pixelSeedExtension = cms.bool(False)
     return process
 
-
-# Simplified TrackerTopologyEP config (PR #7966)
-def customiseFor7966(process):
-    if hasattr(process, 'trackerTopology'):
-        params = process.trackerTopology.parameterNames_()
-        for param in params:
-            delattr(process.trackerTopology, param)
-        setattr(process.trackerTopology, 'appendToDataLabel', cms.string(""))
-    if hasattr(process,'TrackerDigiGeometryESModule'):
-        if hasattr(process.TrackerDigiGeometryESModule,'trackerGeometryConstants'):
-            delattr(process.TrackerDigiGeometryESModule,'trackerGeometryConstants')
-    return process
-
-# Removal of 'upgradeGeometry' from TrackerDigiGeometryESModule (PR #7794)
-def customiseFor7794(process):
-    if hasattr(process, 'TrackerDigiGeometryESModule'):
-        if hasattr(process.TrackerDigiGeometryESModule, 'trackerGeometryConstants'):
-            if hasattr(process.TrackerDigiGeometryESModule.trackerGeometryConstants, 'upgradeGeometry'):
-                delattr(process.TrackerDigiGeometryESModule.trackerGeometryConstants, 'upgradeGeometry')
-    return process
-
-
-# Removal of L1 Stage 1 unpacker configuration from config (PR #10XXX)
-def customiseFor10234(process):
-    if hasattr(process, 'hltCaloStage1Digis'):
-        if hasattr(process.hltCaloStage1Digis, 'FWId'):
-            delattr(process.hltCaloStage1Digis, 'FWId')
-        if hasattr(process.hltCaloStage1Digis, 'FedId'):
-            delattr(process.hltCaloStage1Digis, 'FedId')
-    return process
-
-
-# migrate RPCPointProducer to a global::EDProducer (PR #10927)
-def customiseFor10927(process):
-    if any(module.type_() is 'RPCPointProducer' for module in process.producers.itervalues()):
-        if not hasattr(process, 'CSCObjectMapESProducer'):
-            process.CSCObjectMapESProducer = cms.ESProducer( 'CSCObjectMapESProducer' )
-        if not hasattr(process, 'DTObjectMapESProducer'):
-            process.DTObjectMapESProducer = cms.ESProducer( 'DTObjectMapESProducer' )
-    return process
-
-
+#
 # CMSSW version specific customizations
-def customiseHLTforCMSSW(process, menuType="GRun", fastSim=False):
+def customizeHLTforCMSSW(process, menuType="GRun"):
+
     import os
     cmsswVersion = os.environ['CMSSW_VERSION']
 
-    if cmsswVersion >= "CMSSW_7_5":
-        process = customiseFor10927(process)
-        process = customiseFor9232(process)
-        process = customiseFor8679(process)
-        process = customiseFor8356(process)
-        process = customiseFor7966(process)
-        process = customiseFor7794(process)
-        process = customizeHLTforNewJetCorrectors(process)
-    if cmsswVersion >= "CMSSW_7_4":
-        process = customiseFor10234(process)
+    if cmsswVersion >= "CMSSW_8_0":
+        process = customiseFor15439(process)
+
+    if cmsswVersion >= "CMSSW_8_1":
+        process = customiseFor14356(process)
+        process = customiseFor13753(process)
+#       process = customiseFor12718(process)
+        pass
+
+#   stage-2 changes only if needed
+    if ("Fake" in menuType):
+        return process
+
+#    if ( menuType in ("FULL","GRun","PIon")):
+#        from HLTrigger.Configuration.CustomConfigs import L1XML
+#        process = L1XML(process,"L1Menu_Collisions2016_dev_v3.xml")
+#        from HLTrigger.Configuration.CustomConfigs import L1REPACK
+#        process = L1REPACK(process)
+#
+#    _debug = False
+#
+#   special case
+#    for module in filters_by_type(process,"HLTL1TSeed"):
+#        label = module._Labelable__label
+#        if hasattr(getattr(process,label),'SaveTags'):
+#            delattr(getattr(process,label),'SaveTags')
+#
+#   replace converted l1extra=>l1t plugins which are not yet in ConfDB
+#    replaceList = {
+#        'EDAnalyzer' : { },
+#        'EDFilter'   : {
+#            'HLTMuonL1Filter' : 'HLTMuonL1TFilter',
+#            'HLTMuonL1RegionalFilter' : 'HLTMuonL1TRegionalFilter',
+#            'HLTMuonTrkFilter' : 'HLTMuonTrkL1TFilter',
+#            'HLTMuonL1toL3TkPreFilter' : 'HLTMuonL1TtoL3TkPreFilter',
+#            'HLTMuonDimuonL2Filter' : 'HLTMuonDimuonL2FromL1TFilter',
+#            'HLTEgammaL1MatchFilterRegional' : 'HLTEgammaL1TMatchFilterRegional',
+#            'HLTMuonL2PreFilter' : 'HLTMuonL2FromL1TPreFilter',
+#            'HLTPixelIsolTrackFilter' : 'HLTPixelIsolTrackL1TFilter',
+#            },
+#        'EDProducer' : {
+#            'CaloTowerCreatorForTauHLT' : 'CaloTowerFromL1TCreatorForTauHLT',
+#            'L1HLTTauMatching' : 'L1THLTTauMatching',
+#            'HLTCaloJetL1MatchProducer' : 'HLTCaloJetL1TMatchProducer',
+#            'HLTPFJetL1MatchProducer' : 'HLTPFJetL1TMatchProducer',
+#            'HLTL1MuonSelector' : 'HLTL1TMuonSelector',
+#            'L2MuonSeedGenerator' : 'L2MuonSeedGeneratorFromL1T',
+#            'IsolatedPixelTrackCandidateProducer' : 'IsolatedPixelTrackCandidateL1TProducer',
+#            }
+#        }
+#    for type,list in replaceList.iteritems():
+#        if (type=="EDAnalyzer"):
+#            if _debug:
+#                print "# Replacing EDAnalyzers:"
+#            for old,new in list.iteritems():
+#                if _debug:
+#                    print '## EDAnalyzer plugin type: ',old,' -> ',new
+#                for module in analyzers_by_type(process,old):
+#                    label = module._Labelable__label
+#                    if _debug:
+#                        print '### Instance: ',label
+#                    setattr(process,label,cms.EDAnalyzer(new,**module.parameters_()))
+#        elif (type=="EDFilter"):
+#            if _debug:
+#                print "# Replacing EDFilters  :"
+#            for old,new in list.iteritems():
+#                if _debug:
+#                    print '## EDFilter plugin type  : ',old,' -> ',new
+#                for module in filters_by_type(process,old):
+#                    label = module._Labelable__label
+#                    if _debug:
+#                        print '### Instance: ',label
+#                    setattr(process,label,cms.EDFilter(new,**module.parameters_()))
+#        elif (type=="EDProducer"):
+#            if _debug:
+#                print "# Replacing EDProducers:"
+#            for old,new in list.iteritems():
+#                if _debug:
+#                    print '## EDProducer plugin type: ',old,' -> ',new
+#                for module in producers_by_type(process,old):
+#                    label = module._Labelable__label
+#                    if _debug:
+#                        print '### Instance: ',label
+#                    setattr(process,label,cms.EDProducer(new,**module.parameters_()))
+#                    if (new == 'CaloTowerFromL1TCreatorForTauHLT'):
+#                        setattr(getattr(process,label),'TauTrigger',cms.InputTag('hltCaloStage2Digis:Tau'))
+#                    if ((new == 'HLTCaloJetL1TMatchProducer') or (new == 'HLTPFJetL1TMatchProducer')):
+#                        setattr(getattr(process,label),'L1Jets',cms.InputTag('hltCaloStage2Digis:Jet'))
+#                        if hasattr(getattr(process,label),'L1CenJets'):
+#                            delattr(getattr(process,label),'L1CenJets')
+#                        if hasattr(getattr(process,label),'L1ForJets'):
+#                            delattr(getattr(process,label),'L1ForJets')
+#                        if hasattr(getattr(process,label),'L1TauJets'):
+#                            delattr(getattr(process,label),'L1TauJets')
+#                    if (new == 'HLTL1TMuonSelector'):
+#                        setattr(getattr(process,label),'InputObjects',cms.InputTag('hltGmtStage2Digis:Muon'))
+#                    if (new == 'L2MuonSeedGeneratorFromL1T'):
+#                        setattr(getattr(process,label),'GMTReadoutCollection',cms.InputTag(''))            
+#                        setattr(getattr(process,label),'InputObjects',cms.InputTag('hltGmtStage2Digis:Muon'))
+#                    if (new == 'IsolatedPixelTrackCandidateL1TProducer'):
+#                        setattr(getattr(process,label),'L1eTauJetsSource',cms.InputTag('hltCaloStage2Digis:Tau'))
+#
+#        else:
+#            if _debug:
+#                print "# Error - Type ',type,' not recognised!"
+#
+#   Both of the HLTEcalRecHitInAllL1RegionsProducer instances need InputTag fixes
+#    for module in producers_by_type(process,'HLTEcalRecHitInAllL1RegionsProducer'):
+#        label = module._Labelable__label
+#        setattr(getattr(process,label).l1InputRegions[0],'inputColl',cms.InputTag('hltCaloStage2Digis:EGamma'))
+#        setattr(getattr(process,label).l1InputRegions[0],'type',cms.string("EGamma"))
+#        setattr(getattr(process,label).l1InputRegions[1],'inputColl',cms.InputTag('hltCaloStage2Digis:EGamma'))
+#        setattr(getattr(process,label).l1InputRegions[1],'type',cms.string("EGamma"))
+#        setattr(getattr(process,label).l1InputRegions[2],'inputColl',cms.InputTag('hltCaloStage2Digis:Jet'))
+#        setattr(getattr(process,label).l1InputRegions[2],'type',cms.string("Jet"))
+#
+#   One of the EgammaHLTCaloTowerProducer instances need InputTag fixes
+#    if hasattr(process,'hltRegionalTowerForEgamma'):
+#        setattr(getattr(process,'hltRegionalTowerForEgamma'),'L1NonIsoCand',cms.InputTag('hltCaloStage2Digis:EGamma'))
+#        setattr(getattr(process,'hltRegionalTowerForEgamma'),'L1IsoCand'   ,cms.InputTag('hltCaloStage2Digis:EGamma'))
+#
+#   replace remaining l1extra modules with filter returning 'false'
+#    badTypes = (
+#        'HLTLevel1Activity',
+#        )
+#    if _debug:
+#        print "# Unconverted module types: ",badTypes
+#    badModules = [ ]
+#    for badType in badTypes:
+#        if _debug:
+#            print '## Unconverted module type: ',badType
+#        for module in analyzers_by_type(process,badType):
+#            label = module._Labelable__label
+#            badModules += [label]
+#            if _debug:
+#                print '### analyzer label: ',label
+#        for module in filters_by_type(process,badType):
+#            label = module._Labelable__label
+#            badModules += [label]
+#            if _debug:
+#                print '### filter   label: ',label
+#        for module in producers_by_type(process,badType):
+#            label = module._Labelable__label
+#            badModules += [label]
+#            if _debug:
+#                print '### producer label: ',label
+#    for label in badModules:
+#        setattr(process,label,cms.EDFilter("HLTBool",result=cms.bool(False)))
 
     return process

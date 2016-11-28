@@ -1,11 +1,11 @@
-# /dev/CMSSW_7_4_0/Fake/V20 (CMSSW_7_4_15)
+# /dev/CMSSW_8_0_0/Fake/V25 (CMSSW_8_0_19_patch1)
 
 import FWCore.ParameterSet.Config as cms
 
 process = cms.Process( "HLTFake" )
 
 process.HLTConfigVersion = cms.PSet(
-  tableName = cms.string('/dev/CMSSW_7_4_0/Fake/V20')
+  tableName = cms.string('/dev/CMSSW_8_0_0/Fake/V25')
 )
 
 process.streams = cms.PSet(  A = cms.vstring( 'InitialPD' ) )
@@ -16,7 +16,7 @@ process.datasets = cms.PSet(  InitialPD = cms.vstring( 'HLT_Physics_v1',
 process.GlobalTag = cms.ESSource( "PoolDBESSource",
     globaltag = cms.string( "GR_H_V39" ),
     RefreshEachRun = cms.untracked.bool( True ),
-    RefreshOpenIOVs = cms.untracked.bool( False ),
+    snapshotTime = cms.string( "" ),
     toGet = cms.VPSet( 
     ),
     DBParameters = cms.PSet( 
@@ -33,7 +33,7 @@ process.GlobalTag = cms.ESSource( "PoolDBESSource",
     RefreshAlways = cms.untracked.bool( False ),
     connect = cms.string( "frontier://(proxyurl=http://localhost:3128)(serverurl=http://localhost:8000/FrontierOnProd)(serverurl=http://localhost:8000/FrontierOnProd)(retrieve-ziplevel=0)/CMS_CONDITIONS" ),
     ReconnectEachRun = cms.untracked.bool( True ),
-    BlobStreamerName = cms.untracked.string( "TBufferBlobStreamingService" ),
+    RefreshOpenIOVs = cms.untracked.bool( False ),
     DumpStat = cms.untracked.bool( False )
 )
 
@@ -42,12 +42,13 @@ process.CastorDbProducer = cms.ESProducer( "CastorDbProducer",
 )
 process.HcalTopologyIdealEP = cms.ESProducer( "HcalTopologyIdealEP",
   Exclude = cms.untracked.string( "" ),
-  appendToDataLabel = cms.string( "" ),
-  hcalTopologyConstants = cms.PSet( 
-    maxDepthHE = cms.int32( 3 ),
-    maxDepthHB = cms.int32( 2 ),
-    mode = cms.string( "HcalTopologyMode::LHC" )
-  )
+  appendToDataLabel = cms.string( "" )
+)
+process.hcalDDDRecConstants = cms.ESProducer( "HcalDDDRecConstantsESModule",
+  appendToDataLabel = cms.string( "" )
+)
+process.hcalDDDSimConstants = cms.ESProducer( "HcalDDDSimConstantsESModule",
+  appendToDataLabel = cms.string( "" )
 )
 
 process.FastTimerService = cms.Service( "FastTimerService",
@@ -309,6 +310,24 @@ process.hltTriggerSummaryAOD = cms.EDProducer( "TriggerSummaryProducerAOD",
 process.hltTriggerSummaryRAW = cms.EDProducer( "TriggerSummaryProducerRAW",
     processName = cms.string( "@" )
 )
+process.hltPreHLTAnalyzerEndpath = cms.EDFilter( "HLTPrescaler",
+    L1GtReadoutRecordTag = cms.InputTag( "hltGtDigis" ),
+    offset = cms.uint32( 0 )
+)
+process.hltL1GtTrigReport = cms.EDAnalyzer( "L1GtTrigReport",
+    PrintVerbosity = cms.untracked.int32( 10 ),
+    UseL1GlobalTriggerRecord = cms.bool( False ),
+    PrintOutput = cms.untracked.int32( 3 ),
+    L1GtRecordInputTag = cms.InputTag( "hltGtDigis" )
+)
+process.hltTrigReport = cms.EDAnalyzer( "HLTrigReport",
+    ReferencePath = cms.untracked.string( "HLTriggerFinalPath" ),
+    ReferenceRate = cms.untracked.double( 100.0 ),
+    serviceBy = cms.untracked.string( "never" ),
+    resetBy = cms.untracked.string( "never" ),
+    reportBy = cms.untracked.string( "job" ),
+    HLTriggerResults = cms.InputTag( 'TriggerResults','','HLT' )
+)
 process.hltPreAOutput = cms.EDFilter( "HLTPrescaler",
     L1GtReadoutRecordTag = cms.InputTag( "hltGtDigis" ),
     offset = cms.uint32( 0 )
@@ -341,7 +360,8 @@ process.HLTriggerFirstPath = cms.Path( process.hltGetConditions + process.hltGet
 process.HLT_Physics_v1 = cms.Path( process.HLTBeginSequence + process.hltPrePhysics + process.HLTEndSequence )
 process.HLT_Random_v1 = cms.Path( process.hltRandomEventsFilter + process.hltGtDigis + process.hltPreRandom + process.HLTEndSequence )
 process.HLT_ZeroBias_v1 = cms.Path( process.HLTBeginSequence + process.hltL1sL1ZeroBias + process.hltPreZeroBias + process.HLTEndSequence )
-process.HLTriggerFinalPath = cms.Path( process.hltGtDigis + process.hltScalersRawToDigi + process.hltFEDSelector + process.hltTriggerSummaryAOD + process.hltTriggerSummaryRAW )
+process.HLTriggerFinalPath = cms.Path( process.hltGtDigis + process.hltScalersRawToDigi + process.hltFEDSelector + process.hltTriggerSummaryAOD + process.hltTriggerSummaryRAW + process.hltBoolFalse )
+process.HLTAnalyzerEndpath = cms.EndPath( process.hltGtDigis + process.hltPreHLTAnalyzerEndpath + process.hltL1GtTrigReport + process.hltTrigReport )
 process.AOutput = cms.EndPath( process.hltPreAOutput + process.hltOutputA )
 
 # load the DQMStore and DQMRootOutputModule
@@ -356,7 +376,7 @@ process.DQMOutput = cms.EndPath( process.dqmOutput )
 
 
 
-process.HLTSchedule = cms.Schedule( *(process.HLTriggerFirstPath, process.HLT_Physics_v1, process.HLT_Random_v1, process.HLT_ZeroBias_v1, process.HLTriggerFinalPath, process.AOutput, process.DQMOutput ))
+process.HLTSchedule = cms.Schedule( *(process.HLTriggerFirstPath, process.HLT_Physics_v1, process.HLT_Random_v1, process.HLT_ZeroBias_v1, process.HLTriggerFinalPath, process.HLTAnalyzerEndpath, process.AOutput, process.DQMOutput ))
 
 
 process.source = cms.Source( "PoolSource",
@@ -405,26 +425,24 @@ process.maxEvents = cms.untracked.PSet(
     input = cms.untracked.int32( 100 )
 )
 
-# enable the TrigReport and TimeReport
+# enable TrigReport, TimeReport and MultiThreading
 process.options = cms.untracked.PSet(
-    wantSummary = cms.untracked.bool( True )
+    wantSummary = cms.untracked.bool( True ),
+    numberOfThreads = cms.untracked.uint32( 4 ),
+    numberOfStreams = cms.untracked.uint32( 0 ),
+    sizeOfStackForThreadsInKB = cms.untracked.uint32( 10*1024 )
 )
 
 # override the GlobalTag, connection string and pfnPrefix
 if 'GlobalTag' in process.__dict__:
-    from Configuration.AlCa.GlobalTag_condDBv2 import GlobalTag as customiseGlobalTag
+    from Configuration.AlCa.GlobalTag import GlobalTag as customiseGlobalTag
     process.GlobalTag = customiseGlobalTag(process.GlobalTag, globaltag = 'auto:run1_hlt_Fake')
     process.GlobalTag.connect   = 'frontier://FrontierProd/CMS_CONDITIONS'
-    process.GlobalTag.pfnPrefix = cms.untracked.string('frontier://FrontierProd/')
-    for pset in process.GlobalTag.toGet.value():
-        pset.connect = pset.connect.value().replace('frontier://FrontierProd/', 'frontier://FrontierProd/')
-    # fix for multi-run processing
-    process.GlobalTag.RefreshEachRun = cms.untracked.bool( False )
-    process.GlobalTag.ReconnectEachRun = cms.untracked.bool( False )
 
 if 'MessageLogger' in process.__dict__:
     process.MessageLogger.categories.append('TriggerSummaryProducerAOD')
     process.MessageLogger.categories.append('L1GtTrigReport')
+    process.MessageLogger.categories.append('L1TGlobalSummary')
     process.MessageLogger.categories.append('HLTrigReport')
     process.MessageLogger.categories.append('FastReport')
 
@@ -442,5 +460,8 @@ _customInfo['globalTag' ]= "auto:run1_hlt_Fake"
 _customInfo['inputFile' ]=  ['file:RelVal_Raw_Fake_DATA.root']
 _customInfo['realData'  ]=  True
 from HLTrigger.Configuration.customizeHLTforALL import customizeHLTforAll
-process = customizeHLTforAll(process,_customInfo)
+process = customizeHLTforAll(process,"Fake",_customInfo)
+
+from HLTrigger.Configuration.customizeHLTforCMSSW import customizeHLTforCMSSW
+process = customizeHLTforCMSSW(process,"Fake")
 

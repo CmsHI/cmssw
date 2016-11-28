@@ -3,8 +3,6 @@ from Validation.RecoTrack.TrackingParticleSelectionsForEfficiency_cff import *
 from Validation.RecoTrack.GenParticleSelectionsForEfficiency_cff import *
 
 MTVHistoProducerAlgoForTrackerBlock = cms.PSet(
-    ComponentName = cms.string('MTVHistoProducerAlgoForTracker'),
-
     ### tp selectors for efficiency
     generalTpSelector             = generalTpSelectorBlock,
     TpSelectorForEfficiencyVsEta  = TpSelectorForEfficiencyVsEtaBlock,
@@ -36,16 +34,16 @@ MTVHistoProducerAlgoForTrackerBlock = cms.PSet(
     useLogPt=cms.untracked.bool(True),
     #                               
     minHit = cms.double(-0.5),                            
-    maxHit = cms.double(40.5),
-    nintHit = cms.int32(41),
+    maxHit = cms.double(80.5),
+    nintHit = cms.int32(81),
     #                               
     minPu = cms.double(-0.5),                            
     maxPu = cms.double(199.5),
     nintPu = cms.int32(100),
     #
     minLayers = cms.double(-0.5),                            
-    maxLayers = cms.double(15.5),
-    nintLayers = cms.int32(16),
+    maxLayers = cms.double(25.5),
+    nintLayers = cms.int32(26),
     #
     minPhi = cms.double(-3.1416),
     maxPhi = cms.double(3.1416),
@@ -114,4 +112,17 @@ MTVHistoProducerAlgoForTrackerBlock = cms.PSet(
     dzRes_rangeMax = cms.double(+0.05),
     dzRes_nbin = cms.int32(150),                                   
 
+
+    maxDzpvCumulative = cms.double(0.6),
+    nintDzpvCumulative = cms.int32(240),
+
+    maxDzpvsigCumulative = cms.double(10),
+    nintDzpvsigCumulative = cms.int32(200),
 )
+
+from Configuration.StandardSequences.Eras import eras
+def _modifyForPhase1(pset):
+    pset.minEta = -3
+    pset.maxEta = 3
+    pset.nintEta = 60
+eras.phase1Pixel.toModify(MTVHistoProducerAlgoForTrackerBlock, _modifyForPhase1)

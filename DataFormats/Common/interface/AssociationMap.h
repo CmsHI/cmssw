@@ -38,6 +38,7 @@
 #include "DataFormats/Common/interface/OneToManyWithQuality.h"
 
 #include <utility>
+#include "tbb/concurrent_unordered_map.h"
 
 namespace edm {
 
@@ -68,7 +69,7 @@ namespace edm {
     /// type return by operator[]
     typedef typename value_type::value_type result_type;
     /// transient map type
-    typedef typename std::map<index_type, value_type> internal_transient_map_type;
+    typedef typename tbb::concurrent_unordered_map<index_type, value_type> internal_transient_map_type;
 
     /// const iterator
     struct const_iterator {
@@ -96,20 +97,17 @@ namespace edm {
     /// default constructor
     AssociationMap() { }
 
-#if !defined(__CINT__) && !defined(__MAKECINT__) && !defined(__REFLEX__)
     // You will see better performance if you use other constructors.
     // Use this when the arguments the other constructors require are
     // not easily available.
     explicit
     AssociationMap(EDProductGetter const* getter) :
       ref_(getter) { }
-#endif
 
     // It is rare for this to be useful
     explicit
     AssociationMap(const ref_type & ref) : ref_(ref) { }
 
-#if !defined(__CINT__) && !defined(__MAKECINT__) && !defined(__REFLEX__)
     // In most cases this is the best constructor to use.
     // This constructor should be passed 2 arguments, except in the
     // case where the template parameter is OneToValue where it should
@@ -142,7 +140,6 @@ namespace edm {
 
     template<typename... Args>
     AssociationMap(Args... args) : ref_(std::forward<Args>(args)...) {}
-#endif
 
     /// clear map
     void clear() { map_.clear(); transientMap_.clear(); }
@@ -169,7 +166,7 @@ namespace edm {
     /// erase the element whose key is k
     size_type erase(const key_type& k) {
       index_type i = k.key();
-      transientMap_.erase(i);
+      transientMap_.unsafe_erase(i);
       return map_.erase(i);
     }
     /// find element with specified reference key
@@ -253,13 +250,13 @@ namespace edm {
     const value_type & get(size_type i) const {
       typename internal_transient_map_type::const_iterator tf = transientMap_.find(i);
       if (tf == transientMap_.end()) {
-	typename map_type::const_iterator f = map_.find(i);
-	if (f == map_.end())
-	  Exception::throwThis(edm::errors::InvalidReference, "can't find reference in AssociationMap at position ", i);
-	value_type v(key_type(ref_.key, i), Tag::val(ref_, f->second));
-	std::pair<typename internal_transient_map_type::const_iterator, bool> ins =
-	  transientMap_.insert(std::make_pair(i, v));
-	return ins.first->second;
+        typename map_type::const_iterator f = map_.find(i);
+        if (f == map_.end())
+          Exception::throwThis(edm::errors::InvalidReference, "can't find reference in AssociationMap at position ", i);
+        value_type v(key_type(ref_.key, i), Tag::val(ref_, f->second));
+        std::pair<typename internal_transient_map_type::const_iterator, bool> ins =
+        transientMap_.insert(std::make_pair(i, v));
+        return ins.first->second;
       } else {
 	return tf->second;
       }

@@ -76,7 +76,6 @@ public:
    void toggleItemVisible(Bool_t on = kTRUE);
    void changeItemOpacity(Int_t opacity); 
    void runFilter();
-   void toggleShowFiltered(Bool_t on = true);
    void runSelection();
    void selectAll();
    void deselectAll();
@@ -110,7 +109,6 @@ private:
    FWGUIValidatingTextEntry* m_filterExpressionEntry;
    FWGUIValidatingTextEntry* m_selectExpressionEntry;
    TGTextButton* m_filterButton;
-   TGCheckButton* m_showFilteredCheckButton;
    TGTextButton* m_selectButton;
    TGTextButton* m_selectAllButton;
    TGTextButton* m_deselectAllButton;

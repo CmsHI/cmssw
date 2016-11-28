@@ -36,6 +36,7 @@
 
 #include "DataFormats/BTauReco/interface/CandSecondaryVertexTagInfo.h"
 #include "DataFormats/BTauReco/interface/SecondaryVertexTagInfo.h"
+#include "DataFormats/BTauReco/interface/BoostedDoubleSVTagInfo.h"
 #include "DataFormats/PatCandidates/interface/JetCorrFactors.h"
 #include "DataFormats/JetReco/interface/JetID.h"
 
@@ -152,10 +153,10 @@ namespace pat {
       Jet correctedJet(const unsigned int& level, const JetCorrFactors::Flavor& flavor=JetCorrFactors::NONE, const unsigned int& set=0) const;
       /// p4 of the jet corrected up to the given level for the set
       /// of jet energy correction factors, which is currently in use
-      const LorentzVector& correctedP4(const std::string& level, const std::string& flavor="none", const std::string& set="") const { return correctedJet(level, flavor, set).p4(); };
+      const LorentzVector correctedP4(const std::string& level, const std::string& flavor="none", const std::string& set="") const { return correctedJet(level, flavor, set).p4(); };
       /// p4 of the jet corrected up to the given level for the set
       /// of jet energy correction factors, which is currently in use
-      const LorentzVector& correctedP4(const unsigned int& level, const JetCorrFactors::Flavor& flavor=JetCorrFactors::NONE, const unsigned int& set=0) const { return correctedJet(level, flavor, set).p4(); };
+      const LorentzVector correctedP4(const unsigned int& level, const JetCorrFactors::Flavor& flavor=JetCorrFactors::NONE, const unsigned int& set=0) const { return correctedJet(level, flavor, set).p4(); };
 
   private:
       /// index of the set of jec factors with given label; returns -1 if no set
@@ -201,6 +202,7 @@ namespace pat {
       /// you should omit the 'TagInfos' part from the label
       const reco::CandSecondaryVertexTagInfo * tagInfoCandSecondaryVertex(const std::string &label="") const;
       const reco::SecondaryVertexTagInfo     * tagInfoSecondaryVertex(const std::string &label="") const;
+      const reco::BoostedDoubleSVTagInfo     * tagInfoBoostedDoubleSV(const std::string &label="") const;
       /// method to add a algolabel-discriminator pair
       void addBDiscriminatorPair(const std::pair<std::string, float> & thePair);
       /// sets a tagInfo with the given name from an edm::Ptr<T> to it.

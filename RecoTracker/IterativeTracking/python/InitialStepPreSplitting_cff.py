@@ -1,4 +1,5 @@
 import FWCore.ParameterSet.Config as cms
+from Configuration.StandardSequences.Eras import eras
 
 ### STEP 0 ###
 
@@ -37,7 +38,9 @@ initialStepSeedsPreSplitting.ClusterCheckPSet.PixelClusterCollectionLabel = 'siP
 import TrackingTools.TrajectoryFiltering.TrajectoryFilter_cff
 initialStepTrajectoryFilterBasePreSplitting = TrackingTools.TrajectoryFiltering.TrajectoryFilter_cff.CkfBaseTrajectoryFilter_block.clone(
     minimumNumberOfHits = 3,
-    minPt = 0.2
+    minPt = 0.2,
+    maxCCCLostHits = 2,
+    minGoodStripCharge = cms.PSet(refToPSet_ = cms.string('SiStripClusterChargeCutLoose'))
     )
 import RecoPixelVertexing.PixelLowPtUtilities.StripSubClusterShapeTrajectoryFilter_cfi
 initialStepTrajectoryFilterShapePreSplitting = RecoPixelVertexing.PixelLowPtUtilities.StripSubClusterShapeTrajectoryFilter_cfi.StripSubClusterShapeTrajectoryFilterTIX12.clone()
@@ -48,12 +51,12 @@ initialStepTrajectoryFilterPreSplitting = cms.PSet(
         cms.PSet( refToPSet_ = cms.string('initialStepTrajectoryFilterShapePreSplitting'))),
 )
 
-import RecoTracker.MeasurementDet.Chi2ChargeMeasurementEstimatorESProducer_cfi
-initialStepChi2EstPreSplitting = RecoTracker.MeasurementDet.Chi2ChargeMeasurementEstimatorESProducer_cfi.Chi2ChargeMeasurementEstimator.clone(
+import RecoTracker.MeasurementDet.Chi2ChargeMeasurementEstimator_cfi
+initialStepChi2EstPreSplitting = RecoTracker.MeasurementDet.Chi2ChargeMeasurementEstimator_cfi.Chi2ChargeMeasurementEstimator.clone(
     ComponentName = cms.string('initialStepChi2EstPreSplitting'),
     nSigma = cms.double(3.0),
     MaxChi2 = cms.double(30.0),
-    clusterChargeCut = cms.PSet(refToPSet_ = cms.string('SiStripClusterChargeCutLoose')),
+    clusterChargeCut = cms.PSet(refToPSet_ = cms.string('SiStripClusterChargeCutTiny')),
     pTChargeCutThreshold = cms.double(15.)
 )
 
@@ -139,3 +142,25 @@ InitialStepPreSplitting = cms.Sequence(initialStepSeedLayersPreSplitting*
                                        MeasurementTrackerEvent*
                                        siPixelClusterShapeCache)
 
+# Although InitialStepPreSplitting is not really part of LowPU/Run1/Phase1PU70
+# tracking, we use it to get siPixelClusters and siPixelRecHits
+# collections for non-splitted pixel clusters. All modules before
+# iterTracking sequence use siPixelClustersPreSplitting and
+# siPixelRecHitsPreSplitting for that purpose.
+#
+# If siPixelClusters would be defined in
+# RecoLocalTracker.Configuration.RecoLocalTracker_cff, we would have a
+# situation where
+# - LowPU/Phase1PU70 has siPixelClusters defined in RecoLocalTracker_cff
+# - everything else has siPixelClusters defined here
+# and this leads to a mess. The way it is done here we have only
+# one place (within Reconstruction_cff) where siPixelClusters
+# module is defined.
+from RecoLocalTracker.SiPixelClusterizer.SiPixelClusterizer_cfi import siPixelClusters as _siPixelClusters
+eras.trackingLowPU.toReplaceWith(siPixelClusters, _siPixelClusters)
+eras.trackingLowPU.toReplaceWith(InitialStepPreSplitting, cms.Sequence(
+    siPixelClusters +
+    siPixelRecHits +
+    MeasurementTrackerEvent +
+    siPixelClusterShapeCache
+))

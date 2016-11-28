@@ -34,7 +34,6 @@
 #include "FWCore/Framework/interface/ESWatcher.h"
 
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
-#include "CondCore/DBCommon/interface/Time.h"
 
 /*** Alignment ***/
 #include "Alignment/CommonAlignmentMonitor/interface/AlignmentMonitorBase.h"
@@ -73,6 +72,9 @@
 #include "CondFormats/AlignmentRecord/interface/DTSurveyErrorExtendedRcd.h"
 #include "CondFormats/AlignmentRecord/interface/CSCSurveyRcd.h"
 #include "CondFormats/AlignmentRecord/interface/CSCSurveyErrorExtendedRcd.h"
+
+#include "Alignment/LaserAlignment/interface/TsosVectorCollection.h"
+#include "TrackingTools/PatternTools/interface/TrajTrackAssociation.h"
 
 /*** Forward declarations ***/
 #include "FWCore/Framework/interface/Frameworkfwd.h"
@@ -137,7 +139,7 @@ class PCLTrackerAlProducer : public edm::EDAnalyzer {
     void initBeamSpot(const edm::Event&);
 
     /// Creates ideal geometry @theTrackerGeometry from IdealGeometryRecord
-    void createGeometries(const edm::EventSetup&);
+    void createGeometries(const edm::EventSetup&, const TrackerTopology*);
 
     /// Applies Alignments from Database (GlobalPositionRcd) to Geometry
     /// @theTrackerGeometry
@@ -256,6 +258,16 @@ class PCLTrackerAlProducer : public edm::EDAnalyzer {
     /// ValueMap containing associtaion cluster-flag
     const edm::InputTag clusterValueMapTag_;
 
+    edm::EDGetTokenT<TrajTrackAssociationCollection> tjTkAssociationMapToken;
+    edm::EDGetTokenT<reco::BeamSpot> beamSpotToken;
+    edm::EDGetTokenT<TkFittedLasBeamCollection> tkLasBeamToken;
+    edm::EDGetTokenT<TsosVectorCollection> tsosVectorToken;
+    edm::EDGetTokenT<AliClusterValueMap> clusterValueMapToken;
+    cond::Time_t theFirstRun;
+
+    // file-names
+    //std::string millePedeLogFile_ = "millepede.log";
+    //std::string millePedeResFile_ = "millepede.res";
 
 
     /*** ESWatcher ***/
@@ -280,7 +292,6 @@ class PCLTrackerAlProducer : public edm::EDAnalyzer {
     edm::ESWatcher<CSCSurveyErrorExtendedRcd>     watchCSCSurveyErrExtRcd;
 
 
-    cond::Time_t theFirstRun; 
 
     /*** Survey stuff ***/
 

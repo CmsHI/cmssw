@@ -1,5 +1,13 @@
 import FWCore.ParameterSet.Config as cms
 
+## string added as general entry for module definition here and use in tauTools.py
+preselection = cms.string(
+    'tauID("decayModeFinding") > 0.5 &'
+    ' tauID("byLooseCombinedIsolationDeltaBetaCorr3Hits") > 0.5 &'
+    ' tauID("againstMuonTight3") > 0.5 &'
+    ' tauID("againstElectronVLooseMVA6") > 0.5'
+)
+
 cleanPatTaus = cms.EDProducer("PATTauCleaner",
     src = cms.InputTag("selectedPatTaus"),
 
@@ -8,7 +16,7 @@ cleanPatTaus = cms.EDProducer("PATTauCleaner",
         'tauID("decayModeFinding") > 0.5 &'
         ' tauID("byLooseCombinedIsolationDeltaBetaCorr3Hits") > 0.5 &'
         ' tauID("againstMuonTight3") > 0.5 &'
-        ' tauID("againstElectronVLooseMVA5") > 0.5'
+        ' tauID("againstElectronVLooseMVA6") > 0.5'
     ),
 
     # overlap checking configurables

@@ -223,7 +223,7 @@ akCs5PFJetSequence_mc = cms.Sequence(
                                                   *
                                                   akCs5PFJetBtagging
                                                   *
-                                                  akCs5PFNjettiness
+                                                  akCs5PFNjettiness #No constituents for calo jets in pp. Must be removed for pp calo jets but I'm not sure how to do this transparently (Marta)
                                                   *
                                                   akCs5PFpatJetsWithBtagging
                                                   *

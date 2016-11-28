@@ -13,7 +13,7 @@
 
 #pragma GCC visibility push(hidden)
 
-class PixelForwardLayerPhase1 GCC11_FINAL : public ForwardDetLayer {
+class PixelForwardLayerPhase1 final : public ForwardDetLayer {
  public:
   PixelForwardLayerPhase1(std::vector<const Phase1PixelBlade*>& blades);
   ~PixelForwardLayerPhase1();
@@ -38,7 +38,7 @@ class PixelForwardLayerPhase1 GCC11_FINAL : public ForwardDetLayer {
   static int computeHelicity(const GeometricSearchDet* firstBlade,const GeometricSearchDet* secondBlade);
 
   struct SubTurbineCrossings {
-    SubTurbineCrossings(): isValid(false){}
+    SubTurbineCrossings(): isValid(false), closestIndex(0), nextIndex(0), nextDistance(0.0f) {}
     SubTurbineCrossings( int ci, int ni, float nd) :
       isValid(true),closestIndex(ci), nextIndex(ni), nextDistance(nd) {}
 

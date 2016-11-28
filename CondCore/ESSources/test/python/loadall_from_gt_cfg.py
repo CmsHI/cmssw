@@ -27,17 +27,30 @@ CondDBSetup = cms.PSet( DBParameters = cms.PSet(
                                                 )
                         )
 
-GlobalTag.connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS')
-GlobalTag.snapshotTime = cms.string('2012-01-20 23:59:59.000')
-GlobalTag.globaltag = options.globalTag
-GlobalTag.DumpStat = True
-GlobalTag.toGet = cms.VPSet()
-GlobalTag.toGet.append(
-    cms.PSet(record = cms.string("BeamSpotObjectsRcd"),
-             tag = cms.string("firstcollisions"),
-             )
-    )
-process.GlobalTag = GlobalTag
+process.GlobalTag = cms.ESSource("PoolDBESSource",
+                                 CondDBSetup,
+                                 #connect = cms.string('oracle://cms_orcon_adg/CMS_CONDITIONS'),
+                                 connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS'),
+                                 #    connect = cms.string('sqlite_fip:CondCore/TagCollection/data/GlobalTag.db'), #For use during release integration
+                                 globaltag = cms.string(''),
+                                 snapshotTime = cms.string('2012-01-20 23:59:59.000'),
+                                 RefreshEachRun=cms.untracked.bool(False),
+                                 DumpStat=cms.untracked.bool(False),
+                                 pfnPrefix=cms.untracked.string(''),   
+                                 pfnPostfix=cms.untracked.string('')
+                                 )
+
+
+process.GlobalTag.globaltag = options.globalTag
+process.GlobalTag.DumpStat =  True
+process.GlobalTag.toGet = cms.VPSet()
+process.GlobalTag.toGet.append(
+   cms.PSet(record = cms.string("BeamSpotObjectsRcd"),
+            snapshotTime = cms.string('2014-01-01 00:00:00.000'),
+           )
+)
+
+
 
 process.source = cms.Source("EmptyIOVSource",
                             lastValue = cms.uint64(options.runNumber+1),

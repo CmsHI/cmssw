@@ -20,13 +20,13 @@
 #include "EventFilter/Utilities/interface/FastMonitoringService.h"
 
 #include <fstream>
+using namespace jsoncollector;
 
 TriggerJSONMonitoring::TriggerJSONMonitoring(const edm::ParameterSet& ps) :
   triggerResults_(ps.getParameter<edm::InputTag>("triggerResults")),
   triggerResultsToken_(consumes<edm::TriggerResults>(triggerResults_)),
   level1Results_(ps.getParameter<edm::InputTag>("L1Results")),   
-  m_l1t_results(consumes<L1GlobalTriggerReadoutRecord>(level1Results_)),             
-  hltPrescaleProvider_(ps, consumesCollector(), *this)
+  m_l1t_results(consumes<GlobalAlgBlkBxCollection>(level1Results_))             
 {
 
                                                      
@@ -40,7 +40,7 @@ void
 TriggerJSONMonitoring::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
   desc.add<edm::InputTag>("triggerResults",edm::InputTag("TriggerResults","","HLT"));
-  desc.add<edm::InputTag>("L1Results",edm::InputTag("hltGtDigis"));                
+  desc.add<edm::InputTag>("L1Results",edm::InputTag("hltGtStage2Digis"));                
   descriptions.add("triggerJSONMonitoring", desc);
 }
 
@@ -61,41 +61,42 @@ TriggerJSONMonitoring::analyze(const edm::Event& iEvent, const edm::EventSetup& 
     LogDebug("TriggerJSONMonitoring") << "Not Physics, Calibration or Random. experimentType = " << ex << std::endl;
   }   
 
+  //Temporarily removing L1 monitoring while we adapt for Stage 2
   //Get hold of L1TResults 
-  edm::Handle<L1GlobalTriggerReadoutRecord> l1tResults;
-  iEvent.getByToken(m_l1t_results, l1tResults);
+  // edm::Handle<L1GlobalTriggerReadoutRecord> l1tResults;
+  // iEvent.getByToken(m_l1t_results, l1tResults);
 
-  L1GlobalTriggerReadoutRecord L1TResults = * l1tResults.product();
+  // L1GlobalTriggerReadoutRecord L1TResults = * l1tResults.product();
 
-  const std::vector<bool> & algoword = L1TResults.decisionWord();  
-  if (algoword.size() == L1AlgoAccept_.size()){
-    for (unsigned int i = 0; i < algoword.size(); i++){
-      if (algoword[i]){
-	L1AlgoAccept_[i]++;
-	if (ex == 1) L1AlgoAcceptPhysics_[i]++;
-	if (ex == 2) L1AlgoAcceptCalibration_[i]++;
-	if (ex == 3) L1AlgoAcceptRandom_[i]++;
-      }
-    }
-  }
-  else {
-    LogWarning("TriggerJSONMonitoring")<<"L1 Algo Trigger Mask size does not match number of L1 Algo Triggers!";
-  }
+  // const std::vector<bool> & algoword = L1TResults.decisionWord();  
+  // if (algoword.size() == L1AlgoAccept_.size()){
+  //   for (unsigned int i = 0; i < algoword.size(); i++){
+  //     if (algoword[i]){
+  // 	L1AlgoAccept_[i]++;
+  // 	if (ex == 1) L1AlgoAcceptPhysics_[i]++;
+  // 	if (ex == 2) L1AlgoAcceptCalibration_[i]++;
+  // 	if (ex == 3) L1AlgoAcceptRandom_[i]++;
+  //     }
+  //   }
+  // }
+  // else {
+  //   LogWarning("TriggerJSONMonitoring")<<"L1 Algo Trigger Mask size does not match number of L1 Algo Triggers!";
+  // }
 
-  const std::vector<bool> & techword = L1TResults.technicalTriggerWord();
-  if (techword.size() == L1TechAccept_.size()){
-    for (unsigned int i = 0; i < techword.size(); i++){
-      if (techword[i]){
-	L1TechAccept_[i]++;
-	if (ex == 1) L1TechAcceptPhysics_[i]++;
-	if (ex == 2) L1TechAcceptCalibration_[i]++;
-	if (ex == 3) L1TechAcceptRandom_[i]++;
-      }
-    }
-  }
-  else{
-    LogWarning("TriggerJSONMonitoring")<<"L1 Tech Trigger Mask size does not match number of L1 Tech Triggers!";
-  }
+  // const std::vector<bool> & techword = L1TResults.technicalTriggerWord();
+  // if (techword.size() == L1TechAccept_.size()){
+  //   for (unsigned int i = 0; i < techword.size(); i++){
+  //     if (techword[i]){
+  // 	L1TechAccept_[i]++;
+  // 	if (ex == 1) L1TechAcceptPhysics_[i]++;
+  // 	if (ex == 2) L1TechAcceptCalibration_[i]++;
+  // 	if (ex == 3) L1TechAcceptRandom_[i]++;
+  //     }
+  //   }
+  // }
+  // else{
+  //   LogWarning("TriggerJSONMonitoring")<<"L1 Tech Trigger Mask size does not match number of L1 Tech Triggers!";
+  // }
   
   //Get hold of TriggerResults  
   Handle<TriggerResults> HLTR;
@@ -135,8 +136,10 @@ TriggerJSONMonitoring::analyze(const edm::Event& iEvent, const edm::EventSetup& 
   }
 
   //Prescale index
-  prescaleIndex_ = hltPrescaleProvider_.prescaleSet(iEvent, iSetup);
-
+  edm::Handle<GlobalAlgBlkBxCollection> l1tResults;
+  if (iEvent.getByToken(m_l1t_results, l1tResults) and not (l1tResults->begin(0) == l1tResults->end(0)))
+    prescaleIndex_ = static_cast<unsigned int>(l1tResults->begin(0)->getPreScColumn());
+  
   //Check that the prescale index hasn't changed inside a lumi section
   unsigned int newLumi = (unsigned int) iEvent.eventAuxiliary().luminosityBlock();
   if (oldLumi == newLumi and prescaleIndex_ != oldPrescaleIndex){
@@ -314,12 +317,9 @@ TriggerJSONMonitoring::beginRun(edm::Run const& iRun, edm::EventSetup const& iSe
 
   //Initialize hltConfig_     
   bool changed = true;
-  if (hltPrescaleProvider_.init(iRun, iSetup, triggerResults_.process(), changed)){
-    hltConfig_ =  hltPrescaleProvider_.hltConfigProvider();
-    resetRun(changed);
-  }
+  if (hltConfig_.init(iRun, iSetup, triggerResults_.process(), changed)) resetRun(changed);
   else{
-    LogDebug("TriggerJSONMonitoring") << "HLTPrescaleProvider initialization failed!" << std::endl;
+    LogDebug("TriggerJSONMonitoring") << "HLTConfigProvider initialization failed!" << std::endl;
     return;
   }
 
@@ -414,12 +414,12 @@ TriggerJSONMonitoring::beginRun(edm::Run const& iRun, edm::EventSetup const& iSe
 
 void TriggerJSONMonitoring::beginLuminosityBlock(const edm::LuminosityBlock&, const edm::EventSetup& iSetup){ resetLumi(); }
 
-std::shared_ptr<hltJson::lumiVars>
+std::shared_ptr<trigJson::lumiVars>
 TriggerJSONMonitoring::globalBeginLuminosityBlockSummary(const edm::LuminosityBlock& iLumi, const edm::EventSetup& iSetup, const LuminosityBlockContext* iContext)
 {
-  std::shared_ptr<hltJson::lumiVars> iSummary(new hltJson::lumiVars);
+  std::shared_ptr<trigJson::lumiVars> iSummary(new trigJson::lumiVars);
 
-  unsigned int MAXPATHS = 500;
+  unsigned int MAXPATHS = 1000;
 
   iSummary->processed = new HistoJ<unsigned int>(1, 1);
 
@@ -449,12 +449,14 @@ TriggerJSONMonitoring::globalBeginLuminosityBlockSummary(const edm::LuminosityBl
   iSummary->stL1Jsd              = "";
   iSummary->streamL1Destination  = "";
   iSummary->streamHLTDestination = "";
+  iSummary->streamL1MergeType    = "";
+  iSummary->streamHLTMergeType   = "";
 
   return iSummary;
 }//End globalBeginLuminosityBlockSummary function  
 
 void
-TriggerJSONMonitoring::endLuminosityBlockSummary(const edm::LuminosityBlock& iLumi, const edm::EventSetup& iEventSetup, hltJson::lumiVars* iSummary) const{
+TriggerJSONMonitoring::endLuminosityBlockSummary(const edm::LuminosityBlock& iLumi, const edm::EventSetup& iEventSetup, trigJson::lumiVars* iSummary) const{
 
   //Whichever stream gets there first does the initialiazation 
   if (iSummary->hltWasRun->value().size() == 0){
@@ -495,6 +497,8 @@ TriggerJSONMonitoring::endLuminosityBlockSummary(const edm::LuminosityBlock& iLu
 
     iSummary->streamHLTDestination = runCache()->streamHLTDestination;
     iSummary->streamL1Destination  = runCache()->streamL1Destination;
+    iSummary->streamHLTMergeType   = runCache()->streamHLTMergeType;
+    iSummary->streamL1MergeType    = runCache()->streamL1MergeType;
   }
 
   else{
@@ -533,7 +537,7 @@ TriggerJSONMonitoring::endLuminosityBlockSummary(const edm::LuminosityBlock& iLu
 
 
 void
-TriggerJSONMonitoring::globalEndLuminosityBlockSummary(const edm::LuminosityBlock& iLumi, const edm::EventSetup& iSetup, const LuminosityBlockContext* iContext, hltJson::lumiVars* iSummary)
+TriggerJSONMonitoring::globalEndLuminosityBlockSummary(const edm::LuminosityBlock& iLumi, const edm::EventSetup& iSetup, const LuminosityBlockContext* iContext, trigJson::lumiVars* iSummary)
 {
 
   unsigned int iLs  = iLumi.luminosityBlock();
@@ -665,6 +669,7 @@ TriggerJSONMonitoring::globalEndLuminosityBlockSummary(const edm::LuminosityBloc
     hltDaqJsn[DataPoint::DATA].append(hltJsnInputFiles.value());
     hltDaqJsn[DataPoint::DATA].append(hltJsnFileAdler32);
     hltDaqJsn[DataPoint::DATA].append(iSummary->streamHLTDestination);
+    hltDaqJsn[DataPoint::DATA].append(iSummary->streamHLTMergeType);
     hltDaqJsn[DataPoint::DATA].append((unsigned int)daqJsnHLTErrorEvents.value());
 
     result = writer.write(hltDaqJsn);
@@ -691,6 +696,7 @@ TriggerJSONMonitoring::globalEndLuminosityBlockSummary(const edm::LuminosityBloc
     l1DaqJsn[DataPoint::DATA].append(l1JsnInputFiles.value());
     l1DaqJsn[DataPoint::DATA].append(l1JsnFileAdler32);
     l1DaqJsn[DataPoint::DATA].append(iSummary->streamL1Destination);
+    l1DaqJsn[DataPoint::DATA].append(iSummary->streamL1MergeType);
     l1DaqJsn[DataPoint::DATA].append((unsigned int)daqJsnHLTErrorEvents.value());
 
     result = writer.write(l1DaqJsn);

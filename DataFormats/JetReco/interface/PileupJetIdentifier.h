@@ -22,6 +22,7 @@
 class StoredPileupJetIdentifier {
 public:
 	friend class PileupJetIdAlgo;
+	friend class MVAJetPuId;
 
 	StoredPileupJetIdentifier();
 	~StoredPileupJetIdentifier(); 
@@ -40,6 +41,9 @@ public:
 	const float & RMS() const          { return dR2Mean(); }
 	
 	DECLARE_VARIABLE(dRMean     ,float);  
+
+	DECLARE_VARIABLE(majW  ,float);
+        DECLARE_VARIABLE(minW  ,float);
 
 	DECLARE_VARIABLE(frac01    ,float);  
 	DECLARE_VARIABLE(frac02    ,float);  
@@ -62,12 +66,14 @@ public:
 	DECLARE_VARIABLE(nTrueInt   ,float);
 
 	DECLARE_VARIABLE(nvtx   ,float);  
+	DECLARE_VARIABLE(pull,float);
 };
 
 // ----------------------------------------------------------------------------------------------------
 class PileupJetIdentifier : public StoredPileupJetIdentifier {
 public:
 	friend class PileupJetIdAlgo;
+	friend class MVAJetPuId;
 
 	PileupJetIdentifier();
 	~PileupJetIdentifier(); 
@@ -151,8 +157,8 @@ public:
 	DECLARE_VARIABLE(etaW  ,float);  
 	DECLARE_VARIABLE(phiW  ,float);  
 
-	DECLARE_VARIABLE(majW  ,float);  
-	DECLARE_VARIABLE(minW  ,float);  
+	//DECLARE_VARIABLE(majW  ,float);  
+	//DECLARE_VARIABLE(minW  ,float);  
 
 	DECLARE_VARIABLE(chFrac01    ,float);  
 	DECLARE_VARIABLE(chFrac02    ,float);  

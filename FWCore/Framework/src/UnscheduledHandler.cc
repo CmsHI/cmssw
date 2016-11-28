@@ -24,8 +24,8 @@ namespace edm {
 
   bool
   UnscheduledHandler::tryToFill(std::string const& label,
-                                EventPrincipal& iEvent,
-                                ModuleCallingContext const* mcc) {
+                                EventPrincipal const& iEvent,
+                                ModuleCallingContext const* mcc) const {
      assert(m_setup);
      return tryToFillImpl(label, iEvent, *m_setup, mcc);
   }

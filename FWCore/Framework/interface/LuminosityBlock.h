@@ -25,6 +25,7 @@ For its usage, see "FWCore/Framework/interface/PrincipalGetAdapter.h"
 #include "FWCore/Utilities/interface/EDGetToken.h"
 #include "FWCore/Utilities/interface/ProductKindOfType.h"
 #include "FWCore/Utilities/interface/LuminosityBlockIndex.h"
+#include "FWCore/Utilities/interface/propagate_const.h"
 
 #include <memory>
 #include <set>
@@ -35,6 +36,8 @@ For its usage, see "FWCore/Framework/interface/PrincipalGetAdapter.h"
 namespace edm {
   class ModuleCallingContext;
   class ProducerBase;
+  class SharedResourcesAcquirer;
+  
   namespace stream {
     template< typename T> class ProducingModuleAdaptorBase;
   }
@@ -42,7 +45,7 @@ namespace edm {
 
   class LuminosityBlock : public LuminosityBlockBase {
   public:
-    LuminosityBlock(LuminosityBlockPrincipal& lbp, ModuleDescription const& md,
+    LuminosityBlock(LuminosityBlockPrincipal const& lbp, ModuleDescription const& md,
                     ModuleCallingContext const*);
     ~LuminosityBlock();
 
@@ -65,6 +68,9 @@ namespace edm {
     
     //Used in conjunction with EDGetToken
     void setConsumer(EDConsumerBase const* iConsumer);
+    
+    void setSharedResourcesAcquirer( SharedResourcesAcquirer* iResourceAcquirer);
+
     template <typename PROD>
     bool
     getByLabel(std::string const& label, Handle<PROD>& result) const;
@@ -135,13 +141,10 @@ namespace edm {
     LuminosityBlockPrincipal const&
     luminosityBlockPrincipal() const;
 
-    LuminosityBlockPrincipal&
-    luminosityBlockPrincipal();
-
     // Override version from LuminosityBlockBase class
     virtual BasicHandle getByLabelImpl(std::type_info const& iWrapperType, std::type_info const& iProductType, InputTag const& iTag) const;
 
-    typedef std::vector<std::pair<std::unique_ptr<WrapperBase>, BranchDescription const*> > ProductPtrVec;
+    typedef std::vector<std::pair<edm::propagate_const<std::unique_ptr<WrapperBase>>, BranchDescription const*>> ProductPtrVec;
     ProductPtrVec& putProducts() {return putProducts_;}
     ProductPtrVec const& putProducts() const {return putProducts_;}
 

@@ -4,7 +4,6 @@
 #include "DataFormats/Common/interface/BaseHolder.h"
 #include "DataFormats/Common/interface/RefHolderBase.h"
 #include "DataFormats/Provenance/interface/ProductID.h"
-#include "FWCore/Utilities/interface/GCC11Compatibility.h"
 
 #include <memory>
 
@@ -27,34 +26,32 @@ namespace edm {
       // It may be better to use auto_ptr<RefHolderBase> in
       // this constructor, so that the cloning can be avoided. I'm not
       // sure if use of auto_ptr here causes any troubles elsewhere.
-      IndirectHolder() : BaseHolder<T>(), helper_( 0 ) { }
+      IndirectHolder() : BaseHolder<T>(), helper_( nullptr ) { }
       IndirectHolder(std::shared_ptr<RefHolderBase> p);
-#ifndef __GCCXML__
       template< typename U>
       IndirectHolder(std::unique_ptr<U> p): helper_(p.release()) {}
-#endif
       IndirectHolder(IndirectHolder const& other);
       IndirectHolder& operator= (IndirectHolder const& rhs);
       void swap(IndirectHolder& other);
       virtual ~IndirectHolder();
       
-      virtual BaseHolder<T>* clone() const GCC11_OVERRIDE;
-      virtual T const* getPtr() const GCC11_OVERRIDE;
-      virtual ProductID id() const GCC11_OVERRIDE;
-      virtual size_t key() const GCC11_OVERRIDE;
-      virtual bool isEqualTo(BaseHolder<T> const& rhs) const GCC11_OVERRIDE;
+      virtual BaseHolder<T>* clone() const override;
+      virtual T const* getPtr() const override;
+      virtual ProductID id() const override;
+      virtual size_t key() const override;
+      virtual bool isEqualTo(BaseHolder<T> const& rhs) const override;
 
       virtual bool fillRefIfMyTypeMatches(RefHolderBase& fillme,
-					  std::string& msg) const GCC11_OVERRIDE;
-      virtual std::auto_ptr<RefHolderBase> holder() const GCC11_OVERRIDE;
-      virtual std::auto_ptr<BaseVectorHolder<T> > makeVectorHolder() const GCC11_OVERRIDE;
-      virtual EDProductGetter const* productGetter() const GCC11_OVERRIDE;
+					  std::string& msg) const override;
+      virtual std::auto_ptr<RefHolderBase> holder() const override;
+      virtual std::auto_ptr<BaseVectorHolder<T> > makeVectorHolder() const override;
+      virtual EDProductGetter const* productGetter() const override;
 
       /// Checks if product collection is in memory or available
       /// in the Event. No type checking is done.
-      virtual bool isAvailable() const GCC11_OVERRIDE { return helper_->isAvailable(); }
+      virtual bool isAvailable() const override { return helper_->isAvailable(); }
 
-      virtual bool isTransient() const GCC11_OVERRIDE { return helper_->isTransient(); }
+      virtual bool isTransient() const override { return helper_->isTransient(); }
 
       //Used by ROOT storage
       CMS_CLASS_VERSION(10)

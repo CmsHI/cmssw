@@ -1,7 +1,7 @@
-using namespace std;
 #include "EventFilter/HcalRawToDigi/plugins/HcalRawToDigi.h"
 #include "DataFormats/FEDRawData/interface/FEDNumbering.h"
 #include "DataFormats/HcalDigi/interface/HcalDigiCollections.h"
+#include "DataFormats/HcalDigi/interface/HcalUMNioDigi.h"
 #include "FWCore/Framework/interface/ESHandle.h"
 #include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
 #include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
@@ -22,6 +22,7 @@ HcalRawToDigi::HcalRawToDigi(edm::ParameterSet const& conf):
   unpackCalib_(conf.getUntrackedParameter<bool>("UnpackCalib",false)),
   unpackZDC_(conf.getUntrackedParameter<bool>("UnpackZDC",false)),
   unpackTTP_(conf.getUntrackedParameter<bool>("UnpackTTP",false)),
+  unpackUMNio_(conf.getUntrackedParameter<bool>("UnpackUMNio",false)),
   silent_(conf.getUntrackedParameter<bool>("silent",true)),
   complainEmptyData_(conf.getUntrackedParameter<bool>("ComplainEmptyData",false)),
   unpackerMode_(conf.getUntrackedParameter<int>("UnpackerMode",0)),
@@ -31,12 +32,13 @@ HcalRawToDigi::HcalRawToDigi(edm::ParameterSet const& conf):
   tok_data_ = consumes<FEDRawDataCollection>(conf.getParameter<edm::InputTag>("InputLabel"));
 
   if (fedUnpackList_.empty()) {
+    // VME range for back-compatibility
     for (int i=FEDNumbering::MINHCALFEDID; i<=FEDNumbering::MAXHCALFEDID; i++)
       fedUnpackList_.push_back(i);
-    // HF uTCA
-    fedUnpackList_.push_back(1118);
-    fedUnpackList_.push_back(1120);
-    fedUnpackList_.push_back(1122);
+
+    // uTCA range 
+    for (int i=FEDNumbering::MINHCALuTCAFEDID; i<=FEDNumbering::MAXHCALuTCAFEDID; i++)
+      fedUnpackList_.push_back(i);
   } 
   
   unpacker_.setExpectedOrbitMessageTime(expectedOrbitMessageTime_);
@@ -59,8 +61,11 @@ HcalRawToDigi::HcalRawToDigi(edm::ParameterSet const& conf):
     produces<ZDCDigiCollection>();
   if (unpackTTP_)
     produces<HcalTTPDigiCollection>();
+  if (unpackUMNio_)
+    produces<HcalUMNioDigi>();
   produces<QIE10DigiCollection>();
-
+  produces<QIE11DigiCollection>();
+  
   memset(&stats_,0,sizeof(stats_));
 
 }
@@ -77,6 +82,7 @@ void HcalRawToDigi::fillDescriptions(edm::ConfigurationDescriptions& description
   desc.addUntracked<std::vector<int>>("FEDs", std::vector<int>());
   desc.addUntracked<bool>("UnpackZDC",true);
   desc.addUntracked<bool>("UnpackCalib",true);
+  desc.addUntracked<bool>("UnpackUMNio",true);
   desc.addUntracked<bool>("UnpackTTP",true);
   desc.addUntracked<bool>("silent",true);
   desc.addUntracked<bool>("ComplainEmptyData",false);
@@ -110,6 +116,7 @@ void HcalRawToDigi::produce(edm::Event& e, const edm::EventSetup& es)
   std::vector<ZDCDataFrame> zdc;
   std::vector<HcalTTPDigi> ttp;
   std::vector<HOTriggerPrimitiveDigi> hotp;
+  HcalUMNioDigi umnio;
   std::auto_ptr<HcalUnpackerReport> report(new HcalUnpackerReport);
 
   // Heuristics: use ave+(max-ave)/8
@@ -131,6 +138,7 @@ void HcalRawToDigi::produce(edm::Event& e, const edm::EventSetup& es)
   colls.tphoCont=&hotp;
   colls.calibCont=&hc;
   colls.zdcCont=&zdc;
+  colls.umnio=&umnio;
   if (unpackTTP_) colls.ttp=&ttp;
  
   // Step C: unpack all requested FEDs
@@ -194,6 +202,10 @@ void HcalRawToDigi::produce(edm::Event& e, const edm::EventSetup& es)
     colls.qie10 = new QIE10DigiCollection(); 
   }
   std::auto_ptr<QIE10DigiCollection> qie10_prod(colls.qie10);
+  if (colls.qie11 == 0) {
+    colls.qie11 = new QIE11DigiCollection(); 
+  }
+  std::auto_ptr<QIE11DigiCollection> qie11_prod(colls.qie11);
 
   hbhe_prod->swap_contents(hbhe);
   if( !cntHFdup ) hf_prod->swap_contents(hf);
@@ -221,6 +233,7 @@ void HcalRawToDigi::produce(edm::Event& e, const edm::EventSetup& es)
   htp_prod->sort();
   hotp_prod->sort();
   qie10_prod->sort();
+  qie11_prod->sort();
 
   e.put(hbhe_prod);
   e.put(ho_prod);
@@ -228,6 +241,7 @@ void HcalRawToDigi::produce(edm::Event& e, const edm::EventSetup& es)
   e.put(htp_prod);
   e.put(hotp_prod);
   e.put(qie10_prod);
+  e.put(qie11_prod);
 
   /// calib
   if (unpackCalib_) {
@@ -265,8 +279,14 @@ void HcalRawToDigi::produce(edm::Event& e, const edm::EventSetup& es)
     e.put(prod);
   }
   e.put(report);
+  /// umnio
+  if (unpackUMNio_) {
+    if(colls.umnio != 0) {
+      std::auto_ptr<HcalUMNioDigi> prod(new HcalUMNioDigi(umnio));
+      e.put(prod);
+    }
 
-
+  }
 }
 
 

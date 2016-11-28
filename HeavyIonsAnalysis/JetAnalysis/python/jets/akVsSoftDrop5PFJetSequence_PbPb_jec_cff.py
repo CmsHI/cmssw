@@ -223,7 +223,7 @@ akVsSoftDrop5PFJetSequence_mc = cms.Sequence(
                                                   *
                                                   akVsSoftDrop5PFJetBtagging
                                                   *
-                                                  akVsSoftDrop5PFNjettiness
+                                                  akVsSoftDrop5PFNjettiness #No constituents for calo jets in pp. Must be removed for pp calo jets but I'm not sure how to do this transparently (Marta)
                                                   *
                                                   akVsSoftDrop5PFpatJetsWithBtagging
                                                   *

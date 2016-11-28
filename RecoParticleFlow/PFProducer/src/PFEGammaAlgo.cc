@@ -5,9 +5,11 @@
 #include "DataFormats/ParticleFlowReco/interface/PFCluster.h"
 #include "DataFormats/ParticleFlowReco/interface/PFClusterFwd.h"
 #include "RecoParticleFlow/PFClusterTools/interface/ClusterClusterMapping.h"
+#include "DataFormats/ParticleFlowReco/interface/PFLayer.h"
 #include "DataFormats/ParticleFlowReco/interface/PFRecHit.h"
 #include "DataFormats/EcalDetId/interface/EBDetId.h"
 #include "DataFormats/EcalDetId/interface/EEDetId.h"
+#include "DataFormats/EcalDetId/interface/ESDetId.h"
 #include "DataFormats/EgammaCandidates/interface/Photon.h"
 #include "RecoParticleFlow/PFClusterTools/interface/PFEnergyCalibration.h"
 #include "RecoParticleFlow/PFClusterTools/interface/PFPhotonClusters.h"
@@ -16,10 +18,14 @@
 #include "RecoParticleFlow/PFClusterTools/interface/PFEnergyResolution.h"
 #include "RecoParticleFlow/PFClusterTools/interface/PFClusterWidthAlgo.h"
 #include "RecoParticleFlow/PFProducer/interface/PFElectronExtraEqual.h"
+#include "RecoParticleFlow/PFTracking/interface/PFTrackAlgoTools.h"
 #include "DataFormats/Common/interface/RefToPtr.h"
 #include "RecoEcal/EgammaCoreTools/interface/Mustache.h"
 #include "DataFormats/Math/interface/deltaPhi.h"
 #include "DataFormats/Math/interface/deltaR.h"
+
+#include "CondFormats/ESObjects/interface/ESChannelStatus.h"
+
 #include <TFile.h>
 #include <TVector2.h>
 #include <iomanip>
@@ -706,7 +712,8 @@ PFEGammaAlgo(const PFEGammaAlgo::PFEGConfigInfo& cfg) :
   TotPS1_(0.0), TotPS2_(0.0),
   nVtx_(0.0),
   x0inner_(0.0), x0middle_(0.0), x0outer_(0.0),
-  excluded_(0.0), Mustache_EtRatio_(0.0), Mustache_Et_out_(0.0)
+  excluded_(0.0), Mustache_EtRatio_(0.0), Mustache_Et_out_(0.0),
+  channelStatus_(0)
 {   
   //Material Map
   TFile *XO_File = new TFile(cfg_.X0_Map.c_str(),"READ");
@@ -1394,7 +1401,7 @@ initializeProtoCands(std::list<PFEGammaAlgo::ProtoEGObject>& egobjs) {
 	   const reco::PFBlockElementTrack * kfEle = 
 	     docast(const reco::PFBlockElementTrack*,kftrack.first);
 	   const reco::TrackRef trackref = kfEle->trackRef();
-	   const reco::TrackBase::TrackAlgorithm Algo = trackref->algo();
+
 	   const int nexhits = 
 	     trackref->hitPattern().numberOfLostHits(HitPattern::MISSING_INNER_HITS);
 	   bool fromprimaryvertex = false;
@@ -1406,12 +1413,16 @@ initializeProtoCands(std::list<PFEGammaAlgo::ProtoEGObject>& egobjs) {
 	     }
 	   }// loop over tracks in primary vertex
 	    // if associated to good non-GSF matched track remove this cluster
-	   if( Algo < reco::TrackBase::pixelLessStep && nexhits == 0 && fromprimaryvertex ) {
+	   if( PFTrackAlgoTools::isGoodForEGMPrimary(trackref->algo()) && nexhits == 0 && fromprimaryvertex ) {
 	     closestECAL.second = false;
 	   } else { // otherwise associate the cluster and KF track
 	     _recoveredlinks.push_back( ElementMap::value_type(closestECAL.first,kftrack.first) );
 	     _recoveredlinks.push_back( ElementMap::value_type(kftrack.first,closestECAL.first) );
 	   }
+
+
+
+
 	 }
        } // found a good closest ECAL match
      } // no GSF track matched to KF
@@ -1445,6 +1456,18 @@ initializeProtoCands(std::list<PFEGammaAlgo::ProtoEGObject>& egobjs) {
 	 << "Found objects " << std::distance(mergestart,nomerge)
 	 << " to merge by links to the front!" << std::endl;
        for( auto roToMerge = mergestart; roToMerge != nomerge; ++roToMerge) {
+         //bugfix! L.Gray 14 Jan 2016 
+         // -- check that the front is still mergeable!
+         if( thefront.ecalclusters.size() && roToMerge->ecalclusters.size() ) {
+           if( thefront.ecalclusters.front().first->clusterRef()->layer() !=   
+               roToMerge->ecalclusters.front().first->clusterRef()->layer() ) {
+             LOGWARN("PFEGammaAlgo::mergeROsByAnyLink") 
+               << "Tried to merge EB and EE clusters! Skipping!";
+             ROs.push_back(*roToMerge);
+             continue;
+           }
+         }         
+         //end bugfix
 	 thefront.ecalclusters.insert(thefront.ecalclusters.end(),
 				      roToMerge->ecalclusters.begin(),
 				      roToMerge->ecalclusters.end());
@@ -2229,6 +2252,7 @@ buildRefinedSuperCluster(const PFEGammaAlgo::ProtoEGObject& RO) {
     rawSCEnergy(0), corrSCEnergy(0), corrPSEnergy(0),
     PS1_clus_sum(0), PS2_clus_sum(0),
     ePS1(0), ePS2(0), ps1_energy(0.0), ps2_energy(0.0); 
+  int condP1(1), condP2(1);
   for( auto& clus : RO.ecalclusters ) {
     ePS1 = 0;
     ePS2 = 0;
@@ -2245,17 +2269,58 @@ buildRefinedSuperCluster(const PFEGammaAlgo::ProtoEGObject& RO) {
     posZ += cluseraw * cluspos.Z();
     // update EE calibrated super cluster energies
     if( isEE ) {
+      ePS1 = 0;
+      ePS2 = 0;
+      condP1 = condP2 = 1;
       const auto& psclusters = RO.ecal2ps.at(clus.first);
+   
+      for( auto i_ps = psclusters.begin(); i_ps != psclusters.end(); ++i_ps) {
+        const PFClusterRef&  psclus = i_ps->first->clusterRef();
+
+	auto const& recH_Frac = psclus->recHitFractions();	
+	
+        switch( psclus->layer() ) {
+        case PFLayer::PS1:
+	  for (auto const& recH : recH_Frac){
+            ESDetId strip1 = recH.recHitRef()->detId();
+	    if(strip1 != ESDetId(0)){
+	      ESChannelStatusMap::const_iterator status_p1 = channelStatus_->getMap().find(strip1);
+	      //getStatusCode() == 0 => active channel
+	      // apply correction if all recHits are dead
+	      if(status_p1->getStatusCode() == 0) condP1 = 0;
+	    }
+	  }
+	  break;
+	case PFLayer::PS2:
+	  for (auto const& recH : recH_Frac){
+            ESDetId strip2 = recH.recHitRef()->detId();
+	    if(strip2 != ESDetId(0)) {
+	      ESChannelStatusMap::const_iterator status_p2 = channelStatus_->getMap().find(strip2);
+	      if(status_p2->getStatusCode() == 0) condP2 = 0;
+	    }
+	  }
+	  break;
+	default:
+	  break;
+	}
+      }
+
       PS1_clus_sum = std::accumulate(psclusters.begin(),psclusters.end(),
 				     0.0,sumps1);
       PS2_clus_sum = std::accumulate(psclusters.begin(),psclusters.end(),
 				     0.0,sumps2);
+
+      if(condP1 == 1) ePS1 = -1.;
+      if(condP2 == 1) ePS2 = -1.;
+
       cluscalibe = 
 	cfg_.thePFEnergyCalibration->energyEm(*clusptr,
 					      PS1_clus_sum,PS2_clus_sum,
 					      ePS1, ePS2,
 					      cfg_.applyCrackCorrections);
     }
+    if(ePS1 == -1.) ePS1 = 0;
+    if(ePS2 == -1.) ePS2 = 0;
 
     rawSCEnergy  += cluseraw;
     corrSCEnergy += cluscalibe;    
@@ -2429,7 +2494,8 @@ unlinkRefinableObjectKFandECALMatchedToHCAL(ProtoEGObject& RO,
     NotCloserToOther<reco::PFBlockElement::TRACK,reco::PFBlockElement::HCAL>
       tracksToHCALs(_currentblock,_currentlinks,secd_kf->first);
     reco::TrackRef trkRef =   secd_kf->first->trackRef();
-    const unsigned int Algo = whichTrackAlgo(trkRef);
+
+    bool goodTrack = PFTrackAlgoTools::isGoodForEGM(trkRef->algo());
     const float secpin = trkRef->p();       
     
     for( auto ecal = ecal_begin; ecal != ecal_end; ++ecal ) {
@@ -2464,7 +2530,7 @@ unlinkRefinableObjectKFandECALMatchedToHCAL(ProtoEGObject& RO,
 	    dynamic_cast<const reco::PFBlockElementCluster*>(hcalclus->first); 
 	  const double hcalenergy = clusthcal->clusterRef()->energy();	  
 	  const double hpluse = ecalenergy+hcalenergy;
-	  const bool isHoHE = ( (hcalenergy / hpluse ) > 0.1 && Algo < 3 );
+	  const bool isHoHE = ( (hcalenergy / hpluse ) > 0.1 && goodTrack );
 	  const bool isHoE  = ( hcalenergy > ecalenergy );
 	  const bool isPoHE = ( secpin > hpluse );	
 	  if( cluster_in_sc[clus_idx] ) {
@@ -2477,7 +2543,7 @@ unlinkRefinableObjectKFandECALMatchedToHCAL(ProtoEGObject& RO,
 		<< " HCAL ENE " << hcalenergy
 		<< " ECAL ENE " << ecalenergy
 		<< " secPIN " << secpin 
-		<< " Algo Track " << Algo << std::endl;
+		<< " Algo Track " << trkRef->algo() << std::endl;
 	      remove_this_kf = true;
 	    }
 	  } else {
@@ -2490,7 +2556,7 @@ unlinkRefinableObjectKFandECALMatchedToHCAL(ProtoEGObject& RO,
 		<< " HCAL ENE " << hcalenergy
 		<< " ECAL ENE " << ecalenergy
 		<< " secPIN " << secpin 
-		<< " Algo Track " << Algo << std::endl;
+		<< " Algo Track " <<trkRef->algo() << std::endl;
 	      remove_this_kf = true;
 	    }
 	  }  
@@ -2505,36 +2571,7 @@ unlinkRefinableObjectKFandECALMatchedToHCAL(ProtoEGObject& RO,
 }
 
 
-unsigned int PFEGammaAlgo::whichTrackAlgo(const reco::TrackRef& trackRef) {
-  unsigned int Algo = 0; 
-  switch (trackRef->algo()) {
-  case TrackBase::ctf:
-  case TrackBase::initialStep:
-  case TrackBase::lowPtTripletStep:
-  case TrackBase::pixelPairStep:
-  case TrackBase::jetCoreRegionalStep:
-  case TrackBase::muonSeededStepInOut:
-  case TrackBase::muonSeededStepOutIn:
-    Algo = 0;
-    break;
-  case TrackBase::detachedTripletStep:
-    Algo = 1;
-    break;
-  case TrackBase::mixedTripletStep:
-    Algo = 2;
-    break;
-  case TrackBase::pixelLessStep:
-    Algo = 3;
-    break;
-  case TrackBase::tobTecStep:
-    Algo = 4;
-    break;
-  default:
-    Algo = 5;
-    break;
-  }
-  return Algo;
-}
+
 bool PFEGammaAlgo::isPrimaryTrack(const reco::PFBlockElementTrack& KfEl,
 				    const reco::PFBlockElementGsfTrack& GsfEl) {
   bool isPrimary = false;

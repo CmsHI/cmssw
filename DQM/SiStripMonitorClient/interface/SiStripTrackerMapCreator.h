@@ -51,8 +51,9 @@ class SiStripTrackerMapCreator {
   void printBadModuleList(std::map<unsigned int,std::string>* badmodmap, const edm::EventSetup& eSetup);
   void printTopModules(std::vector<std::pair<float,uint32_t> >* topNmodVec, const edm::EventSetup& eSetup);
 
+
   TrackerMap* trackerMap_;
-  std::string sRunNumber;
+  std::string sRunNumber; //LG
   std::string tkMapName_;
   std::string stripTopLevelDir_;
 

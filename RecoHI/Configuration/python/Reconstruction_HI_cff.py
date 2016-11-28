@@ -73,3 +73,4 @@ globalRecoPbPb_wConformalPixel = cms.Sequence(hiTracking_wConformalPixel
 # Modify zero-suppression sequence here
 from RecoLocalTracker.SiStripZeroSuppression.SiStripZeroSuppression_cfi import *
 siStripZeroSuppression.storeCM = cms.bool(True)
+

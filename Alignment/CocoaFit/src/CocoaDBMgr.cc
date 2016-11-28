@@ -4,7 +4,6 @@
 #include "CondFormats/Alignment/interface/AlignTransformErrorExtended.h"
 #include "DataFormats/GeometryCommonDetAlgo/interface/GlobalError.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
-#include "CondCore/DBCommon/interface/Exception.h"
 #include "CondCore/DBOutputService/interface/PoolDBOutputService.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h" 
 #include "FWCore/Framework/interface/ESHandle.h"
@@ -223,7 +222,7 @@ OpticalAlignInfo CocoaDBMgr::GetOptAlignInfoFromOptO( OpticalObject* opto )
   const std::vector< Entry* > theExtraEntryVector = opto->ExtraEntryList();  std::cout << " CocoaDBMgr::GetOptAlignInfoFromOptO starting entry " << std::endl;
 
   std::vector< Entry* >::const_iterator ite;
-  for( ite = theExtraEntryVector.begin(); ite != theExtraEntryVector.end(); ite++ ) {
+  for( ite = theExtraEntryVector.begin(); ite != theExtraEntryVector.end(); ++ite ) {
     OpticalAlignParam extraEntry; 
     extraEntry.name_ = (*ite)->name();
     extraEntry.dim_type_ = (*ite)->type();
@@ -270,7 +269,7 @@ OpticalAlignments* CocoaDBMgr::BuildOpticalAlignments()
 
   static std::vector< OpticalObject* > optolist = Model::OptOList();
   static std::vector< OpticalObject* >::const_iterator ite;
-  for(ite = optolist.begin(); ite != optolist.end(); ite++ ){
+  for(ite = optolist.begin(); ite != optolist.end(); ++ite ){
     if( (*ite)->type() == "system" ) continue;    
     OpticalAlignInfo data = GetOptAlignInfoFromOptO( *ite );
     optalign->opticalAlignments_.push_back(data);
@@ -293,7 +292,7 @@ std::pair< Alignments*,AlignmentErrorsExtended*> CocoaDBMgr::BuildAlignments(boo
   //read 
   static std::vector< OpticalObject* > optolist = Model::OptOList();
   static std::vector< OpticalObject* >::const_iterator ite;
-  for(ite = optolist.begin(); ite != optolist.end(); ite++ ){
+  for(ite = optolist.begin(); ite != optolist.end(); ++ite ){
     if( (*ite)->type() == "system" ) continue; 
       std::cout << "CocoaDBMgr::BuildAlignments getCmsswID " << (*ite) << std::endl;
       std::cout << "CocoaDBMgr::BuildAlignments getCmsswID " << (*ite)->getCmsswID()  << std::endl;

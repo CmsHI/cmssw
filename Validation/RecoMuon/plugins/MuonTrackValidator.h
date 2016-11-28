@@ -22,6 +22,7 @@ class MuonTrackValidator : public DQMEDAnalyzer, protected MuonTrackValidatorBas
     dirName_ = pset.getParameter<std::string>("dirName");
     associatormap = pset.getParameter< edm::InputTag >("associatormap");
     UseAssociators = pset.getParameter< bool >("UseAssociators");
+    useGEMs_ = pset.getParameter< bool >("useGEMs");
     tpSelector = TrackingParticleSelector(pset.getParameter<double>("ptMinTP"),
 					  pset.getParameter<double>("minRapidityTP"),
 					  pset.getParameter<double>("maxRapidityTP"),
@@ -29,6 +30,7 @@ class MuonTrackValidator : public DQMEDAnalyzer, protected MuonTrackValidatorBas
 					  pset.getParameter<double>("lipTP"),
 					  pset.getParameter<int>("minHitTP"),
 					  pset.getParameter<bool>("signalOnlyTP"),
+					  pset.getParameter<bool>("intimeOnlyTP"),
 					  pset.getParameter<bool>("chargedOnlyTP"),
 					  pset.getParameter<bool>("stableOnlyTP"),
 					  pset.getParameter<std::vector<int> >("pdgIdTP"));
@@ -160,6 +162,7 @@ private:
   edm::EDGetTokenT<SimHitTPAssociationProducer::SimHitTPAssociationList> _simHitTpMapTag;
 
   bool UseAssociators;
+  bool useGEMs_;
   double minPhi, maxPhi;
   int nintPhi;
   bool useGsf;

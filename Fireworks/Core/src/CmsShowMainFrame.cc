@@ -46,6 +46,8 @@
 #include "Fireworks/Core/src/FWNumberEntry.h"
 
 #include "Fireworks/Core/interface/fwPaths.h"
+#include "Fireworks/Core/interface/Context.h"
+#include "Fireworks/Core/interface/CmsShowCommon.h"
 
 #include <fstream>
 
@@ -83,6 +85,7 @@ CmsShowMainFrame::CmsShowMainFrame(const TGWindow *p,UInt_t w,UInt_t h,FWGUIMana
 {
    const unsigned int backgroundColor=0x2f2f2f;
    const unsigned int textColor= 0xb3b3b3;
+   gClient->SetStyle("classic");
 
    CSGAction *openData    = new CSGAction(this, cmsshow::sOpenData.c_str());
    CSGAction *appendData  = new CSGAction(this, cmsshow::sAppendData.c_str());
@@ -259,7 +262,9 @@ CmsShowMainFrame::CmsShowMainFrame(const TGWindow *p,UInt_t w,UInt_t h,FWGUIMana
    while ((title = (TGMenuTitle *)next()))
       title->SetTextColor(textColor);
 
-   menuTopFrame->AddFrame(menuBar, new TGLayoutHints(kLHintsExpandX, 0, 0, 0, 0));
+   menuTopFrame->AddFrame(menuBar, new TGLayoutHints(kLHintsLeft, 0, 0, 0, 0));
+
+   
    AddFrame(menuTopFrame, new TGLayoutHints(kLHintsExpandX, 0, 0, 0, 0));
 
    // !!!! MT Line separating menu from other window components.

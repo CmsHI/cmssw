@@ -41,16 +41,17 @@ class TrackerGeometry final : public TrackingGeometry {
 public:
   typedef GeomDetEnumerators::SubDetector SubDetector;
 
+  enum class ModuleType;
+ 
   virtual ~TrackerGeometry() ;
 
-
-  virtual const DetTypeContainer&  detTypes()         const;
-  virtual const DetUnitContainer&  detUnits()         const;
-  virtual const DetContainer&      dets()             const;
-  virtual const DetIdContainer&    detUnitIds()       const;
-  virtual const DetIdContainer&    detIds()           const;
-  virtual const TrackerGeomDet*    idToDetUnit(DetId) const;
-  virtual const TrackerGeomDet*    idToDet(DetId)     const;
+  const DetTypeContainer&  detTypes()         const {return theDetTypes;}
+  const DetUnitContainer&  detUnits()         const {return theDetUnits;}
+  const DetContainer&      dets()             const {return theDets;}
+  const DetIdContainer&    detUnitIds()       const {return theDetUnitIds;}
+  const DetIdContainer&    detIds()           const { return theDetIds;}
+  const TrackerGeomDet*    idToDetUnit(DetId) const;
+  const TrackerGeomDet*    idToDet(DetId)     const;
 
   const GeomDetEnumerators::SubDetector geomDetSubDetector(int subdet) const;
   unsigned int numberOfLayers(int subdet) const;
@@ -61,6 +62,9 @@ public:
   // Magic : better be called at the right moment...
   void setOffsetDU(SubDetector sid) { theOffsetDU[sid]=detUnits().size();}
   void setEndsetDU(SubDetector sid) { theEndsetDU[sid]=detUnits().size();}
+  void fillTestMap(const GeometricDet* gd);
+
+  ModuleType moduleType(const std::string& name) const;
 
   GeometricDet const * trackerDet() const {return  theTrackerDet;}
 
@@ -70,6 +74,10 @@ public:
   const DetContainer& detsTID() const;
   const DetContainer& detsTOB() const;
   const DetContainer& detsTEC() const;
+
+  ModuleType getDetectorType(DetId) const;
+  float getDetectorThickness(DetId) const;
+
 
 private:
 
@@ -97,7 +105,7 @@ private:
 
   GeomDetEnumerators::SubDetector theSubDetTypeMap[6];
   unsigned int theNumberOfLayers[6];
-
+  std::vector< std::tuple< DetId, TrackerGeometry::ModuleType, float> > theDetTypetList; 
 };
 
 #endif

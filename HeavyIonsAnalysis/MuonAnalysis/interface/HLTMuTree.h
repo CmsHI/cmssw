@@ -80,10 +80,10 @@ private:
   virtual void endJob() ;
 
   // ----------member data ---------------------------
-  edm::InputTag   tagRecoMu;
-  edm::InputTag   tagGenPtl;
-  edm::InputTag   tagSimTrk;
-  edm::InputTag   tagVtx;
+  edm::EDGetTokenT<edm::View<reco::Muon> >   tagRecoMu;
+  edm::EDGetTokenT<std::vector<reco::GenParticle> >   tagGenPtl;
+  //edm::EDGetTokenT<std::vector<reco::GenParticle> >   tagSimTrk;
+  edm::EDGetTokenT<std::vector<reco::Vertex> >   tagVtx;
   edm::InputTag   MuCandTag1;
   edm::InputTag   MuCandTag2;
   edm::InputTag   MuCandTag3;

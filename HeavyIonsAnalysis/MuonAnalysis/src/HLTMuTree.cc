@@ -34,12 +34,12 @@ using namespace HepMC;
 HLTMuTree::HLTMuTree(const edm::ParameterSet& iConfig)
 {
   //now do what ever initialization is needed
-  tagRecoMu = iConfig.getParameter<edm::InputTag>("muons");
-  tagVtx = iConfig.getParameter<edm::InputTag>("vertices");
+  tagRecoMu = consumes<edm::View<reco::Muon>>(iConfig.getParameter<edm::InputTag>("muons"));
+  tagVtx = consumes<std::vector<reco::Vertex>>(iConfig.getParameter<edm::InputTag>("vertices"));
   doReco = iConfig.getUntrackedParameter<bool>("doReco");
   doGen = iConfig.getUntrackedParameter<bool>("doGen");
-  tagGenPtl = iConfig.getParameter<edm::InputTag>("genparticle");
-  tagSimTrk = iConfig.getParameter<edm::InputTag>("simtrack");
+  tagGenPtl = consumes<std::vector<reco::GenParticle>>(iConfig.getParameter<edm::InputTag>("genparticle"));
+//  tagSimTrk = consumes<std::vector<reco::SimTrack>>(iConfig.getParameter<edm::InputTag>("simtrack"));
   // tagCompVtx = iConfig.getParameter<edm::InputTag>("
   //higherPuritySelection_(iConfig.getParameter<std::string>("higherPuritySelection")),
   //lowerPuritySelection_(iConfig.getParameter<std::string>("lowerPuritySelection")),
@@ -135,7 +135,7 @@ HLTMuTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     int nGen = 0;
 
     edm::Handle<reco::GenParticleCollection> genColl;
-    iEvent.getByLabel(tagGenPtl,genColl);
+    iEvent.getByToken(tagGenPtl,genColl);
     if (genColl.isValid()) {
       for (reco::GenParticleCollection::size_type i=0; i+1<genColl.product()->size(); i++) {
         const GenParticleRef genPtl(genColl,i);
@@ -197,7 +197,7 @@ HLTMuTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
 /*
     edm::Handle<TrackingParticleCollection> simColl;
-    iEvent.getByLabel(tagSimTrk,simColl);
+    iEvent.getByToken(tagSimTrk,simColl);
     if (simColl.isValid()) {
     for (TrackingParticleCollection::size_type i=0; i+1<simColl.product()->size(); i++) {
     const TrackingParticleRef simTrk(simColl,i);
@@ -235,7 +235,7 @@ HLTMuTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   if (doReco) {
     //Get vertex position
     edm::Handle< vector<reco::Vertex> > vertex;
-    iEvent.getByLabel(tagVtx,vertex);
+    iEvent.getByToken(tagVtx,vertex);
     if(vertex->size() > 0){
       vx = vertex->begin()->x();
       vy = vertex->begin()->y();
@@ -249,8 +249,8 @@ HLTMuTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     // edm::Handle <reco::VertexCompositeCandidate> compvertex;
     // iEvent.getByLabel(
 
-    edm::Handle< edm::View<reco::Muon> > muons;
-    iEvent.getByLabel(tagRecoMu,muons);
+    edm::Handle<edm::View<reco::Muon> > muons;
+    iEvent.getByToken(tagRecoMu,muons);
 
     int nGlb = 0;
     int nSta = 0;
@@ -322,7 +322,7 @@ HLTMuTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
     //vertex probability cuts
     edm::Handle< edm::View<reco::Muon> > muons2;
-    iEvent.getByLabel(tagRecoMu,muons2);
+    iEvent.getByToken(tagRecoMu,muons2);
 
     edm::ESHandle<TransientTrackBuilder> theTTBuilder;
     iSetup.get<TransientTrackRecord>().get("TransientTrackBuilder",theTTBuilder);
