@@ -156,8 +156,8 @@ from PhysicsTools.SelectorUtils.tools.vid_id_tools import *
 dataFormat = DataFormat.AOD
 switchOnVIDElectronIdProducer(process, dataFormat)
 
-# define which IDs we want to produce. Check here https://twiki.cern.ch/twiki/bin/viewauth/CMS/CutBasedElectronIdentificationRun2#Recipe_for_regular_users_for_7_4
-my_id_modules = ['RecoEgamma.ElectronIdentification.Identification.cutBasedElectronID_Spring15_25ns_V1_cff']
+# define which IDs we want to produce. Check here https://twiki.cern.ch/twiki/bin/viewauth/CMS/CutBasedElectronIdentificationRun2#Working_points_for_2016_data_for
+my_id_modules = ['RecoEgamma.ElectronIdentification.Identification.cutBasedElectronID_Summer16_80X_V1_cff']
 
 #add them to the VID producer
 for idmod in my_id_modules:
