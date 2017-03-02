@@ -940,10 +940,12 @@ HiInclusiveJetAnalyzer::analyze(const Event& iEvent,
         const reco::PFCandidate& track = (*pfCandidates)[icand];
         double dr = deltaR(jet,track);
         if(dr < rParam){
-	  double ptcand = track.pt();
-	  int pfid = track.particleId();
+	  jets_.ecalSum[jets_.nref] += track.ecalEnergy()/cosh(track.eta());
+	  jets_.hcalSum[jets_.nref] += track.hcalEnergy()/cosh(track.eta());
 
-	  switch(pfid){
+      	  double ptcand = track.pt();
+	  int pfid = track.particleId();
+          switch(pfid){
 
 	  case 1:
 	    jets_.chargedSum[jets_.nref] += ptcand;
@@ -992,6 +994,7 @@ HiInclusiveJetAnalyzer::analyze(const Event& iEvent,
 
       // Calorimeter fractions
       // Jet ID for CaloJets
+      /*
       if(doTower){
 	// changing it to take things from towers
 	for(unsigned int i = 0; i < towers->size(); ++i){
@@ -1005,6 +1008,7 @@ HiInclusiveJetAnalyzer::analyze(const Event& iEvent,
 	  
 	}
       }
+      */
 
     }
 
