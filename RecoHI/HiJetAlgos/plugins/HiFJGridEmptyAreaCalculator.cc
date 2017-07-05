@@ -187,7 +187,7 @@ HiFJGridEmptyAreaCalculator::calculateGridRho(const edm::Event& iEvent, const ed
   for(unsigned icand = 0; icand < pfCandidateColl->size(); icand++) {
    const reco::PFCandidate pfCandidate = pfCandidateColl->at(icand);
    //use ony the particles within the eta range
-   if (pfCandidate.eta() < ymin_ || pfCandidate.eta() > ymax_ ) continue;
+   if (pfCandidate.eta() < ymin_ || pfCandidate.eta() >= ymax_ ) continue;
    int jeta = tileIndexEta(&pfCandidate);
    int jphi = tileIndexPhi(&pfCandidate);
    scalarPt[jeta][jphi] += pfCandidate.pt();
