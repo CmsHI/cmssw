@@ -79,8 +79,7 @@ HiSignalParticleProducer::~HiSignalParticleProducer() {
 // ------------ method called to produce the data  ------------
 
 void HiSignalParticleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
-  std::auto_ptr<reco::GenParticleCollection> signalGenParticles;
-  signalGenParticles = std::auto_ptr<reco::GenParticleCollection>(new reco::GenParticleCollection);
+  auto signalGenParticles = std::make_unique<reco::GenParticleCollection>();
 
   edm::Handle<edm::View<reco::GenParticle> > genParticles;
   iEvent.getByToken(genParticleSrc_, genParticles);
@@ -90,7 +89,7 @@ void HiSignalParticleProducer::produce(edm::Event& iEvent, const edm::EventSetup
       signalGenParticles->push_back(genParticle);
   }
 
-  iEvent.put(signalGenParticles);
+  iEvent.put(std::move(signalGenParticles));
 }
 
 DEFINE_FWK_MODULE(HiSignalParticleProducer);

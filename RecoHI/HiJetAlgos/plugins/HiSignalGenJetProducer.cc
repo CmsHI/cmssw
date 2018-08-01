@@ -80,8 +80,7 @@ HiSignalGenJetProducer::~HiSignalGenJetProducer() {
 // ------------ method called to produce the data  ------------
 
 void HiSignalGenJetProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
-  std::auto_ptr<reco::GenJetCollection> jets;
-  jets = std::auto_ptr<reco::GenJetCollection>(new reco::GenJetCollection);
+  auto jets = std::make_unique<reco::GenJetCollection>();
 
   edm::Handle<edm::View<reco::GenJet>> genjets;
   iEvent.getByToken(jetSrc_, genjets);
@@ -95,7 +94,7 @@ void HiSignalGenJetProducer::produce(edm::Event& iEvent, const edm::EventSetup& 
       jets->push_back(jet);
   }
 
-  iEvent.put(jets);
+  iEvent.put(std::move(jets));
 }
 
 DEFINE_FWK_MODULE(HiSignalGenJetProducer);
