@@ -24,6 +24,9 @@ namespace cms
     ~SubEventGenJetProducer() override {}
     void produce(edm::Event&, const edm::EventSetup&) override;
     void runAlgorithm(edm::Event&, const edm::EventSetup&) override;
+
+    static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
+    static void fillDescriptionsFromSubEventGenJetProducer(edm::ParameterSetDescription& desc);
     
   protected:
    std::vector<std::vector<fastjet::PseudoJet> > subInputs_;

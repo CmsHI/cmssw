@@ -170,6 +170,22 @@ void SubEventGenJetProducer::runAlgorithm( edm::Event & iEvent, edm::EventSetup 
    }   
 }
 
+void SubEventGenJetProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+   edm::ParameterSetDescription descSubEventJetProducer;
+   fillDescriptionsFromSubEventGenJetProducer(descSubEventJetProducer);
+   VirtualJetProducer::fillDescriptionsFromVirtualJetProducer(descSubEventJetProducer);
+   descSubEventJetProducer.add<string>("jetCollInstanceName", "");
+   descSubEventJetProducer.add<bool>("sumRecHits", false);
+
+   descriptions.add("SubEventGenJetProducer", descSubEventJetProducer);
+}
+
+void SubEventGenJetProducer::fillDescriptionsFromSubEventGenJetProducer(
+      edm::ParameterSetDescription& desc) {
+   desc.add<bool>("signalOnly", false);
+   desc.addUntracked<bool>("ignoreHydro", true);
+}
+
 DEFINE_FWK_MODULE(SubEventGenJetProducer);
 
 
