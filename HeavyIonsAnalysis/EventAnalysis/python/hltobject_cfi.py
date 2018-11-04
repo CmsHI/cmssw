@@ -175,6 +175,10 @@ hltobject = cms.EDAnalyzer("TriggerObjectAnalyzer",
                              'HLT_HIFullTracks2018_HighPt45_v',
                              'HLT_HIFullTracks2018_HighPt56_v',
                              'HLT_HIFullTracks2018_HighPt60_v',
+                             'HLT_HIUPC_ZeroBias_SinglePixelTrack_v',
+                             'HLT_HIUPC_SingleEG5_NotMBHF2AND_SinglePixelTrack_v',
+                             'HLT_HIUPC_SingleMuOpen_NotMBHF2AND_v',
+                             'HLT_HICastor_MediumJet_NotMBHF2AND_v'
                              ),
    triggerResults = cms.InputTag("TriggerResults","","HLT"),
    triggerEvent = cms.InputTag("hltTriggerSummaryAOD","","HLT")
