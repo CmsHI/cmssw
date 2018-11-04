@@ -102,6 +102,7 @@ process.load("HeavyIonsAnalysis.JetAnalysis.pfcandAnalyzer_cfi")
 process.load('HeavyIonsAnalysis.EventAnalysis.hievtanalyzer_data_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.hltanalysis_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.skimanalysis_cfi')
+process.load('HeavyIonsAnalysis.EventAnalysis.hltobject_cfi')
 
 ###############################################################################
 
@@ -148,6 +149,13 @@ process.CSVscikitTags.weightFile = cms.FileInPath(
 
 ###############################################################################
 
+#####################
+# rho analyzer
+#####################
+process.load('HeavyIonsAnalysis.JetAnalysis.hiFJRhoAnalyzer_cff')
+
+###############################################################################
+
 #########################
 # Main analysis list
 #########################
@@ -155,11 +163,13 @@ process.CSVscikitTags.weightFile = cms.FileInPath(
 process.ana_step = cms.Path(
     process.HiForest +
     process.hltanalysis +
+    process.hltobject +
     process.centralityBin +
     process.hiEvtAnalyzer +
     process.jetSequence +
     process.ggHiNtuplizer +
     process.ggHiNtuplizerGED +
+    process.hiFJRhoAnalyzer +
     process.pfcandAnalyzer +
     process.pfcandAnalyzerCS +
     process.trackSequencesPP
