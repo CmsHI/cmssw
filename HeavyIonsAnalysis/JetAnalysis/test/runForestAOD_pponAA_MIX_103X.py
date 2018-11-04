@@ -176,6 +176,7 @@ process.ana_step = cms.Path(
     process.jetSequence +
     process.ggHiNtuplizer +
     process.ggHiNtuplizerGED +
+    process.hiFJRhoAnalyzer +
     process.pfcandAnalyzer +
     process.pfcandAnalyzerCS +
     process.trackSequencesPP
