@@ -149,13 +149,6 @@ process.CSVscikitTags.weightFile = cms.FileInPath(
 
 ###############################################################################
 
-#####################
-# rho analyzer
-#####################
-process.load('HeavyIonsAnalysis.JetAnalysis.hiFJRhoAnalyzer_cff')
-
-###############################################################################
-
 #########################
 # Main analysis list
 #########################
