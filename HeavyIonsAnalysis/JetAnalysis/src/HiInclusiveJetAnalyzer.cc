@@ -838,6 +838,43 @@ HiInclusiveJetAnalyzer::beginJob() {
   */
   TH1D::SetDefaultSumw2();
 
+  if (doLifeTimeTagging_) {
+    /* clear arrays */
+    memset(jets_.discr_csvV1, 0, MAXJETS * sizeof(float));
+    memset(jets_.discr_csvV2, 0, MAXJETS * sizeof(float));
+    memset(jets_.discr_muByIp3, 0, MAXJETS * sizeof(float));
+    memset(jets_.discr_muByPt, 0, MAXJETS * sizeof(float));
+    memset(jets_.discr_prob, 0, MAXJETS * sizeof(float));
+    memset(jets_.discr_probb, 0, MAXJETS * sizeof(float));
+    memset(jets_.discr_tcHighEff, 0, MAXJETS * sizeof(float));
+    memset(jets_.discr_tcHighPur, 0, MAXJETS * sizeof(float));
+    memset(jets_.discr_ssvHighEff, 0, MAXJETS * sizeof(float));
+    memset(jets_.discr_ssvHighPur, 0, MAXJETS * sizeof(float));
+
+    memset(jets_.ndiscr_ssvHighEff, 0, MAXJETS * sizeof(float));
+    memset(jets_.ndiscr_ssvHighPur, 0, MAXJETS * sizeof(float));
+    memset(jets_.ndiscr_csvV1, 0, MAXJETS * sizeof(float));
+    memset(jets_.ndiscr_csvV2, 0, MAXJETS * sizeof(float));
+    memset(jets_.ndiscr_muByPt, 0, MAXJETS * sizeof(float));
+
+    memset(jets_.pdiscr_csvV1, 0, MAXJETS * sizeof(float));
+    memset(jets_.pdiscr_csvV2, 0, MAXJETS * sizeof(float));
+
+    memset(jets_.nsvtx, 0, MAXJETS * sizeof(int));
+    memset(jets_.svtxntrk, 0, MAXJETS * sizeof(int));
+    memset(jets_.svtxdl, 0, MAXJETS * sizeof(float));
+    memset(jets_.svtxdls, 0, MAXJETS * sizeof(float));
+    memset(jets_.svtxdl2d, 0, MAXJETS * sizeof(float));
+    memset(jets_.svtxdls2d, 0, MAXJETS * sizeof(float));
+    memset(jets_.svtxm, 0, MAXJETS * sizeof(float));
+    memset(jets_.svtxpt, 0, MAXJETS * sizeof(float));
+    memset(jets_.svtxmcorr, 0, MAXJETS * sizeof(float));
+    memset(jets_.svtxnormchi2, 0, MAXJETS * sizeof(float));
+    memset(jets_.svJetDeltaR, 0, MAXJETS * sizeof(float));
+    memset(jets_.svtxTrkSumChi2, 0, MAXJETS * sizeof(float));
+    memset(jets_.svtxTrkNetCharge, 0, MAXJETS * sizeof(int));
+    memset(jets_.svtxNtrkInCone, 0, MAXJETS * sizeof(int));
+  }
 }
 
 
