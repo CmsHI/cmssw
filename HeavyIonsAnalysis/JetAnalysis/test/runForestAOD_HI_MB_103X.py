@@ -94,7 +94,7 @@ process.load("HeavyIonsAnalysis.JetAnalysis.pfcandAnalyzer_cfi")
 process.load('HeavyIonsAnalysis.EventAnalysis.runanalyzer_cfi')
 process.load('HeavyIonsAnalysis.TrackAnalysis.HiGenAnalyzer_cfi')
 # making cuts looser so that we can actually check dNdEta
-process.HiGenParticleAna.ptMin = cms.untracked.double(0.) # default is 5
+process.HiGenParticleAna.ptMin = cms.untracked.double(0.4) # default is 5
 process.HiGenParticleAna.etaMax = cms.untracked.double(5.) # default is 2
 
 ###############################################################################
