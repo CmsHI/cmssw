@@ -247,6 +247,7 @@ private:
   edm::EDGetTokenT<HBHERecHitCollection> HcalRecHitHBHESrc_;
   edm::EDGetTokenT<ZDCDigiCollection> zdcDigiSrc_;
   edm::EDGetTokenT<ZDCRecHitCollection> zdcRecHitSrc_;
+  edm::EDGetTokenT<CastorRecHitCollection> castorRecHitSrc_;
 
   edm::EDGetTokenT<edm::SortedCollection<EcalRecHit,edm::StrictWeakOrdering<EcalRecHit> > > EBSrc_;
   edm::EDGetTokenT<edm::SortedCollection<EcalRecHit,edm::StrictWeakOrdering<EcalRecHit> > > EESrc_;
@@ -301,8 +302,9 @@ RecHitTreeProducer::RecHitTreeProducer(const edm::ParameterSet& iConfig) :
   EESrc_ = consumes<edm::SortedCollection<EcalRecHit,edm::StrictWeakOrdering<EcalRecHit> > > (iConfig.getUntrackedParameter<edm::InputTag>("EERecHitSrc",edm::InputTag("ecalRecHit","EcalRecHitsEE")));
   HcalRecHitHFSrc_ = consumes<HFRecHitCollection> (iConfig.getUntrackedParameter<edm::InputTag>("hcalHFRecHitSrc",edm::InputTag("hfreco")));
   HcalRecHitHBHESrc_ = consumes<HBHERecHitCollection> (iConfig.getUntrackedParameter<edm::InputTag>("hcalHBHERecHitSrc",edm::InputTag("hbhereco")));
-  zdcDigiSrc_ = consumes<ZDCDigiCollection> (iConfig.getUntrackedParameter<edm::InputTag>("zdcDigiSrc",edm::InputTag("castorDigis")));
-  zdcRecHitSrc_ = consumes<ZDCRecHitCollection> (iConfig.getUntrackedParameter<edm::InputTag>("zdcRecHitSrc",edm::InputTag("nothing")));
+  zdcDigiSrc_ = consumes<ZDCDigiCollection> (iConfig.getUntrackedParameter<edm::InputTag>("zdcDigiSrc",edm::InputTag("hcalDigis")));
+  zdcRecHitSrc_ = consumes<ZDCRecHitCollection> (iConfig.getUntrackedParameter<edm::InputTag>("zdcRecHitSrc",edm::InputTag("zdcreco")));
+  castorRecHitSrc_ = consumes<CastorRecHitCollection> (iConfig.getUntrackedParameter<edm::InputTag>("castorRecHitSrc",edm::InputTag("castorreco")));
 
   BCSrc_ = consumes<reco::BasicClusterCollection> (iConfig.getUntrackedParameter<edm::InputTag>("BasicClusterSrc1",edm::InputTag("ecalRecHit","EcalRecHitsEB","RECO")));
   TowerSrc_ = consumes<CaloTowerCollection> (iConfig.getUntrackedParameter<edm::InputTag>("towersSrc",edm::InputTag("towerMaker")));
@@ -432,20 +434,20 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
       math::XYZPoint pos = getPosition(id,vtx);
 
       if(!saveBothVtx_){
-	hfRecHit.et[hfRecHit.n] = getEt(pos,hit.energy());
-	hfRecHit.eta[hfRecHit.n] = pos.eta();
-	hfRecHit.phi[hfRecHit.n] = pos.phi();
-	hfRecHit.perp[hfRecHit.n] = pos.rho();
+        hfRecHit.et[hfRecHit.n] = getEt(pos,hit.energy());
+        hfRecHit.eta[hfRecHit.n] = pos.eta();
+        hfRecHit.phi[hfRecHit.n] = pos.phi();
+        hfRecHit.perp[hfRecHit.n] = pos.rho();
       }else{
-	hfRecHit.et[hfRecHit.n] = getEt(id,hit.energy());
-	hfRecHit.eta[hfRecHit.n] = getEta(id);
-	hfRecHit.phi[hfRecHit.n] = getPhi(id);
-	hfRecHit.perp[hfRecHit.n] = getPerp(id);
+        hfRecHit.et[hfRecHit.n] = getEt(id,hit.energy());
+        hfRecHit.eta[hfRecHit.n] = getEta(id);
+        hfRecHit.phi[hfRecHit.n] = getPhi(id);
+        hfRecHit.perp[hfRecHit.n] = getPerp(id);
 
-	hfRecHit.etVtx[hfRecHit.n] = getEt(pos,hit.energy());
-	hfRecHit.etaVtx[hfRecHit.n] = pos.eta();
-	hfRecHit.phiVtx[hfRecHit.n] = pos.phi();
-	hfRecHit.perpVtx[hfRecHit.n] = pos.rho();
+        hfRecHit.etVtx[hfRecHit.n] = getEt(pos,hit.energy());
+        hfRecHit.etaVtx[hfRecHit.n] = pos.eta();
+        hfRecHit.phiVtx[hfRecHit.n] = pos.phi();
+        hfRecHit.perpVtx[hfRecHit.n] = pos.rho();
 
       }
 
@@ -453,65 +455,65 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
       hfRecHit.depth[hfRecHit.n] = id.depth();
 
       if(id.ieta() > 0){
-	if(hit.energy() > hfShortThreshold_ && id.depth() != 1) nHFshortPlus++;
-	if(hit.energy() > hfLongThreshold_ && id.depth() == 1) nHFlongPlus++;
+        if(hit.energy() > hfShortThreshold_ && id.depth() != 1) nHFshortPlus++;
+        if(hit.energy() > hfLongThreshold_ && id.depth() == 1) nHFlongPlus++;
       }else{
-	if(hit.energy() > hfShortThreshold_ && id.depth() != 1) nHFshortMinus++;
-	if(hit.energy() > hfLongThreshold_ && id.depth() == 1) nHFlongMinus++;
+        if(hit.energy() > hfShortThreshold_ && id.depth() != 1) nHFshortMinus++;
+        if(hit.energy() > hfLongThreshold_ && id.depth() == 1) nHFlongMinus++;
       }
 
       if(useJets_){
-	for(unsigned int j = 0 ; j < jets->size(); ++j){
-	  const reco::Jet& jet = (*jets)[j];
-	  double dr = reco::deltaR(hfRecHit.eta[hfRecHit.n],hfRecHit.phi[hfRecHit.n],jet.eta(),jet.phi());
-	  if(dr < cone){ hfRecHit.isjet[hfRecHit.n] = true; }
-	}
+        for(unsigned int j = 0 ; j < jets->size(); ++j){
+          const reco::Jet& jet = (*jets)[j];
+          double dr = reco::deltaR(hfRecHit.eta[hfRecHit.n],hfRecHit.phi[hfRecHit.n],jet.eta(),jet.phi());
+          if(dr < cone){ hfRecHit.isjet[hfRecHit.n] = true; }
+        }
       }
       if (hfRecHit.et[hfRecHit.n]>=hfPtMin_) hfRecHit.n++;
     }
 
     if(doHcal_ && !doEbyEonly_){
       for(unsigned int i = 0; i < hbheHits->size(); ++i){
-	const HBHERecHit & hit= (*hbheHits)[i];
-	if (getEt(hit.id(),hit.energy())<hbhePtMin_) continue;
+        const HBHERecHit & hit= (*hbheHits)[i];
+        if (getEt(hit.id(),hit.energy())<hbhePtMin_) continue;
 
-    const HcalDetId & id = hit.id();
-    hbheRecHit.rawId[hbheRecHit.n] = id.rawId();
-    hbheRecHit.ieta[hbheRecHit.n] = id.ieta();
-    hbheRecHit.iphi[hbheRecHit.n] = id.iphi();
+        const HcalDetId & id = hit.id();
+        hbheRecHit.rawId[hbheRecHit.n] = id.rawId();
+        hbheRecHit.ieta[hbheRecHit.n] = id.ieta();
+        hbheRecHit.iphi[hbheRecHit.n] = id.iphi();
 
-	hbheRecHit.e[hbheRecHit.n] = hit.energy();
-	hbheRecHit.eraw[hbheRecHit.n] = hit.eraw();
-	math::XYZPoint pos = getPosition(id,vtx);
+        hbheRecHit.e[hbheRecHit.n] = hit.energy();
+        hbheRecHit.eraw[hbheRecHit.n] = hit.eraw();
+        math::XYZPoint pos = getPosition(id,vtx);
 
-	if(!saveBothVtx_){
-	  hbheRecHit.et[hbheRecHit.n] = getEt(pos,hit.energy());
-	  hbheRecHit.eta[hbheRecHit.n] = pos.eta();
-	  hbheRecHit.phi[hbheRecHit.n] = pos.phi();
-	  hbheRecHit.perp[hbheRecHit.n] = pos.rho();
-	}else{
-	  hbheRecHit.et[hbheRecHit.n] = getEt(id,hit.energy());
-	  hbheRecHit.eta[hbheRecHit.n] = getEta(id);
-	  hbheRecHit.phi[hbheRecHit.n] = getPhi(id);
-	  hbheRecHit.perp[hbheRecHit.n] = getPerp(id);
+        if(!saveBothVtx_){
+          hbheRecHit.et[hbheRecHit.n] = getEt(pos,hit.energy());
+          hbheRecHit.eta[hbheRecHit.n] = pos.eta();
+          hbheRecHit.phi[hbheRecHit.n] = pos.phi();
+          hbheRecHit.perp[hbheRecHit.n] = pos.rho();
+        }else{
+          hbheRecHit.et[hbheRecHit.n] = getEt(id,hit.energy());
+          hbheRecHit.eta[hbheRecHit.n] = getEta(id);
+          hbheRecHit.phi[hbheRecHit.n] = getPhi(id);
+          hbheRecHit.perp[hbheRecHit.n] = getPerp(id);
 
-	  hbheRecHit.etVtx[hbheRecHit.n] = getEt(pos,hit.energy());
-	  hbheRecHit.etaVtx[hbheRecHit.n] = pos.eta();
-	  hbheRecHit.phiVtx[hbheRecHit.n] = pos.phi();
-	  hbheRecHit.perpVtx[hbheRecHit.n] = pos.rho();
-	}
+          hbheRecHit.etVtx[hbheRecHit.n] = getEt(pos,hit.energy());
+          hbheRecHit.etaVtx[hbheRecHit.n] = pos.eta();
+          hbheRecHit.phiVtx[hbheRecHit.n] = pos.phi();
+          hbheRecHit.perpVtx[hbheRecHit.n] = pos.rho();
+        }
         
-	hbheRecHit.isjet[hbheRecHit.n] = false;
-	hbheRecHit.depth[hbheRecHit.n] = id.depth();
+        hbheRecHit.isjet[hbheRecHit.n] = false;
+        hbheRecHit.depth[hbheRecHit.n] = id.depth();
 
-	if(useJets_){
-	  for(unsigned int j = 0 ; j < jets->size(); ++j){
-	    const reco::Jet& jet = (*jets)[j];
-	    double dr = reco::deltaR(hbheRecHit.eta[hbheRecHit.n],hbheRecHit.phi[hbheRecHit.n],jet.eta(),jet.phi());
-	    if(dr < cone){ hbheRecHit.isjet[hbheRecHit.n] = true; }
-	  }
-	}
-	hbheRecHit.n++;
+        if(useJets_){
+          for(unsigned int j = 0 ; j < jets->size(); ++j){
+            const reco::Jet& jet = (*jets)[j];
+            double dr = reco::deltaR(hbheRecHit.eta[hbheRecHit.n],hbheRecHit.phi[hbheRecHit.n],jet.eta(),jet.phi());
+            if(dr < cone){ hbheRecHit.isjet[hbheRecHit.n] = true; }
+          }
+        }
+        hbheRecHit.n++;
       }
     }
   }
@@ -529,19 +531,19 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
       math::XYZPoint pos = getPosition(id,vtx);
 
       if(!saveBothVtx_){
-	ebRecHit.et[ebRecHit.n] = getEt(pos,hit.energy());
-	ebRecHit.eta[ebRecHit.n] = pos.eta();
-	ebRecHit.phi[ebRecHit.n] = pos.phi();
-	ebRecHit.perp[ebRecHit.n] = pos.rho();
+        ebRecHit.et[ebRecHit.n] = getEt(pos,hit.energy());
+        ebRecHit.eta[ebRecHit.n] = pos.eta();
+        ebRecHit.phi[ebRecHit.n] = pos.phi();
+        ebRecHit.perp[ebRecHit.n] = pos.rho();
       }else{
-	ebRecHit.et[ebRecHit.n] = getEt(id,hit.energy());
-	ebRecHit.eta[ebRecHit.n] = getEta(id);
-	ebRecHit.phi[ebRecHit.n] = getPhi(id);
-	ebRecHit.perp[ebRecHit.n] = getPerp(id);
-	ebRecHit.etVtx[ebRecHit.n] = getEt(pos,hit.energy());
-	ebRecHit.etaVtx[ebRecHit.n] = pos.eta();
-	ebRecHit.phiVtx[ebRecHit.n] = pos.phi();
-	ebRecHit.perpVtx[ebRecHit.n] = pos.rho();
+        ebRecHit.et[ebRecHit.n] = getEt(id,hit.energy());
+        ebRecHit.eta[ebRecHit.n] = getEta(id);
+        ebRecHit.phi[ebRecHit.n] = getPhi(id);
+        ebRecHit.perp[ebRecHit.n] = getPerp(id);
+        ebRecHit.etVtx[ebRecHit.n] = getEt(pos,hit.energy());
+        ebRecHit.etaVtx[ebRecHit.n] = pos.eta();
+        ebRecHit.phiVtx[ebRecHit.n] = pos.phi();
+        ebRecHit.perpVtx[ebRecHit.n] = pos.rho();
       }
       ebRecHit.chi2[ebRecHit.n] = hit.chi2();
       ebRecHit.eError[ebRecHit.n] = hit.energyError();
@@ -554,11 +556,11 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
       
       ebRecHit.isjet[ebRecHit.n] = false;
       if(useJets_){
-	for(unsigned int j = 0 ; j < jets->size(); ++j){
-	  const reco::Jet& jet = (*jets)[j];
-	  double dr = reco::deltaR(ebRecHit.eta[ebRecHit.n],ebRecHit.phi[ebRecHit.n],jet.eta(),jet.phi());
-	  if(dr < cone){ ebRecHit.isjet[ebRecHit.n] = true; }
-	}
+        for(unsigned int j = 0 ; j < jets->size(); ++j){
+          const reco::Jet& jet = (*jets)[j];
+          double dr = reco::deltaR(ebRecHit.eta[ebRecHit.n],ebRecHit.phi[ebRecHit.n],jet.eta(),jet.phi());
+          if(dr < cone){ ebRecHit.isjet[ebRecHit.n] = true; }
+        }
       }
       ebRecHit.n++;
     }
@@ -578,19 +580,19 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
       math::XYZPoint pos = getPosition(id,vtx);
 
       if(!saveBothVtx_){
-	eeRecHit.et[eeRecHit.n] = getEt(pos,hit.energy());
-	eeRecHit.eta[eeRecHit.n] = pos.eta();
-	eeRecHit.phi[eeRecHit.n] = pos.phi();
-	eeRecHit.perp[eeRecHit.n] = pos.rho();
+        eeRecHit.et[eeRecHit.n] = getEt(pos,hit.energy());
+        eeRecHit.eta[eeRecHit.n] = pos.eta();
+        eeRecHit.phi[eeRecHit.n] = pos.phi();
+        eeRecHit.perp[eeRecHit.n] = pos.rho();
       }else{
-	eeRecHit.et[eeRecHit.n] = getEt(id,hit.energy());
-	eeRecHit.eta[eeRecHit.n] = getEta(id);
-	eeRecHit.phi[eeRecHit.n] = getPhi(id);
-	eeRecHit.perp[eeRecHit.n] = getPerp(id);
-	eeRecHit.etVtx[eeRecHit.n] = getEt(pos,hit.energy());
-	eeRecHit.etaVtx[eeRecHit.n] = pos.eta();
-	eeRecHit.phiVtx[eeRecHit.n] = pos.phi();
-	eeRecHit.perpVtx[eeRecHit.n] = pos.rho();
+        eeRecHit.et[eeRecHit.n] = getEt(id,hit.energy());
+        eeRecHit.eta[eeRecHit.n] = getEta(id);
+        eeRecHit.phi[eeRecHit.n] = getPhi(id);
+        eeRecHit.perp[eeRecHit.n] = getPerp(id);
+        eeRecHit.etVtx[eeRecHit.n] = getEt(pos,hit.energy());
+        eeRecHit.etaVtx[eeRecHit.n] = pos.eta();
+        eeRecHit.phiVtx[eeRecHit.n] = pos.phi();
+        eeRecHit.perpVtx[eeRecHit.n] = pos.rho();
       }
       eeRecHit.chi2[eeRecHit.n] = hit.chi2();
       eeRecHit.eError[eeRecHit.n] = hit.energyError();
@@ -604,11 +606,11 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
       eeRecHit.isjet[eeRecHit.n] = false;
 
       if(useJets_){
-	for(unsigned int j = 0 ; j < jets->size(); ++j){
-	  const reco::Jet& jet = (*jets)[j];
-	  double dr = reco::deltaR(eeRecHit.eta[eeRecHit.n],eeRecHit.phi[eeRecHit.n],jet.eta(),jet.phi());
-	  if(dr < cone){ eeRecHit.isjet[eeRecHit.n] = true; }
-	}
+        for(unsigned int j = 0 ; j < jets->size(); ++j){
+          const reco::Jet& jet = (*jets)[j];
+          double dr = reco::deltaR(eeRecHit.eta[eeRecHit.n],eeRecHit.phi[eeRecHit.n],jet.eta(),jet.phi());
+          if(dr < cone){ eeRecHit.isjet[eeRecHit.n] = true; }
+        }
       }
       eeRecHit.n++;
     }
@@ -633,15 +635,15 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
       myTowers.hadEt[myTowers.n] = hit.hadEt(vtx);
 
       if (saveBothVtx_) {
-	myTowers.e[myTowers.n] = hit.energy();
-	myTowers.et[myTowers.n] = getEt(id,hit.energy());
-	myTowers.eta[myTowers.n] = getEta(id);
-	myTowers.phi[myTowers.n] = getPhi(id);
-	myTowers.isjet[myTowers.n] = false;
-	myTowers.etVtx[myTowers.n] = hit.p4(vtx).Et();
-	myTowers.etaVtx[myTowers.n] = hit.p4(vtx).Eta();
-	myTowers.emEtVtx[myTowers.n] = hit.emEt(vtx);
-	myTowers.hadEtVtx[myTowers.n] = hit.hadEt(vtx);
+        myTowers.e[myTowers.n] = hit.energy();
+        myTowers.et[myTowers.n] = getEt(id,hit.energy());
+        myTowers.eta[myTowers.n] = getEta(id);
+        myTowers.phi[myTowers.n] = getPhi(id);
+        myTowers.isjet[myTowers.n] = false;
+        myTowers.etVtx[myTowers.n] = hit.p4(vtx).Et();
+        myTowers.etaVtx[myTowers.n] = hit.p4(vtx).Eta();
+        myTowers.emEtVtx[myTowers.n] = hit.emEt(vtx);
+        myTowers.hadEtVtx[myTowers.n] = hit.hadEt(vtx);
       }
 
       myTowers.isjet[myTowers.n] = false;
@@ -650,11 +652,11 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
       if(hit.ieta() < -29 && hit.energy() > hfTowerThreshold_) nHFtowerMinus++;
 
       if(useJets_){
-	for(unsigned int j = 0 ; j < jets->size(); ++j){
-	  const reco::Jet& jet = (*jets)[j];
-	  double dr = reco::deltaR(myTowers.eta[myTowers.n],myTowers.phi[myTowers.n],jet.eta(),jet.phi());
-	  if(dr < cone){ myTowers.isjet[myTowers.n] = true; }
-	}
+        for(unsigned int j = 0 ; j < jets->size(); ++j){
+          const reco::Jet& jet = (*jets)[j];
+          double dr = reco::deltaR(myTowers.eta[myTowers.n],myTowers.phi[myTowers.n],jet.eta(),jet.phi());
+          if(dr < cone){ myTowers.isjet[myTowers.n] = true; }
+        }
       }
       myTowers.n++;
     }
@@ -670,33 +672,33 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
       myBC.jtphi = jet.phi();
 
       for(unsigned int i = 0; i < bClusters->size(); ++i){
-	const reco::BasicCluster & bc= (*bClusters)[i];
-	double dr = reco::deltaR(bc.eta(),bc.phi(),jet.eta(),jet.phi());
-	if(dr < cone){
+        const reco::BasicCluster & bc= (*bClusters)[i];
+        double dr = reco::deltaR(bc.eta(),bc.phi(),jet.eta(),jet.phi());
+        if(dr < cone){
 
-	    // rawId will be the rawId of the seed RecHit.
-	    const DetId & id = bc.hitsAndFractions().at(0).first;
-	    myBC.rawId[myBC.n] = id.rawId();
-	    myBC.ieta[myBC.n] = -999;
-	    myBC.iphi[myBC.n] = -999;
-	    myBC.ix[myBC.n] = -999;
-	    myBC.iy[myBC.n] = -999;
-	    if ( id.subdetId() == EcalSubdetector::EcalBarrel ) {
-	        myBC.ieta[myBC.n] = EBDetId(id).ieta();
-	        myBC.iphi[myBC.n] = EBDetId(id).iphi();
-	    }
-	    else if (id.subdetId() == EcalSubdetector::EcalEndcap) {
-	        myBC.ix[myBC.n] = EEDetId(id).ix();
-	        myBC.iy[myBC.n] = EEDetId(id).iy()*EEDetId(id).zside();
-	        // positive (negative) myBC.iy will correspond to EE+ (EE-)
-	    }
+          // rawId will be the rawId of the seed RecHit.
+          const DetId & id = bc.hitsAndFractions().at(0).first;
+          myBC.rawId[myBC.n] = id.rawId();
+          myBC.ieta[myBC.n] = -999;
+          myBC.iphi[myBC.n] = -999;
+          myBC.ix[myBC.n] = -999;
+          myBC.iy[myBC.n] = -999;
+          if ( id.subdetId() == EcalSubdetector::EcalBarrel ) {
+            myBC.ieta[myBC.n] = EBDetId(id).ieta();
+            myBC.iphi[myBC.n] = EBDetId(id).iphi();
+          }
+          else if (id.subdetId() == EcalSubdetector::EcalEndcap) {
+            myBC.ix[myBC.n] = EEDetId(id).ix();
+            myBC.iy[myBC.n] = EEDetId(id).iy()*EEDetId(id).zside();
+            // positive (negative) myBC.iy will correspond to EE+ (EE-)
+          }
 
-	  myBC.e[myBC.n] = bc.energy();
-	  myBC.et[myBC.n] = bc.energy()*sin(bc.position().theta());
-	  myBC.eta[myBC.n] = bc.eta();
-	  myBC.phi[myBC.n] = bc.phi();
-	  myBC.n++;
-	}
+          myBC.e[myBC.n] = bc.energy();
+          myBC.et[myBC.n] = bc.energy()*sin(bc.position().theta());
+          myBC.eta[myBC.n] = bc.eta();
+          myBC.phi[myBC.n] = bc.phi();
+          myBC.n++;
+        }
       }
       bcTree->Fill();
     }
@@ -705,7 +707,7 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
   if(doCastor_){
 
     edm::Handle<CastorRecHitCollection> casrechits;
-    try{ ev.getByLabel("castorreco",casrechits); }
+    try{ ev.getByToken(castorRecHitSrc_ ,casrechits); }
     catch(...) { edm::LogWarning(" CASTOR ") << " Cannot get Castor RecHits " << std::endl; }
 
     int nhits = 0;
@@ -715,20 +717,20 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
       edm::LogWarning(" CASTOR ") << " Cannot read CastorRecHitCollection" << std::endl;
     } else {
       for(size_t i1 = 0; i1 < casrechits->size(); ++i1) {
-	const CastorRecHit & rh = (*casrechits)[i1];
-	HcalCastorDetId castorid = rh.id();
-	energyCastor += rh.energy();
-	if (nhits  < 224) {
-	  castorRecHit.rawId[nhits] = castorid.rawId();
-	  castorRecHit.e[nhits] = rh.energy();
-	  castorRecHit.iphi[nhits] = castorid.sector();
-	  castorRecHit.depth[nhits] = castorid.module();
-	  castorRecHit.phi[nhits] = getPhi(castorid);
-	  castorRecHit.saturation[nhits] = static_cast<int>( rh.flagField(HcalCaloFlagLabels::ADCSaturationBit) );
+        const CastorRecHit & rh = (*casrechits)[i1];
+        HcalCastorDetId castorid = rh.id();
+        energyCastor += rh.energy();
+        if (nhits  < 224) {
+          castorRecHit.rawId[nhits] = castorid.rawId();
+          castorRecHit.e[nhits] = rh.energy();
+          castorRecHit.iphi[nhits] = castorid.sector();
+          castorRecHit.depth[nhits] = castorid.module();
+          castorRecHit.phi[nhits] = getPhi(castorid);
+          castorRecHit.saturation[nhits] = static_cast<int>( rh.flagField(HcalCaloFlagLabels::ADCSaturationBit) );
 
-	}
+        }
 
-	nhits++;
+        nhits++;
 
       } // end loop castor rechits
     }
@@ -750,17 +752,17 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
       edm::LogWarning(" ZDC ") << " Cannot read ZDCRecHitCollection" << std::endl;
     } else {
       for(size_t i1 = 0; i1 < zdcrechits->size(); ++i1) {
-	const ZDCRecHit & rh = (*zdcrechits)[i1];
-	HcalZDCDetId zdcid = rh.id();
-	if (nhits  < 18) {
-	  zdcRecHit.e[nhits] = rh.energy();
-	  zdcRecHit.zside[nhits] = zdcid.zside();
-	  zdcRecHit.section[nhits] = zdcid.section();
-	  zdcRecHit.channel[nhits] = zdcid.channel();
-	  zdcRecHit.saturation[nhits] = static_cast<int>( rh.flagField(HcalCaloFlagLabels::ADCSaturationBit) );
-	}
+        const ZDCRecHit & rh = (*zdcrechits)[i1];
+        HcalZDCDetId zdcid = rh.id();
+        if (nhits  < 18) {
+          zdcRecHit.e[nhits] = rh.energy();
+          zdcRecHit.zside[nhits] = zdcid.zside();
+          zdcRecHit.section[nhits] = zdcid.section();
+          zdcRecHit.channel[nhits] = zdcid.channel();
+          zdcRecHit.saturation[nhits] = static_cast<int>( rh.flagField(HcalCaloFlagLabels::ADCSaturationBit) );
+        }
 
-	nhits++;
+        nhits++;
 
       } // end loop zdc rechits
     }
@@ -787,30 +789,30 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
       iSetup.get<HcalDbRecord>().get(conditions);
 
       for(size_t i1 = 0; i1 < zdcdigis->size(); ++i1) {
-	CaloSamples caldigi;
-	const ZDCDataFrame & rh = (*zdcdigis)[i1];
-	HcalZDCDetId zdcid = rh.id();
+        CaloSamples caldigi;
+        const ZDCDataFrame & rh = (*zdcdigis)[i1];
+        HcalZDCDetId zdcid = rh.id();
 
-	if(calZDCDigi_){
- 	  const HcalQIECoder* qiecoder=conditions->getHcalCoder(zdcid);
-	  const HcalQIEShape* qieshape=conditions->getHcalShape(qiecoder);
-	  HcalCoderDb coder(*qiecoder,*qieshape);
-	  coder.adc2fC(rh,caldigi);
-	}
+        if(calZDCDigi_){
+          const HcalQIECoder* qiecoder=conditions->getHcalCoder(zdcid);
+          const HcalQIEShape* qieshape=conditions->getHcalShape(qiecoder);
+          HcalCoderDb coder(*qiecoder,*qieshape);
+          coder.adc2fC(rh,caldigi);
+        }
 
-	if (nhits  < 18) {
-	  int ts = 0;
-	  zdcDigi.zside[nhits] = zdcid.zside();
-	  zdcDigi.section[nhits] = zdcid.section();
-	  zdcDigi.channel[nhits] = zdcid.channel();
+        if (nhits  < 18) {
+          int ts = 0;
+          zdcDigi.zside[nhits] = zdcid.zside();
+          zdcDigi.section[nhits] = zdcid.section();
+          zdcDigi.channel[nhits] = zdcid.channel();
 
-	  for(int j1 = 0; j1 < rh.size(); j1++){
-	    zdcDigi.chargefC[ts][nhits]=calZDCDigi_?caldigi[ts]:rh[ts].nominal_fC();
-	    zdcDigi.adc[ts][nhits]= rh[ts].adc();
-	    ts++;
-	  }
-	}
-	nhits++;
+          for(int j1 = 0; j1 < rh.size(); j1++){
+            zdcDigi.chargefC[ts][nhits]=calZDCDigi_?caldigi[ts]:rh[ts].nominal_fC();
+            zdcDigi.adc[ts][nhits]= rh[ts].adc();
+            ts++;
+          }
+        }
+        nhits++;
       } // end loop zdc rechits
     }
 
@@ -820,8 +822,10 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
   }
 
   if(!doEbyEonly_){
-    towerTree->Fill();
-
+    if(doTowers_){
+      towerTree->Fill();
+    }
+    
     if(doEcal_){
       eeTree->Fill();
       ebTree->Fill();
