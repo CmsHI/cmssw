@@ -532,8 +532,10 @@ HiInclusiveJetAnalyzer::beginJob() {
 
 
   if(isMC_){
-    t->Branch("beamId1",&jets_.beamId1,"beamId1/I");
-    t->Branch("beamId2",&jets_.beamId2,"beamId2/I");
+    if (useHepMC_) {
+      t->Branch("beamId1",&jets_.beamId1,"beamId1/I");
+      t->Branch("beamId2",&jets_.beamId2,"beamId2/I");
+    }
 
     t->Branch("pthat",&jets_.pthat,"pthat/F");
 
@@ -874,6 +876,9 @@ HiInclusiveJetAnalyzer::beginJob() {
     memset(jets_.svtxTrkSumChi2, 0, MAXJETS * sizeof(float));
     memset(jets_.svtxTrkNetCharge, 0, MAXJETS * sizeof(int));
     memset(jets_.svtxNtrkInCone, 0, MAXJETS * sizeof(int));
+
+    memset(jets_.nIPtrk, 0, MAXJETS * sizeof(int));
+    memset(jets_.nselIPtrk, 0, MAXJETS * sizeof(int));
   }
 }
 
@@ -1421,6 +1426,14 @@ HiInclusiveJetAnalyzer::analyze(const Event& iEvent,
     }
     //     if(etrk.quality(reco::TrackBase::qualityByName(qualityString_))) pev_.trkQual[pev_.nTrk]=1;
 
+    jets_.jtpt[jets_.nref] = jet.pt();
+    jets_.jteta[jets_.nref] = jet.eta();
+    jets_.jtphi[jets_.nref] = jet.phi();
+    jets_.jty[jets_.nref] = jet.eta();
+    jets_.jtpu[jets_.nref] = jet.pileup();
+    jets_.jtm[jets_.nref] = jet.mass();
+    jets_.jtarea[jets_.nref] = jet.jetArea();
+
     if(doHiJetID_){
 
       // JetID Selections for 5 TeV PbPb
@@ -1502,13 +1515,6 @@ HiInclusiveJetAnalyzer::analyze(const Event& iEvent,
 	azimuth_adapt = azimuth_adapt_new;
       }
     }
-    jets_.jtpt[jets_.nref] = jet.pt();
-    jets_.jteta[jets_.nref] = jet.eta();
-    jets_.jtphi[jets_.nref] = jet.phi();
-    jets_.jty[jets_.nref] = jet.eta();
-    jets_.jtpu[jets_.nref] = jet.pileup();
-    jets_.jtm[jets_.nref] = jet.mass();
-    jets_.jtarea[jets_.nref] = jet.jetArea();
 
     //! fill in the new jet varibles
     if(doNewJetVars_)
@@ -1841,8 +1847,8 @@ HiInclusiveJetAnalyzer::analyze(const Event& iEvent,
       const HepMC::GenEvent* MCEvt = hepMCProduct->GetEvent();
 
       std::pair<HepMC::GenParticle*,HepMC::GenParticle*> beamParticles = MCEvt->beam_particles();
-      if(beamParticles.first != 0)jets_.beamId1 = beamParticles.first->pdg_id();
-      if(beamParticles.second != 0)jets_.beamId2 = beamParticles.second->pdg_id();
+      jets_.beamId1 = (beamParticles.first != 0) ? beamParticles.first->pdg_id() : 0;
+      jets_.beamId2 = (beamParticles.second != 0) ? beamParticles.second->pdg_id() : 0;
     }
     
     edm::Handle<GenEventInfoProduct> hEventInfo;
