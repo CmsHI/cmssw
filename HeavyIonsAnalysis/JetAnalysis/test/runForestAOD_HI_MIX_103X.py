@@ -182,8 +182,7 @@ process.ana_step = cms.Path(
     process.pfcandAnalyzer +
     process.pfcandAnalyzerCS +
     process.trackSequencesPbPb +
-    process.rechitanalyzer +
-    process.pfTowers
+    process.rechitanalyzer
     )
 
 ###############################################################################

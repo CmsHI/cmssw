@@ -173,8 +173,7 @@ process.ana_step = cms.Path(
     process.pfcandAnalyzer +
     process.pfcandAnalyzerCS +
     process.trackSequencesPP +
-    process.rechitanalyzerpp +
-    process.pfTowerspp
+    process.rechitanalyzerpp
     )
 
 # # edm output for debugging purposes
