@@ -158,6 +158,13 @@ process.CSVscikitTags.weightFile = cms.FileInPath(
 ###############################################################################
 
 #########################
+# RecHits & pfTowers (HF, Castor & ZDC)
+#########################
+process.load('HeavyIonsAnalysis.JetAnalysis.rechitanalyzer_cfi')
+
+###############################################################################
+
+#########################
 # Main analysis list
 #########################
 
@@ -174,7 +181,9 @@ process.ana_step = cms.Path(
     process.ggHiNtuplizerGED +
     process.pfcandAnalyzer +
     process.pfcandAnalyzerCS +
-    process.trackSequencesPbPb
+    process.trackSequencesPbPb +
+    process.rechitanalyzer +
+    process.pfTowers
     )
 
 ###############################################################################
