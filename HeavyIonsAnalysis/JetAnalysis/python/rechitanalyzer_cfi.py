@@ -8,6 +8,10 @@ rechitanalyzer = cms.EDAnalyzer("RecHitTreeProducer",
     hcalHBHERecHitSrc = cms.untracked.InputTag("hbhereco"),
     towersSrc = cms.untracked.InputTag("towerMaker"),
     JetSrc = cms.untracked.InputTag("iterativeConePu5CaloJets"),
+    zdcRecHitSrc = cms.untracked.InputTag("zdcreco"),
+    castorRecHitSrc = cms.untracked.InputTag("castorreco"),
+    zdcDigiSrc = cms.untracked.InputTag("hcalDigis"),
+    vtxSrc = cms.untracked.InputTag("hiSelectedVertex"),
     useJets = cms.untracked.bool(True),
     doBasicClusters = cms.untracked.bool(False),
     doTowers = cms.untracked.bool(True),
@@ -39,10 +43,13 @@ pfTowers = rechitanalyzer.clone(
 
 rechitanalyzerpp = rechitanalyzer.clone(
     vtxSrc = cms.untracked.InputTag("offlinePrimaryVerticesWithBS"),
-    JetSrc = cms.untracked.InputTag("ak3CaloJets")
+    JetSrc = cms.untracked.InputTag("ak4CaloJets"),
+    doHF = cms.untracked.bool(False)
     )
 
 pfTowerspp = pfTowers.clone(
     vtxSrc = cms.untracked.InputTag("offlinePrimaryVerticesWithBS"),
-    JetSrc = cms.untracked.InputTag("ak3CaloJets")
+    JetSrc = cms.untracked.InputTag("ak4CaloJets"),
+    doHF = cms.untracked.bool(False),
+    doTowers = cms.untracked.bool(False)
     )
