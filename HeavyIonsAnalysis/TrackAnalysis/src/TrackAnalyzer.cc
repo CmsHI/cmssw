@@ -276,7 +276,7 @@ class TrackAnalyzer : public edm::EDAnalyzer {
     edm::EDGetTokenT<edm::View<reco::Track>> trackSrcView_;
     edm::EDGetTokenT<std::vector<reco::Track>> trackSrc_;
     edm::InputTag mvaSrcLabel_;
-    edm::EDGetTokenT<std::vector<float>> mvaSrc_;
+    edm::EDGetTokenT<edm::ValueMap<float>> mvaSrc_;
     edm::EDGetTokenT<reco::GenParticleCollection> particleSrc_;
     edm::EDGetTokenT<TrackingParticleCollection> tpEffSrc_;
     edm::EDGetTokenT<reco::PFCandidateCollection> pfCandSrc_;
@@ -334,7 +334,7 @@ TrackAnalyzer::TrackAnalyzer(const edm::ParameterSet& iConfig)
   trackSrcView_ = consumes<edm::View<reco::Track>>(trackSrcLabel_);
   if (doMVA_) {
     mvaSrcLabel_ = iConfig.getParameter<edm::InputTag>("mvaSrc");
-    mvaSrc_ = consumes<std::vector<float>>(mvaSrcLabel_);
+    mvaSrc_ = consumes<edm::ValueMap<float>>(mvaSrcLabel_);
   }
   if (doSimTrack_) {
     particleSrc_ = consumes<reco::GenParticleCollection>(iConfig.getParameter<edm::InputTag>("particleSrc"));
@@ -540,7 +540,7 @@ TrackAnalyzer::fillTracks(const edm::Event& iEvent, const edm::EventSetup& iSetu
     iEvent.getByToken(DeDxSrc_, DeDxMap);
   }
 
-  edm::Handle<std::vector<float>> mvaoutput;
+  edm::Handle<edm::ValueMap<float>> mvaoutput;
   if (doMVA_) {
     iEvent.getByToken(mvaSrc_, mvaoutput);
   }
@@ -629,7 +629,7 @@ TrackAnalyzer::fillTracks(const edm::Event& iEvent, const edm::EventSetup& iSetu
         else
           pev_.trkMVA[pev_.nTrk] = -1;
       } else {
-        pev_.trkMVA[pev_.nTrk] = (*mvaoutput)[it];//non algo = 11 behavior
+        pev_.trkMVA[pev_.nTrk] = (*mvaoutput)[trackRef];//non algo = 11 behavior
       }
 
       if (mvaSrcLabel_.label() == "generalTracks") {
@@ -893,9 +893,9 @@ TrackAnalyzer::fillSimTracks(const edm::Event& iEvent, const edm::EventSetup& iS
           }
 
           if (mvaSrcLabel_.label() == "generalTracks") {
-            pev_.mtrkMVALoose[pev_.nParticle] = mtrk->quality(reco::TrackBase::qualityByName("highPurity"));
+            pev_.mtrkMVALoose[pev_.nParticle] = (!((pev_.mtrkAlgo[pev_.nParticle] == 4 && pev_.mtrkMVA[pev_.nParticle] < -0.7) || (pev_.mtrkAlgo[pev_.nParticle] == 5 && pev_.mtrkMVA[pev_.nParticle] < -0.1) || (pev_.mtrkAlgo[pev_.nParticle] == 6 && pev_.mtrkMVA[pev_.nParticle] < 0.3) || (pev_.mtrkAlgo[pev_.nParticle] == 7 && pev_.mtrkMVA[pev_.nParticle] < 0.4) || (pev_.mtrkAlgo[pev_.nParticle] == 8 && pev_.mtrkMVA[pev_.nParticle] < -0.2) || (pev_.mtrkAlgo[pev_.nParticle] == 9 && pev_.mtrkMVA[pev_.nParticle] < 0.0) ||(pev_.mtrkAlgo[pev_.nParticle] == 10 && pev_.mtrkMVA[pev_.nParticle] < -0.3)) || pev_.mtrkMVA[pev_.nParticle] == -99) &&  mtrk->quality(reco::TrackBase::qualityByName("highPurity"));
 
-            pev_.mtrkMVATight[pev_.nParticle] = mtrk->quality(reco::TrackBase::qualityByName("highPurity"));
+            pev_.mtrkMVATight[pev_.nParticle] = (!((pev_.mtrkAlgo[pev_.nParticle] == 4 && pev_.mtrkMVA[pev_.nParticle] < -0.7) || (pev_.mtrkAlgo[pev_.nParticle] == 5 && pev_.mtrkMVA[pev_.nParticle] < -0.1) || (pev_.mtrkAlgo[pev_.nParticle] == 6 && pev_.mtrkMVA[pev_.nParticle] < 0.3) || (pev_.mtrkAlgo[pev_.nParticle] == 7 && pev_.mtrkMVA[pev_.nParticle] < 0.5) || (pev_.mtrkAlgo[pev_.nParticle] == 8 && pev_.mtrkMVA[pev_.nParticle] < 0.5) || (pev_.mtrkAlgo[pev_.nParticle] == 9 && pev_.mtrkMVA[pev_.nParticle] < 0.4) ||(pev_.mtrkAlgo[pev_.nParticle] == 10 && pev_.mtrkMVA[pev_.nParticle] < 0)) || pev_.mtrkMVA[pev_.nParticle] == -99) &&  mtrk->quality(reco::TrackBase::qualityByName("highPurity"));
           } else if (mvaSrcLabel_.label() == "hiGeneralTracks") {
             pev_.mtrkMVATight[pev_.nParticle] = (!((pev_.mtrkAlgo[pev_.nParticle] == 4 && pev_.mtrkMVA[pev_.nParticle] < -0.77) || (pev_.mtrkAlgo[pev_.nParticle] == 5 && pev_.mtrkMVA[pev_.nParticle] < 0.35) || (pev_.mtrkAlgo[pev_.nParticle] == 6 && pev_.mtrkMVA[pev_.nParticle] < 0.77) || (pev_.mtrkAlgo[pev_.nParticle] == 7 && pev_.mtrkMVA[pev_.nParticle] < 0.35)) || pev_.mtrkMVA[pev_.nParticle] == -99) &&  mtrk->quality(reco::TrackBase::qualityByName("highPurity"));
           }

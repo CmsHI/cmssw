@@ -7,9 +7,7 @@ anaTrack = ppTrack.clone(
     trackSrc = cms.InputTag("hiGeneralTracks"),
     vertexSrc = cms.vstring('hiSelectedVertex'),
     mvaSrc = cms.InputTag('hiGeneralTracks','MVAVals'),
-    pfCandSrc = cms.InputTag("particleFlowTmp"),
-    doMVA = False   
-)
+    pfCandSrc = cms.InputTag("particleFlowTmp"))
 
 pixelTrack = anaTrack.clone(
     trackPtMin = 0.4,
