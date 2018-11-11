@@ -18,16 +18,24 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) :
 {
   // class instance configuration
   doGenParticles_         = ps.getParameter<bool>("doGenParticles");
+  doElectrons_            = ps.getParameter<bool>("doElectrons");
+  doPhotons_              = ps.getParameter<bool>("doPhotons");
+  doMuons_                = ps.getParameter<bool>("doMuons");
   runOnParticleGun_       = ps.getParameter<bool>("runOnParticleGun");
   useValMapIso_           = ps.getParameter<bool>("useValMapIso");
   doPfIso_                = ps.getParameter<bool>("doPfIso");
   doRecHitsEB_            = ps.getParameter<bool>("doRecHitsEB");
   doRecHitsEE_            = ps.getParameter<bool>("doRecHitsEE");
-  genPileupCollection_    = consumes<std::vector<PileupSummaryInfo>>(ps.getParameter<edm::InputTag>("pileupCollection"));
-  genParticlesCollection_ = consumes<std::vector<reco::GenParticle>>(ps.getParameter<edm::InputTag>("genParticleSrc"));
-  gsfElectronsCollection_ = consumes<edm::View<reco::GsfElectron>>(ps.getParameter<edm::InputTag>("gsfElectronLabel"));
-  recoPhotonsCollection_  = consumes<edm::View<reco::Photon>>(ps.getParameter<edm::InputTag>("recoPhotonSrc"));
-  recoMuonsCollection_    = consumes<edm::View<reco::Muon>>(ps.getParameter<edm::InputTag>("recoMuonSrc"));
+  if (doGenParticles_) {
+    genPileupCollection_    = consumes<std::vector<PileupSummaryInfo>>(ps.getParameter<edm::InputTag>("pileupCollection"));
+    genParticlesCollection_ = consumes<std::vector<reco::GenParticle>>(ps.getParameter<edm::InputTag>("genParticleSrc"));
+  }
+  if (doElectrons_)
+    gsfElectronsCollection_ = consumes<edm::View<reco::GsfElectron>>(ps.getParameter<edm::InputTag>("gsfElectronLabel"));
+  if (doPhotons_)
+    recoPhotonsCollection_  = consumes<edm::View<reco::Photon>>(ps.getParameter<edm::InputTag>("recoPhotonSrc"));
+  if (doMuons_)
+    recoMuonsCollection_    = consumes<edm::View<reco::Muon>>(ps.getParameter<edm::InputTag>("recoMuonSrc"));
   vtxCollection_          = consumes<std::vector<reco::Vertex>>(ps.getParameter<edm::InputTag>("VtxLabel"));
   doVID_                  = ps.getParameter<bool>("doElectronVID");
   if (doVID_) {
@@ -100,197 +108,201 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) :
     tree_->Branch("mcTrkIsoDR04", &mcTrkIsoDR04_);
   }
 
-  tree_->Branch("nEle",                  &nEle_);
-  tree_->Branch("eleCharge",             &eleCharge_);
-  tree_->Branch("eleChargeConsistent",   &eleChargeConsistent_);
-  tree_->Branch("eleSCPixCharge",        &eleSCPixCharge_);
-  tree_->Branch("eleCtfCharge",          &eleCtfCharge_);
-  tree_->Branch("eleEn",                 &eleEn_);
-  tree_->Branch("eleD0",                 &eleD0_);
-  tree_->Branch("eleDz",                 &eleDz_);
-  tree_->Branch("eleD0Err",              &eleD0Err_);
-  tree_->Branch("eleDzErr",              &eleDzErr_);
-  tree_->Branch("eleTrkPt",              &eleTrkPt_);
-  tree_->Branch("eleTrkEta",             &eleTrkEta_);
-  tree_->Branch("eleTrkPhi",             &eleTrkPhi_);
-  tree_->Branch("eleTrkCharge",          &eleTrkCharge_);
-  tree_->Branch("eleTrkChi2",            &eleTrkChi2_);
-  tree_->Branch("eleTrkNdof",            &eleTrkNdof_);
-  tree_->Branch("eleTrkNormalizedChi2",  &eleTrkNormalizedChi2_);
-  tree_->Branch("eleTrkValidHits",       &eleTrkValidHits_);
-  tree_->Branch("eleTrkLayers",          &eleTrkLayers_);
+  if (doElectrons_) {
+    tree_->Branch("nEle",                  &nEle_);
+    tree_->Branch("eleCharge",             &eleCharge_);
+    tree_->Branch("eleChargeConsistent",   &eleChargeConsistent_);
+    tree_->Branch("eleSCPixCharge",        &eleSCPixCharge_);
+    tree_->Branch("eleCtfCharge",          &eleCtfCharge_);
+    tree_->Branch("eleEn",                 &eleEn_);
+    tree_->Branch("eleD0",                 &eleD0_);
+    tree_->Branch("eleDz",                 &eleDz_);
+    tree_->Branch("eleD0Err",              &eleD0Err_);
+    tree_->Branch("eleDzErr",              &eleDzErr_);
+    tree_->Branch("eleTrkPt",              &eleTrkPt_);
+    tree_->Branch("eleTrkEta",             &eleTrkEta_);
+    tree_->Branch("eleTrkPhi",             &eleTrkPhi_);
+    tree_->Branch("eleTrkCharge",          &eleTrkCharge_);
+    tree_->Branch("eleTrkChi2",            &eleTrkChi2_);
+    tree_->Branch("eleTrkNdof",            &eleTrkNdof_);
+    tree_->Branch("eleTrkNormalizedChi2",  &eleTrkNormalizedChi2_);
+    tree_->Branch("eleTrkValidHits",       &eleTrkValidHits_);
+    tree_->Branch("eleTrkLayers",          &eleTrkLayers_);
 
-  tree_->Branch("elePt",                 &elePt_);
-  tree_->Branch("eleEta",                &eleEta_);
-  tree_->Branch("elePhi",                &elePhi_);
-  tree_->Branch("eleSCEn",               &eleSCEn_);
-  tree_->Branch("eleESEn",               &eleESEn_);
-  tree_->Branch("eleSCEta",              &eleSCEta_);
-  tree_->Branch("eleSCPhi",              &eleSCPhi_);
-  tree_->Branch("eleSCRawEn",            &eleSCRawEn_);
-  tree_->Branch("eleSCEtaWidth",         &eleSCEtaWidth_);
-  tree_->Branch("eleSCPhiWidth",         &eleSCPhiWidth_);
-  tree_->Branch("eleHoverE",             &eleHoverE_);
-  tree_->Branch("eleHoverEBc",           &eleHoverEBc_);
-  tree_->Branch("eleEoverP",             &eleEoverP_);
-  tree_->Branch("eleEoverPInv",          &eleEoverPInv_);
-  tree_->Branch("eleBrem",               &eleBrem_);
-  tree_->Branch("eledEtaAtVtx",          &eledEtaAtVtx_);
-  tree_->Branch("eledPhiAtVtx",          &eledPhiAtVtx_);
-  tree_->Branch("eleSigmaIEtaIEta",      &eleSigmaIEtaIEta_);
-  tree_->Branch("eleSigmaIEtaIEta_2012", &eleSigmaIEtaIEta_2012_);
-  tree_->Branch("eleSigmaIPhiIPhi",      &eleSigmaIPhiIPhi_);
-  // tree_->Branch("eleConvVeto",           &eleConvVeto_);  // TODO: not available in reco::
-  tree_->Branch("eleMissHits",           &eleMissHits_);
-  tree_->Branch("eleESEffSigmaRR",       &eleESEffSigmaRR_);
-  tree_->Branch("elePFChIso",            &elePFChIso_);
-  tree_->Branch("elePFPhoIso",           &elePFPhoIso_);
-  tree_->Branch("elePFNeuIso",           &elePFNeuIso_);
-  tree_->Branch("elePFPUIso",            &elePFPUIso_);
-  tree_->Branch("elePFChIso03",          &elePFChIso03_);
-  tree_->Branch("elePFPhoIso03",         &elePFPhoIso03_);
-  tree_->Branch("elePFNeuIso03",         &elePFNeuIso03_);
-  tree_->Branch("elePFChIso04",          &elePFChIso04_);
-  tree_->Branch("elePFPhoIso04",         &elePFPhoIso04_);
-  tree_->Branch("elePFNeuIso04",         &elePFNeuIso04_);
-  tree_->Branch("elePFRelIsoWithEA",     &elePFRelIsoWithEA_);
-  tree_->Branch("elePFRelIsoWithDBeta",  &elePFRelIsoWithDBeta_);
+    tree_->Branch("elePt",                 &elePt_);
+    tree_->Branch("eleEta",                &eleEta_);
+    tree_->Branch("elePhi",                &elePhi_);
+    tree_->Branch("eleSCEn",               &eleSCEn_);
+    tree_->Branch("eleESEn",               &eleESEn_);
+    tree_->Branch("eleSCEta",              &eleSCEta_);
+    tree_->Branch("eleSCPhi",              &eleSCPhi_);
+    tree_->Branch("eleSCRawEn",            &eleSCRawEn_);
+    tree_->Branch("eleSCEtaWidth",         &eleSCEtaWidth_);
+    tree_->Branch("eleSCPhiWidth",         &eleSCPhiWidth_);
+    tree_->Branch("eleHoverE",             &eleHoverE_);
+    tree_->Branch("eleHoverEBc",           &eleHoverEBc_);
+    tree_->Branch("eleEoverP",             &eleEoverP_);
+    tree_->Branch("eleEoverPInv",          &eleEoverPInv_);
+    tree_->Branch("eleBrem",               &eleBrem_);
+    tree_->Branch("eledEtaAtVtx",          &eledEtaAtVtx_);
+    tree_->Branch("eledPhiAtVtx",          &eledPhiAtVtx_);
+    tree_->Branch("eleSigmaIEtaIEta",      &eleSigmaIEtaIEta_);
+    tree_->Branch("eleSigmaIEtaIEta_2012", &eleSigmaIEtaIEta_2012_);
+    tree_->Branch("eleSigmaIPhiIPhi",      &eleSigmaIPhiIPhi_);
+    // tree_->Branch("eleConvVeto",           &eleConvVeto_);  // TODO: not available in reco::
+    tree_->Branch("eleMissHits",           &eleMissHits_);
+    tree_->Branch("eleESEffSigmaRR",       &eleESEffSigmaRR_);
+    tree_->Branch("elePFChIso",            &elePFChIso_);
+    tree_->Branch("elePFPhoIso",           &elePFPhoIso_);
+    tree_->Branch("elePFNeuIso",           &elePFNeuIso_);
+    tree_->Branch("elePFPUIso",            &elePFPUIso_);
+    tree_->Branch("elePFChIso03",          &elePFChIso03_);
+    tree_->Branch("elePFPhoIso03",         &elePFPhoIso03_);
+    tree_->Branch("elePFNeuIso03",         &elePFNeuIso03_);
+    tree_->Branch("elePFChIso04",          &elePFChIso04_);
+    tree_->Branch("elePFPhoIso04",         &elePFPhoIso04_);
+    tree_->Branch("elePFNeuIso04",         &elePFNeuIso04_);
+    tree_->Branch("elePFRelIsoWithEA",     &elePFRelIsoWithEA_);
+    tree_->Branch("elePFRelIsoWithDBeta",  &elePFRelIsoWithDBeta_);
 
-  tree_->Branch("eleR9",                 &eleR9_);
-  tree_->Branch("eleE3x3",               &eleE3x3_);
-  tree_->Branch("eleE5x5",               &eleE5x5_);
-  tree_->Branch("eleR9Full5x5",          &eleR9Full5x5_);
-  tree_->Branch("eleE3x3Full5x5",        &eleE3x3Full5x5_);
-  tree_->Branch("eleE5x5Full5x5",        &eleE5x5Full5x5_);
-  tree_->Branch("NClusters",             &NClusters_);
-  tree_->Branch("NEcalClusters",         &NEcalClusters_);
-  tree_->Branch("eleSeedEn",             &eleSeedEn_);
-  tree_->Branch("eleSeedEta",            &eleSeedEta_);
-  tree_->Branch("eleSeedPhi",            &eleSeedPhi_);
-  tree_->Branch("eleSeedCryEta",         &eleSeedCryEta_);
-  tree_->Branch("eleSeedCryPhi",         &eleSeedCryPhi_);
-  tree_->Branch("eleSeedCryIeta",        &eleSeedCryIeta_);
-  tree_->Branch("eleSeedCryIphi",        &eleSeedCryIphi_);
+    tree_->Branch("eleR9",                 &eleR9_);
+    tree_->Branch("eleE3x3",               &eleE3x3_);
+    tree_->Branch("eleE5x5",               &eleE5x5_);
+    tree_->Branch("eleR9Full5x5",          &eleR9Full5x5_);
+    tree_->Branch("eleE3x3Full5x5",        &eleE3x3Full5x5_);
+    tree_->Branch("eleE5x5Full5x5",        &eleE5x5Full5x5_);
+    tree_->Branch("NClusters",             &NClusters_);
+    tree_->Branch("NEcalClusters",         &NEcalClusters_);
+    tree_->Branch("eleSeedEn",             &eleSeedEn_);
+    tree_->Branch("eleSeedEta",            &eleSeedEta_);
+    tree_->Branch("eleSeedPhi",            &eleSeedPhi_);
+    tree_->Branch("eleSeedCryEta",         &eleSeedCryEta_);
+    tree_->Branch("eleSeedCryPhi",         &eleSeedCryPhi_);
+    tree_->Branch("eleSeedCryIeta",        &eleSeedCryIeta_);
+    tree_->Branch("eleSeedCryIphi",        &eleSeedCryIphi_);
 
-  tree_->Branch("eleBC1E",               &eleBC1E_);
-  tree_->Branch("eleBC1Eta",             &eleBC1Eta_);
-  tree_->Branch("eleBC2E",               &eleBC2E_);
-  tree_->Branch("eleBC2Eta",             &eleBC2Eta_);
-  tree_->Branch("eleIDVeto",             &eleIDVeto_);
-  tree_->Branch("eleIDLoose",            &eleIDLoose_);
-  tree_->Branch("eleIDMedium",           &eleIDMedium_);
-  tree_->Branch("eleIDTight",            &eleIDTight_);
-  tree_->Branch("elepassConversionVeto", &elepassConversionVeto_);
-  tree_->Branch("eleEffAreaTimesRho",    &eleEffAreaTimesRho_);
-
-  tree_->Branch("nPho",                  &nPho_);
-  tree_->Branch("phoE",                  &phoE_);
-  tree_->Branch("phoEt",                 &phoEt_);
-  tree_->Branch("phoEta",                &phoEta_);
-  tree_->Branch("phoPhi",                &phoPhi_);
-
-  tree_->Branch("phoEcorrStdEcal",       &phoEcorrStdEcal_);
-  tree_->Branch("phoEcorrPhoEcal",       &phoEcorrPhoEcal_);
-  tree_->Branch("phoEcorrRegr1",         &phoEcorrRegr1_);
-  tree_->Branch("phoEcorrRegr2",         &phoEcorrRegr2_);
-  tree_->Branch("phoEcorrErrStdEcal",    &phoEcorrErrStdEcal_);
-  tree_->Branch("phoEcorrErrPhoEcal",    &phoEcorrErrPhoEcal_);
-  tree_->Branch("phoEcorrErrRegr1",      &phoEcorrErrRegr1_);
-  tree_->Branch("phoEcorrErrRegr2",      &phoEcorrErrRegr2_);
-
-  tree_->Branch("phoSCE",                &phoSCE_);
-  tree_->Branch("phoSCRawE",             &phoSCRawE_);
-  tree_->Branch("phoSCEta",              &phoSCEta_);
-  tree_->Branch("phoSCPhi",              &phoSCPhi_);
-  tree_->Branch("phoSCEtaWidth",         &phoSCEtaWidth_);
-  tree_->Branch("phoSCPhiWidth",         &phoSCPhiWidth_);
-  tree_->Branch("phoSCBrem",             &phoSCBrem_);
-  tree_->Branch("phoSCnHits",            &phoSCnHits_);
-  tree_->Branch("phoSCflags",            &phoSCflags_);
-  tree_->Branch("phoSCinClean",          &phoSCinClean_);
-  tree_->Branch("phoSCinUnClean",        &phoSCinUnClean_);
-  tree_->Branch("phoSCnBC",              &phoSCnBC_);
-  tree_->Branch("phoESEn",               &phoESEn_);
-
-  tree_->Branch("phoPSCE",               &phoPSCE_);
-  tree_->Branch("phoPSCRawE",            &phoPSCRawE_);
-  tree_->Branch("phoPSCEta",             &phoPSCEta_);
-  tree_->Branch("phoPSCPhi",             &phoPSCPhi_);
-  tree_->Branch("phoPSCEtaWidth",        &phoPSCEtaWidth_);
-  tree_->Branch("phoPSCPhiWidth",        &phoPSCPhiWidth_);
-  tree_->Branch("phoPSCBrem",            &phoPSCBrem_);
-  tree_->Branch("phoPSCnHits",           &phoPSCnHits_);
-  tree_->Branch("phoPSCflags",           &phoPSCflags_);
-  tree_->Branch("phoPSCinClean",         &phoPSCinClean_);
-  tree_->Branch("phoPSCinUnClean",       &phoPSCinUnClean_);
-  tree_->Branch("phoPSCnBC",             &phoPSCnBC_);
-  tree_->Branch("phoPESEn",              &phoPESEn_);
-
-  tree_->Branch("phoIsPFPhoton",         &phoIsPFPhoton_);
-  tree_->Branch("phoIsStandardPhoton",   &phoIsStandardPhoton_);
-  tree_->Branch("phoHasPixelSeed",       &phoHasPixelSeed_);
-  tree_->Branch("phoHasConversionTracks",&phoHasConversionTracks_);
-  // tree_->Branch("phoEleVeto",            &phoEleVeto_);        // TODO: not available in reco::
-  tree_->Branch("phoR9",                 &phoR9_);
-  tree_->Branch("phoHadTowerOverEm",     &phoHadTowerOverEm_);
-  tree_->Branch("phoHoverE",             &phoHoverE_);
-  tree_->Branch("phoSigmaIEtaIEta",      &phoSigmaIEtaIEta_);
-  // tree_->Branch("phoSigmaIEtaIPhi",      &phoSigmaIEtaIPhi_);  // TODO: not available in reco::
-  // tree_->Branch("phoSigmaIPhiIPhi",      &phoSigmaIPhiIPhi_);  // TODO: not available in reco::
-  tree_->Branch("phoE1x5",               &phoE1x5_);
-  tree_->Branch("phoE2x5",               &phoE2x5_);
-  tree_->Branch("phoE3x3",               &phoE3x3_);
-  tree_->Branch("phoE5x5",               &phoE5x5_);
-  tree_->Branch("phoMaxEnergyXtal",      &phoMaxEnergyXtal_);
-  tree_->Branch("phoSigmaEtaEta",        &phoSigmaEtaEta_);
-  tree_->Branch("phoR1x5",               &phoR1x5_);
-  tree_->Branch("phoR2x5",               &phoR2x5_);
-  tree_->Branch("phoR9_2012",            &phoR9_2012_);
-  tree_->Branch("phoSigmaIEtaIEta_2012", &phoSigmaIEtaIEta_2012_);
-  tree_->Branch("phoE1x5_2012",          &phoE1x5_2012_);
-  tree_->Branch("phoE2x5_2012",          &phoE2x5_2012_);
-  tree_->Branch("phoE3x3_2012",          &phoE3x3_2012_);
-  tree_->Branch("phoE5x5_2012",          &phoE5x5_2012_);
-  tree_->Branch("phoMaxEnergyXtal_2012", &phoMaxEnergyXtal_2012_);
-  tree_->Branch("phoSigmaEtaEta_2012",   &phoSigmaEtaEta_2012_);
-  tree_->Branch("phoR1x5_2012",          &phoR1x5_2012_);
-  tree_->Branch("phoR2x5_2012",          &phoR2x5_2012_);
-
-  tree_->Branch("phoBC1E",               &phoBC1E_);
-  tree_->Branch("phoBC1Ecorr",           &phoBC1Ecorr_);
-  tree_->Branch("phoBC1Eta",             &phoBC1Eta_);
-  tree_->Branch("phoBC1Phi",             &phoBC1Phi_);
-  tree_->Branch("phoBC1size",            &phoBC1size_);
-  tree_->Branch("phoBC1flags",           &phoBC1flags_);
-  tree_->Branch("phoBC1inClean",         &phoBC1inClean_);
-  tree_->Branch("phoBC1inUnClean",       &phoBC1inUnClean_);
-  tree_->Branch("phoBC1rawID",           &phoBC1rawID_);
-
-  /* tree_->Branch("phoBC2E",               &phoBC2E_); */
-  /* tree_->Branch("phoBC2Eta",             &phoBC2Eta_); */
-  /* tree_->Branch("phoBC2Phi",             &phoBC2Phi_); */
-
-  tree_->Branch("pho_ecalClusterIsoR2", &pho_ecalClusterIsoR2_);
-  tree_->Branch("pho_ecalClusterIsoR3", &pho_ecalClusterIsoR3_);
-  tree_->Branch("pho_ecalClusterIsoR4", &pho_ecalClusterIsoR4_);
-  tree_->Branch("pho_ecalClusterIsoR5", &pho_ecalClusterIsoR5_);
-  tree_->Branch("pho_hcalRechitIsoR1", &pho_hcalRechitIsoR1_);
-  tree_->Branch("pho_hcalRechitIsoR2", &pho_hcalRechitIsoR2_);
-  tree_->Branch("pho_hcalRechitIsoR3", &pho_hcalRechitIsoR3_);
-  tree_->Branch("pho_hcalRechitIsoR4", &pho_hcalRechitIsoR4_);
-  tree_->Branch("pho_hcalRechitIsoR5", &pho_hcalRechitIsoR5_);
-  tree_->Branch("pho_trackIsoR1PtCut20", &pho_trackIsoR1PtCut20_);
-  tree_->Branch("pho_trackIsoR2PtCut20", &pho_trackIsoR2PtCut20_);
-  tree_->Branch("pho_trackIsoR3PtCut20", &pho_trackIsoR3PtCut20_);
-  tree_->Branch("pho_trackIsoR4PtCut20", &pho_trackIsoR4PtCut20_);
-  tree_->Branch("pho_trackIsoR5PtCut20", &pho_trackIsoR5PtCut20_);
-  tree_->Branch("pho_swissCrx", &pho_swissCrx_);
-  tree_->Branch("pho_seedTime", &pho_seedTime_);
-  if (doGenParticles_) {
-    tree_->Branch("pho_genMatchedIndex", &pho_genMatchedIndex_);
+    tree_->Branch("eleBC1E",               &eleBC1E_);
+    tree_->Branch("eleBC1Eta",             &eleBC1Eta_);
+    tree_->Branch("eleBC2E",               &eleBC2E_);
+    tree_->Branch("eleBC2Eta",             &eleBC2Eta_);
+    tree_->Branch("eleIDVeto",             &eleIDVeto_);
+    tree_->Branch("eleIDLoose",            &eleIDLoose_);
+    tree_->Branch("eleIDMedium",           &eleIDMedium_);
+    tree_->Branch("eleIDTight",            &eleIDTight_);
+    tree_->Branch("elepassConversionVeto", &elepassConversionVeto_);
+    tree_->Branch("eleEffAreaTimesRho",    &eleEffAreaTimesRho_);
   }
 
-  if (doRecHitsEB_ || doRecHitsEE_) {
+  if (doPhotons_) {
+    tree_->Branch("nPho",                  &nPho_);
+    tree_->Branch("phoE",                  &phoE_);
+    tree_->Branch("phoEt",                 &phoEt_);
+    tree_->Branch("phoEta",                &phoEta_);
+    tree_->Branch("phoPhi",                &phoPhi_);
+
+    tree_->Branch("phoEcorrStdEcal",       &phoEcorrStdEcal_);
+    tree_->Branch("phoEcorrPhoEcal",       &phoEcorrPhoEcal_);
+    tree_->Branch("phoEcorrRegr1",         &phoEcorrRegr1_);
+    tree_->Branch("phoEcorrRegr2",         &phoEcorrRegr2_);
+    tree_->Branch("phoEcorrErrStdEcal",    &phoEcorrErrStdEcal_);
+    tree_->Branch("phoEcorrErrPhoEcal",    &phoEcorrErrPhoEcal_);
+    tree_->Branch("phoEcorrErrRegr1",      &phoEcorrErrRegr1_);
+    tree_->Branch("phoEcorrErrRegr2",      &phoEcorrErrRegr2_);
+
+    tree_->Branch("phoSCE",                &phoSCE_);
+    tree_->Branch("phoSCRawE",             &phoSCRawE_);
+    tree_->Branch("phoSCEta",              &phoSCEta_);
+    tree_->Branch("phoSCPhi",              &phoSCPhi_);
+    tree_->Branch("phoSCEtaWidth",         &phoSCEtaWidth_);
+    tree_->Branch("phoSCPhiWidth",         &phoSCPhiWidth_);
+    tree_->Branch("phoSCBrem",             &phoSCBrem_);
+    tree_->Branch("phoSCnHits",            &phoSCnHits_);
+    tree_->Branch("phoSCflags",            &phoSCflags_);
+    tree_->Branch("phoSCinClean",          &phoSCinClean_);
+    tree_->Branch("phoSCinUnClean",        &phoSCinUnClean_);
+    tree_->Branch("phoSCnBC",              &phoSCnBC_);
+    tree_->Branch("phoESEn",               &phoESEn_);
+
+    tree_->Branch("phoPSCE",               &phoPSCE_);
+    tree_->Branch("phoPSCRawE",            &phoPSCRawE_);
+    tree_->Branch("phoPSCEta",             &phoPSCEta_);
+    tree_->Branch("phoPSCPhi",             &phoPSCPhi_);
+    tree_->Branch("phoPSCEtaWidth",        &phoPSCEtaWidth_);
+    tree_->Branch("phoPSCPhiWidth",        &phoPSCPhiWidth_);
+    tree_->Branch("phoPSCBrem",            &phoPSCBrem_);
+    tree_->Branch("phoPSCnHits",           &phoPSCnHits_);
+    tree_->Branch("phoPSCflags",           &phoPSCflags_);
+    tree_->Branch("phoPSCinClean",         &phoPSCinClean_);
+    tree_->Branch("phoPSCinUnClean",       &phoPSCinUnClean_);
+    tree_->Branch("phoPSCnBC",             &phoPSCnBC_);
+    tree_->Branch("phoPESEn",              &phoPESEn_);
+
+    tree_->Branch("phoIsPFPhoton",         &phoIsPFPhoton_);
+    tree_->Branch("phoIsStandardPhoton",   &phoIsStandardPhoton_);
+    tree_->Branch("phoHasPixelSeed",       &phoHasPixelSeed_);
+    tree_->Branch("phoHasConversionTracks",&phoHasConversionTracks_);
+    // tree_->Branch("phoEleVeto",            &phoEleVeto_);        // TODO: not available in reco::
+    tree_->Branch("phoR9",                 &phoR9_);
+    tree_->Branch("phoHadTowerOverEm",     &phoHadTowerOverEm_);
+    tree_->Branch("phoHoverE",             &phoHoverE_);
+    tree_->Branch("phoSigmaIEtaIEta",      &phoSigmaIEtaIEta_);
+    // tree_->Branch("phoSigmaIEtaIPhi",      &phoSigmaIEtaIPhi_);  // TODO: not available in reco::
+    // tree_->Branch("phoSigmaIPhiIPhi",      &phoSigmaIPhiIPhi_);  // TODO: not available in reco::
+    tree_->Branch("phoE1x5",               &phoE1x5_);
+    tree_->Branch("phoE2x5",               &phoE2x5_);
+    tree_->Branch("phoE3x3",               &phoE3x3_);
+    tree_->Branch("phoE5x5",               &phoE5x5_);
+    tree_->Branch("phoMaxEnergyXtal",      &phoMaxEnergyXtal_);
+    tree_->Branch("phoSigmaEtaEta",        &phoSigmaEtaEta_);
+    tree_->Branch("phoR1x5",               &phoR1x5_);
+    tree_->Branch("phoR2x5",               &phoR2x5_);
+    tree_->Branch("phoR9_2012",            &phoR9_2012_);
+    tree_->Branch("phoSigmaIEtaIEta_2012", &phoSigmaIEtaIEta_2012_);
+    tree_->Branch("phoE1x5_2012",          &phoE1x5_2012_);
+    tree_->Branch("phoE2x5_2012",          &phoE2x5_2012_);
+    tree_->Branch("phoE3x3_2012",          &phoE3x3_2012_);
+    tree_->Branch("phoE5x5_2012",          &phoE5x5_2012_);
+    tree_->Branch("phoMaxEnergyXtal_2012", &phoMaxEnergyXtal_2012_);
+    tree_->Branch("phoSigmaEtaEta_2012",   &phoSigmaEtaEta_2012_);
+    tree_->Branch("phoR1x5_2012",          &phoR1x5_2012_);
+    tree_->Branch("phoR2x5_2012",          &phoR2x5_2012_);
+
+    tree_->Branch("phoBC1E",               &phoBC1E_);
+    tree_->Branch("phoBC1Ecorr",           &phoBC1Ecorr_);
+    tree_->Branch("phoBC1Eta",             &phoBC1Eta_);
+    tree_->Branch("phoBC1Phi",             &phoBC1Phi_);
+    tree_->Branch("phoBC1size",            &phoBC1size_);
+    tree_->Branch("phoBC1flags",           &phoBC1flags_);
+    tree_->Branch("phoBC1inClean",         &phoBC1inClean_);
+    tree_->Branch("phoBC1inUnClean",       &phoBC1inUnClean_);
+    tree_->Branch("phoBC1rawID",           &phoBC1rawID_);
+
+    /* tree_->Branch("phoBC2E",               &phoBC2E_); */
+    /* tree_->Branch("phoBC2Eta",             &phoBC2Eta_); */
+    /* tree_->Branch("phoBC2Phi",             &phoBC2Phi_); */
+
+    tree_->Branch("pho_ecalClusterIsoR2", &pho_ecalClusterIsoR2_);
+    tree_->Branch("pho_ecalClusterIsoR3", &pho_ecalClusterIsoR3_);
+    tree_->Branch("pho_ecalClusterIsoR4", &pho_ecalClusterIsoR4_);
+    tree_->Branch("pho_ecalClusterIsoR5", &pho_ecalClusterIsoR5_);
+    tree_->Branch("pho_hcalRechitIsoR1", &pho_hcalRechitIsoR1_);
+    tree_->Branch("pho_hcalRechitIsoR2", &pho_hcalRechitIsoR2_);
+    tree_->Branch("pho_hcalRechitIsoR3", &pho_hcalRechitIsoR3_);
+    tree_->Branch("pho_hcalRechitIsoR4", &pho_hcalRechitIsoR4_);
+    tree_->Branch("pho_hcalRechitIsoR5", &pho_hcalRechitIsoR5_);
+    tree_->Branch("pho_trackIsoR1PtCut20", &pho_trackIsoR1PtCut20_);
+    tree_->Branch("pho_trackIsoR2PtCut20", &pho_trackIsoR2PtCut20_);
+    tree_->Branch("pho_trackIsoR3PtCut20", &pho_trackIsoR3PtCut20_);
+    tree_->Branch("pho_trackIsoR4PtCut20", &pho_trackIsoR4PtCut20_);
+    tree_->Branch("pho_trackIsoR5PtCut20", &pho_trackIsoR5PtCut20_);
+    tree_->Branch("pho_swissCrx", &pho_swissCrx_);
+    tree_->Branch("pho_seedTime", &pho_seedTime_);
+
+    if (doGenParticles_) {
+      tree_->Branch("pho_genMatchedIndex", &pho_genMatchedIndex_);
+    }
+
+    if (doRecHitsEB_ || doRecHitsEE_) {
       // rechit info
       tree_->Branch("nRH", &nRH_);
       tree_->Branch("rhRawId", &rhRawId_);
@@ -307,328 +319,344 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) :
       tree_->Branch("rhFlags", &rhFlags_);
       tree_->Branch("rhPhoIdx", &rhPhoIdx_);
       tree_->Branch("rhBCIdx", &rhBCIdx_);
+    }
+
+    if (doPfIso_) {
+      tree_->Branch("pfcIso1",&pfcIso1);
+      tree_->Branch("pfcIso2",&pfcIso2);
+      tree_->Branch("pfcIso3",&pfcIso3);
+      tree_->Branch("pfcIso4",&pfcIso4);
+      tree_->Branch("pfcIso5",&pfcIso5);
+
+      tree_->Branch("pfpIso1",&pfpIso1);
+      tree_->Branch("pfpIso2",&pfpIso2);
+      tree_->Branch("pfpIso3",&pfpIso3);
+      tree_->Branch("pfpIso4",&pfpIso4);
+      tree_->Branch("pfpIso5",&pfpIso5);
+
+      tree_->Branch("pfnIso1",&pfnIso1);
+      tree_->Branch("pfnIso2",&pfnIso2);
+      tree_->Branch("pfnIso3",&pfnIso3);
+      tree_->Branch("pfnIso4",&pfnIso4);
+      tree_->Branch("pfnIso5",&pfnIso5);
+    }
   }
 
-  if (doPfIso_) {
-    tree_->Branch("pfcIso1",&pfcIso1);
-    tree_->Branch("pfcIso2",&pfcIso2);
-    tree_->Branch("pfcIso3",&pfcIso3);
-    tree_->Branch("pfcIso4",&pfcIso4);
-    tree_->Branch("pfcIso5",&pfcIso5);
-
-    tree_->Branch("pfpIso1",&pfpIso1);
-    tree_->Branch("pfpIso2",&pfpIso2);
-    tree_->Branch("pfpIso3",&pfpIso3);
-    tree_->Branch("pfpIso4",&pfpIso4);
-    tree_->Branch("pfpIso5",&pfpIso5);
-
-    tree_->Branch("pfnIso1",&pfnIso1);
-    tree_->Branch("pfnIso2",&pfnIso2);
-    tree_->Branch("pfnIso3",&pfnIso3);
-    tree_->Branch("pfnIso4",&pfnIso4);
-    tree_->Branch("pfnIso5",&pfnIso5);
+  if (doMuons_) {
+    tree_->Branch("nMu",                   &nMu_);
+    tree_->Branch("muPt",                  &muPt_);
+    tree_->Branch("muEta",                 &muEta_);
+    tree_->Branch("muPhi",                 &muPhi_);
+    tree_->Branch("muCharge",              &muCharge_);
+    tree_->Branch("muType",                &muType_);
+    tree_->Branch("muIsGood",              &muIsGood_);
+    tree_->Branch("muD0",                  &muD0_);
+    tree_->Branch("muDz",                  &muDz_);
+    tree_->Branch("muChi2NDF",             &muChi2NDF_);
+    tree_->Branch("muInnerD0",             &muInnerD0_);
+    tree_->Branch("muInnerDz",             &muInnerDz_);
+    tree_->Branch("muTrkLayers",           &muTrkLayers_);
+    tree_->Branch("muPixelLayers",         &muPixelLayers_);
+    tree_->Branch("muPixelHits",           &muPixelHits_);
+    tree_->Branch("muMuonHits",            &muMuonHits_);
+    tree_->Branch("muTrkQuality",          &muTrkQuality_);
+    tree_->Branch("muStations",            &muStations_);
+    tree_->Branch("muIsoTrk",              &muIsoTrk_);
+    tree_->Branch("muPFChIso",             &muPFChIso_);
+    tree_->Branch("muPFPhoIso",            &muPFPhoIso_);
+    tree_->Branch("muPFNeuIso",            &muPFNeuIso_);
+    tree_->Branch("muPFPUIso",             &muPFPUIso_);
   }
-
-  tree_->Branch("nMu",                   &nMu_);
-  tree_->Branch("muPt",                  &muPt_);
-  tree_->Branch("muEta",                 &muEta_);
-  tree_->Branch("muPhi",                 &muPhi_);
-  tree_->Branch("muCharge",              &muCharge_);
-  tree_->Branch("muType",                &muType_);
-  tree_->Branch("muIsGood",              &muIsGood_);
-  tree_->Branch("muD0",                  &muD0_);
-  tree_->Branch("muDz",                  &muDz_);
-  tree_->Branch("muChi2NDF",             &muChi2NDF_);
-  tree_->Branch("muInnerD0",             &muInnerD0_);
-  tree_->Branch("muInnerDz",             &muInnerDz_);
-  tree_->Branch("muTrkLayers",           &muTrkLayers_);
-  tree_->Branch("muPixelLayers",         &muPixelLayers_);
-  tree_->Branch("muPixelHits",           &muPixelHits_);
-  tree_->Branch("muMuonHits",            &muMuonHits_);
-  tree_->Branch("muTrkQuality",          &muTrkQuality_);
-  tree_->Branch("muStations",            &muStations_);
-  tree_->Branch("muIsoTrk",              &muIsoTrk_);
-  tree_->Branch("muPFChIso",             &muPFChIso_);
-  tree_->Branch("muPFPhoIso",            &muPFPhoIso_);
-  tree_->Branch("muPFNeuIso",            &muPFNeuIso_);
-  tree_->Branch("muPFPUIso",             &muPFPUIso_);
 }
 
 void ggHiNtuplizer::analyze(const edm::Event& e, const edm::EventSetup& es)
 {
   // cleanup from previous event
-  nPUInfo_ = 0;
-  nMC_ = 0;
-  nEle_ = 0;
-  nPho_ = 0;
-  nMu_ = 0;
-  nRH_ = 0;
 
-  nPU_                  .clear();
-  puBX_                 .clear();
-  puTrue_               .clear();
+  if (doGenParticles_) {
+    nPUInfo_ = 0;
+    nPU_                  .clear();
+    puBX_                 .clear();
+    puTrue_               .clear();
 
-  mcPID_                .clear();
-  mcStatus_             .clear();
-  mcVtx_x_              .clear();
-  mcVtx_y_              .clear();
-  mcVtx_z_              .clear();
-  mcPt_                 .clear();
-  mcEta_                .clear();
-  mcPhi_                .clear();
-  mcE_                  .clear();
-  mcEt_                 .clear();
-  mcMass_               .clear();
-  mcParentage_          .clear();
-  mcMomPID_             .clear();
-  mcMomPt_              .clear();
-  mcMomEta_             .clear();
-  mcMomPhi_             .clear();
-  mcMomMass_            .clear();
-  mcGMomPID_            .clear();
-  mcIndex_              .clear();
-  mcCalIsoDR03_         .clear();
-  mcCalIsoDR04_         .clear();
-  mcTrkIsoDR03_         .clear();
-  mcTrkIsoDR04_         .clear();
+    nMC_ = 0;
+    mcPID_                .clear();
+    mcStatus_             .clear();
+    mcVtx_x_              .clear();
+    mcVtx_y_              .clear();
+    mcVtx_z_              .clear();
+    mcPt_                 .clear();
+    mcEta_                .clear();
+    mcPhi_                .clear();
+    mcE_                  .clear();
+    mcEt_                 .clear();
+    mcMass_               .clear();
+    mcParentage_          .clear();
+    mcMomPID_             .clear();
+    mcMomPt_              .clear();
+    mcMomEta_             .clear();
+    mcMomPhi_             .clear();
+    mcMomMass_            .clear();
+    mcGMomPID_            .clear();
+    mcIndex_              .clear();
+    mcCalIsoDR03_         .clear();
+    mcCalIsoDR04_         .clear();
+    mcTrkIsoDR03_         .clear();
+    mcTrkIsoDR04_         .clear();
+  }
 
-  eleCharge_            .clear();
-  eleChargeConsistent_  .clear();
-  eleSCPixCharge_       .clear();
-  eleCtfCharge_         .clear();
-  eleEn_                .clear();
-  eleD0_                .clear();
-  eleDz_                .clear();
-  eleD0Err_             .clear();
-  eleDzErr_             .clear();
-  eleTrkPt_             .clear();
-  eleTrkEta_            .clear();
-  eleTrkPhi_            .clear();
-  eleTrkCharge_         .clear();
-  eleTrkChi2_           .clear();
-  eleTrkNdof_           .clear();
-  eleTrkNormalizedChi2_ .clear();
-  eleTrkValidHits_      .clear();
-  eleTrkLayers_         .clear();
-  elePt_                .clear();
-  eleEta_               .clear();
-  elePhi_               .clear();
-  eleSCEn_              .clear();
-  eleESEn_              .clear();
-  eleSCEta_             .clear();
-  eleSCPhi_             .clear();
-  eleSCRawEn_           .clear();
-  eleSCEtaWidth_        .clear();
-  eleSCPhiWidth_        .clear();
-  eleHoverE_            .clear();
-  eleHoverEBc_          .clear();
-  eleEoverP_            .clear();
-  eleEoverPInv_         .clear();
-  eleBrem_              .clear();
-  eledEtaAtVtx_         .clear();
-  eledPhiAtVtx_         .clear();
-  eleSigmaIEtaIEta_     .clear();
-  eleSigmaIEtaIEta_2012_.clear();
-  eleSigmaIPhiIPhi_     .clear();
-  // eleConvVeto_          .clear();  // TODO: not available in reco::
-  eleMissHits_          .clear();
-  eleESEffSigmaRR_      .clear();
-  elePFChIso_           .clear();
-  elePFPhoIso_          .clear();
-  elePFNeuIso_          .clear();
-  elePFPUIso_           .clear();
-  elePFChIso03_         .clear();
-  elePFPhoIso03_        .clear();
-  elePFNeuIso03_        .clear();
-  elePFChIso04_         .clear();
-  elePFPhoIso04_        .clear();
-  elePFNeuIso04_        .clear();
-  elePFRelIsoWithEA_    .clear();
-  elePFRelIsoWithDBeta_ .clear();
-  eleR9_                .clear();
-  eleE3x3_              .clear();
-  eleE5x5_              .clear();
-  eleR9Full5x5_         .clear();
-  eleE3x3Full5x5_       .clear();
-  eleE5x5Full5x5_       .clear();
-  NClusters_            .clear();
-  NEcalClusters_        .clear();
-  eleSeedEn_            .clear();
-  eleSeedEta_           .clear();
-  eleSeedPhi_           .clear();
-  eleSeedCryEta_        .clear();
-  eleSeedCryPhi_        .clear();
-  eleSeedCryIeta_       .clear();
-  eleSeedCryIphi_       .clear();
-  eleBC1E_              .clear();
-  eleBC1Eta_            .clear();
-  eleBC2E_              .clear();
-  eleBC2Eta_            .clear();
-  eleIDVeto_            .clear();
-  eleIDLoose_           .clear();
-  eleIDMedium_          .clear();
-  eleIDTight_           .clear();
-  elepassConversionVeto_.clear();
-  eleEffAreaTimesRho_   .clear();
+  if (doElectrons_) {
+    nEle_ = 0;
+    eleCharge_            .clear();
+    eleChargeConsistent_  .clear();
+    eleSCPixCharge_       .clear();
+    eleCtfCharge_         .clear();
+    eleEn_                .clear();
+    eleD0_                .clear();
+    eleDz_                .clear();
+    eleD0Err_             .clear();
+    eleDzErr_             .clear();
+    eleTrkPt_             .clear();
+    eleTrkEta_            .clear();
+    eleTrkPhi_            .clear();
+    eleTrkCharge_         .clear();
+    eleTrkChi2_           .clear();
+    eleTrkNdof_           .clear();
+    eleTrkNormalizedChi2_ .clear();
+    eleTrkValidHits_      .clear();
+    eleTrkLayers_         .clear();
+    elePt_                .clear();
+    eleEta_               .clear();
+    elePhi_               .clear();
+    eleSCEn_              .clear();
+    eleESEn_              .clear();
+    eleSCEta_             .clear();
+    eleSCPhi_             .clear();
+    eleSCRawEn_           .clear();
+    eleSCEtaWidth_        .clear();
+    eleSCPhiWidth_        .clear();
+    eleHoverE_            .clear();
+    eleHoverEBc_          .clear();
+    eleEoverP_            .clear();
+    eleEoverPInv_         .clear();
+    eleBrem_              .clear();
+    eledEtaAtVtx_         .clear();
+    eledPhiAtVtx_         .clear();
+    eleSigmaIEtaIEta_     .clear();
+    eleSigmaIEtaIEta_2012_.clear();
+    eleSigmaIPhiIPhi_     .clear();
+    // eleConvVeto_          .clear();  // TODO: not available in reco::
+    eleMissHits_          .clear();
+    eleESEffSigmaRR_      .clear();
+    elePFChIso_           .clear();
+    elePFPhoIso_          .clear();
+    elePFNeuIso_          .clear();
+    elePFPUIso_           .clear();
+    elePFChIso03_         .clear();
+    elePFPhoIso03_        .clear();
+    elePFNeuIso03_        .clear();
+    elePFChIso04_         .clear();
+    elePFPhoIso04_        .clear();
+    elePFNeuIso04_        .clear();
+    elePFRelIsoWithEA_    .clear();
+    elePFRelIsoWithDBeta_ .clear();
+    eleR9_                .clear();
+    eleE3x3_              .clear();
+    eleE5x5_              .clear();
+    eleR9Full5x5_         .clear();
+    eleE3x3Full5x5_       .clear();
+    eleE5x5Full5x5_       .clear();
+    NClusters_            .clear();
+    NEcalClusters_        .clear();
+    eleSeedEn_            .clear();
+    eleSeedEta_           .clear();
+    eleSeedPhi_           .clear();
+    eleSeedCryEta_        .clear();
+    eleSeedCryPhi_        .clear();
+    eleSeedCryIeta_       .clear();
+    eleSeedCryIphi_       .clear();
+    eleBC1E_              .clear();
+    eleBC1Eta_            .clear();
+    eleBC2E_              .clear();
+    eleBC2Eta_            .clear();
+    eleIDVeto_            .clear();
+    eleIDLoose_           .clear();
+    eleIDMedium_          .clear();
+    eleIDTight_           .clear();
+    elepassConversionVeto_.clear();
+    eleEffAreaTimesRho_   .clear();
+  }
 
-  phoE_                 .clear();
-  phoEt_                .clear();
-  phoEta_               .clear();
-  phoPhi_               .clear();
+  if (doPhotons_) {
+    nPho_ = 0;
+    phoE_                 .clear();
+    phoEt_                .clear();
+    phoEta_               .clear();
+    phoPhi_               .clear();
 
-  phoEcorrStdEcal_      .clear();
-  phoEcorrPhoEcal_      .clear();
-  phoEcorrRegr1_        .clear();
-  phoEcorrRegr2_        .clear();
-  phoEcorrErrStdEcal_   .clear();
-  phoEcorrErrPhoEcal_   .clear();
-  phoEcorrErrRegr1_     .clear();
-  phoEcorrErrRegr2_     .clear();
+    phoEcorrStdEcal_      .clear();
+    phoEcorrPhoEcal_      .clear();
+    phoEcorrRegr1_        .clear();
+    phoEcorrRegr2_        .clear();
+    phoEcorrErrStdEcal_   .clear();
+    phoEcorrErrPhoEcal_   .clear();
+    phoEcorrErrRegr1_     .clear();
+    phoEcorrErrRegr2_     .clear();
 
-  phoSCE_               .clear();
-  phoSCRawE_            .clear();
-  phoSCEta_             .clear();
-  phoSCPhi_             .clear();
-  phoSCEtaWidth_        .clear();
-  phoSCPhiWidth_        .clear();
-  phoSCBrem_            .clear();
-  phoSCnHits_           .clear();
-  phoSCflags_           .clear();
-  phoSCinClean_         .clear();
-  phoSCinUnClean_       .clear();
-  phoSCnBC_             .clear();
-  phoESEn_              .clear();
+    phoSCE_               .clear();
+    phoSCRawE_            .clear();
+    phoSCEta_             .clear();
+    phoSCPhi_             .clear();
+    phoSCEtaWidth_        .clear();
+    phoSCPhiWidth_        .clear();
+    phoSCBrem_            .clear();
+    phoSCnHits_           .clear();
+    phoSCflags_           .clear();
+    phoSCinClean_         .clear();
+    phoSCinUnClean_       .clear();
+    phoSCnBC_             .clear();
+    phoESEn_              .clear();
 
-  phoPSCE_              .clear();
-  phoPSCRawE_           .clear();
-  phoPSCEta_            .clear();
-  phoPSCPhi_            .clear();
-  phoPSCEtaWidth_       .clear();
-  phoPSCPhiWidth_       .clear();
-  phoPSCBrem_           .clear();
-  phoPSCnHits_          .clear();
-  phoPSCflags_          .clear();
-  phoPSCinClean_        .clear();
-  phoPSCinUnClean_      .clear();
-  phoPSCnBC_            .clear();
-  phoPESEn_             .clear();
+    phoPSCE_              .clear();
+    phoPSCRawE_           .clear();
+    phoPSCEta_            .clear();
+    phoPSCPhi_            .clear();
+    phoPSCEtaWidth_       .clear();
+    phoPSCPhiWidth_       .clear();
+    phoPSCBrem_           .clear();
+    phoPSCnHits_          .clear();
+    phoPSCflags_          .clear();
+    phoPSCinClean_        .clear();
+    phoPSCinUnClean_      .clear();
+    phoPSCnBC_            .clear();
+    phoPESEn_             .clear();
 
-  phoIsPFPhoton_        .clear();
-  phoIsStandardPhoton_  .clear();
-  phoHasPixelSeed_      .clear();
-  phoHasConversionTracks_.clear();
-  // phoEleVeto_           .clear();  // TODO: not available in reco::
-  phoR9_                .clear();
-  phoHadTowerOverEm_    .clear();
-  phoHoverE_            .clear();
-  phoSigmaIEtaIEta_     .clear();
-  // phoSigmaIEtaIPhi_     .clear();  // TODO: not available in reco::
-  // phoSigmaIPhiIPhi_     .clear();  // TODO: not available in reco::
-  phoE1x5_              .clear();
-  phoE2x5_              .clear();
-  phoE3x3_              .clear();
-  phoE5x5_              .clear();
-  phoMaxEnergyXtal_     .clear();
-  phoSigmaEtaEta_       .clear();
-  phoR1x5_              .clear();
-  phoR2x5_              .clear();
-  phoR9_2012_           .clear();
-  phoSigmaIEtaIEta_2012_.clear();
-  phoE1x5_2012_         .clear();
-  phoE2x5_2012_         .clear();
-  phoE3x3_2012_         .clear();
-  phoE5x5_2012_         .clear();
-  phoMaxEnergyXtal_2012_.clear();
-  phoSigmaEtaEta_2012_  .clear();
-  phoR1x5_2012_         .clear();
-  phoR2x5_2012_         .clear();
+    phoIsPFPhoton_        .clear();
+    phoIsStandardPhoton_  .clear();
+    phoHasPixelSeed_      .clear();
+    phoHasConversionTracks_.clear();
+    // phoEleVeto_           .clear();  // TODO: not available in reco::
+    phoR9_                .clear();
+    phoHadTowerOverEm_    .clear();
+    phoHoverE_            .clear();
+    phoSigmaIEtaIEta_     .clear();
+    // phoSigmaIEtaIPhi_     .clear();  // TODO: not available in reco::
+    // phoSigmaIPhiIPhi_     .clear();  // TODO: not available in reco::
+    phoE1x5_              .clear();
+    phoE2x5_              .clear();
+    phoE3x3_              .clear();
+    phoE5x5_              .clear();
+    phoMaxEnergyXtal_     .clear();
+    phoSigmaEtaEta_       .clear();
+    phoR1x5_              .clear();
+    phoR2x5_              .clear();
+    phoR9_2012_           .clear();
+    phoSigmaIEtaIEta_2012_.clear();
+    phoE1x5_2012_         .clear();
+    phoE2x5_2012_         .clear();
+    phoE3x3_2012_         .clear();
+    phoE5x5_2012_         .clear();
+    phoMaxEnergyXtal_2012_.clear();
+    phoSigmaEtaEta_2012_  .clear();
+    phoR1x5_2012_         .clear();
+    phoR2x5_2012_         .clear();
 
-  phoBC1E_              .clear();
-  phoBC1Ecorr_          .clear();
-  phoBC1Eta_            .clear();
-  phoBC1Phi_            .clear();
-  phoBC1size_           .clear();
-  phoBC1flags_          .clear();
-  phoBC1inClean_        .clear();
-  phoBC1inUnClean_      .clear();
-  phoBC1rawID_          .clear();
+    phoBC1E_              .clear();
+    phoBC1Ecorr_          .clear();
+    phoBC1Eta_            .clear();
+    phoBC1Phi_            .clear();
+    phoBC1size_           .clear();
+    phoBC1flags_          .clear();
+    phoBC1inClean_        .clear();
+    phoBC1inUnClean_      .clear();
+    phoBC1rawID_          .clear();
 
-  /* phoBC2E_              .clear(); */
-  /* phoBC2Eta_            .clear(); */
-  /* phoBC2Phi_            .clear(); */
-  pho_ecalClusterIsoR2_.clear();
-  pho_ecalClusterIsoR3_.clear();
-  pho_ecalClusterIsoR4_.clear();
-  pho_ecalClusterIsoR5_.clear();
-  pho_hcalRechitIsoR1_.clear();
-  pho_hcalRechitIsoR2_.clear();
-  pho_hcalRechitIsoR3_.clear();
-  pho_hcalRechitIsoR4_.clear();
-  pho_hcalRechitIsoR5_.clear();
-  pho_trackIsoR1PtCut20_.clear();
-  pho_trackIsoR2PtCut20_.clear();
-  pho_trackIsoR3PtCut20_.clear();
-  pho_trackIsoR4PtCut20_.clear();
-  pho_trackIsoR5PtCut20_.clear();
-  pho_swissCrx_.clear();
-  pho_seedTime_.clear();
-  pho_genMatchedIndex_.clear();
+    /* phoBC2E_              .clear(); */
+    /* phoBC2Eta_            .clear(); */
+    /* phoBC2Phi_            .clear(); */
+    pho_ecalClusterIsoR2_.clear();
+    pho_ecalClusterIsoR3_.clear();
+    pho_ecalClusterIsoR4_.clear();
+    pho_ecalClusterIsoR5_.clear();
+    pho_hcalRechitIsoR1_.clear();
+    pho_hcalRechitIsoR2_.clear();
+    pho_hcalRechitIsoR3_.clear();
+    pho_hcalRechitIsoR4_.clear();
+    pho_hcalRechitIsoR5_.clear();
+    pho_trackIsoR1PtCut20_.clear();
+    pho_trackIsoR2PtCut20_.clear();
+    pho_trackIsoR3PtCut20_.clear();
+    pho_trackIsoR4PtCut20_.clear();
+    pho_trackIsoR5PtCut20_.clear();
+    pho_swissCrx_.clear();
+    pho_seedTime_.clear();
 
-  // rechit info
-  rhRawId_.clear();
-  rhieta_.clear();
-  rhiphi_.clear();
-  rhix_.clear();
-  rhiy_.clear();
-  rhE_.clear();
-  rhEt_.clear();
-  rhEta_.clear();
-  rhPhi_.clear();
-  rhChi2_.clear();
-  rhEerror_.clear();
-  rhFlags_.clear();
-  rhPhoIdx_.clear();
-  rhBCIdx_.clear();
+    pho_genMatchedIndex_.clear();
 
-  //photon pf isolation stuff
-  pfcIso1.clear();
-  pfcIso2.clear();
-  pfcIso3.clear();
-  pfcIso4.clear();
-  pfcIso5.clear();
-  pfpIso1.clear();
-  pfpIso2.clear();
-  pfpIso3.clear();
-  pfpIso4.clear();
-  pfpIso5.clear();
-  pfnIso1.clear();
-  pfnIso2.clear();
-  pfnIso3.clear();
-  pfnIso4.clear();
-  pfnIso5.clear();
+    // rechit info
+    if (doRecHitsEB_ || doRecHitsEE_) {
+      nRH_ = 0;
+      rhRawId_.clear();
+      rhieta_.clear();
+      rhiphi_.clear();
+      rhix_.clear();
+      rhiy_.clear();
+      rhE_.clear();
+      rhEt_.clear();
+      rhEta_.clear();
+      rhPhi_.clear();
+      rhChi2_.clear();
+      rhEerror_.clear();
+      rhFlags_.clear();
+      rhPhoIdx_.clear();
+      rhBCIdx_.clear();
+    }
 
-  muPt_                 .clear();
-  muEta_                .clear();
-  muPhi_                .clear();
-  muCharge_             .clear();
-  muType_               .clear();
-  muIsGood_             .clear();
-  muD0_                 .clear();
-  muDz_                 .clear();
-  muChi2NDF_            .clear();
-  muInnerD0_            .clear();
-  muInnerDz_            .clear();
-  muTrkLayers_          .clear();
-  muPixelLayers_        .clear();
-  muPixelHits_          .clear();
-  muMuonHits_           .clear();
-  muTrkQuality_         .clear();
-  muStations_           .clear();
-  muIsoTrk_             .clear();
-  muPFChIso_            .clear();
-  muPFPhoIso_           .clear();
-  muPFNeuIso_           .clear();
-  muPFPUIso_            .clear();
+    //photon pf isolation stuff
+    if (doPfIso_) {
+      pfcIso1.clear();
+      pfcIso2.clear();
+      pfcIso3.clear();
+      pfcIso4.clear();
+      pfcIso5.clear();
+      pfpIso1.clear();
+      pfpIso2.clear();
+      pfpIso3.clear();
+      pfpIso4.clear();
+      pfpIso5.clear();
+      pfnIso1.clear();
+      pfnIso2.clear();
+      pfnIso3.clear();
+      pfnIso4.clear();
+      pfnIso5.clear();
+    }
+  }
+
+  if (doMuons_) {
+    nMu_ = 0;
+    muPt_                 .clear();
+    muEta_                .clear();
+    muPhi_                .clear();
+    muCharge_             .clear();
+    muType_               .clear();
+    muIsGood_             .clear();
+    muD0_                 .clear();
+    muDz_                 .clear();
+    muChi2NDF_            .clear();
+    muInnerD0_            .clear();
+    muInnerDz_            .clear();
+    muTrkLayers_          .clear();
+    muPixelLayers_        .clear();
+    muPixelHits_          .clear();
+    muMuonHits_           .clear();
+    muTrkQuality_         .clear();
+    muStations_           .clear();
+    muIsoTrk_             .clear();
+    muPFChIso_            .clear();
+    muPFPhoIso_           .clear();
+    muPFNeuIso_           .clear();
+    muPFPUIso_            .clear();
+  }
 
   run_    = e.id().run();
   event_  = e.id().event();
@@ -658,9 +686,9 @@ void ggHiNtuplizer::analyze(const edm::Event& e, const edm::EventSetup& es)
       geo = pGeo.product();
   }
 
-  fillElectrons(e, es, pv);
-  fillPhotons(e, es, pv);
-  fillMuons(e, es, pv);
+  if (doElectrons_) fillElectrons(e, es, pv);
+  if (doPhotons_) fillPhotons(e, es, pv);
+  if (doMuons_) fillMuons(e, es, pv);
 
   tree_->Fill();
 }

@@ -121,6 +121,8 @@ process.load('HeavyIonsAnalysis.TrackAnalysis.TrkAnalyzers_cff')
 # Photons
 #####################
 process.load('HeavyIonsAnalysis.PhotonAnalysis.ggHiNtuplizer_cfi')
+process.ggHiNtuplizer.doGenParticles = False
+process.ggHiNtuplizerGED.doGenParticles = False
 
 ###############################################################################
 

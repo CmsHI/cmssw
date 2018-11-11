@@ -50,6 +50,9 @@ class ggHiNtuplizer : public edm::EDAnalyzer {
 
    // switches
    bool doGenParticles_;
+   bool doElectrons_;
+   bool doPhotons_;
+   bool doMuons_;
    bool runOnParticleGun_;
    bool useValMapIso_;
    bool doPfIso_;
