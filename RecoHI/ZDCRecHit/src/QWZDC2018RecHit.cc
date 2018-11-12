@@ -130,6 +130,8 @@ void QWZDC2018RecHit::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
 
 	int idx = 0;
 	for ( auto it = psrcDid->begin(); it != psrcDid->end(); it++ ) {
+		if ( cname2str_.find(uint32_t(*it)) == cname2str_.end() ) continue;
+
 		charge[ cname2str_[uint32_t(*it)] ] = new double[NS];
 		energy[ uint32_t(*it) ] = new double[NS];
 		for ( int ts = 0; ts < NS; ts++ ) {
@@ -140,6 +142,7 @@ void QWZDC2018RecHit::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
 	}
 
 	for ( auto it = psrcDid->begin(); it != psrcDid->end(); it++ ) {
+		if ( energy.find(uint32_t(*it)) == energy.end() ) continue;
 		double E = energy[uint32_t(*it)][4] + energy[uint32_t(*it)][5] + energy[uint32_t(*it)][6];
 		HcalZDCDetId did = HcalZDCDetId( uint32_t(*it) );
 		if ( did.zside() > 0 ) {
