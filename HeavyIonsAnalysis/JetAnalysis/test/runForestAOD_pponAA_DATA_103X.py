@@ -152,9 +152,18 @@ process.CSVscikitTags.weightFile = cms.FileInPath(
 ###############################################################################
 
 #########################
+# ZDC RecHit Producer
+#########################
+process.load('RecoHI.ZDCRecHit.QWZDC2018Producer_cfi')
+process.load('RecoHI.ZDCRecHit.QWZDC2018RecHit_cfi')
+
+###############################################################################
+
+#########################
 # RecHits & pfTowers (HF, Castor & ZDC)
 #########################
 process.load('HeavyIonsAnalysis.JetAnalysis.rechitanalyzer_cfi')
+process.rechitanalyzerpp.zdcRecHitSrc = cms.untracked.InputTag("QWzdcreco")
 
 ###############################################################################
 
@@ -175,6 +184,8 @@ process.ana_step = cms.Path(
     process.pfcandAnalyzer +
     process.pfcandAnalyzerCS +
     process.trackSequencesPP +
+    process.zdcdigi +
+    process.QWzdcreco +
     process.rechitanalyzerpp
     )
 
