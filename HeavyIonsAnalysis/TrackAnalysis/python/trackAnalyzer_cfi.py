@@ -6,7 +6,7 @@ ppTrack = cms.EDAnalyzer(
     simTrackPtMin = cms.untracked.double(0.1),
     vertexSrc = cms.vstring('offlinePrimaryVertices'),
     trackSrc = cms.InputTag('generalTracks'),
-    mvaSrc = cms.InputTag("generalTracks","MVAVals"),
+    mvaSrc = cms.InputTag("generalTracks","MVAValues"),
     particleSrc = cms.InputTag('genParticles'),
     pfCandSrc = cms.InputTag('particleFlow'),
     beamSpotSrc = cms.untracked.InputTag('offlineBeamSpot'),
@@ -20,6 +20,6 @@ ppTrack = cms.EDAnalyzer(
     tpEffSrc = cms.untracked.InputTag('mix','MergedTrackTruth'),
     # associateChi2 = cms.bool(False),
     associatorMap = cms.InputTag('tpRecoAssocHiGeneralTracks'),
-    doMVA = cms.untracked.bool(False),
+    doMVA = cms.untracked.bool(True),
     fillSimTrack = cms.untracked.bool(False)
 )
