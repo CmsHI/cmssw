@@ -16,7 +16,7 @@ class TreePFCandEventData
 {
   public:
     void SetTree(TTree * t) { tree_ = t; }
-    void SetBranches(bool doJets, bool doMC);
+    void SetBranches(bool doJets, bool doMC, bool doCaloEnergy);
     void Clear();
 
     Int_t nPFpart_;
@@ -77,5 +77,6 @@ class HiPFCandAnalyzer : public edm::EDAnalyzer {
 
     bool doJets_;
     bool doMC_;
+    bool doCaloEnergy_;
     bool skipCharged_;
 };

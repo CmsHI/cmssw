@@ -11,8 +11,11 @@ pfcandAnalyzer = cms.EDAnalyzer(
     jetPtMin         = cms.double(20.0),
     doMC             = cms.bool(False),
     doJets           = cms.bool(False),
+    doCaloEnergy     = cms.bool(True),
     skipCharged      = cms.bool(False),
     )
 
 pfcandAnalyzerCS = pfcandAnalyzer.clone(
-    pfCandidateLabel = cms.InputTag("akCs4PFJets","pfParticlesCs"))
+    pfCandidateLabel = cms.InputTag("akCs4PFJets","pfParticlesCs"),
+    doCaloEnergy     = cms.bool(False),
+    )
