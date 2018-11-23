@@ -84,23 +84,25 @@ mkdir logs
 
 echo -e "\n  running configs...\n"
 
+children=()
 for c in ${configs[@]}; do
    cmsRun test_$c &> logs/test_${c%.*}.log &
+   children+=("$!")
 done
 
-wait
-sleep 1
+for c in "${!children[@]}"; do
+   config=${configs[$c]}
 
-# check logs for errors
-for c in ${configs[@]}; do
-   error=$(grep -i "Fatal\|Segmentation" logs/test_${c%.*}.log)
-   if [ -z "$error" ]; then
-      echo -e "\E[32mOK: $c\E[0m"
+   wait ${children[$c]}
+   retc=$?
+
+   if [ $retc -eq 0 ]; then
+      echo -e "\E[32mPASS: $config\E[0m"
    else
       fail=1
       mkdir -p fail
-      echo -e "\E[31mFAIL: $c\E[0m"
-      mv test_$c logs/test_${c%.*}.log fail/
+      echo -e "\E[31mFAIL: $config\E[0m"
+      mv test_$config logs/test_${config%.*}.log fail/
    fi
 done
 
