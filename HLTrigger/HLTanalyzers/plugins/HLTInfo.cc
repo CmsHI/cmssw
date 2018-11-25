@@ -11,10 +11,11 @@
 
 #include "HLTInfo.h"
 #include "FWCore/Common/interface/TriggerNames.h"
+#include "FWCore/MessageLogger/interface/MessageLogger.h"
 
 // L1 related
 #include "HLTrigger/HLTcore/interface/HLTConfigProvider.h"
-#include "L1Trigger/GlobalTriggerAnalyzer/interface/L1GtUtils.h"
+#include "L1Trigger/L1TGlobal/interface/L1TGlobalUtil.h"
 
 //static const bool useL1EventSetup(true);
 //static const bool useL1GtTriggerMenuLite(false);
@@ -163,10 +164,9 @@ void HLTInfo::analyze(const edm::Handle<edm::TriggerResults>                 & h
   //==============L1 information=======================================
 
   // L1 Triggers from Menu
-  L1GtUtils const& l1GtUtils = hltPrescaleProvider_->l1GtUtils();
+  auto& l1GtUtils = const_cast<l1t::L1TGlobalUtil&>(hltPrescaleProvider_->l1tGlobalUtil());
 
-  //  m_l1GtUtils.retrieveL1EventSetup(eventSetup);
-  //m_l1GtUtils.getL1GtRunCache(iEvent,eventSetup,useL1EventSetup,useL1GtTriggerMenuLite);
+  l1GtUtils.retrieveL1(iEvent,eventSetup);
   /*
   unsigned long long id = eventSetup.get<L1TUtmTriggerMenuRcd>().cacheIdentifier();
   
@@ -186,21 +186,8 @@ void HLTInfo::analyze(const edm::Handle<edm::TriggerResults>                 & h
   */
     //} // end get menu
 
-  int iErrorCode = -1;
-  L1GtUtils::TriggerCategory trigCategory = L1GtUtils::AlgorithmTrigger;
-  const int pfSetIndexAlgorithmTrigger = l1GtUtils.prescaleFactorSetIndex(
-									  iEvent, trigCategory, iErrorCode);
-  if (iErrorCode == 0) {
-    if (_Debug) std::cout << "%Prescale set index: " << pfSetIndexAlgorithmTrigger  << std::endl;
-  }else{
-    std::cout << "%Could not extract Prescale set index from event record. Error code: " << iErrorCode << std::endl;
-  }
-
   // 1st event : Book as many branches as trigger paths provided in the input...
-  if (l1results.isValid()) {  
-    
-    int ntrigs = l1results->size();
-    if (ntrigs==0){std::cout << "%L1Results -- No trigger name given in TriggerResults of the input " << std::endl;}
+  if (l1results.isValid() && l1results->size() != 0) {
     /*
     edm::TriggerNames const& triggerNames = iEvent.triggerNames(&results);
     // 1st event : Book as many branches as trigger paths provided in the input...
@@ -211,7 +198,7 @@ void HLTInfo::analyze(const edm::Handle<edm::TriggerResults>                 & h
       for (auto const & keyval: menu->getAlgorithmMap()) { 
 	std::string const & trigName  = keyval.second.getName(); 
 	unsigned int index = keyval.second.getIndex(); 
-	if (_Debug) std::cerr << "bit: " << index << "\tname: " << trigName << std::endl;                                                              
+	if (_Debug) std::cerr << "bit: " << index << "\tname: " << trigName << std::endl;
 	  
 	int itrig = index;
  	algoBitToName[itrig] = TString( trigName );
@@ -237,10 +224,8 @@ void HLTInfo::analyze(const edm::Handle<edm::TriggerResults>                 & h
       if (myflag ) { l1flag[itrig] = 1; }
       else {l1flag[itrig] =0 ; }
 
-      std::string l1triggername = static_cast<const char *>(algoBitToName[itrig]);
-      l1Prescl[itrig] = l1GtUtils.prescaleFactor(iEvent, 
-						 l1triggername, 
-						 iErrorCode);      
+      int index = itrig;
+      l1GtUtils.getPrescaleByBit(index, l1Prescl[itrig]);
 
       if (_Debug) std::cout << "L1 TD: "<<itrig<<" "<<algoBitToName[itrig]<<" " 
 			    << l1flag[itrig] <<" " 
@@ -251,7 +236,6 @@ void HLTInfo::analyze(const edm::Handle<edm::TriggerResults>                 & h
     if (_Debug) std::cout << "%L1Info -- Done with routine" << std::endl;                                                                         
 
   } // l1results.isValid
-  else { if (_Debug) std::cout << "%L1Results -- No Trigger Result" << std::endl;}                                                                             
+  else { edm::LogWarning("HLTInfo") << "%L1Results -- No L1 Results" << std::endl; }
 
 }
-      
