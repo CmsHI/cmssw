@@ -153,18 +153,16 @@ process.CSVscikitTags.weightFile = cms.FileInPath(
 ###############################################################################
 
 #########################
-# ZDC RecHit Producer
+# RecHits & pfTowers (HF, Castor & ZDC)
 #########################
+# ZDC RecHit Producer
 process.load('RecoHI.ZDCRecHit.QWZDC2018Producer_cfi')
 process.load('RecoHI.ZDCRecHit.QWZDC2018RecHit_cfi')
 
-###############################################################################
-
-#########################
-# RecHits & pfTowers (HF, Castor & ZDC)
-#########################
 process.load('HeavyIonsAnalysis.JetAnalysis.rechitanalyzer_cfi')
-process.rechitanalyzerpp.zdcRecHitSrc = cms.untracked.InputTag("QWzdcreco")
+process.rechitanalyzerpp.doZDCRecHit = True
+process.rechitanalyzerpp.zdcRecHitSrc = cms.InputTag("QWzdcreco")
+process.pfTowerspp.doHF = False
 
 ###############################################################################
 #Recover peripheral primary vertices
