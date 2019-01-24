@@ -98,10 +98,12 @@ process.jetSequences = cms.Sequence(
 # Event Analysis
 ############################
 process.load('HeavyIonsAnalysis.EventAnalysis.hievtanalyzer_data_cfi')
-process.load('HeavyIonsAnalysis.EventAnalysis.hltobject_cfi')
 process.hiEvtAnalyzer.Vertex = cms.InputTag("offlinePrimaryVertices")
 process.hiEvtAnalyzer.doCentrality = cms.bool(False)
 process.hiEvtAnalyzer.doEvtPlane = cms.bool(False)
+
+process.load('HeavyIonsAnalysis.EventAnalysis.hltobject_cfi')
+process.load('HeavyIonsAnalysis.EventAnalysis.l1object_cfi')
 
 process.load('HeavyIonsAnalysis.EventAnalysis.hltanalysis_cff')
 from HeavyIonsAnalysis.EventAnalysis.dummybranches_cff import addHLTdummybranchesForPP
@@ -173,6 +175,7 @@ for idmod in my_id_modules:
 process.ana_step = cms.Path(
     process.hltanalysisReco *
     process.hltobject *
+    # process.l1object +
     process.hiEvtAnalyzer *
     process.jetSequences +
     # Should be added in the path for VID module

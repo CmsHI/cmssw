@@ -83,6 +83,9 @@ process.hiEvtAnalyzer.doEvtPlane = cms.bool(False)
 process.hiEvtAnalyzer.doMC = cms.bool(True) # general MC info
 process.hiEvtAnalyzer.doHiMC = cms.bool(False) # HI specific MC info
 
+process.load('HeavyIonsAnalysis.EventAnalysis.hltobject_cfi')
+process.load('HeavyIonsAnalysis.EventAnalysis.l1object_cfi')
+
 process.load('HeavyIonsAnalysis.JetAnalysis.HiGenAnalyzer_cfi')
 process.HiGenParticleAna.genParticleSrc = cms.untracked.InputTag("genParticles")
 process.HiGenParticleAna.doHI = False
@@ -156,6 +159,8 @@ for idmod in my_id_modules:
 process.ana_step = cms.Path(
     process.hltanalysis *
     process.hiEvtAnalyzer *
+    process.hltobject +
+    # process.l1object +
     process.HiGenParticleAna*
     process.jetSequences +
     # Should be added in the path for VID module
