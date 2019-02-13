@@ -171,19 +171,10 @@ HiInclusiveJetAnalyzer::HiInclusiveJetAnalyzer(const edm::ParameterSet& iConfig)
     JetProbabilityBJetTags_ = consumes<JetTagCollection> (iConfig.getUntrackedParameter<string>("JetProbabilityBJetTags",(bTagJetName_+"JetProbabilityBJetTags")));
     JetBProbabilityBJetTags_ = consumes<JetTagCollection> (iConfig.getUntrackedParameter<string>("JetBProbabilityBJetTags",(bTagJetName_+"JetBProbabilityBJetTags")));
     SecondaryVertexTagInfos_ = consumes<vector<SecondaryVertexTagInfo> > (iConfig.getUntrackedParameter<string>("SecondaryVertexTagInfos",(bTagJetName_+"SecondaryVertexTagInfos")));
-    SecondaryVertexNegativeTagInfos_ = consumes<vector<SecondaryVertexTagInfo> > (iConfig.getUntrackedParameter<string>("SecondaryVertexNegativeTagInfos",(bTagJetName_+"SecondaryVertexNegativeTagInfos")));
     SimpleSecondaryVertexHighEffBJetTags_ = consumes<JetTagCollection> (iConfig.getUntrackedParameter<string>("SimpleSecondaryVertexHighEffBJetTags",(bTagJetName_+"SimpleSecondaryVertexHighEffBJetTags")));
-    NegativeSimpleSecondaryVertexHighEffBJetTags_ = consumes<JetTagCollection> (iConfig.getUntrackedParameter<string>("NegativeSimpleSecondaryVertexHighEffBJetTags",(bTagJetName_+"NegativeSimpleSecondaryVertexHighEffBJetTags")));
     SimpleSecondaryVertexHighPurBJetTags_ = consumes<JetTagCollection> (iConfig.getUntrackedParameter<string>("SimpleSecondaryVertexHighPurBJetTags",(bTagJetName_+"SimpleSecondaryVertexHighPurBJetTags")));
-    NegativeSimpleSecondaryVertexHighPurBJetTags_ = consumes<JetTagCollection> (iConfig.getUntrackedParameter<string>("NegativeSimpleSecondaryVertexHighPurBJetTags",(bTagJetName_+"NegativeSimpleSecondaryVertexHighPurBJetTags")));
     CombinedSecondaryVertexBJetTags_ = consumes<JetTagCollection> (iConfig.getUntrackedParameter<string>("CombinedSecondaryVertexBJetTags",(bTagJetName_+"CombinedSecondaryVertexBJetTags")));
-    NegativeCombinedSecondaryVertexBJetTags_ = consumes<JetTagCollection> (iConfig.getUntrackedParameter<string>("NegativeCombinedSecondaryVertexBJetTags",(bTagJetName_+"NegativeCombinedSecondaryVertexBJetTags")));
-    PositiveCombinedSecondaryVertexBJetTags_ = consumes<JetTagCollection> (iConfig.getUntrackedParameter<string>("PositiveCombinedSecondaryVertexBJetTags",(bTagJetName_+"PositiveCombinedSecondaryVertexBJetTags")));
     CombinedSecondaryVertexV2BJetTags_ = consumes<JetTagCollection> (iConfig.getUntrackedParameter<string>("CombinedSecondaryVertexV2BJetTags",(bTagJetName_+"CombinedSecondaryVertexV2BJetTags")));
-    NegativeCombinedSecondaryVertexV2BJetTags_ = consumes<JetTagCollection> (iConfig.getUntrackedParameter<string>("NegativeCombinedSecondaryVertexV2BJetTags",(bTagJetName_+"NegativeCombinedSecondaryVertexV2BJetTags")));
-    PositiveCombinedSecondaryVertexV2BJetTags_ = consumes<JetTagCollection> (iConfig.getUntrackedParameter<string>("PositiveCombinedSecondaryVertexV2BJetTags",(bTagJetName_+"PositiveCombinedSecondaryVertexV2BJetTags")));
-    NegativeSoftPFMuonByPtBJetTags_ = consumes<JetTagCollection> (iConfig.getUntrackedParameter<string>("NegativeSoftPFMuonByPtBJetTags",(bTagJetName_+"NegativeSoftPFMuonByPtBJetTags")));
-    PositiveSoftPFMuonByPtBJetTags_ = consumes<JetTagCollection> (iConfig.getUntrackedParameter<string>("PositiveSoftPFMuonByPtBJetTags",(bTagJetName_+"PositiveSoftPFMuonByPtBJetTags")));
   }
 
   doSubEvent_ = 0;
@@ -973,17 +964,10 @@ HiInclusiveJetAnalyzer::analyze(const Event& iEvent,
   // Secondary vertex taggers
   //------------------------------------------------------
   Handle<vector<SecondaryVertexTagInfo> > tagInfoSVx;
-  Handle<vector<SecondaryVertexTagInfo> > tagInfoNegSVx;
   Handle<JetTagCollection> jetTags_SvtxHighEff;
-  Handle<JetTagCollection> jetTags_negSvtxHighEff;
   Handle<JetTagCollection> jetTags_SvtxHighPur;
-  Handle<JetTagCollection> jetTags_negSvtxHighPur;
   Handle<JetTagCollection> jetTags_CombinedSvtx;
-  Handle<JetTagCollection> jetTags_negCombinedSvtx;
-  Handle<JetTagCollection> jetTags_posCombinedSvtx;
   Handle<JetTagCollection> jetTags_CombinedSvtxV2;
-  Handle<JetTagCollection> jetTags_negCombinedSvtxV2;
-  Handle<JetTagCollection> jetTags_posCombinedSvtxV2;
 
   //------------------------------------------------------
   // Soft muon tagger
@@ -991,7 +975,6 @@ HiInclusiveJetAnalyzer::analyze(const Event& iEvent,
 
   //Handle<SoftLeptonTagInfoCollection> tagInos_softmuon;
   //Handle<JetTagCollection> jetTags_softMu;
-  //Handle<JetTagCollection> jetTags_softMuneg;
 
   if(doLifeTimeTagging_){
     iEvent.getByToken(ImpactParameterTagInfos_, tagInfo);
@@ -1000,19 +983,10 @@ HiInclusiveJetAnalyzer::analyze(const Event& iEvent,
     iEvent.getByToken(JetProbabilityBJetTags_, jetTags_JP);
     iEvent.getByToken(JetBProbabilityBJetTags_, jetTags_JB);
     iEvent.getByToken(SecondaryVertexTagInfos_, tagInfoSVx);
-    iEvent.getByToken(SecondaryVertexNegativeTagInfos_, tagInfoNegSVx);
     iEvent.getByToken(SimpleSecondaryVertexHighEffBJetTags_, jetTags_SvtxHighEff);
-    iEvent.getByToken(NegativeSimpleSecondaryVertexHighEffBJetTags_, jetTags_negSvtxHighEff);
     iEvent.getByToken(SimpleSecondaryVertexHighPurBJetTags_, jetTags_SvtxHighPur);
-    iEvent.getByToken(NegativeSimpleSecondaryVertexHighEffBJetTags_, jetTags_negSvtxHighPur);
     iEvent.getByToken(CombinedSecondaryVertexBJetTags_, jetTags_CombinedSvtx);
-    iEvent.getByToken(NegativeCombinedSecondaryVertexBJetTags_, jetTags_negCombinedSvtx);
-    iEvent.getByToken(PositiveCombinedSecondaryVertexBJetTags_, jetTags_posCombinedSvtx);
     iEvent.getByToken(CombinedSecondaryVertexV2BJetTags_, jetTags_CombinedSvtxV2);
-    iEvent.getByToken(NegativeCombinedSecondaryVertexV2BJetTags_, jetTags_negCombinedSvtxV2);
-    iEvent.getByToken(PositiveCombinedSecondaryVertexV2BJetTags_, jetTags_posCombinedSvtxV2);
-    //iEvent.getByToken(NegativeSoftPFMuonByPtBJetTags_, jetTags_softMuneg);
-    //iEvent.getByToken(PositiveSoftPFMuonByPtBJetTags_, jetTags_softMu);
   }
 
 
@@ -1134,26 +1108,15 @@ HiInclusiveJetAnalyzer::analyze(const Event& iEvent,
 	  if(svtx.ndof()>0)jets_.svtxnormchi2[jets_.nref]  = svtx.chi2()/svtx.ndof();
 	}
       }
-      ith_tagged    = this->TaggedJet(jet,jetTags_negSvtxHighEff);
-      if(ith_tagged >= 0) jets_.ndiscr_ssvHighEff[jets_.nref]   = (*jetTags_negSvtxHighEff)[ith_tagged].second;
+
       ith_tagged    = this->TaggedJet(jet,jetTags_SvtxHighPur);
       if(ith_tagged >= 0) jets_.discr_ssvHighPur[jets_.nref]  = (*jetTags_SvtxHighPur)[ith_tagged].second;
-      ith_tagged    = this->TaggedJet(jet,jetTags_negSvtxHighPur);
-      if(ith_tagged >= 0) jets_.ndiscr_ssvHighPur[jets_.nref] = (*jetTags_negSvtxHighPur)[ith_tagged].second;
 
       ith_tagged          = this->TaggedJet(jet,jetTags_CombinedSvtx);
       if(ith_tagged >= 0) jets_.discr_csvV1[jets_.nref]  = (*jetTags_CombinedSvtx)[ith_tagged].second;
-      ith_tagged          = this->TaggedJet(jet,jetTags_negCombinedSvtx);
-      if(ith_tagged >= 0) jets_.ndiscr_csvV1[jets_.nref] = (*jetTags_negCombinedSvtx)[ith_tagged].second;
-      ith_tagged  = this->TaggedJet(jet,jetTags_posCombinedSvtx);
-      if(ith_tagged >= 0) jets_.pdiscr_csvV1[jets_.nref] = (*jetTags_posCombinedSvtx)[ith_tagged].second;
 
       ith_tagged          = this->TaggedJet(jet,jetTags_CombinedSvtxV2);
       if(ith_tagged >= 0) jets_.discr_csvV2[jets_.nref]  = (*jetTags_CombinedSvtxV2)[ith_tagged].second;
-      ith_tagged          = this->TaggedJet(jet,jetTags_negCombinedSvtxV2);
-      if(ith_tagged >= 0) jets_.ndiscr_csvV2[jets_.nref] = (*jetTags_negCombinedSvtxV2)[ith_tagged].second;
-      ith_tagged  = this->TaggedJet(jet,jetTags_posCombinedSvtxV2);
-      if(ith_tagged >= 0) jets_.pdiscr_csvV2[jets_.nref] = (*jetTags_posCombinedSvtxV2)[ith_tagged].second;
 
       if(ith_tagged >= 0){
 	ith_tagged = this->TaggedJet(jet,jetTags_JP);
@@ -1226,19 +1189,6 @@ HiInclusiveJetAnalyzer::analyze(const Event& iEvent,
       ith_tagged    = this->TaggedJet(jet,jetTags_TCHighPur);
       if(ith_tagged >= 0) jets_.discr_tcHighPur[jets_.nref]   = (*jetTags_TCHighPur)[ith_tagged].second;
 
-      //ith_tagged = this->TaggedJet(jet,jetTags_softMu);
-      //if(ith_tagged >= 0){
-      //  if ( (*jetTags_softMu)[ith_tagged].second     > -100000 )
-      //    jets_.discr_muByPt[jets_.nref]  = (*jetTags_softMu)[ith_tagged].second;
-      //}
-      //ith_tagged = this->TaggedJet(jet,jetTags_softMuneg);
-      //if(ith_tagged >= 0){
-      //  float SoftMN = 0;
-      //  if ( (*jetTags_softMuneg)[ith_tagged].second  > -100000 )
-      //    SoftMN = ((*jetTags_softMuneg)[ith_tagged].second);
-      //  if ( SoftMN > 0 ) SoftMN = -SoftMN;
-      //  jets_.ndiscr_muByPt[jets_.nref] = SoftMN;
-      //}
 
       const PFCandidateCollection *pfCandidateColl = &(*pfCandidates);
       int pfMuonIndex = getPFJetMuon(jet, pfCandidateColl);
