@@ -123,6 +123,7 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) :
     tree_->Branch("eleTrkEta",             &eleTrkEta_);
     tree_->Branch("eleTrkPhi",             &eleTrkPhi_);
     tree_->Branch("eleTrkCharge",          &eleTrkCharge_);
+    tree_->Branch("eleTrkPtErr",           &eleTrkPtErr_);
     tree_->Branch("eleTrkChi2",            &eleTrkChi2_);
     tree_->Branch("eleTrkNdof",            &eleTrkNdof_);
     tree_->Branch("eleTrkNormalizedChi2",  &eleTrkNormalizedChi2_);
@@ -143,6 +144,11 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) :
     tree_->Branch("eleHoverEBc",           &eleHoverEBc_);
     tree_->Branch("eleEoverP",             &eleEoverP_);
     tree_->Branch("eleEoverPInv",          &eleEoverPInv_);
+    tree_->Branch("eleEcalE",              &eleEcalE_);
+    tree_->Branch("elePAtVtx",             &elePAtVtx_);
+    tree_->Branch("elePAtSC",              &elePAtSC_);
+    tree_->Branch("elePAtCluster",         &elePAtCluster_);
+    tree_->Branch("elePAtSeed",            &elePAtSeed_);
     tree_->Branch("eleBrem",               &eleBrem_);
     tree_->Branch("eledEtaAtVtx",          &eledEtaAtVtx_);
     tree_->Branch("eledPhiAtVtx",          &eledPhiAtVtx_);
@@ -420,6 +426,7 @@ void ggHiNtuplizer::analyze(const edm::Event& e, const edm::EventSetup& es)
     eleTrkEta_            .clear();
     eleTrkPhi_            .clear();
     eleTrkCharge_         .clear();
+    eleTrkPtErr_          .clear();
     eleTrkChi2_           .clear();
     eleTrkNdof_           .clear();
     eleTrkNormalizedChi2_ .clear();
@@ -439,6 +446,11 @@ void ggHiNtuplizer::analyze(const edm::Event& e, const edm::EventSetup& es)
     eleHoverEBc_          .clear();
     eleEoverP_            .clear();
     eleEoverPInv_         .clear();
+    eleEcalE_             .clear();
+    elePAtVtx_            .clear();
+    elePAtSC_             .clear();
+    elePAtCluster_        .clear();
+    elePAtSeed_           .clear();
     eleBrem_              .clear();
     eledEtaAtVtx_         .clear();
     eledPhiAtVtx_         .clear();
@@ -917,6 +929,7 @@ void ggHiNtuplizer::fillElectrons(const edm::Event& e, const edm::EventSetup& es
     eleTrkEta_           .push_back(ele->gsfTrack()->eta());
     eleTrkPhi_           .push_back(ele->gsfTrack()->phi());
     eleTrkCharge_        .push_back(ele->gsfTrack()->charge());
+    eleTrkPtErr_         .push_back(ele->gsfTrack()->ptError());
     eleTrkChi2_          .push_back(ele->gsfTrack()->chi2());
     eleTrkNdof_          .push_back(ele->gsfTrack()->ndof());
     eleTrkNormalizedChi2_.push_back(ele->gsfTrack()->normalizedChi2());
@@ -935,7 +948,12 @@ void ggHiNtuplizer::fillElectrons(const edm::Event& e, const edm::EventSetup& es
     eleHoverE_           .push_back(ele->hcalOverEcal());
     eleHoverEBc_         .push_back(ele->hcalOverEcalBc());
     eleEoverP_           .push_back(ele->eSuperClusterOverP());
-    eleEoverPInv_        .push_back(std::abs(1./ele->ecalEnergy() - 1./ele->trackMomentumAtVtx().R()));
+    eleEoverPInv_        .push_back(1./ele->ecalEnergy() - 1./ele->trackMomentumAtVtx().R());
+    eleEcalE_            .push_back(ele->ecalEnergy());
+    elePAtVtx_           .push_back(ele->trackMomentumAtVtx().R());
+    elePAtSC_            .push_back(ele->trackMomentumAtCalo().R());
+    elePAtCluster_       .push_back(ele->trackMomentumAtEleClus().R());
+    elePAtSeed_          .push_back(ele->trackMomentumOut().R());
     eleBrem_             .push_back(ele->fbrem());
     eledEtaAtVtx_        .push_back(ele->deltaEtaSuperClusterTrackAtVtx());
     eledPhiAtVtx_        .push_back(ele->deltaPhiSuperClusterTrackAtVtx());
