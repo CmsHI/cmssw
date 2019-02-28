@@ -1,6 +1,7 @@
 <use   name="CommonTools/UtilAlgos"/>
 <use   name="DataFormats/Common"/>
 <use   name="DataFormats/Math"/>
+<use   name="EgammaAnalysis/ElectronTools"/>
 <use   name="FWCore/Framework"/>
 <use   name="FWCore/ParameterSet"/>
 <use   name="Geometry/CaloGeometry"/>

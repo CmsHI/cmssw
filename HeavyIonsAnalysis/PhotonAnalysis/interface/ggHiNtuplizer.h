@@ -56,6 +56,7 @@ class ggHiNtuplizer : public edm::EDAnalyzer {
    bool runOnParticleGun_;
    bool useValMapIso_;
    bool doPfIso_;
+   bool doEReg_;
    bool doVID_;
    bool doRecHitsEB_;
    bool doRecHitsEE_;
@@ -81,6 +82,7 @@ class ggHiNtuplizer : public edm::EDAnalyzer {
    edm::EDGetTokenT<EcalRecHitCollection> recHitsEE_;
 
    const CaloGeometry *geo;
+   const CaloTopology* topo;
 
    EffectiveAreas effectiveAreas_;
 
@@ -170,7 +172,7 @@ class ggHiNtuplizer : public edm::EDAnalyzer {
    std::vector<float>  eleSigmaIEtaIEta_;
    std::vector<float>  eleSigmaIEtaIEta_2012_;
    std::vector<float>  eleSigmaIPhiIPhi_;
-// std::vector<int>    eleConvVeto_;     // TODO: not available in reco::
+   std::vector<int>    eleConvVeto_;
    std::vector<int>    eleMissHits_;
    std::vector<float>  eleESEffSigmaRR_;
    std::vector<float>  elePFChIso_;
@@ -200,6 +202,23 @@ class ggHiNtuplizer : public edm::EDAnalyzer {
    std::vector<float>  eleSeedCryPhi_;
    std::vector<float>  eleSeedCryIeta_;
    std::vector<float>  eleSeedCryIphi_;
+   std::vector<float>  eleSeedE3x3_;
+   std::vector<float>  eleSeedE5x5_;
+   std::vector<float>  eleSEE_;
+   std::vector<float>  eleSPP_;
+   std::vector<float>  eleSEP_;
+   std::vector<float>  eleSeedEMax_;
+   std::vector<float>  eleSeedE2nd_;
+   std::vector<float>  eleSeedETop_;
+   std::vector<float>  eleSeedEBottom_;
+   std::vector<float>  eleSeedELeft_;
+   std::vector<float>  eleSeedERight_;
+   std::vector<float>  eleSeedE2x5Max_;
+   std::vector<float>  eleSeedE2x5Top_;
+   std::vector<float>  eleSeedE2x5Bottom_;
+   std::vector<float>  eleSeedE2x5Left_;
+   std::vector<float>  eleSeedE2x5Right_;
+   std::vector<float>  eleESOverRaw_;
    std::vector<float>  eleBC1E_;
    std::vector<float>  eleBC1Eta_;
    std::vector<float>  eleBC2E_;
@@ -208,7 +227,6 @@ class ggHiNtuplizer : public edm::EDAnalyzer {
    std::vector<int>    eleIDLoose_;
    std::vector<int>    eleIDMedium_;
    std::vector<int>    eleIDTight_;
-   std::vector<int>    elepassConversionVeto_;
    std::vector<float>  eleEffAreaTimesRho_;
 
    // reco::Photon
