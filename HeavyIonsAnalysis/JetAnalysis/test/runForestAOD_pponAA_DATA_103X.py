@@ -126,6 +126,18 @@ process.load('HeavyIonsAnalysis.PhotonAnalysis.ggHiNtuplizer_cfi')
 process.ggHiNtuplizer.doGenParticles = False
 process.ggHiNtuplizerGED.doGenParticles = False
 
+EEScaleFixCorrectionFile = "HeavyIonsAnalysis/PhotonAnalysis/data/heavyIonECALScaleFix"
+
+process.load("RecoEgamma.EgammaTools.calibratedEgammas_cff")
+process.calibratedElectrons.correctionFile = EEScaleFixCorrectionFile
+process.calibratedPhotons.correctionFile = EEScaleFixCorrectionFile
+process.ggHiNtuplizerGEDEESF = process.ggHiNtuplizerGED.clone(
+    recoPhotonSrc = "calibratedPhotons",
+    gsfElectronLabel = "calibratedElectrons",
+    useValMapIso = False,
+    doMuons = False
+    )
+
 ###############################################################################
 
 #######################
@@ -186,6 +198,9 @@ process.ana_step = cms.Path(
     process.jetSequence +
     process.ggHiNtuplizer +
     process.ggHiNtuplizerGED +
+    process.calibratedPhotons +
+    process.calibratedElectrons +
+    process.ggHiNtuplizerGEDEESF +
     process.hiFJRhoAnalyzer +
     process.pfcandAnalyzer +
     process.pfcandAnalyzerCS +
