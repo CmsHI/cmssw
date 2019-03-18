@@ -57,6 +57,7 @@ class ggHiNtuplizer : public edm::EDAnalyzer {
    bool useValMapIso_;
    bool doPfIso_;
    bool doEReg_;
+   bool doEffectiveAreas_;
    bool doVID_;
    bool doRecHitsEB_;
    bool doRecHitsEE_;
@@ -128,6 +129,7 @@ class ggHiNtuplizer : public edm::EDAnalyzer {
 
    // reco::GsfElectron
    Int_t          nEle_;
+   Float_t        eleRho_;
    std::vector<int>    eleCharge_;
    std::vector<int>    eleChargeConsistent_;
    std::vector<int>    eleSCPixCharge_;
@@ -187,6 +189,7 @@ class ggHiNtuplizer : public edm::EDAnalyzer {
    std::vector<float>  elePFNeuIso04_;
    std::vector<float>  elePFRelIsoWithEA_;
    std::vector<float>  elePFRelIsoWithDBeta_;
+   std::vector<float>  eleEffAreaTimesRho_;
    std::vector<float>  eleR9_;
    std::vector<float>  eleE3x3_;
    std::vector<float>  eleE5x5_;
@@ -219,6 +222,14 @@ class ggHiNtuplizer : public edm::EDAnalyzer {
    std::vector<float>  eleSeedE2x5Left_;
    std::vector<float>  eleSeedE2x5Right_;
    std::vector<float>  eleESOverRaw_;
+   std::vector<float>  eleChargeMode_;
+   std::vector<float>  eleTrkQoverPMode_;
+   std::vector<float>  eleTrkPMode_;
+   std::vector<float>  eleTrkPtMode_;
+   std::vector<float>  eleTrkEtaMode_;
+   std::vector<float>  eleTrkPhiMode_;
+   std::vector<float>  eleTrkQoverPModeErr_;
+   std::vector<float>  eleTrkPtModeErr_;
    std::vector<float>  eleBC1E_;
    std::vector<float>  eleBC1Eta_;
    std::vector<float>  eleBC2E_;
@@ -227,7 +238,6 @@ class ggHiNtuplizer : public edm::EDAnalyzer {
    std::vector<int>    eleIDLoose_;
    std::vector<int>    eleIDMedium_;
    std::vector<int>    eleIDTight_;
-   std::vector<float>  eleEffAreaTimesRho_;
 
    // reco::Photon
    Int_t          nPho_;

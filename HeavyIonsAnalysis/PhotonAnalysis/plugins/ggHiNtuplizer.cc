@@ -35,6 +35,16 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) :
     gsfElectronsCollection_ = consumes<edm::View<reco::GsfElectron>>(ps.getParameter<edm::InputTag>("gsfElectronLabel"));
     beamSpotToken_          = consumes<reco::BeamSpot>(ps.getParameter <edm::InputTag>("beamSpot"));
     conversionsToken_       = consumes< reco::ConversionCollection >(ps.getParameter<edm::InputTag>("conversions"));
+    doEffectiveAreas_       = ps.getParameter<bool>("doEffectiveAreas");
+    if (doEffectiveAreas_)
+      rhoToken_               = consumes<double>(ps.getParameter<edm::InputTag>("rho"));
+    doVID_                  = ps.getParameter<bool>("doElectronVID");
+    if (doVID_) {
+      eleVetoIdMapToken_      = consumes<edm::ValueMap<bool> >(ps.getParameter<edm::InputTag>("electronVetoID"));
+      eleLooseIdMapToken_     = consumes<edm::ValueMap<bool> >(ps.getParameter<edm::InputTag>("electronLooseID"));
+      eleMediumIdMapToken_    = consumes<edm::ValueMap<bool> >(ps.getParameter<edm::InputTag>("electronMediumID"));
+      eleTightIdMapToken_     = consumes<edm::ValueMap<bool> >(ps.getParameter<edm::InputTag>("electronTightID"));
+    }
   }
   if (doPhotons_)
     recoPhotonsCollection_  = consumes<edm::View<reco::Photon>>(ps.getParameter<edm::InputTag>("recoPhotonSrc"));
@@ -42,14 +52,6 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) :
     recoMuonsCollection_    = consumes<edm::View<reco::Muon>>(ps.getParameter<edm::InputTag>("recoMuonSrc"));
   vtxCollection_          = consumes<std::vector<reco::Vertex>>(ps.getParameter<edm::InputTag>("VtxLabel"));
   doEReg_                 = ps.getParameter<bool>("doEleERegression");
-  doVID_                  = ps.getParameter<bool>("doElectronVID");
-  if (doVID_) {
-    rhoToken_               = consumes<double>(ps.getParameter<edm::InputTag>("rho"));
-    eleVetoIdMapToken_      = consumes<edm::ValueMap<bool> >(ps.getParameter<edm::InputTag>("electronVetoID"));
-    eleLooseIdMapToken_     = consumes<edm::ValueMap<bool> >(ps.getParameter<edm::InputTag>("electronLooseID"));
-    eleMediumIdMapToken_    = consumes<edm::ValueMap<bool> >(ps.getParameter<edm::InputTag>("electronMediumID"));
-    eleTightIdMapToken_     = consumes<edm::ValueMap<bool> >(ps.getParameter<edm::InputTag>("electronTightID"));
-  }
   if (useValMapIso_) {
     recoPhotonsHiIso_     = consumes<edm::ValueMap<reco::HIPhotonIsolation> > (
       ps.getParameter<edm::InputTag>("recoPhotonHiIsolationMap"));
@@ -171,9 +173,13 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) :
     tree_->Branch("elePFChIso04",          &elePFChIso04_);
     tree_->Branch("elePFPhoIso04",         &elePFPhoIso04_);
     tree_->Branch("elePFNeuIso04",         &elePFNeuIso04_);
-    tree_->Branch("elePFRelIsoWithEA",     &elePFRelIsoWithEA_);
-    tree_->Branch("elePFRelIsoWithDBeta",  &elePFRelIsoWithDBeta_);
-    tree_->Branch("eleEffAreaTimesRho",    &eleEffAreaTimesRho_);
+
+    if (doEffectiveAreas_) {
+      tree_->Branch("eleRho",                &eleRho_);
+      tree_->Branch("elePFRelIsoWithEA",     &elePFRelIsoWithEA_);
+      tree_->Branch("elePFRelIsoWithDBeta",  &elePFRelIsoWithDBeta_);
+      tree_->Branch("eleEffAreaTimesRho",    &eleEffAreaTimesRho_);
+    }
 
     tree_->Branch("eleR9",                 &eleR9_);
     tree_->Branch("eleE3x3",               &eleE3x3_);
@@ -214,12 +220,23 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) :
       tree_->Branch("eleSeedE2x5Left",     &eleSeedE2x5Left_);
       tree_->Branch("eleSeedE2x5Right",    &eleSeedE2x5Right_);
       tree_->Branch("eleESOverRaw",        &eleESOverRaw_);
+
+      tree_->Branch("eleChargeMode",       &eleChargeMode_);
+      tree_->Branch("eleTrkQoverPMode",    &eleTrkQoverPMode_);
+      tree_->Branch("eleTrkPMode",         &eleTrkPMode_);
+      tree_->Branch("eleTrkPtMode",        &eleTrkPtMode_);
+      tree_->Branch("eleTrkEtaMode",       &eleTrkEtaMode_);
+      tree_->Branch("eleTrkPhiMode",       &eleTrkPhiMode_);
+      tree_->Branch("eleTrkQoverPModeErr", &eleTrkQoverPModeErr_);
+      tree_->Branch("eleTrkPtModeErr",     &eleTrkPtModeErr_);
     }
 
-    tree_->Branch("eleIDVeto",             &eleIDVeto_);
-    tree_->Branch("eleIDLoose",            &eleIDLoose_);
-    tree_->Branch("eleIDMedium",           &eleIDMedium_);
-    tree_->Branch("eleIDTight",            &eleIDTight_);
+    if (doVID_) {
+      tree_->Branch("eleIDVeto",             &eleIDVeto_);
+      tree_->Branch("eleIDLoose",            &eleIDLoose_);
+      tree_->Branch("eleIDMedium",           &eleIDMedium_);
+      tree_->Branch("eleIDTight",            &eleIDTight_);
+    }
   }
 
   if (doPhotons_) {
@@ -436,6 +453,7 @@ void ggHiNtuplizer::analyze(const edm::Event& e, const edm::EventSetup& es)
 
   if (doElectrons_) {
     nEle_ = 0;
+    eleRho_ = -1;
     eleCharge_            .clear();
     eleChargeConsistent_  .clear();
     eleSCPixCharge_       .clear();
@@ -495,6 +513,7 @@ void ggHiNtuplizer::analyze(const edm::Event& e, const edm::EventSetup& es)
     elePFNeuIso04_        .clear();
     elePFRelIsoWithEA_    .clear();
     elePFRelIsoWithDBeta_ .clear();
+    eleEffAreaTimesRho_   .clear();
     eleR9_                .clear();
     eleE3x3_              .clear();
     eleE5x5_              .clear();
@@ -510,6 +529,36 @@ void ggHiNtuplizer::analyze(const edm::Event& e, const edm::EventSetup& es)
     eleSeedCryPhi_        .clear();
     eleSeedCryIeta_       .clear();
     eleSeedCryIphi_       .clear();
+
+    if (doEReg_) {
+      eleSeedE3x3_        .clear();
+      eleSeedE5x5_        .clear();
+      eleSEE_             .clear();
+      eleSPP_             .clear();
+      eleSEP_             .clear();
+      eleSeedEMax_        .clear();
+      eleSeedE2nd_        .clear();
+      eleSeedETop_        .clear();
+      eleSeedEBottom_     .clear();
+      eleSeedELeft_       .clear();
+      eleSeedERight_      .clear();
+      eleSeedE2x5Max_     .clear();
+      eleSeedE2x5Top_     .clear();
+      eleSeedE2x5Bottom_  .clear();
+      eleSeedE2x5Left_    .clear();
+      eleSeedE2x5Right_   .clear();
+      eleESOverRaw_       .clear();
+
+      eleChargeMode_      .clear();
+      eleTrkQoverPMode_   .clear();
+      eleTrkPMode_        .clear();
+      eleTrkPtMode_       .clear();
+      eleTrkEtaMode_      .clear();
+      eleTrkPhiMode_      .clear();
+      eleTrkQoverPModeErr_.clear();
+      eleTrkPtModeErr_    .clear();
+    }
+
     eleBC1E_              .clear();
     eleBC1Eta_            .clear();
     eleBC2E_              .clear();
@@ -518,7 +567,6 @@ void ggHiNtuplizer::analyze(const edm::Event& e, const edm::EventSetup& es)
     eleIDLoose_           .clear();
     eleIDMedium_          .clear();
     eleIDTight_           .clear();
-    eleEffAreaTimesRho_   .clear();
   }
 
   if (doPhotons_) {
@@ -915,20 +963,24 @@ void ggHiNtuplizer::fillElectrons(const edm::Event& e, const edm::EventSetup& es
 
   edm::Handle<EcalRecHitCollection> recHitsEBHandle;
   edm::Handle<EcalRecHitCollection> recHitsEEHandle;
+
   if (doEReg_) {
       e.getByToken(recHitsEB_, recHitsEBHandle);
       e.getByToken(recHitsEE_, recHitsEEHandle);
+  }
+
+  edm::Handle<double> rhoH;
+
+  if (doEffectiveAreas_) {
+    e.getByToken(rhoToken_, rhoH);
+
+    eleRho_ = *rhoH;
   }
 
   edm::Handle<edm::ValueMap<bool> > veto_id_decisions;
   edm::Handle<edm::ValueMap<bool> > loose_id_decisions;
   edm::Handle<edm::ValueMap<bool> > medium_id_decisions;
   edm::Handle<edm::ValueMap<bool> > tight_id_decisions;
-
-  edm::Handle<double> rhoH;
-  if (!rhoToken_.isUninitialized())
-    e.getByToken(rhoToken_, rhoH);
-  float rho = rhoH.isValid() ? *rhoH : -999;
 
   if (doVID_) {
     // Get the electron ID data from the event stream.
@@ -1001,12 +1053,14 @@ void ggHiNtuplizer::fillElectrons(const edm::Event& e, const edm::EventSetup& es
     elePFNeuIso_         .push_back(pfIso.sumNeutralHadronEt);
     elePFPUIso_          .push_back(pfIso.sumPUPt);
 
-    double area = effectiveAreas_.getEffectiveArea(ele->superCluster()->eta());
-    elePFRelIsoWithEA_   .push_back((pfIso.sumChargedHadronPt + std::max(0.0,
-      pfIso.sumNeutralHadronEt + pfIso.sumPhotonEt - rho * area)) / ele->pt());
-    elePFRelIsoWithDBeta_.push_back((pfIso.sumChargedHadronPt + std::max(0.0,
-      pfIso.sumNeutralHadronEt + pfIso.sumPhotonEt - 0.5 * pfIso.sumPUPt)) / ele->pt());
-    eleEffAreaTimesRho_.push_back(area * rho);
+    if (doEffectiveAreas_) {
+      double area = effectiveAreas_.getEffectiveArea(ele->superCluster()->eta());
+      elePFRelIsoWithEA_   .push_back((pfIso.sumChargedHadronPt + std::max(0.0,
+        pfIso.sumNeutralHadronEt + pfIso.sumPhotonEt - eleRho_ * area)) / ele->pt());
+      elePFRelIsoWithDBeta_.push_back((pfIso.sumChargedHadronPt + std::max(0.0,
+        pfIso.sumNeutralHadronEt + pfIso.sumPhotonEt - 0.5 * pfIso.sumPUPt)) / ele->pt());
+      eleEffAreaTimesRho_.push_back(area * eleRho_);
+    }
 
     bool passConvVeto = !ConversionTools::hasMatchedConversion(
       *ele, conversions, theBeamSpot->position());
@@ -1068,6 +1122,15 @@ void ggHiNtuplizer::fillElectrons(const edm::Event& e, const edm::EventSetup& es
       eleSeedE2x5Left_  .push_back(sch->e2x5Left());
       eleSeedE2x5Right_ .push_back(sch->e2x5Right());
       eleESOverRaw_     .push_back(sch->preshowerEnergyOverRaw());
+
+      eleChargeMode_      .push_back(ele->gsfTrack()->chargeMode());
+      eleTrkQoverPMode_   .push_back(ele->gsfTrack()->qoverpMode());
+      eleTrkPMode_        .push_back(ele->gsfTrack()->pMode());
+      eleTrkPtMode_       .push_back(ele->gsfTrack()->ptMode());
+      eleTrkEtaMode_      .push_back(ele->gsfTrack()->etaMode());
+      eleTrkPhiMode_      .push_back(ele->gsfTrack()->phiMode());
+      eleTrkQoverPModeErr_.push_back(ele->gsfTrack()->qoverpModeError());
+      eleTrkPtModeErr_    .push_back(ele->gsfTrack()->ptModeError());
     }
 
     // local coordinates
