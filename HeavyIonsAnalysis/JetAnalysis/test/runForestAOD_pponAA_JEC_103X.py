@@ -49,11 +49,12 @@ from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase1_2018_realistic_hi', '')
 process.HiForest.GlobalTagLabel = process.GlobalTag.globaltag
 
-print('\n\033[31m~*~ USING CENTRALITY TABLE FOR Hydjet Drum5Ev8 ~*~\033[0m\n')
+print('\n\033[31m~*~ USING CENTRALITY TABLE FOR Hydjet Drum5F ~*~\033[0m\n')
 process.GlobalTag.snapshotTime = cms.string("9999-12-31 23:59:59.000")
 process.GlobalTag.toGet.extend([
     cms.PSet(record = cms.string("HeavyIonRcd"),
-        tag = cms.string("CentralityTable_HFtowers200_HydjetDrum5Ev8_v1030pre5x02_mc"),
+        # tag = cms.string("CentralityTable_HFtowers200_HydjetDrum5Ev8_v1030pre5x02_mc"),
+        tag = cms.string("CentralityTable_HFtowers200_HydjetDrum5F_v1032x01_mc"),
         connect = cms.string("frontier://FrontierProd/CMS_CONDITIONS"),
         label = cms.untracked.string("HFtowers")
         ),
