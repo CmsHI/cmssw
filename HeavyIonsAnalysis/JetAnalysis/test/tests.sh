@@ -33,8 +33,8 @@ mkdir $area
 # samples
 samples=(
    https://github.com/bi-ran/samples/raw/master/step2_PbPb_1030pre6_HIRECO.root
-   https://github.com/bi-ran/samples/raw/master/step2_PbPb_1030pre6_RECO.root
-   https://github.com/bi-ran/samples/raw/master/step2_PbPb_1030_t0streamer_RECO.root
+   https://github.com/bi-ran/samples/raw/master/HINPbPbAutumn18DR_Pythia8_Ze10e10_TuneCP5_5p02TeV_1032_AODSIM.root
+   https://github.com/bi-ran/samples/raw/master/HIHardProbes_HIRun2018A-PromptReco-v2_1031p1_AOD.root
 )
 
 [ $inputdir ] && {
