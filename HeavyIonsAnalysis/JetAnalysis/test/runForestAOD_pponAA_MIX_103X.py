@@ -117,6 +117,8 @@ process.hiEvtAnalyzer.doMC = cms.bool(True) # general MC info
 process.hiEvtAnalyzer.doHiMC = cms.bool(True) # HI specific MC info
 process.load('HeavyIonsAnalysis.EventAnalysis.hltanalysis_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.skimanalysis_cfi')
+process.load('HeavyIonsAnalysis.EventAnalysis.hltobject_cfi')
+process.load('HeavyIonsAnalysis.EventAnalysis.l1object_cfi')
 
 ###############################################################################
 
@@ -182,6 +184,8 @@ process.ana_step = cms.Path(
     process.HiForest +
     process.runAnalyzer +
     process.hltanalysis +
+    process.hltobject +
+    # process.l1object +
     process.centralityBin +
     process.hiEvtAnalyzer +
     process.HiGenParticleAna +
