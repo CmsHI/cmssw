@@ -101,8 +101,14 @@ TriggerObjectAnalyzer::TriggerObjectAnalyzer(const edm::ParameterSet& ps):
 {
   //now do what ever initialization is needed
   nt_.reserve(triggerNames_.size());
-  for(unsigned int isize=0; isize<triggerNames_.size(); isize++){
-  nt_[isize] = fs->make<TTree>(triggerNames_.at(isize).c_str(),Form("trigger %d",isize));
+  for(unsigned int itrig=0; itrig<triggerNames_.size(); itrig++){
+    nt_[itrig] = fs->make<TTree>(triggerNames_.at(itrig).c_str(),Form("trigger %d",itrig));
+
+    nt_[itrig]->Branch("TriggerObjID",&(id[itrig]));
+    nt_[itrig]->Branch("pt",&(pt[itrig]));
+    nt_[itrig]->Branch("eta",&(eta[itrig]));
+    nt_[itrig]->Branch("phi",&(phi[itrig]));
+    nt_[itrig]->Branch("mass",&(mass[itrig]));
   }
 
 
@@ -253,14 +259,6 @@ TriggerObjectAnalyzer::beginRun(edm::Run const& iRun, edm::EventSetup const& iSe
     cout << "HLTObjectAnalyzer::analyze:"
 	 << " config extraction failure with process name "
 	 << processName_ << endl;
-  }
-
-  for(unsigned int itrig=0; itrig<triggerNames_.size(); itrig++){
-    nt_[itrig]->Branch("TriggerObjID",&(id[itrig]));
-    nt_[itrig]->Branch("pt",&(pt[itrig]));
-    nt_[itrig]->Branch("eta",&(eta[itrig]));
-    nt_[itrig]->Branch("phi",&(phi[itrig]));
-    nt_[itrig]->Branch("mass",&(mass[itrig]));
   }
 }
 
