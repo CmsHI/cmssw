@@ -106,6 +106,9 @@ process.load('HeavyIonsAnalysis.EventAnalysis.skimanalysis_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.hltobject_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.l1object_cfi')
 
+from HeavyIonsAnalysis.EventAnalysis.hltobject_cfi import trigger_list_data
+process.hltobject.triggerNames = trigger_list_data
+
 ###############################################################################
 
 #########################
