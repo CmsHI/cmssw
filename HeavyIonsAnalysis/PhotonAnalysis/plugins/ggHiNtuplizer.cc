@@ -172,6 +172,7 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) :
     tree_->Branch("eleBrem",               &eleBrem_);
     tree_->Branch("eledEtaAtVtx",          &eledEtaAtVtx_);
     tree_->Branch("eledPhiAtVtx",          &eledPhiAtVtx_);
+    tree_->Branch("eledEtaSeedAtVtx",      &eledEtaSeedAtVtx_);
     tree_->Branch("eleSigmaIEtaIEta",      &eleSigmaIEtaIEta_);
     tree_->Branch("eleSigmaIEtaIEta_2012", &eleSigmaIEtaIEta_2012_);
     tree_->Branch("eleSigmaIPhiIPhi",      &eleSigmaIPhiIPhi_);
@@ -613,6 +614,7 @@ void ggHiNtuplizer::analyze(const edm::Event& e, const edm::EventSetup& es)
     eleBrem_              .clear();
     eledEtaAtVtx_         .clear();
     eledPhiAtVtx_         .clear();
+    eledEtaSeedAtVtx_     .clear();
     eleSigmaIEtaIEta_     .clear();
     eleSigmaIEtaIEta_2012_.clear();
     eleSigmaIPhiIPhi_     .clear();
@@ -1258,6 +1260,7 @@ void ggHiNtuplizer::fillElectrons(const edm::Event& e, const edm::EventSetup& es
     eleBrem_             .push_back(ele->fbrem());
     eledEtaAtVtx_        .push_back(ele->deltaEtaSuperClusterTrackAtVtx());
     eledPhiAtVtx_        .push_back(ele->deltaPhiSuperClusterTrackAtVtx());
+    eledEtaSeedAtVtx_    .push_back(ele->deltaEtaSeedClusterTrackAtVtx());
     eleSigmaIEtaIEta_    .push_back(ele->sigmaIetaIeta());
     eleSigmaIPhiIPhi_    .push_back(ele->sigmaIphiIphi());
     eleMissHits_         .push_back(ele->gsfTrack()->numberOfLostHits());

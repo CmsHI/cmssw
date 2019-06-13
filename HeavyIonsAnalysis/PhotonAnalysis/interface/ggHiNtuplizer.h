@@ -179,6 +179,7 @@ class ggHiNtuplizer : public edm::EDAnalyzer {
    std::vector<float>  eleBrem_;
    std::vector<float>  eledEtaAtVtx_;
    std::vector<float>  eledPhiAtVtx_;
+   std::vector<float>  eledEtaSeedAtVtx_;
    std::vector<float>  eleSigmaIEtaIEta_;
    std::vector<float>  eleSigmaIEtaIEta_2012_;
    std::vector<float>  eleSigmaIPhiIPhi_;
