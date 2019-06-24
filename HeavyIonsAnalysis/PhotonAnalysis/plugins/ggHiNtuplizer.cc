@@ -183,12 +183,15 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) :
     tree_->Branch("elePFPhoIso",           &elePFPhoIso_);
     tree_->Branch("elePFNeuIso",           &elePFNeuIso_);
     tree_->Branch("elePFPUIso",            &elePFPUIso_);
-    tree_->Branch("elePFChIso03",          &elePFChIso03_);
-    tree_->Branch("elePFPhoIso03",         &elePFPhoIso03_);
-    tree_->Branch("elePFNeuIso03",         &elePFNeuIso03_);
-    tree_->Branch("elePFChIso04",          &elePFChIso04_);
-    tree_->Branch("elePFPhoIso04",         &elePFPhoIso04_);
-    tree_->Branch("elePFNeuIso04",         &elePFNeuIso04_);
+
+    if (doPfIso_) {
+      tree_->Branch("elePFChIso03",          &elePFChIso03_);
+      tree_->Branch("elePFPhoIso03",         &elePFPhoIso03_);
+      tree_->Branch("elePFNeuIso03",         &elePFNeuIso03_);
+      tree_->Branch("elePFChIso04",          &elePFChIso04_);
+      tree_->Branch("elePFPhoIso04",         &elePFPhoIso04_);
+      tree_->Branch("elePFNeuIso04",         &elePFNeuIso04_);
+    }
 
     if (doEffectiveAreas_) {
       tree_->Branch("elePFRelIsoWithEA",     &elePFRelIsoWithEA_);
@@ -1334,21 +1337,23 @@ void ggHiNtuplizer::fillElectrons(const edm::Event& e, const edm::EventSetup& es
     eleIP3DErr_            .push_back(eleIP3DErr);
 
     // calculation on the fly
-    pfIsoCalculator pfIsoCal(e, pfCollection_, pv.position());
-    if (std::abs(ele->superCluster()->eta()) > 1.566) {
-      elePFChIso03_          .push_back(pfIsoCal.getPfIso(*ele, reco::PFCandidate::h,     0.3, 0.015, 0.));
-      elePFChIso04_          .push_back(pfIsoCal.getPfIso(*ele, reco::PFCandidate::h,     0.4, 0.015, 0.));
-      elePFPhoIso03_         .push_back(pfIsoCal.getPfIso(*ele, reco::PFCandidate::gamma, 0.3, 0.08, 0.));
-      elePFPhoIso04_         .push_back(pfIsoCal.getPfIso(*ele, reco::PFCandidate::gamma, 0.4, 0.08, 0.));
-    } else {
-      elePFChIso03_          .push_back(pfIsoCal.getPfIso(*ele, reco::PFCandidate::h,     0.3, 0.0, 0.));
-      elePFChIso04_          .push_back(pfIsoCal.getPfIso(*ele, reco::PFCandidate::h,     0.4, 0.0, 0.));
-      elePFPhoIso03_         .push_back(pfIsoCal.getPfIso(*ele, reco::PFCandidate::gamma, 0.3, 0.0, 0.));
-      elePFPhoIso04_         .push_back(pfIsoCal.getPfIso(*ele, reco::PFCandidate::gamma, 0.4, 0.0, 0.));
-    }
+    if (doPfIso_) {
+      pfIsoCalculator pfIsoCal(e, pfCollection_, pv.position());
+      if (std::abs(ele->superCluster()->eta()) > 1.566) {
+        elePFChIso03_          .push_back(pfIsoCal.getPfIso(*ele, reco::PFCandidate::h,     0.3, 0.015, 0.));
+        elePFChIso04_          .push_back(pfIsoCal.getPfIso(*ele, reco::PFCandidate::h,     0.4, 0.015, 0.));
+        elePFPhoIso03_         .push_back(pfIsoCal.getPfIso(*ele, reco::PFCandidate::gamma, 0.3, 0.08, 0.));
+        elePFPhoIso04_         .push_back(pfIsoCal.getPfIso(*ele, reco::PFCandidate::gamma, 0.4, 0.08, 0.));
+      } else {
+        elePFChIso03_          .push_back(pfIsoCal.getPfIso(*ele, reco::PFCandidate::h,     0.3, 0.0, 0.));
+        elePFChIso04_          .push_back(pfIsoCal.getPfIso(*ele, reco::PFCandidate::h,     0.4, 0.0, 0.));
+        elePFPhoIso03_         .push_back(pfIsoCal.getPfIso(*ele, reco::PFCandidate::gamma, 0.3, 0.0, 0.));
+        elePFPhoIso04_         .push_back(pfIsoCal.getPfIso(*ele, reco::PFCandidate::gamma, 0.4, 0.0, 0.));
+      }
 
-    elePFNeuIso03_         .push_back(pfIsoCal.getPfIso(*ele, reco::PFCandidate::h0, 0.3, 0., 0.));
-    elePFNeuIso04_         .push_back(pfIsoCal.getPfIso(*ele, reco::PFCandidate::h0, 0.4, 0., 0.));
+      elePFNeuIso03_         .push_back(pfIsoCal.getPfIso(*ele, reco::PFCandidate::h0, 0.3, 0., 0.));
+      elePFNeuIso04_         .push_back(pfIsoCal.getPfIso(*ele, reco::PFCandidate::h0, 0.4, 0., 0.));
+    }
 
     eleR9_               .push_back(ele->r9());
     eleE3x3_             .push_back(ele->r9()*ele->superCluster()->energy());
