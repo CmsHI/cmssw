@@ -274,7 +274,6 @@ private:
   void fillVertices(const edm::Event& iEvent);
   void fillTracks(const edm::Event& iEvent, const edm::EventSetup& iSetup);
   void fillSimTracks(const edm::Event& iEvent, const edm::EventSetup& iSetup);
-  void matchPFCandToTrack(const edm::Event& iEvent, const edm::EventSetup& iSetup, unsigned it, int & cand_type, float & cand_pt, float & mEcalSum, float & mHcalSum);
 
   int getLayerId(const PSimHit&);
   bool hitDeadPXF(const reco::Track& tr);
@@ -591,6 +590,10 @@ TrackAnalyzer::fillTracks(const edm::Event& iEvent, const edm::EventSetup& iSetu
   iEvent.getByToken(beamSpotProducer_,recoBeamSpotHandle);
   beamSpot = *recoBeamSpotHandle;
 
+  // get PF candidates
+  Handle<PFCandidateCollection> pfCandidates;
+  iEvent.getByToken(pfCandSrc_, pfCandidates);
+
   // do reco-to-sim association
   // Handle<TrackingParticleCollection>  TPCollectionHfake;
   Handle<edm::View<reco::Track> >  trackCollection;
@@ -617,6 +620,23 @@ TrackAnalyzer::fillTracks(const edm::Event& iEvent, const edm::EventSetup& iSetu
   pev_.nTrk=0;
   pev_.N=0;
   pev_.leadingTrackPt[0]=0;  pev_.leadingTrackPt[1]=0;  pev_.leadingTrackPt[2]=0;  pev_.leadingTrackPt[3]=0;
+
+  auto track_pfcand_map = std::unordered_map<int, int>();
+  if (doPFMatching_) {
+    for (std::size_t i = 0; i < pfCandidates->size(); ++i) {
+      auto const& cand = (*pfCandidates)[i];
+
+      int type = cand.particleId();
+      // only charged hadrons and leptons can be asscociated with a track
+      if (!(type == reco::PFCandidate::h ||
+            type == reco::PFCandidate::e ||
+            type == reco::PFCandidate::mu)
+         ) { continue; }
+
+      auto key = cand.trackRef().key();
+      track_pfcand_map[key] = i;
+    }
+  }
 
   for(unsigned it=0; it<etracks->size(); ++it){
     const reco::Track & etrk = (*etracks)[it];
@@ -783,12 +803,19 @@ TrackAnalyzer::fillTracks(const edm::Event& iEvent, const edm::EventSetup& iSetu
       pev_.trkExpHit3Eta[pev_.nTrk]=eta3;
     }
     //pev_.trkNhit[pev_.nTrk]=tr.numberOfValidHits();
-    if(doPFMatching_) matchPFCandToTrack(iEvent, iSetup, it,
-					 // output to the following vars
-					 pev_.pfType[pev_.nTrk],
-					 pev_.pfCandPt[pev_.nTrk],
-					 pev_.pfEcal[pev_.nTrk],
-					 pev_.pfHcal[pev_.nTrk]);
+    if(doPFMatching_) {
+      pev_.pfType[pev_.nTrk] = -1;
+      pev_.pfCandPt[pev_.nTrk] = -999;
+
+      auto index = trackRef.key();
+      if (track_pfcand_map.find(index) != std::end(track_pfcand_map)) {
+	auto const& cand = (*pfCandidates)[track_pfcand_map[index]];
+	pev_.pfType[pev_.nTrk] = cand.particleId();
+        pev_.pfCandPt[pev_.nTrk] = cand.pt();
+        pev_.pfEcal[pev_.nTrk] = cand.ecalEnergy();
+        pev_.pfHcal[pev_.nTrk] = cand.hcalEnergy();
+      }
+    }
 
     //for checking single track triggers with various cuts
     bool isHP = etrk.quality(reco::TrackBase::qualityByName(qualityStrings_[0].data()));
@@ -834,6 +861,26 @@ TrackAnalyzer::fillSimTracks(const edm::Event& iEvent, const edm::EventSetup& iS
   iEvent.getByToken(associatorMapSR_,simtorecoCollectionH);
   simRecColl= *(simtorecoCollectionH.product());
 
+  // get PF candidates
+  Handle<PFCandidateCollection> pfCandidates;
+  iEvent.getByToken(pfCandSrc_, pfCandidates);
+
+  auto track_pfcand_map = std::unordered_map<int, int>();
+  if (doPFMatching_) {
+    for (std::size_t i = 0; i < pfCandidates->size(); ++i) {
+      auto const& cand = (*pfCandidates)[i];
+
+      int type = cand.particleId();
+      // only charged hadrons and leptons can be asscociated with a track
+      if (!(type == reco::PFCandidate::h ||
+            type == reco::PFCandidate::e ||
+            type == reco::PFCandidate::mu)
+         ) { continue; }
+
+      auto key = cand.trackRef().key();
+      track_pfcand_map[key] = i;
+    }
+  }
 
   // Loop through sim tracks
   pev_.nParticle = 0;
@@ -850,6 +897,23 @@ TrackAnalyzer::fillSimTracks(const edm::Event& iEvent, const edm::EventSetup& iS
     pev_.pEta[pev_.nParticle] = tp->eta();
     pev_.pPhi[pev_.nParticle] = tp->phi();
     pev_.pPt[pev_.nParticle] = tp->pt();
+
+    auto track_pfcand_map = std::unordered_map<int, int>();
+    if (doPFMatching_) {
+      for (std::size_t i = 0; i < pfCandidates->size(); ++i) {
+        auto const& cand = (*pfCandidates)[i];
+
+        int type = cand.particleId();
+        // only charged hadrons and leptons can be asscociated with a track
+        if (!(type == reco::PFCandidate::h ||
+              type == reco::PFCandidate::e ||
+              type == reco::PFCandidate::mu)
+           ) { continue; }
+
+        auto key = cand.trackRef().key();
+        track_pfcand_map[key] = i;
+      }
+    }
 
     // Look up association map
     std::vector<std::pair<edm::RefToBase<reco::Track>, double> > rt;
@@ -945,13 +1009,18 @@ TrackAnalyzer::fillSimTracks(const edm::Event& iEvent, const edm::EventSetup& iS
       }
       // calo matching info for the matched track
       if(doPFMatching_) {
-	size_t mtrkkey = rt.begin()->first.key();
-	matchPFCandToTrack(iEvent, iSetup, mtrkkey,
-			   // output to the following vars
-			   pev_.mtrkPfType[pev_.nParticle],
-			   pev_.mtrkPfCandPt[pev_.nParticle],
-			   pev_.mtrkPfEcal[pev_.nParticle],
-			   pev_.mtrkPfHcal[pev_.nParticle]);
+        pev_.mtrkPfType[pev_.nParticle] = -1;
+        pev_.mtrkPfCandPt[pev_.nParticle] = -999;
+
+        auto index = rt.begin()->first.key();
+        if (track_pfcand_map.find(index) != std::end(track_pfcand_map)) {
+          auto const& cand = (*pfCandidates)[track_pfcand_map[index]];
+
+          pev_.mtrkPfType[pev_.nParticle] = cand.particleId();
+          pev_.mtrkPfCandPt[pev_.nParticle] = cand.pt();
+          pev_.mtrkPfEcal[pev_.nParticle] = cand.ecalEnergy();
+          pev_.mtrkPfHcal[pev_.nParticle] = cand.hcalEnergy();
+        }
       }
     }
     // remove the association if the track hits the bed region in FPIX
@@ -965,112 +1034,6 @@ TrackAnalyzer::fillSimTracks(const edm::Event& iEvent, const edm::EventSetup& iS
   }
 
 }
-
-
-//--------------------------------------------------------------------------------------------------
-void
-TrackAnalyzer::matchPFCandToTrack(const edm::Event& iEvent, const edm::EventSetup& iSetup, unsigned it, int & cand_type, float & cand_pt, float & mEcalSum, float & mHcalSum)
-{
-
-  // get PF candidates
-  Handle<PFCandidateCollection> pfCandidates;
-  bool isPFThere = iEvent.getByToken(pfCandSrc_, pfCandidates);
-
-  if (!isPFThere){
-    //cout<<" NO PF Candidates Found"<<endl;
-    return;  // if no PFCand in an event, skip it
-  }
-
-  // double sum_ecal=0.0, sum_hcal=0.0;
-  double ecalEnergy=0.0, hcalEnergy=0.0;
-
-
-  // loop over pfCandidates to find track
-
-  // int cand_index = -999;
-  cand_pt = -999.0;
-  cand_type =-1;
-
-  for( unsigned ic=0; ic<pfCandidates->size(); ic++ ) {
-
-    const reco::PFCandidate& cand = (*pfCandidates)[ic];
-
-    int type = cand.particleId();
-
-    // only charged hadrons and leptons can be asscociated with a track
-    if(!(type == PFCandidate::h ||     //type1
-	 type == PFCandidate::e ||     //type2
-	 type == PFCandidate::mu      //type3
-	 )
-      ) continue;
-
-
-    reco::TrackRef trackRef = cand.trackRef();
-
-    if(it==trackRef.key()) {
-      // cand_index = ic;
-      cand_type = type;
-      cand_pt = cand.pt();
-      ecalEnergy = cand.ecalEnergy();
-      hcalEnergy = cand.hcalEnergy();
-      break;
-
-    }
-  }
-
-  /*
-  if(cand_index>=0){
-
-    const reco::PFCandidate& cand = (*pfCandidates)[cand_index];
-
-    for(unsigned ib=0; ib<cand.elementsInBlocks().size(); ib++) {
-
-      PFBlockRef blockRef = cand.elementsInBlocks()[ib].first;
-
-
-      unsigned indexInBlock = cand.elementsInBlocks()[ib].second;
-      const edm::OwnVector<  reco::PFBlockElement>&  elements = (*blockRef).elements();
-
-      //This tells you what type of element it is:
-      //cout<<" block type"<<elements[indexInBlock].type()<<endl;
-
-      switch (elements[indexInBlock].type()) {
-
-      case PFBlockElement::ECAL: {
-	reco::PFClusterRef clusterRef = elements[indexInBlock].clusterRef();
-	double eet = clusterRef->energy()/cosh(clusterRef->eta());
-	sum_ecal+=eet;
-	break;
-      }
-
-      case PFBlockElement::HCAL: {
-	reco::PFClusterRef clusterRef = elements[indexInBlock].clusterRef();
-	double eet = clusterRef->energy()/cosh(clusterRef->eta());
-	sum_hcal+=eet;
-	break;
-      }
-      case PFBlockElement::TRACK: {
-	//Do nothing since track are not normally linked to other tracks
-	break;
-      }
-      default:
-	break;
-      }
-
-    } // end of elementsInBlocks()
-  }  // end of if(cand_index >= 0)
-*/
-
-  cand_type=cand_type;
-  cand_pt=cand_pt;
-  mEcalSum=ecalEnergy;
-  mHcalSum=hcalEnergy;
-
-  return;
-
-}
-
-
 
 // ------------
 int
