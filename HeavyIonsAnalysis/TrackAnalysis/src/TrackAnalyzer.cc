@@ -933,10 +933,10 @@ TrackAnalyzer::fillSimTracks(const edm::Event& iEvent, const edm::EventSetup& iS
         if (track_pfcand_map.find(index) != std::end(track_pfcand_map)) {
           auto const& cand = (*pfCandidates)[track_pfcand_map[index]];
 
-          pev_.pfType[pev_.nTrk] = cand.particleId();
-          pev_.pfCandPt[pev_.nTrk] = cand.pt();
-          pev_.pfEcal[pev_.nTrk] = cand.ecalEnergy();
-          pev_.pfHcal[pev_.nTrk] = cand.hcalEnergy();
+          pev_.mtrkPfType[pev_.nParticle] = cand.particleId();
+          pev_.mtrkPfCandPt[pev_.nParticle] = cand.pt();
+          pev_.mtrkPfEcal[pev_.nParticle] = cand.ecalEnergy();
+          pev_.mtrkPfHcal[pev_.nParticle] = cand.hcalEnergy();
         }
       }
     }
