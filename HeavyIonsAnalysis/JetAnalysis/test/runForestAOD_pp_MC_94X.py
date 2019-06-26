@@ -117,21 +117,6 @@ process.load('HeavyIonsAnalysis.JetAnalysis.TrkAnalyzers_cff')
 # photons
 ######################
 process.load('HeavyIonsAnalysis.PhotonAnalysis.ggHiNtuplizer_cfi')
-process.ggHiNtuplizer.gsfElectronLabel         = "gedGsfElectrons"
-process.ggHiNtuplizer.recoPhotonHiIsolationMap = 'photonIsolationHIProducerpp'
-# set to False if it gives error due to "not found" photonIsolationHIProducer
-process.ggHiNtuplizer.useValMapIso             = True
-process.ggHiNtuplizer.VtxLabel                 = "offlinePrimaryVertices"
-process.ggHiNtuplizer.particleFlowCollection   = "particleFlow"
-process.ggHiNtuplizer.doElectronVID            = True
-
-process.ggHiNtuplizerGED = process.ggHiNtuplizer.clone(
-    doElectrons = True,
-    doMuons = True,
-    recoPhotonSrc = cms.InputTag('gedPhotons'),
-    recoPhotonHiIsolationMap = cms.InputTag('photonIsolationHIProducerppGED'),
-    removePhotonPfIsoFootprint = True,
-    particleBasedIsolationPhoton = cms.InputTag("particleBasedIsolation", "gedPhotons"))
 
 ####################################################################################
 
