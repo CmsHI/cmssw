@@ -62,6 +62,9 @@ HiInclusiveJetAnalyzer::HiInclusiveJetAnalyzer(const edm::ParameterSet& iConfig)
   doGenSubJets_ = iConfig.getUntrackedParameter<bool>("doGenSubJets", false);
   subjetGenTag_ = consumes<reco::JetView> (iConfig.getUntrackedParameter<InputTag>("subjetGenTag"));
 
+  //reWTA reclustering
+  doWTARecluster_ = iConfig.getUntrackedParameter<bool>("doWTARecluster", false);
+
   // useGenTaus = true;
   // if (iConfig.exists("genTau1"))
   //   tokenGenTau1_          = consumes<edm::ValueMap<float> >(iConfig.getParameter<edm::InputTag>("genTau1"));
@@ -194,6 +197,12 @@ HiInclusiveJetAnalyzer::beginJob() {
   t->Branch("jtpu",jets_.jtpu,"jtpu[nref]/F");
   t->Branch("jtm",jets_.jtm,"jtm[nref]/F");
   t->Branch("jtarea",jets_.jtarea,"jtarea[nref]/F");
+
+  //for reWTA reclustering
+  if(doWTARecluster_){
+    t->Branch("WTAeta",jets_.WTAeta,"WTAeta[nref]/F");
+    t->Branch("WTAphi",jets_.WTAphi,"WTAphi[nref]/F");
+  }
 
   t->Branch("jtPfCHF",jets_.jtPfCHF,"jtPfCHF[nref]/F");
   t->Branch("jtPfNHF",jets_.jtPfNHF,"jtPfNHF[nref]/F");
@@ -509,6 +518,12 @@ HiInclusiveJetAnalyzer::beginJob() {
       t->Branch("genm",jets_.genm,"genm[ngen]/F");
       t->Branch("gendphijt",jets_.gendphijt,"gendphijt[ngen]/F");
       t->Branch("gendrjt",jets_.gendrjt,"gendrjt[ngen]/F");
+
+      //for reWTA reclustering
+      if(doWTARecluster_){
+        t->Branch("WTAgeneta",jets_.WTAgeneta,"WTAgeneta[ngen]/F");
+        t->Branch("WTAgenphi",jets_.WTAgenphi,"WTAgenphi[ngen]/F");
+      }
 
       if(doGenSubJets_) {
         t->Branch("genptG",jets_.genptG,"genptG[ngen]/F");
@@ -1033,6 +1048,22 @@ HiInclusiveJetAnalyzer::analyze(const Event& iEvent,
     jets_.jtm[jets_.nref] = jet.mass();
     jets_.jtarea[jets_.nref] = jet.jetArea();
 
+    //recluster the jet constituents in reWTA scheme-------------------------
+    if(doWTARecluster_){
+      std::vector<fastjet::PseudoJet> candidates;
+      auto daughters = jet.getJetConstituents();
+      for(auto it = daughters.begin(); it!=daughters.end(); ++it){
+        candidates.push_back(fastjet::PseudoJet((**it).px(), (**it).py(), (**it).pz(), (**it).energy()));
+      }
+      auto cs = new fastjet::ClusterSequence(candidates, WTAjtDef);
+      std::vector<fastjet::PseudoJet> wtajt = fastjet::sorted_by_pt(cs->inclusive_jets(0));
+
+      jets_.WTAeta[jets_.nref] = (wtajt.size() > 0) ? wtajt[0].eta() : -999;
+      jets_.WTAphi[jets_.nref] = (wtajt.size() > 0) ? wtajt[0].phi_std() : -999;
+      delete cs;
+    }
+    //------------------------------------------------------------------
+
     jets_.jttau1[jets_.nref] = -999.;
     jets_.jttau2[jets_.nref] = -999.;
     jets_.jttau3[jets_.nref] = -999.;
@@ -1401,6 +1432,22 @@ HiInclusiveJetAnalyzer::analyze(const Event& iEvent,
           break;
         }
       }
+
+      //reWTA reclustering----------------------------------
+      if(doWTARecluster_){
+        std::vector<fastjet::PseudoJet> candidates;
+        auto daughters = genjet.getJetConstituents();
+        for(auto it = daughters.begin(); it!=daughters.end(); ++it){
+          candidates.push_back(fastjet::PseudoJet((**it).px(), (**it).py(), (**it).pz(), (**it).energy()));
+        }
+        auto cs = new fastjet::ClusterSequence(candidates, WTAjtDef);
+        std::vector<fastjet::PseudoJet> wtajt = fastjet::sorted_by_pt(cs->inclusive_jets(0));
+
+        jets_.WTAgeneta[jets_.ngen] = (wtajt.size() > 0) ? wtajt[0].eta() : -999;
+        jets_.WTAgenphi[jets_.ngen] =  (wtajt.size() > 0) ? wtajt[0].phi_std() : -999;
+        delete cs;
+      }
+      //-------------------------------------------------
 
       // threshold to reduce size of output in minbias PbPb
       if(genjet_pt>genPtMin_){
