@@ -1,26 +1,16 @@
 import FWCore.ParameterSet.Config as cms
 
-from HLTrigger.HLTanalyzers.HLTBitAnalyser_cfi import *
+from HeavyIonsAnalysis.EventAnalysis.dummybranches_cff import *
 
-hltbitanalysis.UseTFileService = cms.untracked.bool(True)
-hltanalysis = hltbitanalysis.clone(
-    l1GtReadoutRecord    = cms.InputTag("gtDigis"),
-    l1GctHFBitCounts     = cms.InputTag("gctDigis"),
-    l1GctHFRingSums      = cms.InputTag("gctDigis"),
-    l1extramu            = cms.string('l1extraParticles'),
-    l1extramc            = cms.string('l1extraParticles'),
-    hltresults           = cms.InputTag("TriggerResults","","HLT"),
-    dummyBranches = cms.untracked.vstring()
-    )
-
-
-hltanalysisReco = hltbitanalysis.clone(
-    l1tAlgBlkInputTag               = cms.InputTag("gtStage2Digis"),
-    l1tExtBlkInputTag               = cms.InputTag("gtStage2Digis"),
-    gObjectMapRecord                = cms.InputTag("gtStage2ObjectMap"),
-    gmtStage2Digis                  = cms.string("gmtStage2Digis"),
-    caloStage2Digis                 = cms.string("caloStage2Digis"),
-    hltresults           = cms.InputTag("TriggerResults::HLT"),
+hltanalysis = cms.EDAnalyzer('HLTBitAnalyzer',
+    HLTProcessName = cms.string('HLT'),
+    hltresults = cms.InputTag('TriggerResults::HLT'),
+    l1results = cms.InputTag('gtStage2Digis'),
+    dummyBranches = dummy_branches_for_pp_2017_HLT,
+    l1dummyBranches = dummy_branches_for_pp_2017_L1,
+    RunParameters = cms.PSet(
+        Debug = cms.bool(False),
+    ),
 )
 
 

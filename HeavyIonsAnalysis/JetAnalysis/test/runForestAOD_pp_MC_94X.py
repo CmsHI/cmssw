@@ -74,7 +74,6 @@ process.ak4PFcorr.payload = "AK4PF"
 ############################
 # Event Analysis
 ############################
-process.load('HeavyIonsAnalysis.EventAnalysis.hltanalysis_cff')
 # use data version to avoid PbPb MC
 process.load('HeavyIonsAnalysis.EventAnalysis.hievtanalyzer_data_cfi')
 process.hiEvtAnalyzer.Vertex = cms.InputTag("offlinePrimaryVertices")
@@ -83,6 +82,7 @@ process.hiEvtAnalyzer.doEvtPlane = cms.bool(False)
 process.hiEvtAnalyzer.doMC = cms.bool(True) # general MC info
 process.hiEvtAnalyzer.doHiMC = cms.bool(False) # HI specific MC info
 
+process.load('HeavyIonsAnalysis.EventAnalysis.hltanalysis_cff')
 process.load('HeavyIonsAnalysis.EventAnalysis.hltobject_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.l1object_cfi')
 

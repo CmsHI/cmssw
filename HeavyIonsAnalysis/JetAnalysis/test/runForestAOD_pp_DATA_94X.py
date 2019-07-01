@@ -102,12 +102,9 @@ process.hiEvtAnalyzer.Vertex = cms.InputTag("offlinePrimaryVertices")
 process.hiEvtAnalyzer.doCentrality = cms.bool(False)
 process.hiEvtAnalyzer.doEvtPlane = cms.bool(False)
 
+process.load('HeavyIonsAnalysis.EventAnalysis.hltanalysis_cff')
 process.load('HeavyIonsAnalysis.EventAnalysis.hltobject_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.l1object_cfi')
-
-process.load('HeavyIonsAnalysis.EventAnalysis.hltanalysis_cff')
-from HeavyIonsAnalysis.EventAnalysis.dummybranches_cff import addHLTdummybranchesForPP
-addHLTdummybranchesForPP(process)
 
 process.load("HeavyIonsAnalysis.JetAnalysis.pfcandAnalyzer_cfi")
 process.pfcandAnalyzer.skipCharged = False
@@ -161,7 +158,7 @@ for idmod in my_id_modules:
 #########################
 
 process.ana_step = cms.Path(
-    process.hltanalysisReco *
+    process.hltanalysis *
     process.hltobject *
     # process.l1object +
     process.hiEvtAnalyzer *
