@@ -201,7 +201,6 @@ ALGO_SUB_GROOM_RADIUS_OBJECT_JetAnalyzer = inclusiveJetAnalyzer.clone(
     bTagJetName = cms.untracked.string("ALGO_SUB_GROOM_RADIUS_OBJECT_"),
     jetName = cms.untracked.string("ALGO_SUB_GROOM_RADIUS_OBJECT_"),
     genPtMin = cms.untracked.double(5),
-    hltTrgResults = cms.untracked.string('TriggerResults::'+'HISIGNAL'),
     doTower = cms.untracked.bool(DOTOWERS_),
     doSubJets = cms.untracked.bool(DOSUBJETS_),
     doGenSubJets = cms.untracked.bool(DOGENSUBJETS_),

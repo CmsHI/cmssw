@@ -16,7 +16,6 @@ inclusiveJetAnalyzer = cms.EDAnalyzer(
     trackQuality  = cms.untracked.string("highPurity"),
     useCentrality = cms.untracked.bool(False),
     doLifeTimeTagging = cms.untracked.bool(False),
-    L1gtReadout = cms.InputTag("gtDigis"),
     doGenTaus = cms.untracked.bool(False),
     doGenSym = cms.untracked.bool(False),
     doSubJets = cms.untracked.bool(False),
@@ -26,11 +25,4 @@ inclusiveJetAnalyzer = cms.EDAnalyzer(
     doHiJetID = cms.untracked.bool(True),
     doStandardJetID = cms.untracked.bool(False),
     doSubEvent = cms.untracked.bool(False),
-    jetIDWeight = cms.untracked.string("HeavyIonsAnalysis/JetAnalysis/data/JetID_TMVAClassification_BDTG_weights.xml"),       
-    hltTrgResults = cms.untracked.string("TriggerResults::HLT"),
-    hltTrgNames  = cms.untracked.vstring(
-        'HLT_HIMinBiasHfOrBSC_Core',
-        'HLT_HIJet35U',
-        'HLT_HIJet35U_Core',
-        'HLT_HIJet50U_Core')
     )
