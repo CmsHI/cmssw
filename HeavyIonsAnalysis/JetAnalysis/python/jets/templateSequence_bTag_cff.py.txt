@@ -201,6 +201,9 @@ ALGO_SUB_GROOM_RADIUS_OBJECT_JetAnalyzer = inclusiveJetAnalyzer.clone(jetTag = c
                                                              doGenTaus = ISMC
                                                             )
 
+ALGO_SUB_GROOM_RADIUS_OBJECT_JetAnalyzer.trackSelection = ALGO_SUB_GROOM_RADIUS_OBJECT_SecondaryVertexTagInfos.trackSelection
+ALGO_SUB_GROOM_RADIUS_OBJECT_JetAnalyzer.trackPairV0Filter = ALGO_SUB_GROOM_RADIUS_OBJECT_SecondaryVertexTagInfos.vertexCuts.v0Filter
+
 ALGO_SUB_GROOM_RADIUS_OBJECT_JetSequence_mc = cms.Sequence(
                                                   #ALGO_SUB_GROOM_RADIUS_OBJECT_clean
                                                   #*

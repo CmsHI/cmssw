@@ -1,142 +1,104 @@
 #!/bin/sh
 
-for system in PbPb pp
+for system in pp
 do
-    for sample in data jec mc mb
+    for sample in data jec mc
     do
-	if [ $system == "pp" ] && [ $sample == "mb" ]; then
-	    continue
-	fi	
         for algo in ak
         do
-            for sub in Vs Pu Cs NONE
-            do
-                for groom in SoftDrop Filter NONE
-                do
-                    for radius in 1 2 3 4 5 6
-                    do
-                        for object in PF Calo
-                        do
-			    # no Cs Calo or pp jets
-			    if ( [ $object == "Calo" ] ) && ( [ $sub == "Cs" ] ) ; then
-			        continue
-			    fi
-                            subt=$sub
-                            if [ $sub == "NONE" ]; then
-                                subt=""
-                            fi
-                            groomt=$groom
-                            if [ $groom == "NONE" ]; then
-                                groomt=""
-                            fi
-			    if [ $sample == "mb" ]; then
-                                matchGenjets="HiCleanedGenJets"
-			        partons="selectedPartons"
-			    else
-			        matchGenjets="HiSignalGenJets"
-			        partons="hiSignalGenParticles"
-			    fi
-			    if ( [ $sub == "Vs" ] || [ $sub == "Cs" ] ) ; then
-			        resolveByDist="True"
-			    else 
-			        resolveByDist="False"
-			    fi
-			    genjets="HiGenJets"
-                            ispp="False"
-			    ismc="False"
-                            corrlabel="_offline"
-                            domatch="True"
-                            tracks="hiGeneralTracks"
-                            pflow="particleFlowTmp"
-                            domatch="False"
-			    doTower="True"
-			    doSubJets="False"
-                            doGenSubJets="False"
-                            match=""
-                            eventinfotag="generator"
-			    jetcorrectionlevels="\'L2Relative\',\'L3Absolute\'"
-                            #echo "" > $algo$subt$radius${object}JetSequence_${system}_${sample}_cff.py
-                            
-                            if [ $system == "pp" ]; then
-                                #corrlabel="_generalTracks"
-                                tracks="generalTracks"
-                                genparticles="genParticles"
-                                partons="genParticles"
-                                pflow="particleFlow"
-			        doTower="False"
-				ispp="True"
-			        if [ $sample == "data" ] && [ $sub == "NONE" ] && [ $radius == 4 ] && [ $object == "PF" ]; then
-				    jetcorrectionlevels="\'L2Relative\',\'L3Absolute\',\'L2L3Residual\'"
-			        fi
-                            fi
+	    for groom in SoftDrop Filter NONE
+	    do
+		for radius in 1 2 3 4 5 6
+		do
+		    for object in PF Calo
+		    do
+			subt=""
+			groomt=$groom
+			if [ $groom == "NONE" ]; then
+			    groomt=""
+			fi
+			partons="genParticles"
+			genjets="GenJets"
+			matchGenjets="GenJets"
+			resolveByDist="False"
+			ispp="True"
+			ismc="False"
+			corrlabel="_offline"
+			domatch="True"
+			tracks="generalTracks"
+			pflow="particleFlow"
+			domatch="False"
+			doTower="False"
+			doSubJets="False"
+			doGenSubJets="False"
+			match=""
+			eventinfotag="generator"
+			jetcorrectionlevels="\'L2Relative\',\'L3Absolute\'"
+			genparticles="genParticles"
 
-                            if [ $sample == "mc" ] || [ $sample == "jec" ] || [ $sample == "mb" ]; then
-                                ismc="True"
-                            fi
+			if [ $sample == "data" ] && [ $radius == 4 ] && [ $object == "PF" ]; then
+			    jetcorrectionlevels="\'L2Relative\',\'L3Absolute\',\'L2L3Residual\'"
+			fi
 
-                            if [ $system == "pp" ]; then
-                                genjets="GenJets"
-                                matchGenjets="GenJets"
-                            fi
+			if [ $sample == "mc" ] || [ $sample == "jec" ]; then
+			    ismc="True"
+			fi
 
-			    if [ $sub == "Pu" ]; then
-			        corrname=`echo ${algo} | sed 's/\(.*\)/\U\1/'`${sub}${radius}${object}${corrlabel}
-			    else 
-			        corrname=`echo ${algo} | sed 's/\(.*\)/\U\1/'`${radius}${object}${corrlabel}
+			corrname=`echo ${algo} | sed 's/\(.*\)/\U\1/'`${radius}${object}${corrlabel}
+
+			if [ $groom == "SoftDrop" ] || [ $groom == "Filter" ]; then
+			    doSubJets="True"
+			    if [ $sample == "mc" ] && [ $groom == "SoftDrop" ]; then
+				doGenSubJets="True"
 			    fi
-                            
-			    if [ $groom == "SoftDrop" ] || [ $groom == "Filter" ]; then
-			        doSubJets="True"
-                                if [ $sample == "mc" ] && [ $groom == "SoftDrop" ]; then
-                                    doGenSubJets="True"
-                                fi
-			    fi
+			fi
 
-                            cat templateSequence_bTag_cff.py.txt \
-                                | sed -e "s/ALGO_/$algo/g" \
-                                      -e "s/SUB_/$subt/g" \
-                                      -e "s/GROOM_/$groomt/g" \
-                                      -e "s/RADIUS_/$radius/g" \
-                                      -e "s/OBJECT_/$object/g" \
-                                      -e "s/SAMPLE_/$sample/g" \
-                                      -e "s/CORRNAME_/$corrname/g" \
-                                      -e "s/MATCHED_/$match/g" \
-                                      -e "s/ISMC/$ismc/g" \
-				      -e "s/ISPP/$ispp/g" \
-                                      -e "s/MATCHGENJETS/$matchGenjets/g" \
-                                      -e "s/GENJETS/$genjets/g" \
-                                      -e "s/GENPARTICLES/$genparticles/g" \
-                                      -e "s/PARTONS/$partons/g" \
-                                      -e "s/TRACKS/$tracks/g" \
-                                      -e "s/PARTICLEFLOW/$pflow/g" \
-                                      -e "s/DOMATCH/$domatch/g" \
-                                      -e "s/EVENTINFOTAG/$eventinfotag/g" \
-			              -e "s/JETCORRECTIONLEVELS/$jetcorrectionlevels/g" \
-			              -e "s/DOTOWERS_/$doTower/g" \
-			              -e "s/DOSUBJETS_/$doSubJets/g" \
-                                      -e "s/DOGENSUBJETS_/$doGenSubJets/g" \
-			              -e "s/RESOLVEBYDIST_/$resolveByDist/g" \
-				      > $algo$subt$groomt$radius${object}JetSequence_${system}_${sample}_cff.py
+			fulltag=${algo}${subt}${groomt}${radius}${object}
+			jetseqfile=${fulltag}JetSequence_${system}_${sample}_cff.py
 
-			    if [ $doSubJets == "True" ]; then
-			    	sed -i 's/\#SUBJETDUMMY_//g' $algo$subt$groomt$radius${object}JetSequence_${system}_${sample}_cff.py 
-			    fi
-			
-			    if [ $ispp == "True" ]; then
-			    	sed -i 's/\#ppDummy_//g' $algo$subt$groomt$radius${object}JetSequence_${system}_${sample}_cff.py
-			    fi 
-                            if [ $ispp != "True" ] || [ $sample != "data" ]; then
-			    	sed -i 's/\#ppDataDummy_//g' $algo$subt$groomt$radius${object}JetSequence_${system}_${sample}_cff.py
-			    fi			    
-                            # skip no sub
-			    if [ $sample == "jec" ]; then
-                                echo "${algo}${subt}${groomt}${radius}${object}JetAnalyzer.genPtMin = cms.untracked.double(1)" >> $algo$subt$groomt$radius${object}JetSequence_${system}_${sample}_cff.py
-			        echo "${algo}${subt}${groomt}${radius}${object}JetAnalyzer.jetPtMin = cms.double(1)" >> $algo$subt$groomt$radius${object}JetSequence_${system}_${sample}_cff.py
-                            fi
-                        done
-                    done
-                done
-            done
-        done
+			cat templateSequence_bTag_cff.py.txt | sed \
+			    -e "s/ALGO_/$algo/g" \
+			    -e "s/SUB_/$subt/g" \
+			    -e "s/GROOM_/$groomt/g" \
+			    -e "s/RADIUS_/$radius/g" \
+			    -e "s/OBJECT_/$object/g" \
+			    -e "s/SAMPLE_/$sample/g" \
+			    -e "s/CORRNAME_/$corrname/g" \
+			    -e "s/MATCHED_/$match/g" \
+			    -e "s/ISMC/$ismc/g" \
+			    -e "s/ISPP/$ispp/g" \
+			    -e "s/MATCHGENJETS/$matchGenjets/g" \
+			    -e "s/GENJETS/$genjets/g" \
+			    -e "s/GENPARTICLES/$genparticles/g" \
+			    -e "s/PARTONS/$partons/g" \
+			    -e "s/TRACKS/$tracks/g" \
+			    -e "s/PARTICLEFLOW/$pflow/g" \
+			    -e "s/DOMATCH/$domatch/g" \
+			    -e "s/EVENTINFOTAG/$eventinfotag/g" \
+			    -e "s/JETCORRECTIONLEVELS/$jetcorrectionlevels/g" \
+			    -e "s/DOTOWERS_/$doTower/g" \
+			    -e "s/DOSUBJETS_/$doSubJets/g" \
+			    -e "s/DOGENSUBJETS_/$doGenSubJets/g" \
+			    -e "s/RESOLVEBYDIST_/$resolveByDist/g" \
+			    > $jetseqfile
+
+			if [ $doSubJets == "True" ]; then
+			    sed -i 's/\#SUBJETDUMMY_//g' $jetseqfile
+			fi
+
+			sed -i 's/\#ppDummy_//g' $jetseqfile
+			if [ $sample != "data" ]; then
+			    sed -i 's/\#ppDataDummy_//g' $jetseqfile
+			fi
+			# skip no sub
+			if [ $sample == "jec" ]; then
+			    echo "${fulltag}JetAnalyzer.genPtMin = cms.untracked.double(1)" >> $jetseqfile
+			    echo "${fulltag}JetAnalyzer.jetPtMin = cms.double(1)" >> $jetseqfile
+			    echo "${fulltag}JetAnalyzer.doSubEvent = True" >> $jetseqfile
+			fi
+		    done
+		done
+	    done
+	done
     done
 done

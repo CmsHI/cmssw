@@ -65,32 +65,7 @@ process.TFileService = cms.Service("TFileService",
 #############################
 # Jets
 #############################
-
-from RecoJets.JetProducers.ak4PFJets_cfi import ak4PFJets
-ak4PFJets.doAreaFastjet = True
-process.ak5PFJets = ak4PFJets.clone(rParam = 0.5)
-process.ak3PFJets = ak4PFJets.clone(rParam = 0.3)
-
-process.load('HeavyIonsAnalysis.JetAnalysis.jets.ak4CaloJetSequence_pp_data_cff')
-
-process.load('HeavyIonsAnalysis.JetAnalysis.jets.ak3PFJetSequence_pp_data_cff')
-process.load('HeavyIonsAnalysis.JetAnalysis.jets.ak4PFJetSequence_pp_data_cff')
-process.load('HeavyIonsAnalysis.JetAnalysis.jets.ak5PFJetSequence_pp_data_cff')
-
-process.highPurityTracks = cms.EDFilter("TrackSelector",
-    src = cms.InputTag("generalTracks"),
-    cut = cms.string('quality("highPurity")')
-)
-
-process.jetSequences = cms.Sequence(
-    process.ak3PFJets +
-    process.ak5PFJets +
-    process.highPurityTracks +
-    process.ak4CaloJetSequence +
-    process.ak3PFJetSequence +
-    process.ak4PFJetSequence +
-    process.ak5PFJetSequence
-)
+process.load('HeavyIonsAnalysis.JetAnalysis.fullJetSequence_pp_data_cff')
 
 #####################################################################################
 
@@ -162,7 +137,7 @@ process.ana_step = cms.Path(
     process.hltobject *
     # process.l1object +
     process.hiEvtAnalyzer *
-    process.jetSequences +
+    process.jetSequence +
     # Should be added in the path for VID module
     # process.egmGsfElectronIDSequence +
     process.ggHiNtuplizer +
@@ -213,11 +188,3 @@ process.pVertexFilterCutEandG = cms.Path(process.pileupVertexFilterCutEandG)
 process.pAna = cms.EndPath(process.skimanalysis)
 
 # Customization
-
-for analyzer in [process.ak3PFJetAnalyzer,
-                 process.ak4PFJetAnalyzer,
-                 process.ak5PFJetAnalyzer,
-                 process.ak4CaloJetAnalyzer,
-                 ]:
-    analyzer.trackSelection = process.ak4PFSecondaryVertexTagInfos.trackSelection
-    analyzer.trackPairV0Filter = process.ak4PFSecondaryVertexTagInfos.vertexCuts.v0Filter

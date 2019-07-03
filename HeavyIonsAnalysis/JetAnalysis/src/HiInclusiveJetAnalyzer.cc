@@ -155,12 +155,16 @@ HiInclusiveJetAnalyzer::HiInclusiveJetAnalyzer(const edm::ParameterSet& iConfig)
   doExtraCTagging_ = iConfig.getUntrackedParameter<bool>("doExtraCTagging",false);
 
   genParticleSrc_ = consumes<reco::GenParticleCollection> (iConfig.getUntrackedParameter<edm::InputTag>("genParticles",edm::InputTag("hiGenParticles")));
-  jetFlavourInfosToken_ = consumes<reco::JetFlavourInfoMatchingCollection>( iConfig.getParameter<edm::InputTag>("jetFlavourInfos") );
 
-  if(doSubJets_ && doExtendedFlavorTagging_){
-	  subjetFlavourInfosToken_ = mayConsume<reco::JetFlavourInfoMatchingCollection>( iConfig.exists("subjetFlavourInfos") ? iConfig.getParameter<edm::InputTag>("subjetFlavourInfos") : edm::InputTag() );
-	  groomedJetsToken_ = mayConsume<edm::View<reco::Jet> >( iConfig.exists("groomedJets") ? iConfig.getParameter<edm::InputTag>("groomedJets") : edm::InputTag() );
-	  useSubjets_ = ( iConfig.exists("subjetFlavourInfos") && iConfig.exists("groomedJets") );
+  if (doExtendedFlavorTagging_) {
+    jetFlavourInfosToken_ = consumes<reco::JetFlavourInfoMatchingCollection>( iConfig.getParameter<edm::InputTag>("jetFlavourInfos") );
+    if (doSubJets_) {
+      useSubjets_ = iConfig.exists("subjetFlavourInfos") && iConfig.exists("groomedJets");
+      if (useSubjets_) {
+        subjetFlavourInfosToken_ = consumes<reco::JetFlavourInfoMatchingCollection>(iConfig.getParameter<edm::InputTag>("subjetFlavourInfos"));
+        groomedJetsToken_ = consumes<edm::View<reco::Jet> >(iConfig.getParameter<edm::InputTag>("groomedJets"));
+      }
+    }
   }
 
   if(doTrigger_){
@@ -1497,7 +1501,7 @@ HiInclusiveJetAnalyzer::analyze(const Event& iEvent,
    edm::Handle<edm::View<reco::Jet> > groomedJets; 
    if(doExtendedFlavorTagging_){
 	   iEvent.getByToken(jetFlavourInfosToken_, theJetFlavourInfos );
-	   if(useSubjets_){
+	   if(doSubJets_ && useSubjets_){
 		   iEvent.getByToken(subjetFlavourInfosToken_, theSubjetFlavourInfos);
 		   iEvent.getByToken(groomedJetsToken_, groomedJets);
 	   }   
@@ -2337,7 +2341,7 @@ void HiInclusiveJetAnalyzer::analyzeSubjets(const reco::Jet jet, int idx, edm::H
 
 		  const reco::Jet *subjd = dynamic_cast<const reco::Jet*>(jet.daughter(k));
 
-		  if(doExtendedFlavorTagging_){		
+		  if (doSubJets_ && useSubjets_) {
 		    vector<float> hdr, hpt, heta, hphi, hpdg, pdr, ppt, peta, pphi, ppdg;
 		    for ( reco::JetFlavourInfoMatchingCollection::const_iterator sj  = theSubjetFlavourInfos->begin(); sj != theSubjetFlavourInfos->end(); sj++ ) { 
 		      if( sqrt(reco::deltaR2(subjd->eta(), subjd->phi(), (*sj).first.get()->eta(), (*sj).first.get()->phi() )) <0.01  ){

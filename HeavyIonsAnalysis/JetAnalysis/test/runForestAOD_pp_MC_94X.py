@@ -48,6 +48,9 @@ from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, '94X_mc2017_realistic_forppRef5TeV', '')
 process.HiForest.GlobalTagLabel = process.GlobalTag.globaltag
 
+from HeavyIonsAnalysis.Configuration.CommonFunctions_cff import overrideJEC_pp5020
+process = overrideJEC_pp5020(process)
+
 #####################################################################################
 # Define tree output
 #####################################################################################
@@ -62,12 +65,10 @@ process.TFileService = cms.Service("TFileService",
 #############################
 # Jets
 #############################
-
-process.load("HeavyIonsAnalysis.JetAnalysis.FullJetSequence_nominalPP")
-process.ak4PFcorr.payload = "AK4PF"
+process.load("HeavyIonsAnalysis.JetAnalysis.fullJetSequence_pp_mc_cff")
 
 # Use this version for JEC
-# process.load("HeavyIonsAnalysis.JetAnalysis.FullJetSequence_JECPP")
+# process.load("HeavyIonsAnalysis.JetAnalysis.fullJetSequence_pp_jec_cff")
 
 #####################################################################################
 
@@ -148,8 +149,8 @@ process.ana_step = cms.Path(
     process.hiEvtAnalyzer *
     process.hltobject +
     # process.l1object +
-    process.HiGenParticleAna*
-    process.jetSequences +
+    process.genJetSequence +
+    process.jetSequence +
     # Should be added in the path for VID module
     # process.egmGsfElectronIDSequence +
     process.ggHiNtuplizer +
@@ -201,5 +202,3 @@ process.pVertexFilterCutEandG = cms.Path(process.pileupVertexFilterCutEandG)
 process.pAna = cms.EndPath(process.skimanalysis)
 
 # Customization
-process.ak4PFJetAnalyzer.trackSelection = process.ak4PFSecondaryVertexTagInfos.trackSelection
-process.ak4PFJetAnalyzer.trackPairV0Filter = process.ak4PFSecondaryVertexTagInfos.vertexCuts.v0Filter
