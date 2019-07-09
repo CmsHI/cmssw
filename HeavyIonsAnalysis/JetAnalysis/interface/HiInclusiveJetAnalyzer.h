@@ -6,32 +6,22 @@
 #include <string>
 #include <iostream>
 
-// user include files
-#include "FWCore/Framework/interface/Frameworkfwd.h"
-#include "FWCore/Framework/interface/EDAnalyzer.h"
-#include "FWCore/ParameterSet/interface/ParameterSet.h"
-#include "FWCore/Framework/interface/Event.h"
-#include "FWCore/Framework/interface/MakerMacros.h"
-
-#include "TFile.h"
-#include "TVector2.h"
+// ROOT headers
 #include "TTree.h"
-#include "TLorentzVector.h"
-#include "TH1.h"
+
+// user include files
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
-#include "FWCore/ServiceRegistry/interface/Service.h"
-
-#include "Geometry/CaloGeometry/interface/CaloGeometry.h"
-
 #include "DataFormats/Candidate/interface/Candidate.h"
-#include "DataFormats/PatCandidates/interface/Jet.h"
 #include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
-#include "SimDataFormats/GeneratorProducts/interface/HepMCProduct.h"
-#include "DataFormats/L1GlobalTrigger/interface/L1GlobalTriggerReadoutSetup.h"
-#include "DataFormats/L1GlobalTrigger/interface/L1GlobalTriggerReadoutRecord.h"
-#include "DataFormats/L1GlobalTrigger/interface/L1GlobalTriggerObjectMapRecord.h"
-#include "DataFormats/L1GlobalTrigger/interface/L1GlobalTriggerObjectMap.h"
+#include "DataFormats/PatCandidates/interface/Jet.h"
+#include "FWCore/Framework/interface/EDAnalyzer.h"
+#include "FWCore/Framework/interface/Event.h"
+#include "FWCore/Framework/interface/Frameworkfwd.h"
+#include "FWCore/Framework/interface/MakerMacros.h"
+#include "FWCore/ParameterSet/interface/ParameterSet.h"
+#include "FWCore/ServiceRegistry/interface/Service.h"
 #include "SimDataFormats/GeneratorProducts/interface/GenEventInfoProduct.h"
+#include "SimDataFormats/GeneratorProducts/interface/HepMCProduct.h"
 
 #include "RecoBTag/SecondaryVertex/interface/TrackKinematics.h"
 #include "DataFormats/Common/interface/View.h"
@@ -44,7 +34,6 @@
 #include "RecoBTag/SecondaryVertex/interface/TrackSelector.h"
 
 #include "fastjet/contrib/Njettiness.hh"
-#include "TMVA/Reader.h"
 //
 
 /**\class HiInclusiveJetAnalyzer
@@ -66,18 +55,13 @@ public:
 
   virtual void beginJob();
 
-  void fillL1Bits(const edm::Event &iEvent);
-
-  void fillHLTBits(const edm::Event &iEvent);
-
   template <typename TYPE>
     void getProduct(const std::string name, edm::Handle<TYPE> &prod,
 		    const edm::Event &event) const;
+
   template <typename TYPE>
     bool getProductSafe(const std::string name, edm::Handle<TYPE> &prod,
 			const edm::Event &event) const;
-
-
 
 private:
 
@@ -117,43 +101,30 @@ private:
     int _index;
   };
 
-  
-  // edm::InputTag   jetTag_, vtxTag_, genjetTag_, eventInfoTag_, L1gtReadout_, pfCandidateLabel_, trackTag_, matchTag_;
   edm::InputTag   jetTagLabel_;
-  edm::EDGetTokenT<std::vector<reco::Vertex> >         vtxTag_;
-  edm::EDGetTokenT<reco::JetView>              jetTag_;
-  edm::EDGetTokenT<pat::JetCollection>         jetTagPat_;
-  edm::EDGetTokenT<reco::JetView>              matchTag_;
-  edm::EDGetTokenT<pat::JetCollection>         matchTagPat_;
-  edm::EDGetTokenT<reco::JetView>              subjetGenTag_;
-  edm::EDGetTokenT<reco::PFCandidateCollection>         pfCandidateLabel_;
-  edm::EDGetTokenT<reco::TrackCollection>         trackTag_;
-  edm::EDGetTokenT<reco::GenParticleCollection>         genParticleSrc_;
-  edm::EDGetTokenT<std::vector<reco::GenJet> >         genjetTag_;
-  //edm::EDGetTokenT<edm::View<reco::Jet>>         genjetTag_;
-  edm::EDGetTokenT<edm::HepMCProduct>         eventInfoTag_;
-  edm::EDGetTokenT<GenEventInfoProduct>  eventGenInfoTag_;
-  edm::EDGetTokenT< L1GlobalTriggerReadoutRecord >         L1gtReadout_;
-  // edm::InputTag HcalRecHitHFSrc_;
-  // edm::InputTag HcalRecHitHBHESrc_;
-  // edm::InputTag EBSrc_;
-  // edm::InputTag EESrc_;
-  // edm::InputTag genParticleSrc_;
+  edm::EDGetTokenT<std::vector<reco::Vertex>>    vtxTag_;
+  edm::EDGetTokenT<reco::JetView>                jetTag_;
+  edm::EDGetTokenT<pat::JetCollection>           jetTagPat_;
+  edm::EDGetTokenT<reco::JetView>                matchTag_;
+  edm::EDGetTokenT<pat::JetCollection>           matchTagPat_;
+  edm::EDGetTokenT<reco::PFCandidateCollection>  pfCandidateLabel_;
+  edm::EDGetTokenT<reco::TrackCollection>        trackTag_;
+  edm::EDGetTokenT<reco::GenParticleCollection>  genParticleSrc_;
+  edm::EDGetTokenT<std::vector<reco::GenJet>>    genjetTag_;
+  edm::EDGetTokenT<reco::JetView>                subjetGenTag_;
+  edm::EDGetTokenT<edm::HepMCProduct>            eventInfoTag_;
+  edm::EDGetTokenT<GenEventInfoProduct>          eventGenInfoTag_;
 
   std::string jetName_; //used as prefix for jet structures
   edm::Handle<reco::JetView> gensubjets_;
   /* edm::EDGetTokenT< edm::ValueMap<float> > tokenGenTau1_; */
   /* edm::EDGetTokenT< edm::ValueMap<float> > tokenGenTau2_; */
   /* edm::EDGetTokenT< edm::ValueMap<float> > tokenGenTau3_; */
-  
+
   // towers
   edm::EDGetTokenT<CaloTowerCollection> TowerSrc_;
 
   std::vector<float> usedStringPts;
-
-  //for the JetID BDT
-  std::unique_ptr<TMVA::Reader> reader;
-  std::unique_ptr<float[]> varAddr;
 
   /// verbose ?
   bool verbose_;
@@ -188,23 +159,10 @@ private:
   bool doGenTaus_;
   bool doSubJets_;
   bool doJetConstituents_;
-  bool doNewJetVars_;
   bool doGenSubJets_;
 
   TTree *t;
   edm::Service<TFileService> fs1;
-
-  const CaloGeometry *geo;
-
-  edm::EDGetTokenT<edm::TriggerResults> hltResName_;         //HLT trigger results name
-  std::vector<std::string>      hltProcNames_;       //HLT process name(s)
-  std::vector<std::string>      hltTrgNames_;        //HLT trigger name(s)
-
-  std::vector<int>              hltTrgBits_;         //HLT trigger bit(s)
-  std::vector<bool>             hltTrgDeci_;         //HLT trigger descision(s)
-  std::vector<std::string>      hltTrgUsedNames_;    //HLT used trigger name(s)
-  std::string                   hltUsedResName_;     //used HLT trigger results name
-  std::string			jetIDweightFile_;
 
   std::string bTagJetName_;
   std::string ipTagInfos_;
@@ -228,7 +186,6 @@ private:
 
   static const int MAXJETS = 1000;
   static const int MAXTRACKS = 5000;
-  static const int MAXHLTBITS = 5000;
   static const int MAXBFRAG = 500;
 
   struct JRA{
@@ -250,79 +207,6 @@ private:
     float jtpu[MAXJETS];
     float jtm[MAXJETS];
     float jtarea[MAXJETS];
-    int jtnCands[MAXJETS];
-    int jtnChCands[MAXJETS];
-    int jtnNeCands[MAXJETS];
-    float jtchargedSumConst[MAXJETS];
-    int   jtchargedNConst  [MAXJETS];
-    float jteSumConst      [MAXJETS];
-    int   jteNConst        [MAXJETS];
-    float jtmuSumConst     [MAXJETS];
-    int   jtmuNConst       [MAXJETS];
-    float jtphotonSumConst [MAXJETS];
-    int   jtphotonNConst   [MAXJETS];
-    float jtneutralSumConst[MAXJETS];
-    int   jtneutralNConst  [MAXJETS];
-    float jthfhadSumConst  [MAXJETS];
-    int   jthfhadNConst    [MAXJETS];
-    float jthfemSumConst   [MAXJETS];
-    int   jthfemNConst     [MAXJETS];
-
-    float jtMByPt[MAXJETS];
-    float jtRMSCand[MAXJETS];
-    float jtAxis1[MAXJETS];
-    float jtAxis2[MAXJETS];
-    float jtSigma[MAXJETS];
-    float jtR[MAXJETS];
-    float jtpTD[MAXJETS];
-    float jtrm0p5[MAXJETS];
-    float jtrm1[MAXJETS];
-    float jtrm2[MAXJETS];
-    float jtrm3[MAXJETS];
-    float jtpull[MAXJETS];
-    float jtSDm[MAXJETS];
-    float jtSDpt[MAXJETS];
-    float jtSDeta[MAXJETS];
-    float jtSDphi[MAXJETS];
-    float jtSDptFrac[MAXJETS];
-    float jtSDrm0p5[MAXJETS];
-    float jtSDrm1[MAXJETS];
-    float jtSDrm2[MAXJETS];
-    float jtSDrm3[MAXJETS];
-    
-    float jtTbeta20p2[MAXJETS];
-    float jtTbeta20p3[MAXJETS];
-    float jtTbeta20p4[MAXJETS];
-    float jtTbeta20p5[MAXJETS];
-    float jtTbeta30p2[MAXJETS];
-    float jtTbeta30p3[MAXJETS];
-    float jtTbeta30p4[MAXJETS];
-    float jtTbeta30p5[MAXJETS];
-    float jtCbeta20p2[MAXJETS];
-    float jtCbeta20p3[MAXJETS];
-    float jtCbeta20p4[MAXJETS];
-    float jtCbeta20p5[MAXJETS];
-    float jtZ11[MAXJETS];
-    float jtZ20[MAXJETS];
-    float jtZ22[MAXJETS];
-    float jtZ31[MAXJETS];
-    float jtZ33[MAXJETS];
-    float jtZ40[MAXJETS];
-    float jtZ42[MAXJETS];
-    float jtZ44[MAXJETS];
-    float jtZ51[MAXJETS];
-    float jtZ53[MAXJETS];
-    float jtZ55[MAXJETS];
-    float jtPhi1[MAXJETS];
-    float jtPhi2[MAXJETS];
-    float jtPhi3[MAXJETS];
-    float jtPhi4[MAXJETS];
-    float jtPhi5[MAXJETS];
-    float jtPhi6[MAXJETS];
-    float jtPhi7[MAXJETS];
-    float jtSkx[MAXJETS];
-    float jtSky[MAXJETS];
-
 
     float jtPfCHF[MAXJETS];
     float jtPfNHF[MAXJETS];
@@ -416,7 +300,6 @@ private:
     float hcalSum[MAXJETS];
     float ecalSum[MAXJETS];
 
-
     float fHPD[MAXJETS];
     float fRBX[MAXJETS];
     int n90[MAXJETS];
@@ -444,7 +327,6 @@ private:
     float fShort[MAXJETS];
     float fLS[MAXJETS];
     float fHFOOT[MAXJETS];
-
 
     int subid[MAXJETS];
 
@@ -526,12 +408,8 @@ private:
     float muptrel[MAXJETS];
     int muchg[MAXJETS];
 
-    float discr_fr01[MAXJETS];
-    float discr_jetID_cuts[MAXJETS];
-    float discr_jetID_bdt[MAXJETS];
-
     int refparton_flavorProcess[MAXJETS];
-    float	refGSP_gpt [MAXJETS];
+    float refGSP_gpt [MAXJETS];
     float refGSP_geta [MAXJETS];
     float refGSP_gphi [MAXJETS];
     float refGSP_gidx [MAXJETS];
@@ -561,78 +439,7 @@ private:
     float refparton_pt[MAXJETS];
     int refparton_flavor[MAXJETS];
     int refparton_flavorForB[MAXJETS];
-    int refnCands[MAXJETS];
-    int refnChCands[MAXJETS];
-    int refnNeCands[MAXJETS];
-    float refchargedSumConst[MAXJETS];
-    int   refchargedNConst  [MAXJETS];
-    float refeSumConst      [MAXJETS];
-    int   refeNConst        [MAXJETS];
-    float refmuSumConst     [MAXJETS];
-    int   refmuNConst       [MAXJETS];
-    float refphotonSumConst [MAXJETS];
-    int   refphotonNConst   [MAXJETS];
-    float refneutralSumConst[MAXJETS];
-    int   refneutralNConst  [MAXJETS];
-    float refhfhadSumConst  [MAXJETS];
-    int   refhfhadNConst    [MAXJETS];
-    float refhfemSumConst   [MAXJETS];
-    int   refhfemNConst     [MAXJETS];
 
-    float refMByPt[MAXJETS];
-    float refRMSCand[MAXJETS];
-    float refAxis1[MAXJETS];
-    float refAxis2[MAXJETS];
-    float refSigma[MAXJETS];
-    float refR[MAXJETS];
-    float refpTD[MAXJETS];
-    float refrm0p5[MAXJETS];
-    float refrm1[MAXJETS];
-    float refrm2[MAXJETS];
-    float refrm3[MAXJETS];
-    float refpull[MAXJETS];
-    float refSDm[MAXJETS];
-    float refSDpt[MAXJETS];
-    float refSDeta[MAXJETS];
-    float refSDphi[MAXJETS];
-    float refSDptFrac[MAXJETS];
-    float refSDrm0p5[MAXJETS];
-    float refSDrm1[MAXJETS];
-    float refSDrm2[MAXJETS];
-    float refSDrm3[MAXJETS];
-    float refTbeta20p2[MAXJETS];
-    float refTbeta20p3[MAXJETS];
-    float refTbeta20p4[MAXJETS];
-    float refTbeta20p5[MAXJETS];
-    float refTbeta30p2[MAXJETS];
-    float refTbeta30p3[MAXJETS];
-    float refTbeta30p4[MAXJETS];
-    float refTbeta30p5[MAXJETS];
-    float refCbeta20p2[MAXJETS];
-    float refCbeta20p3[MAXJETS];
-    float refCbeta20p4[MAXJETS];
-    float refCbeta20p5[MAXJETS];
-    float refZ11[MAXJETS];
-    float refZ20[MAXJETS];
-    float refZ22[MAXJETS];
-    float refZ31[MAXJETS];
-    float refZ33[MAXJETS];
-    float refZ40[MAXJETS];
-    float refZ42[MAXJETS];
-    float refZ44[MAXJETS];
-    float refZ51[MAXJETS];
-    float refZ53[MAXJETS];
-    float refZ55[MAXJETS];
-    float refPhi1[MAXJETS];
-    float refPhi2[MAXJETS];
-    float refPhi3[MAXJETS];
-    float refPhi4[MAXJETS];
-    float refPhi5[MAXJETS];
-    float refPhi6[MAXJETS];
-    float refPhi7[MAXJETS];
-    float refSkx[MAXJETS];
-    float refSky[MAXJETS];
-    
     float refptG[MAXJETS];
     float refetaG[MAXJETS];
     float refphiG[MAXJETS];
@@ -671,80 +478,6 @@ private:
     float gendrjt[MAXJETS];
     int gensubid[MAXJETS];
 
-    int gennCands[MAXJETS];
-    int gennChCands[MAXJETS];
-    int gennNeCands[MAXJETS];
-    float genchargedSumConst[MAXJETS];
-    int   genchargedNConst  [MAXJETS];
-    float geneSumConst      [MAXJETS];
-    int   geneNConst        [MAXJETS];
-    float genmuSumConst     [MAXJETS];
-    int   genmuNConst       [MAXJETS];
-    float genphotonSumConst [MAXJETS];
-    int   genphotonNConst   [MAXJETS];
-    float genneutralSumConst[MAXJETS];
-    int   genneutralNConst  [MAXJETS];
-    float genhfhadSumConst  [MAXJETS];
-    int   genhfhadNConst    [MAXJETS];
-    float genhfemSumConst   [MAXJETS];
-    int   genhfemNConst     [MAXJETS];
-
-    float genMByPt[MAXJETS];
-    float genRMSCand[MAXJETS];
-    float genAxis1[MAXJETS];
-    float genAxis2[MAXJETS];
-    float genSigma[MAXJETS];
-    float genR[MAXJETS];
-    float genpTD[MAXJETS];
-    float genrm0p5[MAXJETS];
-    float genrm1[MAXJETS];
-    float genrm2[MAXJETS];
-    float genrm3[MAXJETS];
-    float genpull[MAXJETS];
-
-    float genSDm[MAXJETS];
-    float genSDpt[MAXJETS];
-    float genSDeta[MAXJETS];
-    float genSDphi[MAXJETS];
-    float genSDptFrac[MAXJETS];
-    float genSDrm0p5[MAXJETS];
-    float genSDrm1[MAXJETS];
-    float genSDrm2[MAXJETS];
-    float genSDrm3[MAXJETS];
-
-    float genTbeta20p2[MAXJETS];
-    float genTbeta20p3[MAXJETS];
-    float genTbeta20p4[MAXJETS];
-    float genTbeta20p5[MAXJETS];
-    float genTbeta30p2[MAXJETS];
-    float genTbeta30p3[MAXJETS];
-    float genTbeta30p4[MAXJETS];
-    float genTbeta30p5[MAXJETS];
-    float genCbeta20p2[MAXJETS];
-    float genCbeta20p3[MAXJETS];
-    float genCbeta20p4[MAXJETS];
-    float genCbeta20p5[MAXJETS];
-    float genZ11[MAXJETS];
-    float genZ20[MAXJETS];
-    float genZ22[MAXJETS];
-    float genZ31[MAXJETS];
-    float genZ33[MAXJETS];
-    float genZ40[MAXJETS];
-    float genZ42[MAXJETS];
-    float genZ44[MAXJETS];
-    float genZ51[MAXJETS];
-    float genZ53[MAXJETS];
-    float genZ55[MAXJETS];
-    float genPhi1[MAXJETS];
-    float genPhi2[MAXJETS];
-    float genPhi3[MAXJETS];
-    float genPhi4[MAXJETS];
-    float genPhi5[MAXJETS];
-    float genPhi6[MAXJETS];
-    float genPhi7[MAXJETS];
-    float genSkx[MAXJETS];
-    float genSky[MAXJETS];
-    
     float genptG[MAXJETS];
     float genetaG[MAXJETS];
     float genphiG[MAXJETS];
@@ -768,16 +501,6 @@ private:
     std::vector<std::vector<float>> genSDConstituentsPhi;
     std::vector<std::vector<float>> genSDConstituentsM;
 
-    // hlt
-    int nHLTBit;
-    bool hltBit[MAXHLTBITS];
-
-    // l1
-    int nL1TBit;
-    bool l1TBit[MAXHLTBITS];
-    int nL1ABit;
-    bool l1ABit[MAXHLTBITS];
-
     int bMult;
     int bJetIndex[MAXBFRAG];
     int bStatus[MAXBFRAG];
@@ -789,8 +512,6 @@ private:
     float bPt[MAXBFRAG];
     float bEta[MAXBFRAG];
     float bPhi[MAXBFRAG];
-
-
   };
 
   JRA jets_;
