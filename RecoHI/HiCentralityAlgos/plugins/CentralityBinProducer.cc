@@ -46,7 +46,7 @@
 //
 
 class CentralityBinProducer : public edm::EDProducer {
-  enum VariableType {HFtowers = 0, HFtowersPlus = 1, HFtowersMinus = 2, HFtowersTrunc = 3, HFtowersPlusTrunc = 4, HFtowersMinusTrunc = 5, HFhits = 6, PixelHits = 7, PixelTracks = 8, Tracks = 9, EB = 10, EE = 11, ZDChitsPlus = 12, ZDChitsMinus = 13, Missing = 14};
+  enum VariableType {HFtowers = 0, HFtowersPlus = 1, HFtowersMinus = 2, HFtowersTrunc = 3, HFtowersPlusTrunc = 4, HFtowersMinusTrunc = 5, HFhits = 6, PixelHits = 7, PixelTracks = 8, Tracks = 9, EB = 10, EE = 11, ZDChitsPlus = 12, ZDChitsMinus = 13, HFtowersECut = 14, Missing = 15};
    public:
       explicit CentralityBinProducer(const edm::ParameterSet&);
       ~CentralityBinProducer() override;
@@ -107,9 +107,10 @@ CentralityBinProducer::CentralityBinProducer(const edm::ParameterSet& iConfig):
    if(centralityVariable_ == "EE") varType_ = EE;
    if(centralityVariable_ == "ZDChitsPlus") varType_ = ZDChitsPlus;
    if(centralityVariable_ == "ZDChitsMinus") varType_ = ZDChitsMinus;
+   if(centralityVariable_ == "HFtowersECut") varType_ = HFtowersECut;
    if(varType_ == Missing){
      std::string errorMessage="Requested Centrality variable does not exist : "+centralityVariable_+"\n" +
-       "Supported variables are: \n" + "HFtowers HFtowersPlus HFtowersMinus HFtowersTrunc HFtowersPlusTrunc HFtowersMinusTrunc HFhits PixelHits PixelTracks Tracks EB EE" + "\n";
+       "Supported variables are: \n" + "HFtowers HFtowersPlus HFtowersMinus HFtowersTrunc HFtowersPlusTrunc HFtowersMinusTrunc HFhits PixelHits PixelTracks Tracks EB EE ZDChitsPlus ZDChitsMinus HFtowersECut" + "\n";
      throw cms::Exception("Configuration",errorMessage);
    }
 
@@ -158,6 +159,7 @@ CentralityBinProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
   case EE : value = chandle_->EtEESum();break;
   case ZDChitsPlus : value = chandle_->zdcSumPlus();break;
   case ZDChitsMinus : value = chandle_->zdcSumMinus();break;
+  case HFtowersECut : value = chandle_->EtHFtowerSumECut();break;
   default:
     throw cms::Exception("CentralityBinProducer","Centrality variable not recognized.");
   }
