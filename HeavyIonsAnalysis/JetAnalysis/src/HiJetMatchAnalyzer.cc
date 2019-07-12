@@ -20,7 +20,7 @@
 
 // system include files
 #include <memory>
-#include <iostream>
+#include <vector>
 
 // user include files
 #include "FWCore/Framework/interface/Frameworkfwd.h"
@@ -50,11 +50,25 @@
 #include "FWCore/ParameterSet/interface/FileInPath.h"
 #include "FWCore/Framework/interface/ESWatcher.h"
 
-#include "HeavyIonsAnalysis/JetAnalysis/interface/RhoGetter.h"
 #include "TTree.h"
 
 using namespace std;
 using namespace edm;
+
+static double rhoBins[11] = {-5,-4,-3,-2,-1,0,1,2,3,4,5};
+
+double getRho(double eta, const std::vector<double> rhos){
+  int j = 0;
+  double deta = 99;
+  for(unsigned int i = 0; i < rhos.size() ; ++i){
+    double d = fabs(eta-rhoBins[i]);
+    if(d < deta){
+      deta = d;
+      j = i;
+    }
+  }
+  return rhos[j];
+}
 
 static const int MAXJETS = 500;
 
