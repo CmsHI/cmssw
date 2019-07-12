@@ -20,48 +20,36 @@
 
 // system include files
 #include <memory>
-#include <iostream>
 #include <string>
-#include <fstream>
+#include <vector>
 
 // user include files
-#include "FWCore/Framework/interface/Frameworkfwd.h"
-#include "FWCore/Framework/interface/EDAnalyzer.h"
-
-#include "FWCore/Framework/interface/Event.h"
-#include "FWCore/Framework/interface/MakerMacros.h"
-#include "FWCore/Framework/interface/EventSetup.h"
-
-#include "FWCore/ParameterSet/interface/ParameterSet.h"
-#include "FWCore/Utilities/interface/InputTag.h"
-#include "FWCore/Framework/interface/ESHandle.h"
-
-#include "FWCore/ServiceRegistry/interface/Service.h"
-
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
-
+#include "DataFormats/HepMCCandidate/interface/GenParticle.h"
+#include "FWCore/Framework/interface/EDAnalyzer.h"
+#include "FWCore/Framework/interface/ESHandle.h"
+#include "FWCore/Framework/interface/Event.h"
+#include "FWCore/Framework/interface/EventSetup.h"
+#include "FWCore/Framework/interface/Frameworkfwd.h"
+#include "FWCore/Framework/interface/MakerMacros.h"
+#include "FWCore/ParameterSet/interface/ParameterSet.h"
+#include "FWCore/ServiceRegistry/interface/Service.h"
+#include "FWCore/Utilities/interface/InputTag.h"
 #include "SimDataFormats/GeneratorProducts/interface/HepMCProduct.h"
-#include "SimDataFormats/CrossingFrame/interface/MixCollection.h"
+#include "SimDataFormats/HiGenData/interface/GenHIEvent.h"
 #include "SimDataFormats/Vertex/interface/SimVertex.h"
 #include "SimDataFormats/Vertex/interface/SimVertexContainer.h"
-#include "SimDataFormats/HiGenData/interface/GenHIEvent.h"
-#include "DataFormats/HepMCCandidate/interface/GenParticle.h"
+#include "SimGeneral/HepPDTRecord/interface/ParticleDataTable.h"
 
 #include "HepMC/GenEvent.h"
 #include "HepMC/HeavyIon.h"
 
-#include "SimGeneral/HepPDTRecord/interface/ParticleDataTable.h"
-
 // root include file
 #include "TFile.h"
-#include "TNtuple.h"
-#include "TMath.h"
-#include <vector>
+#include "TTree.h"
 
 using namespace std;
 
-//static const Int_t MAXPARTICLES = 200000;
-//static const Int_t MAXVTX = 1000;
 static const Int_t ETABINS = 3; // Fix also in branch string
 
 //
@@ -118,13 +106,10 @@ private:
 
   // ----------member data ---------------------------
 
-  //std::string g4Label;
   edm::EDGetTokenT<edm::SimVertexContainer> g4Label;
 
   TTree* hydjetTree_;
   HydjetEvent hev_;
-
-  TNtuple *nt;
 
   Bool_t doVertex_;
   Bool_t useHepMCProduct_;
@@ -136,10 +121,6 @@ private:
   Double_t ptMin_;
   Bool_t chargedOnly_;
   Bool_t stableOnly_;
-
-  // edm::InputTag src_;
-  // edm::InputTag genParticleSrc_;
-  // edm::InputTag genHIsrc_;
 
   edm::EDGetTokenT<edm::HepMCProduct> src_;
   edm::EDGetTokenT<reco::GenParticleCollection> genParticleSrc_;
@@ -293,11 +274,6 @@ HiGenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   Double_t vr = -99;
   const GenEvent* evt;
 
-  Int_t nmix = -1;
-  Int_t np = 0;
-  Int_t sig = -1;
-  Int_t src = -1;
-
   if(useHepMCProduct_){
     Handle<edm::HepMCProduct> mc;
     iEvent.getByToken(src_,mc);
@@ -313,15 +289,12 @@ HiGenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
       phi0 = hi->event_plane_angle();
     }
 
-    src = evt->particles_size();
-
     HepMC::GenEvent::particle_const_iterator begin = evt->particles_begin();
     HepMC::GenEvent::particle_const_iterator end = evt->particles_end();
     int nparticles=-1;
     for(HepMC::GenEvent::particle_const_iterator it = begin; it != end; ++it){
       nparticles++;
       if ((*it)->momentum().perp()<ptMin_) continue;
-      //	if((*it)->status() == 1){
       if (fabs((*it)->momentum().eta())>etaMax_) continue; 
       Int_t pdg_id = (*it)->pdg_id();
       Float_t eta = (*it)->momentum().eta();
@@ -348,8 +321,6 @@ HiGenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	++(hev_.n[etabin]);
       }
       ++(hev_.mult);
-      // if(hev_.mult >= MAXPARTICLES)
-      // 	edm::LogError("Number of genparticles exceeds array bounds.");
     }
   }else{
     edm::Handle<reco::GenParticleCollection> parts;
@@ -371,15 +342,9 @@ HiGenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
       hev_.nMothers.push_back( p.numberOfMothers());
       vector<int> tempMothers = getMotherIdx(parts, p);
       hev_.motherIndex.push_back(tempMothers);
-      // for(unsigned int imother=0; imother<tempMothers.size(); imother++){
-      // 	hev_.motherIndex[hev_.mult].push_back(tempMothers.at(imother));
-      // }
       hev_.nDaughters.push_back( p.numberOfDaughters());
       vector<int> tempDaughters = getDaughterIdx(parts, p);
       hev_.daughterIndex.push_back(tempDaughters);
-      // for(unsigned int idaughter=0; idaughter<tempDaughters.size(); idaughter++){
-      // 	hev_.daughterIndex[hev_.mult].push_back(tempDaughters.at(idaughter));
-      // }
       Double_t eta = fabs(p.eta());
 
       Int_t etabin = 0;
@@ -390,8 +355,6 @@ HiGenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	++(hev_.n[etabin]);
       }
       ++(hev_.mult);
-      // if(hev_.mult >= MAXPARTICLES)
-      // 	edm::LogError("Number of genparticles exceeds array bounds.");
     }
     if(doHI_){
       edm::Handle<edm::GenHIEvent> higen;
@@ -408,16 +371,13 @@ HiGenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
   if(doVertex_){
     edm::Handle<edm::SimVertexContainer> simVertices;
-    // iEvent.getByType<edm::SimVertexContainer>(simVertices);
     iEvent.getByToken(g4Label,simVertices);
 
     if (! simVertices.isValid() ) throw cms::Exception("FatalError") << "No vertices found\n";
-    //Int_t inum = 0;
 
     edm::SimVertexContainer::const_iterator it=simVertices->begin();
     if(it != simVertices->end()){
       SimVertex vertex = (*it);
-      //cout<<" Vertex position "<< inum <<" " << vertex.position().rho()<<" "<<vertex.position().z()<<endl;
       vx = vertex.position().x();
       vy = vertex.position().y();
       vz = vertex.position().z();
@@ -440,8 +400,6 @@ HiGenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   hev_.vz = vz;
   hev_.vr = vr;
 
-  nt->Fill(nmix,np,src,sig);
-
   hydjetTree_->Fill();
 
 }
@@ -457,8 +415,6 @@ HiGenAnalyzer::beginRun(const edm::Run&, const edm::EventSetup& iSetup)
 void
 HiGenAnalyzer::beginJob()
 {
-
-  nt = f->make<TNtuple>("nt","Mixing Analysis","mix:np:src:sig");
 
   hydjetTree_ = f->make<TTree>("hi","Tree of Hi gen Event");
   hydjetTree_->Branch("event",&hev_.event,"event/I");

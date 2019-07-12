@@ -25,45 +25,34 @@ Prepare the Track Tree for analysis
 #include <functional>
 
 // CMSSW user include files
-#include "DataFormats/Common/interface/DetSetAlgorithm.h"
+#include "CommonTools/UtilAlgos/interface/TFileService.h"
+#include "DataFormats/BeamSpot/interface/BeamSpot.h"
 #include "DataFormats/GeometryVector/interface/GlobalPoint.h"
-#include "DataFormats/SiPixelDetId/interface/PXBDetId.h"
-#include "DataFormats/SiPixelDetId/interface/PXFDetId.h"
-#include "DataFormats/Common/interface/TriggerResults.h"
+#include "DataFormats/HepMCCandidate/interface/GenParticle.h"
+#include "DataFormats/Math/interface/Point3D.h"
+#include "DataFormats/ParticleFlowCandidate/interface/PFCandidateFwd.h"
+#include "DataFormats/RecoCandidate/interface/TrackAssociation.h"
+#include "DataFormats/TrackReco/interface/DeDxData.h"
+#include "DataFormats/TrackerRecHit2D/interface/SiStripRecHit1D.h"
 #include "DataFormats/VertexReco/interface/Vertex.h"
 #include "DataFormats/VertexReco/interface/VertexFwd.h"
-#include "DataFormats/TrackerRecHit2D/interface/SiPixelRecHitCollection.h"
-#include "DataFormats/ParticleFlowCandidate/interface/PFCandidateFwd.h"
-#include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/Framework/interface/EDAnalyzer.h"
+#include "FWCore/Framework/interface/ESHandle.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
-#include "FWCore/Framework/interface/ESHandle.h"
+#include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
 #include "Geometry/Records/interface/TrackerDigiGeometryRecord.h"
-#include "Geometry/TrackerGeometryBuilder/interface/PixelGeomDetUnit.h"
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
-#include "HLTrigger/HLTcore/interface/HLTConfigProvider.h"
-#include "CommonTools/UtilAlgos/interface/TFileService.h"
+#include "SimDataFormats/TrackingAnalysis/interface/TrackingParticle.h"
+#include "SimDataFormats/TrackingAnalysis/interface/TrackingParticleFwd.h"
 #include "SimDataFormats/TrackingAnalysis/interface/TrackingVertex.h"
 #include "SimDataFormats/TrackingAnalysis/interface/TrackingVertexContainer.h"
 #include "SimDataFormats/TrackingHit/interface/PSimHit.h"
 #include "SimGeneral/HepPDTRecord/interface/ParticleDataTable.h"
-#include "DataFormats/SiPixelDetId/interface/PixelEndcapName.h"
-
-#include "DataFormats/Math/interface/Point3D.h"
-#include "DataFormats/BeamSpot/interface/BeamSpot.h"
-
-#include "SimDataFormats/TrackingAnalysis/interface/TrackingParticle.h"
-#include "SimDataFormats/TrackingAnalysis/interface/TrackingParticleFwd.h"
 #include "SimTracker/Records/interface/TrackAssociatorRecord.h"
-#include "DataFormats/RecoCandidate/interface/TrackAssociation.h"
-#include "DataFormats/TrackReco/interface/DeDxData.h"
-#include "DataFormats/HepMCCandidate/interface/GenParticle.h"
-
-#include "HeavyIonsAnalysis/TrackAnalysis/interface/TrkAnalyzerUtils.h"
 
 // Particle Flow
 #include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
@@ -140,19 +129,19 @@ struct TrackEvent {
   unsigned char trkNdof[MAXTRACKS];
   float trkDz[MAXTRACKS];
   float trkDz1[MAXTRACKS];               // dZ to the highest pt vertex
-  float trkDz2[MAXTRACKS];               // dZ to the highest mult vertex
+  /* float trkDz2[MAXTRACKS];               // dZ to the highest mult vertex */
   float trkDzError[MAXTRACKS];
   float trkDzError1[MAXTRACKS];
-  float trkDzError2[MAXTRACKS];
+  /* float trkDzError2[MAXTRACKS]; */
   float trkDzOverDzError[MAXTRACKS*MAXVTX];
   float trkDxy[MAXTRACKS];
   float trkDxyBS[MAXTRACKS];
   float trkDxy1[MAXTRACKS];              // d0 to the highest pt vertex
-  float trkDxy2[MAXTRACKS];              // d0 to the highest mult vertex
+  /* float trkDxy2[MAXTRACKS];              // d0 to the highest mult vertex */
   float trkDxyError[MAXTRACKS];
   float trkDxyErrorBS[MAXTRACKS];
   float trkDxyError1[MAXTRACKS];
-  float trkDxyError2[MAXTRACKS];
+  /* float trkDxyError2[MAXTRACKS]; */
   float trkDxyOverDxyError[MAXTRACKS*MAXVTX];
   float trkVx[MAXTRACKS];
   float trkVy[MAXTRACKS];
@@ -170,9 +159,6 @@ struct TrackEvent {
   bool trkAssocVtx[MAXTRACKS*MAXVTX];
   int nTrkTimesnVtx;
 
-  float trkExpHit1Eta[MAXTRACKS];
-  float trkExpHit2Eta[MAXTRACKS];
-  float trkExpHit3Eta[MAXTRACKS];
   float trkStatus[MAXTRACKS];
   float trkPId[MAXTRACKS];
   float trkMPId[MAXTRACKS];
@@ -249,12 +235,14 @@ class TrackAnalyzer : public edm::EDAnalyzer {
     void fillTracks(const edm::Event& iEvent, const edm::EventSetup& iSetup);
     void fillSimTracks(const edm::Event& iEvent, const edm::EventSetup& iSetup);
 
-    int associateSimhitToTrackingparticle(unsigned int trid);
-    bool checkprimaryparticle(const TrackingParticle* tp);
+    std::vector<int> matchTpToGen(const edm::Event& iEvent,
+                                  const TrackingParticle* tparticle,
+                                  reco::GenParticleCollection const& genCollection);
 
+    const TrackingParticle* doRecoToTpMatch(reco::RecoToSimCollection const& recSimColl,
+                                            const reco::TrackRef &in);
     // ----------member data ---------------------------
     bool doTrack_;
-    bool doTrackExtra_;
     bool doSimTrack_;
     bool doSimVertex_;
     bool fillSimTrack_;
@@ -302,7 +290,6 @@ class TrackAnalyzer : public edm::EDAnalyzer {
 TrackAnalyzer::TrackAnalyzer(const edm::ParameterSet& iConfig)
 {
   doTrack_ = iConfig.getUntrackedParameter<bool>("doTrack",true);
-  doTrackExtra_ = iConfig.getUntrackedParameter<bool>("doTrackExtra",false);
   doSimTrack_ = iConfig.getUntrackedParameter<bool>("doSimTrack",false);
   fillSimTrack_ = iConfig.getUntrackedParameter<bool>("fillSimTrack",false);
   doSimVertex_ = iConfig.getUntrackedParameter<bool>("doSimVertex",false);
@@ -377,24 +364,18 @@ TrackAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   pev_.nBX = (int)iEvent.bunchCrossing();
   pev_.N = 0;
 
-  // pev_.nv = 0;
   pev_.nParticle = 0;
   pev_.nTrk = 0;
 
-  //cout <<"Fill Vtx"<<endl;
   fillVertices(iEvent);
 
-  //cout <<"Fill Tracks"<<endl;
   if (doTrack_) fillTracks(iEvent, iSetup);
-  //cout <<"Tracks filled!"<<endl;
   if (doSimTrack_) {
     fillSimTracks(iEvent, iSetup);
     pev_.nParticleTimesnVtx = pev_.nParticle*pev_.nVtx;
   }
-  //cout <<"SimTracks filled!"<<endl;
   pev_.nTrkTimesnVtx = pev_.nTrk*pev_.nVtx;
   trackTree_->Fill();
-  //cout <<"Tree filled!"<<endl;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -419,10 +400,8 @@ TrackAnalyzer::fillVertices(const edm::Event& iEvent) {
   for (unsigned int iv = 0; iv < vertexSrc_.size(); ++iv) {
     const reco::VertexCollection* recoVertices;
     edm::Handle<reco::VertexCollection> vertexCollection;
-    //cout <<vertexSrc_[iv]<<endl;
     iEvent.getByToken(vertexSrc_[iv],vertexCollection);
     recoVertices = vertexCollection.product();
-    // unsigned int daughter = 0;
     int nVertex = 0;
     unsigned int greatestNtrkVtx = 0;
     unsigned int greatestPtVtx = 0;
@@ -476,10 +455,8 @@ TrackAnalyzer::fillVertices(const edm::Event& iEvent) {
 
           for (unsigned itrack = 0; itrack<etracks->size(); ++itrack) {
             reco::TrackRef trackRef = reco::TrackRef(etracks,itrack);
-            //cout<<" trackRef.key() "<<trackRef.key()<< " it->key() "<<it->key()<<endl;
             if (trackRef.key() == it->key()) {
               pev_.trkVtxIndex[itrack] = i;  // note that index starts from 1
-              //cout<< " matching track "<<itrack<<endl;
             }
           }
         }
@@ -527,13 +504,11 @@ TrackAnalyzer::fillTracks(const edm::Event& iEvent, const edm::EventSetup& iSetu
   iEvent.getByToken(pfCandSrc_, pfCandidates);
 
   // do reco-to-sim association
-  // edm::Handle<TrackingParticleCollection> TPCollectionHfake;
   edm::Handle<edm::View<reco::Track>> trackCollection;
   iEvent.getByToken(trackSrcView_, trackCollection);
-  // ESedm::Handle<TrackAssociatorBase> theAssociator;
-  reco::RecoToSimCollection recSimColl;
 
   edm::Handle<reco::RecoToSimCollection> recotosimCollectionH;
+  edm::Handle<reco::GenParticleCollection> genCollectionH;
 
   edm::Handle<reco::DeDxDataValueMap> DeDxMap;
   if (doDeDx_) {
@@ -546,7 +521,7 @@ TrackAnalyzer::fillTracks(const edm::Event& iEvent, const edm::EventSetup& iSetu
   }
   if (doSimTrack_) {
     iEvent.getByToken(associatorMapRS_,recotosimCollectionH);
-    recSimColl = *(recotosimCollectionH.product());
+    iEvent.getByToken(particleSrc_, genCollectionH);
   }
 
   pev_.nTrk = 0;
@@ -588,12 +563,33 @@ TrackAnalyzer::fillTracks(const edm::Event& iEvent, const edm::EventSetup& iSetu
       pev_.dedx[pev_.nTrk] = (*DeDxMap)[trackRef].dEdx();
     }
 
+    pev_.trkEta[pev_.nTrk] = etrk.eta();
+    pev_.trkPhi[pev_.nTrk] = etrk.phi();
+    pev_.trkPt[pev_.nTrk] = etrk.pt();
+    pev_.trkPtError[pev_.nTrk] = etrk.ptError();
+    pev_.trkCharge[pev_.nTrk] = etrk.charge();
+    pev_.trkNHit[pev_.nTrk] = etrk.numberOfValidHits();
+    pev_.trkChi2[pev_.nTrk] = etrk.chi2();
+    pev_.trkNdof[pev_.nTrk] = etrk.ndof();
+
     if (doDebug_) {
+      pev_.trkDxy[pev_.nTrk] = etrk.dxy();
+      pev_.trkDxyError[pev_.nTrk] = etrk.dxyError();
+      pev_.trkDz[pev_.nTrk] = etrk.dz();
+      pev_.trkDzError[pev_.nTrk] = etrk.dzError();
+      pev_.trkVx[pev_.nTrk] = etrk.vx();
+      pev_.trkVy[pev_.nTrk] = etrk.vy();
+      pev_.trkVz[pev_.nTrk] = etrk.vz();
+
+      pev_.trkDxyBS[pev_.nTrk] = etrk.dxy(beamSpot.position());
+      pev_.trkDxyErrorBS[pev_.nTrk] = sqrt(etrk.dxyError()*etrk.dxyError()+beamSpot.BeamWidthX()*beamSpot.BeamWidthY());
+
+      pev_.trkNlayer[pev_.nTrk] = etrk.hitPattern().trackerLayersWithMeasurement();
+      pev_.trkNlayer3D[pev_.nTrk] = etrk.hitPattern().pixelLayersWithMeasurement() + etrk.hitPattern().numberOfValidStripLayersWithMonoAndStereo();
+
       int count1dhits = 0;
       trackingRecHit_iterator edh = etrk.recHitsEnd();
       for (trackingRecHit_iterator ith = etrk.recHitsBegin(); ith != edh; ++ith) {
-        // const TrackingRecHit* hit = ith->get();
-
         if ((*ith)->isValid()) {
           if (typeid(*ith) == typeid(SiStripRecHit1D)) ++count1dhits;
         }
@@ -601,40 +597,17 @@ TrackAnalyzer::fillTracks(const edm::Event& iEvent, const edm::EventSetup& iSetu
       pev_.trkChi2hit1D[pev_.nTrk] = (etrk.chi2()+count1dhits)/double(etrk.ndof()+count1dhits);
     }
 
-    pev_.trkEta[pev_.nTrk] = etrk.eta();
-    pev_.trkPhi[pev_.nTrk] = etrk.phi();
-    pev_.trkPt[pev_.nTrk] = etrk.pt();
-    pev_.trkPtError[pev_.nTrk] = etrk.ptError();
-    pev_.trkCharge[pev_.nTrk] = etrk.charge();
-    pev_.trkNHit[pev_.nTrk] = etrk.numberOfValidHits();
-    pev_.trkDxy[pev_.nTrk] = etrk.dxy();
-    pev_.trkDxyError[pev_.nTrk] = etrk.dxyError();
-    pev_.trkDz[pev_.nTrk] = etrk.dz();
-    pev_.trkDzError[pev_.nTrk] = etrk.dzError();
-    pev_.trkChi2[pev_.nTrk] = etrk.chi2();
-    pev_.trkNdof[pev_.nTrk] = etrk.ndof();
-    pev_.trkVx[pev_.nTrk] = etrk.vx();
-    pev_.trkVy[pev_.nTrk] = etrk.vy();
-    pev_.trkVz[pev_.nTrk] = etrk.vz();
-
     math::XYZPoint v1(pev_.xVtx[pev_.maxPtVtx],pev_.yVtx[pev_.maxPtVtx], pev_.zVtx[pev_.maxPtVtx]);
-    // std::cout << it << " " << pev_.nVtx << " " << etrk.dz(v1) << std::endl;
     pev_.trkDz1[pev_.nTrk] = etrk.dz(v1);
     pev_.trkDzError1[pev_.nTrk] = sqrt(etrk.dzError()*etrk.dzError()+pev_.zVtxErr[pev_.maxPtVtx]*pev_.zVtxErr[pev_.maxPtVtx]);
     pev_.trkDxy1[pev_.nTrk] = etrk.dxy(v1);
     pev_.trkDxyError1[pev_.nTrk] = sqrt(etrk.dxyError()*etrk.dxyError()+pev_.xVtxErr[pev_.maxPtVtx]*pev_.yVtxErr[pev_.maxPtVtx]);
 
-    math::XYZPoint v2(pev_.xVtx[pev_.maxMultVtx],pev_.yVtx[pev_.maxMultVtx], pev_.zVtx[pev_.maxMultVtx]);
-    pev_.trkDz2[pev_.nTrk] = etrk.dz(v2);
-    pev_.trkDzError2[pev_.nTrk] = sqrt(etrk.dzError()*etrk.dzError()+pev_.zVtxErr[pev_.maxMultVtx]*pev_.zVtxErr[pev_.maxMultVtx]);
-    pev_.trkDxy2[pev_.nTrk] = etrk.dxy(v2);
-    pev_.trkDxyError2[pev_.nTrk] = sqrt(etrk.dxyError()*etrk.dxyError()+pev_.xVtxErr[pev_.maxMultVtx]*pev_.yVtxErr[pev_.maxMultVtx]);
-
-    pev_.trkDxyBS[pev_.nTrk] = etrk.dxy(beamSpot.position());
-    pev_.trkDxyErrorBS[pev_.nTrk] = sqrt(etrk.dxyError()*etrk.dxyError()+beamSpot.BeamWidthX()*beamSpot.BeamWidthY());
-
-    pev_.trkNlayer[pev_.nTrk] = etrk.hitPattern().trackerLayersWithMeasurement();
-    pev_.trkNlayer3D[pev_.nTrk] = etrk.hitPattern().pixelLayersWithMeasurement() + etrk.hitPattern().numberOfValidStripLayersWithMonoAndStereo();
+    /* math::XYZPoint v2(pev_.xVtx[pev_.maxMultVtx],pev_.yVtx[pev_.maxMultVtx], pev_.zVtx[pev_.maxMultVtx]); */
+    /* pev_.trkDz2[pev_.nTrk] = etrk.dz(v2); */
+    /* pev_.trkDzError2[pev_.nTrk] = sqrt(etrk.dzError()*etrk.dzError()+pev_.zVtxErr[pev_.maxMultVtx]*pev_.zVtxErr[pev_.maxMultVtx]); */
+    /* pev_.trkDxy2[pev_.nTrk] = etrk.dxy(v2); */
+    /* pev_.trkDxyError2[pev_.nTrk] = sqrt(etrk.dxyError()*etrk.dxyError()+pev_.xVtxErr[pev_.maxMultVtx]*pev_.yVtxErr[pev_.maxMultVtx]); */
 
     pev_.trkAlgo[pev_.nTrk] = etrk.algo();
     pev_.trkOriginalAlgo[pev_.nTrk] = etrk.originalAlgo();
@@ -674,7 +647,7 @@ TrackAnalyzer::fillTracks(const edm::Event& iEvent, const edm::EventSetup& iSetu
       pev_.trkGMPId[pev_.nTrk] = -999;
 
       //match tracking particle to the reco particle
-      const TrackingParticle* tparticle = doRecoToTpMatch(recSimColl, trackRef);//matchedSim->val[0].first.get();
+      const TrackingParticle* tparticle = doRecoToTpMatch(*recotosimCollectionH, trackRef);
       if (!tparticle) {
         pev_.trkFake[pev_.nTrk] = 1;
       } else {
@@ -687,42 +660,12 @@ TrackAnalyzer::fillTracks(const edm::Event& iEvent, const edm::EventSetup& iSetu
         }
 
         //now match the tracking particle to the gen-level particle
-        std::vector<int> tempBarcode = matchTpToGen(iEvent, tparticle, particleSrc_);
+        std::vector<int> tempBarcode = matchTpToGen(iEvent, tparticle, *genCollectionH);
         for (unsigned int ibarcode = 0; ibarcode<tempBarcode.size(); ibarcode++) {
           pev_.matchedGenID[pev_.nTrk][ibarcode] = tempBarcode.at(ibarcode);
         }
       }
     }
-
-    if (doTrackExtra_) {
-      // Very rough estimation of the expected position of the Pixel Hit
-      double r = 4.4; // averaged first layer rho
-      double x = r*cos(etrk.phi())+etrk.vx();
-      double y = r*sin(etrk.eta())+etrk.vy();
-      double z = r/tan(atan(exp(-etrk.eta()))*2)+etrk.vz();
-      ROOT::Math::XYZVector tmpVector(x-pev_.xVtx[1],y-pev_.yVtx[1],z-pev_.zVtx[1]);
-      double eta1 = tmpVector.eta();
-      //double phi1 = etrk.phi();
-
-      double r2 = 7.29; // averaged 2nd layer rho
-      x = r2*cos(etrk.phi())+etrk.vx();
-      y = r2*sin(etrk.eta())+etrk.vy();
-      z = r2/tan(atan(exp(-etrk.eta()))*2)+etrk.vz();
-      ROOT::Math::XYZVector tmpVector2(x-pev_.xVtx[1],y-pev_.yVtx[1],z-pev_.zVtx[1]);
-      double eta2 = tmpVector2.eta();
-
-      double r3 = 10.16; // averaged 3rd layer rho
-      x = r3*cos(etrk.phi())+etrk.vx();
-      y = r3*sin(etrk.eta())+etrk.vy();
-      z = r3/tan(atan(exp(-etrk.eta()))*2)+etrk.vz();
-      ROOT::Math::XYZVector tmpVector3(x-pev_.xVtx[1],y-pev_.yVtx[1],z-pev_.zVtx[1]);
-      double eta3 = tmpVector3.eta();
-
-      pev_.trkExpHit1Eta[pev_.nTrk] = eta1;
-      pev_.trkExpHit2Eta[pev_.nTrk] = eta2;
-      pev_.trkExpHit3Eta[pev_.nTrk] = eta3;
-    }
-    //pev_.trkNhit[pev_.nTrk] = tr.numberOfValidHits();
 
     if (doPFMatching_) {
       pev_.pfType[pev_.nTrk] = -1;
@@ -764,17 +707,6 @@ TrackAnalyzer::fillTracks(const edm::Event& iEvent, const edm::EventSetup& iSetu
 
   }
 
-}
-
-//-------------- Fill mother particle info via the production vertex -----------------
-const HepMC::GenParticle* getGpMother(const HepMC::GenParticle *gp) {
-  if (gp != 0) {
-    const HepMC::GenVertex *vtx = gp->production_vertex();
-    if (vtx != 0 && vtx->particles_in_size() > 0) {
-      return *vtx->particles_in_const_begin();
-    }
-  }
-  return 0;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -1000,6 +932,7 @@ TrackAnalyzer::beginJob()
   trackTree_->Branch("trkEta",&pev_.trkEta,"trkEta[nTrk]/F");
   trackTree_->Branch("trkPhi",&pev_.trkPhi,"trkPhi[nTrk]/F");
   trackTree_->Branch("trkCharge",&pev_.trkCharge,"trkCharge[nTrk]/I");
+
   if (doTrackVtxWImpPar_) {
     trackTree_->Branch("trkNVtx",&pev_.trkNVtx,"trkNVtx[nTrk]/b");
     trackTree_->Branch("nTrkTimesnVtx",&pev_.nTrkTimesnVtx,"nTrkTimesnVtx/I");
@@ -1061,13 +994,6 @@ TrackAnalyzer::beginJob()
     trackTree_->Branch("pfCandPt",&pev_.pfCandPt,"pfCandPt[nTrk]/F");
     trackTree_->Branch("pfEcal",&pev_.pfEcal,"pfEcal[nTrk]/F");
     trackTree_->Branch("pfHcal",&pev_.pfHcal,"pfHcal[nTrk]/F");
-  }
-
-  // Track Extra
-  if (doTrackExtra_) {
-    trackTree_->Branch("trkExpHit1Eta",&pev_.trkExpHit1Eta,"trkExpHit1Eta[nTrk]/F");
-    trackTree_->Branch("trkExpHit2Eta",&pev_.trkExpHit2Eta,"trkExpHit2Eta[nTrk]/F");
-    trackTree_->Branch("trkExpHit3Eta",&pev_.trkExpHit3Eta,"trkExpHit3Eta[nTrk]/F");
   }
 
   // Sim Tracks
@@ -1137,6 +1063,57 @@ TrackAnalyzer::beginJob()
 // ------------ method called once each job just after ending the event loop  ------------
 void
 TrackAnalyzer::endJob() {
+}
+
+//----------------------------------------------------------------------------------------------------
+const TrackingParticle*
+TrackAnalyzer::doRecoToTpMatch(reco::RecoToSimCollection const& recSimColl,
+                               const reco::TrackRef &in) {
+  //if(in.status()!=1) return NULL;
+  reco::RecoToSimCollection::const_iterator matchedSim = recSimColl.find(edm::RefToBase<reco::Track>(in));
+  if (matchedSim == recSimColl.end()) {
+    return NULL;
+  } else {
+    const TrackingParticle *tparticle = matchedSim->val[0].first.get();
+    return tparticle;
+  }
+}
+
+//-------------------------------------------------------------------------------------------------
+std::vector<int>
+TrackAnalyzer::matchTpToGen(const edm::Event& iEvent,
+                            const TrackingParticle* tparticle,
+                            reco::GenParticleCollection const& genCollection) {
+  std::vector<int> retArr;
+  if (!tparticle) { retArr.push_back(-999); return retArr; }
+
+  std::vector<reco::GenParticle> tempStore;
+  for (TrackingParticle::genp_iterator igen = tparticle->genParticle_begin(); igen != tparticle->genParticle_end(); igen++){
+    const reco::GenParticle* temp = igen->get();
+    tempStore.push_back(*temp); //temp->momentum().px()*temp->momentum().py()*temp->momentum().pz(); //store HepMC barcode for unique id
+  }
+
+  //now figure out the array number of the associated genParticles
+  bool *tripwire = new bool[tempStore.size()];
+  for (unsigned int ii = 0; ii < tempStore.size(); ii++)
+    tripwire[ii] = 0; //reset tripwires
+
+  for (unsigned int igenCand = 0; igenCand < tempStore.size(); igenCand++) {
+    for (UInt_t igenP = 0; igenP < genCollection.size(); ++igenP) {
+      const reco::GenParticle& p = genCollection[igenP];
+      if (tripwire[igenCand]) continue;
+      // there's no equivalence operator for genParticle!! This is a workaround since the stupid things are floats
+      if (fabs((p.px()+p.py()+p.pz()) - (tempStore.at(igenCand).px()+tempStore.at(igenCand).py()+tempStore.at(igenCand).pz())) < 0.001){
+        retArr.push_back(igenP); //genParticle instance number;
+        tripwire[igenCand]=1;
+      }
+    }
+    if (!tripwire[igenCand])
+      retArr.push_back(-999);
+  }
+  delete[] tripwire;
+
+  return retArr;
 }
 
 //define this as a plug-in
