@@ -44,9 +44,7 @@ HiInclusiveJetAnalyzer::HiInclusiveJetAnalyzer(const edm::ParameterSet& iConfig)
   matchTag_ = consumes<reco::JetView> (iConfig.getUntrackedParameter<InputTag>("matchTag"));
   matchTagPat_ = consumes<pat::JetCollection> (iConfig.getUntrackedParameter<InputTag>("matchTag"));
   
-  // vtxTag_ = iConfig.getUntrackedParameter<edm::InputTag>("vtxTag",edm::InputTag("hiSelectedVertex"));
-  vtxTag_ = consumes<vector<reco::Vertex> >        (iConfig.getUntrackedParameter<edm::InputTag>("vtxTag",edm::InputTag("hiSelectedVertex")));  
-  // iConfig.getUntrackedParameter<edm::InputTag>("vtxTag",edm::InputTag("hiSelectedVertex"));
+  vtxTag_ = consumes<vector<reco::Vertex>>(iConfig.getParameter<edm::InputTag>("vtxTag"));
   trackTag_ = consumes<reco::TrackCollection> (iConfig.getParameter<InputTag>("trackTag"));
   useQuality_ = iConfig.getUntrackedParameter<bool>("useQuality",1);
   trackQuality_ = iConfig.getUntrackedParameter<string>("trackQuality","highPurity");
@@ -62,17 +60,16 @@ HiInclusiveJetAnalyzer::HiInclusiveJetAnalyzer(const edm::ParameterSet& iConfig)
   //reWTA reclustering
   doWTARecluster_ = iConfig.getUntrackedParameter<bool>("doWTARecluster", false);
 
-  if (iConfig.exists("genTau1"))
-    tokenGenTau1_          = consumes<edm::ValueMap<float> >(iConfig.getParameter<edm::InputTag>("genTau1"));
-  if (iConfig.exists("genTau2"))
-    tokenGenTau2_          = consumes<edm::ValueMap<float> >(iConfig.getParameter<edm::InputTag>("genTau2"));
-  if (iConfig.exists("genTau3"))
-    tokenGenTau3_          = consumes<edm::ValueMap<float> >(iConfig.getParameter<edm::InputTag>("genTau3"));
+  if(doGenTaus_) {
+    tokenGenTau1_ = consumes<edm::ValueMap<float> >(iConfig.getParameter<edm::InputTag>("genTau1"));
+    tokenGenTau2_ = consumes<edm::ValueMap<float> >(iConfig.getParameter<edm::InputTag>("genTau2"));
+    tokenGenTau3_ = consumes<edm::ValueMap<float> >(iConfig.getParameter<edm::InputTag>("genTau3"));
+  }
 
-  if (iConfig.exists("genSym"))
-    tokenGenSym_          = consumes<edm::ValueMap<float> >(iConfig.getParameter<edm::InputTag>("genSym"));
-  if (iConfig.exists("genDroppedBranches"))
-    tokenGenDroppedBranches_          = consumes<edm::ValueMap<int> >(iConfig.getParameter<edm::InputTag>("genDroppedBranches"));
+  if (doGenSym_) {
+    tokenGenSym_ = consumes<edm::ValueMap<float> >(iConfig.getParameter<edm::InputTag>("genSym"));
+    tokenGenDroppedBranches_ = consumes<edm::ValueMap<int> >(iConfig.getParameter<edm::InputTag>("genDroppedBranches"));
+  }
 
   isMC_ = iConfig.getUntrackedParameter<bool>("isMC",false);
   useHepMC_ = iConfig.getUntrackedParameter<bool> ("useHepMC",false);
@@ -87,7 +84,6 @@ HiInclusiveJetAnalyzer::HiInclusiveJetAnalyzer(const edm::ParameterSet& iConfig)
   jetAbsEtaMax_ = iConfig.getUntrackedParameter<double>("jetAbsEtaMax", 5.1);
 
   if(isMC_){
-    //genjetTag_ = consumes<vector<reco::GenJet> > (iConfig.getParameter<InputTag>("genjetTag"));
     genjetTag_ = consumes<edm::View<reco::GenJet>>(iConfig.getParameter<InputTag>("genjetTag"));
     if(useHepMC_) eventInfoTag_ = consumes<HepMCProduct> (iConfig.getParameter<InputTag>("eventInfoTag"));
     eventGenInfoTag_ = consumes<GenEventInfoProduct> (iConfig.getParameter<InputTag>("eventInfoTag"));
@@ -103,16 +99,16 @@ HiInclusiveJetAnalyzer::HiInclusiveJetAnalyzer(const edm::ParameterSet& iConfig)
   saveBfragments_  = iConfig.getUntrackedParameter<bool>("saveBfragments",false);
   skipCorrections_  = iConfig.getUntrackedParameter<bool>("skipCorrections",false);
 
-  pfCandidateLabel_ = consumes<reco::PFCandidateCollection> (iConfig.getUntrackedParameter<edm::InputTag>("pfCandidateLabel",edm::InputTag("particleFlowTmp")));
+  pfCandidateLabel_ = consumes<reco::PFCandidateCollection>(iConfig.getUntrackedParameter<edm::InputTag>("pfCandidateLabel"));
 
   doTower = iConfig.getUntrackedParameter<bool>("doTower",false);
   if(doTower){
-    TowerSrc_ = consumes<CaloTowerCollection>( iConfig.getUntrackedParameter<edm::InputTag>("towersSrc",edm::InputTag("towerMaker")));
+    TowerSrc_ = consumes<CaloTowerCollection>(iConfig.getParameter<edm::InputTag>("towersSrc"));
   }
   
   doExtraCTagging_ = iConfig.getUntrackedParameter<bool>("doExtraCTagging",false);
 
-  genParticleSrc_ = consumes<reco::GenParticleCollection> (iConfig.getUntrackedParameter<edm::InputTag>("genParticles",edm::InputTag("hiGenParticles")));
+  genParticleSrc_ = consumes<reco::GenParticleCollection>(iConfig.getUntrackedParameter<edm::InputTag>("genParticles"));
 
   if(doLifeTimeTagging_){
     bTagJetName_ = iConfig.getUntrackedParameter<string>("bTagJetName");
@@ -134,17 +130,9 @@ HiInclusiveJetAnalyzer::HiInclusiveJetAnalyzer(const edm::ParameterSet& iConfig)
     genPtMin_ = iConfig.getUntrackedParameter<double>("genPtMin",10);
     doSubEvent_ = iConfig.getUntrackedParameter<bool>("doSubEvent",0);
   }
-
-  fastjet::contrib::OnePass_KT_Axes     onepass_kt_axes;
-  fastjet::contrib::NormalizedMeasure normalizedMeasure(1.,rParam);
-  routine_ = std::auto_ptr<fastjet::contrib::Njettiness> ( new fastjet::contrib::Njettiness( onepass_kt_axes, normalizedMeasure) );
 }
 
-
-
 HiInclusiveJetAnalyzer::~HiInclusiveJetAnalyzer() { }
-
-
 
 void
 HiInclusiveJetAnalyzer::beginRun(const edm::Run& run,
@@ -153,15 +141,12 @@ HiInclusiveJetAnalyzer::beginRun(const edm::Run& run,
 void
 HiInclusiveJetAnalyzer::beginJob() {
 
-  //string jetTagName = jetTag_.label()+"_tree";
   string jetTagTitle = jetTagLabel_.label()+" Jet Analysis Tree";
   t = fs1->make<TTree>("t",jetTagTitle.c_str());
 
-  //  TTree* t= new TTree("t","Jet Response Analyzer");
-  //t->Branch("run",&jets_.run,"run/I");
+  t->Branch("run",&jets_.run,"run/I");
   t->Branch("evt",&jets_.evt,"evt/I");
-  //t->Branch("lumi",&jets_.lumi,"lumi/I");
-  t->Branch("b",&jets_.b,"b/F");
+  t->Branch("lumi",&jets_.lumi,"lumi/I");
   if (useVtx_) {
     t->Branch("vx",&jets_.vx,"vx/F");
     t->Branch("vy",&jets_.vy,"vy/F");
@@ -579,14 +564,7 @@ HiInclusiveJetAnalyzer::analyze(const Event& iEvent,
 
   LogDebug("HiInclusiveJetAnalyzer")<<"START event: "<<event<<" in run "<<run<<endl;
 
-  int bin = -1;
-  double hf = 0.;
-  double b = 999.;
-
   // loop the events
-
-  jets_.bin = bin;
-  jets_.hf = hf;
 
   reco::Vertex::Point vtx(0,0,0);
   if (useVtx_) {
@@ -637,7 +615,6 @@ HiInclusiveJetAnalyzer::analyze(const Event& iEvent,
   }
 
   // FILL JRA TREE
-  jets_.b = b;
   jets_.nref = 0;
 
   if( doJetConstituents_ ){
@@ -678,8 +655,6 @@ HiInclusiveJetAnalyzer::analyze(const Event& iEvent,
     jets_.genSDConstituentsM.clear();
   }
 
-
-
   for(unsigned int j = 0; j < jets->size(); ++j){
     const reco::Jet& jet = (*jets)[j];
 
@@ -689,9 +664,8 @@ HiInclusiveJetAnalyzer::analyze(const Event& iEvent,
       jets_.rawpt[jets_.nref]=(*patjets)[j].correctedJet("Uncorrected").pt();
     }
 
-    math::XYZVector jetDir = jet.momentum().Unit();
-
     if(doLifeTimeTagging_){
+      math::XYZVector jetDir = jet.momentum().Unit();
 
       jets_.discr_ssvHighEff[jets_.nref]=(*patjets)[j].bDiscriminator(simpleSVHighEffBJetTags_);
       jets_.discr_ssvHighPur[jets_.nref]=(*patjets)[j].bDiscriminator(simpleSVHighPurBJetTags_);
@@ -1043,7 +1017,6 @@ HiInclusiveJetAnalyzer::analyze(const Event& iEvent,
 
       if( (*patjets)[j].hasUserFloat(jetName_+"Jets:sym") )
         jets_.jtsym[jets_.nref] = (*patjets)[j].userFloat(jetName_+"Jets:sym");
-      //std::cout << "jets_.nref: " << jets_.nref << "  jtsym: " << jets_.jtsym[jets_.nref] << endl;
       if( (*patjets)[j].hasUserInt(jetName_+"Jets:droppedBranches") )
         jets_.jtdroppedBranches[jets_.nref] = (*patjets)[j].userInt(jetName_+"Jets:droppedBranches");
 
@@ -1123,47 +1096,20 @@ HiInclusiveJetAnalyzer::analyze(const Event& iEvent,
 	jets_.refdphijt[jets_.nref] = -999.;
 	jets_.refdrjt[jets_.nref] = -999.;
 
-	if( doJetConstituents_ ){
-	  std::vector<int>   refCId;	  
-	  std::vector<float> refCE;
-	  std::vector<float> refCPt;
-	  std::vector<float> refCEta;
-	  std::vector<float> refCPhi;
-	  std::vector<float> refCM;
-	  refCId.push_back(-999);	  
-	  refCE.push_back(-999);
-	  refCPt.push_back(-999);
-	  refCEta.push_back(-999);
-	  refCPhi.push_back(-999);
-	  refCM.push_back(-999);
-
-	  jets_.refConstituentsId.push_back(refCId);
-	  jets_.refConstituentsE.push_back(refCE);
-	  jets_.refConstituentsPt.push_back(refCPt);
-	  jets_.refConstituentsEta.push_back(refCEta);
-	  jets_.refConstituentsPhi.push_back(refCPhi);
-	  jets_.refConstituentsM.push_back(refCM);
+	if (doJetConstituents_) {
+	  jets_.refConstituentsId.emplace_back(1, -999);
+	  jets_.refConstituentsE.emplace_back(1, -999);
+	  jets_.refConstituentsPt.emplace_back(1, -999);
+	  jets_.refConstituentsEta.emplace_back(1, -999);
+	  jets_.refConstituentsPhi.emplace_back(1, -999);
+	  jets_.refConstituentsM.emplace_back(1, -999);
 	  
-	  std::vector<int> refSDId;
-	  std::vector<float> refSDCE;
-	  std::vector<float> refSDCPt;
-	  std::vector<float> refSDCEta;
-	  std::vector<float> refSDCPhi;
-	  std::vector<float> refSDCM;
-	  
-	  refSDId.push_back(-999);
-	  refSDCE.push_back(-999);
-	  refSDCPt.push_back(-999);
-	  refSDCEta.push_back(-999);
-	  refSDCPhi.push_back(-999);
-	  refSDCM.push_back(-999);
-	  
-	  jets_.refSDConstituentsId.push_back(refSDId);
-	  jets_.refSDConstituentsE.push_back(refSDCE);
-	  jets_.refSDConstituentsPt.push_back(refSDCPt);
-	  jets_.refSDConstituentsEta.push_back(refSDCEta);
-	  jets_.refSDConstituentsPhi.push_back(refSDCPhi);
-	  jets_.refSDConstituentsM.push_back(refSDCM);
+	  jets_.refSDConstituentsId.emplace_back(1, -999);
+	  jets_.refSDConstituentsE.emplace_back(1, -999);
+	  jets_.refSDConstituentsPt.emplace_back(1, -999);
+	  jets_.refSDConstituentsEta.emplace_back(1, -999);
+	  jets_.refSDConstituentsPhi.emplace_back(1, -999);
+	  jets_.refSDConstituentsM.emplace_back(1, -999);
 	}
 
 	if(doGenSubJets_) {
@@ -1173,20 +1119,11 @@ HiInclusiveJetAnalyzer::analyze(const Event& iEvent,
           jets_.refmG[jets_.nref]   = -999.;
           jets_.refsym[jets_.nref]  = -999.;
           jets_.refdroppedBranches[jets_.nref]  = -999;
-          
-          std::vector<float> sjpt;
-          std::vector<float> sjeta;
-          std::vector<float> sjphi;
-          std::vector<float> sjm;
-          sjpt.push_back(-999.);
-          sjeta.push_back(-999.);
-          sjphi.push_back(-999.);
-          sjm.push_back(-999.);
 
-          jets_.refSubJetPt.push_back(sjpt);
-          jets_.refSubJetEta.push_back(sjeta);
-          jets_.refSubJetPhi.push_back(sjphi);
-          jets_.refSubJetM.push_back(sjm);
+          jets_.refSubJetPt.emplace_back(1, -999);
+          jets_.refSubJetEta.emplace_back(1, -999);
+          jets_.refSubJetPhi.emplace_back(1, -999);
+          jets_.refSubJetM.emplace_back(1, -999);
         }
       }
       jets_.reftau1[jets_.nref] = -999.;
@@ -1265,12 +1202,8 @@ HiInclusiveJetAnalyzer::analyze(const Event& iEvent,
     
     jets_.ngen = 0;
 
-    //int igen = 0;
     for(unsigned int igen = 0 ; igen < genjets->size(); ++igen){
-      //for ( typename edm::View<reco::Jet>::const_iterator genjetIt = genjets->begin() ; genjetIt != genjets->end() ; ++genjetIt ) {
       const reco::GenJet & genjet = (*genjets)[igen];
-      //edm::Ptr<reco::Jet> genjetPtr = genjets->ptrAt(genjetIt - genjets->begin());
-      //const reco::GenJet genjet = (*dynamic_cast<const reco::GenJet*>(&(*genjetPtr)));
       float genjet_pt = genjet.pt();
 
       float tau1 =  -999.;
@@ -1366,7 +1299,7 @@ HiInclusiveJetAnalyzer::getPFJetMuon(const pat::Jet& pfJet, const reco::PFCandid
 
 
   for(unsigned icand=0;icand<pfCandidateColl->size(); icand++) {
-    const reco::PFCandidate pfCandidate = pfCandidateColl->at(icand);
+    const reco::PFCandidate& pfCandidate = pfCandidateColl->at(icand);
 
     int id = pfCandidate.particleId();
     if(abs(id) != 3) continue;
@@ -1386,7 +1319,7 @@ HiInclusiveJetAnalyzer::getPFJetMuon(const pat::Jet& pfJet, const reco::PFCandid
 
 
 double
-HiInclusiveJetAnalyzer::getPtRel(const reco::PFCandidate lep, const pat::Jet& jet )
+HiInclusiveJetAnalyzer::getPtRel(const reco::PFCandidate& lep, const pat::Jet& jet )
 {
 
   float lj_x = jet.p4().px();
@@ -1484,46 +1417,8 @@ HiInclusiveJetAnalyzer::saveDaughters(const reco::Candidate &gen){
   }
 }
 
-double HiInclusiveJetAnalyzer::getEt(math::XYZPoint pos, double energy){
-  double et = energy*sin(pos.theta());
-  return et;
-}
-
-int HiInclusiveJetAnalyzer::TaggedJet(Jet calojet, Handle<JetTagCollection > jetTags ) {
-  double small = 1.e-5;
-  int result = -1;
-
-  for (size_t t = 0; t < jetTags->size(); t++) {
-    RefToBase<Jet> jet_p = (*jetTags)[t].first;
-    if (jet_p.isNull()) {
-      continue;
-    }
-    if (DeltaR<Candidate>()( calojet, *jet_p ) < small) {
-      result = (int) t;
-    }
-  }
-  return result;
-}
-
-
 //--------------------------------------------------------------------------------------------------
-float HiInclusiveJetAnalyzer::getTau(unsigned num, const reco::GenJet object) const
-{
-  std::vector<fastjet::PseudoJet> FJparticles;
-  if(object.numberOfDaughters()>0) {
-    for (unsigned k = 0; k < object.numberOfDaughters(); ++k)
-      {
-        const reco::Candidate & dp = *object.daughter(k);
-        //const reco::CandidatePtr & dp = object.daughterPtr(k);
-        if(dp.pt()>0.) FJparticles.push_back( fastjet::PseudoJet( dp.px(), dp.py(), dp.pz(), dp.energy() ) );
-      }
-  }
-  return routine_->getTau(num, FJparticles);
-}
-
-
-//--------------------------------------------------------------------------------------------------
-void HiInclusiveJetAnalyzer::analyzeSubjets(const reco::Jet jet) {
+void HiInclusiveJetAnalyzer::analyzeSubjets(const reco::Jet& jet) {
 
   std::vector<float> sjpt;
   std::vector<float> sjeta;
@@ -1551,7 +1446,7 @@ void HiInclusiveJetAnalyzer::analyzeSubjets(const reco::Jet jet) {
 }
 
 //--------------------------------------------------------------------------------------------------
-int HiInclusiveJetAnalyzer::getGroomedGenJetIndex(const reco::GenJet jet) const {
+int HiInclusiveJetAnalyzer::getGroomedGenJetIndex(const reco::GenJet& jet) const {
   //Find closest soft-dropped gen jet
   double drMin = 100;
   int imatch = -1;
@@ -1568,7 +1463,7 @@ int HiInclusiveJetAnalyzer::getGroomedGenJetIndex(const reco::GenJet jet) const 
 }
 
 //--------------------------------------------------------------------------------------------------
-void HiInclusiveJetAnalyzer::analyzeRefSubjets(const reco::GenJet jet) {
+void HiInclusiveJetAnalyzer::analyzeRefSubjets(const reco::GenJet& jet) {
 
   //Find closest soft-dropped gen jet
   int imatch = getGroomedGenJetIndex(jet);
@@ -1605,13 +1500,10 @@ void HiInclusiveJetAnalyzer::analyzeRefSubjets(const reco::GenJet jet) {
         sjm.push_back(dp.mass());
       }
     }
-    Ptr<reco::Jet> genJetPtr = gensubjets_->ptrAt(imatch);
-    if(genSymVM_.isValid()) {
+    if (doGenSym_) {
+      Ptr<reco::Jet> genJetPtr = gensubjets_->ptrAt(imatch);
       float gensym = (*genSymVM_)[genJetPtr];
       jets_.refsym[jets_.nref] = gensym;
-    }
-
-    if(genDroppedBranchesVM_.isValid()) {
       int db = (*genDroppedBranchesVM_)[genJetPtr];
       jets_.refdroppedBranches[jets_.nref] = db;
     }
@@ -1635,7 +1527,7 @@ void HiInclusiveJetAnalyzer::analyzeRefSubjets(const reco::GenJet jet) {
 }
 
 //--------------------------------------------------------------------------------------------------
-void HiInclusiveJetAnalyzer::analyzeGenSubjets(const reco::GenJet jet) {
+void HiInclusiveJetAnalyzer::analyzeGenSubjets(const reco::GenJet& jet) {
   //Find closest soft-dropped gen jet
   int imatch = getGroomedGenJetIndex(jet);
   double dr = 999.;
@@ -1673,17 +1565,12 @@ void HiInclusiveJetAnalyzer::analyzeGenSubjets(const reco::GenJet jet) {
         //sjarea.push_back(dp.castTo<reco::JetRef>()->jetArea());
       }
     }
-    Ptr<reco::Jet> genJetPtr = gensubjets_->ptrAt(imatch);
-    if(genSymVM_.isValid()) {
+    if (doGenSym_) {
+      Ptr<reco::Jet> genJetPtr = gensubjets_->ptrAt(imatch);
       float gensym = (*genSymVM_)[genJetPtr];
       jets_.gensym[jets_.ngen] = gensym;
-      //std::cout << "gensym " << gensym << std::endl;
-    }
-
-    if(genDroppedBranchesVM_.isValid()) {
       int db = (*genDroppedBranchesVM_)[genJetPtr];
       jets_.gendroppedBranches[jets_.ngen] = db;
-      //std::cout << "genDroppedBranches " << db << std::endl;
     }
   }
   else {

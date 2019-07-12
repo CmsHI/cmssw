@@ -48,14 +48,6 @@ public:
 
   virtual void beginJob();
 
-  template <typename TYPE>
-    void getProduct(const std::string name, edm::Handle<TYPE> &prod,
-		    const edm::Event &event) const;
-
-  template <typename TYPE>
-    bool getProductSafe(const std::string name, edm::Handle<TYPE> &prod,
-			const edm::Event &event) const;
-
 private:
 
   // for reWTA reclustering-----------------------
@@ -65,32 +57,15 @@ private:
 
   int getPFJetMuon(const pat::Jet& pfJet, const reco::PFCandidateCollection *pfCandidateColl);
 
-  double getPtRel(const reco::PFCandidate lep, const pat::Jet& jet );
+  double getPtRel(const reco::PFCandidate& lep, const pat::Jet& jet );
 
   void saveDaughters( const reco::GenParticle & gen);
   void saveDaughters( const reco::Candidate & gen);
-  double getEt(math::XYZPoint pos, double energy);
-  math::XYZPoint getPosition(const DetId &id, reco::Vertex::Point vtx = reco::Vertex::Point(0,0,0));
-  int TaggedJet(reco::Jet calojet, edm::Handle<reco::JetTagCollection > jetTags );
-  float getTau(unsigned num, const reco::GenJet object) const;
-  void analyzeSubjets(const reco::Jet jet);
-  void fillNewJetVarsRecoJet(const reco::Jet jet);
-  void fillNewJetVarsRefJet(const reco::GenJet jet);
-  void fillNewJetVarsGenJet(const reco::GenJet jet);
-  int  getGroomedGenJetIndex(const reco::GenJet jet) const;
-  void analyzeRefSubjets(const reco::GenJet jet);
-  void analyzeGenSubjets(const reco::GenJet jet);
+  void analyzeSubjets(const reco::Jet& jet);
+  int  getGroomedGenJetIndex(const reco::GenJet& jet) const;
+  void analyzeRefSubjets(const reco::GenJet& jet);
+  void analyzeGenSubjets(const reco::GenJet& jet);
   float getAboveCharmThresh(reco::TrackRefVector& selTracks, const reco::TrackIPTagInfo& ipData, int sigOrVal);
- 
-  std::auto_ptr<fastjet::contrib::Njettiness>   routine_;
-
-  class ExtraInfo : public fastjet::PseudoJet::UserInfoBase {
-  public:
-  ExtraInfo(int id) : _index(id){}
-    int part_id() const { return _index; }
-  protected:
-    int _index;
-  };
 
   edm::InputTag   jetTagLabel_;
   edm::EDGetTokenT<std::vector<reco::Vertex> >       vtxTag_;
@@ -131,7 +106,6 @@ private:
   bool isMC_;
   bool useHepMC_;
   bool fillGenJets_;
-  bool doTrigger_;
   bool useQuality_;
   std::string trackQuality_;
 
@@ -181,10 +155,7 @@ private:
     int run;
     int evt;
     int lumi;
-    int bin;
     float vx, vy, vz;
-    float b;
-    float hf;
 
     float rawpt[MAXJETS];
     float jtpt[MAXJETS];
