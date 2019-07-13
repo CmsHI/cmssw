@@ -94,6 +94,7 @@ process.TFileService = cms.Service("TFileService",
 ################################
 
 # event analysis
+process.load('HeavyIonsAnalysis.EventAnalysis.hltanalysis_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.particleFlowAnalyser_cfi')
 
 ################################
@@ -126,6 +127,8 @@ process.load("HeavyIonsAnalysis.TrackAnalysis.TrackAnalyzers_cff")
 # main forest sequence
 process.forest = cms.Path(
     process.HiForestInfo
+    +
+    process.hltanalysis
     +
     process.trackSequencePbPb
     +
