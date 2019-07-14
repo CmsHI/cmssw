@@ -200,6 +200,9 @@ ALGO_SUB_GROOM_RADIUS_OBJECT_JetAnalyzer = inclusiveJetAnalyzer.clone(jetTag = c
                                                              doGenTaus = ISMC
                                                             )
 
+#ENABLE_PPCALO_ALGO_SUB_GROOM_RADIUS_OBJECT_patJetsWithBtagging.getJetMCFlavour = False
+#ENABLE_PPCALO_ALGO_SUB_GROOM_RADIUS_OBJECT_JetAnalyzer.doExtendedFlavorTagging = False
+
 ALGO_SUB_GROOM_RADIUS_OBJECT_JetAnalyzer.trackSelection = ALGO_SUB_GROOM_RADIUS_OBJECT_SecondaryVertexTagInfos.trackSelection
 ALGO_SUB_GROOM_RADIUS_OBJECT_JetAnalyzer.trackPairV0Filter = ALGO_SUB_GROOM_RADIUS_OBJECT_SecondaryVertexTagInfos.vertexCuts.v0Filter
 
@@ -218,14 +221,14 @@ ALGO_SUB_GROOM_RADIUS_OBJECT_JetSequence_mc = cms.Sequence(
                                                   #*
                                                   #ALGO_SUB_GROOM_RADIUS_OBJECT_PatJetFlavourIdLegacy  # works for PbPb
                                                   #*
-			                          #ppDummy_ALGO_SUB_GROOM_RADIUS_OBJECT_PatJetFlavourId  # doesn't work for PbPb yet
-                                                  #ppDummy_*
+                                                  #DISABLE_PPCALO_ALGO_SUB_GROOM_RADIUS_OBJECT_PatJetFlavourId  # doesn't work for PbPb yet
+                                                  #DISABLE_PPCALO_*
                                                   ALGO_SUB_GROOM_RADIUS_OBJECT_JetTracksAssociatorAtVertex
                                                   *
                                                   ALGO_SUB_GROOM_RADIUS_OBJECT_JetBtagging
                                                   *
-                                                  #ppDataDummy_ALGO_SUB_GROOM_RADIUS_OBJECT_Njettiness #No constituents for calo jets in pp. Must be removed for pp calo jets but I'm not sure how to do this transparently (Marta)
-                                                  #ppDataDummy_*
+                                                  #DISABLE_PPCALO_ALGO_SUB_GROOM_RADIUS_OBJECT_Njettiness
+                                                  #DISABLE_PPCALO_*
                                                   ALGO_SUB_GROOM_RADIUS_OBJECT_patJetsWithBtagging
                                                   *
                                                   ALGO_SUB_GROOM_RADIUS_OBJECT_JetAnalyzer
@@ -239,8 +242,8 @@ ALGO_SUB_GROOM_RADIUS_OBJECT_JetSequence_data = cms.Sequence(ALGO_SUB_GROOM_RADI
                                                     *
                                                     ALGO_SUB_GROOM_RADIUS_OBJECT_JetBtagging
                                                     *
-                                                    #ppDataDummy_ALGO_SUB_GROOM_RADIUS_OBJECT_Njettiness 
-                                                    #ppDataDummy_*
+                                                    #DISABLE_PPCALO_ALGO_SUB_GROOM_RADIUS_OBJECT_Njettiness
+                                                    #DISABLE_PPCALO_*
                                                     ALGO_SUB_GROOM_RADIUS_OBJECT_patJetsWithBtagging
                                                     *
                                                     ALGO_SUB_GROOM_RADIUS_OBJECT_JetAnalyzer

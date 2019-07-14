@@ -86,10 +86,11 @@ do
 			    sed -i 's/\#SUBJETDUMMY_//g' $jetseqfile
 			fi
 
-			sed -i 's/\#ppDummy_//g' $jetseqfile
-			if [ $sample != "data" ]; then
-			    sed -i 's/\#ppDataDummy_//g' $jetseqfile
-			fi
+                        if [ $object != "Calo" ]; then
+                            sed -i 's/\#DISABLE_PPCALO_//g' $jetseqfile
+			else
+			    sed -i 's/\#ENABLE_PPCALO_//g' $jetseqfile
+                        fi
 			# skip no sub
 			if [ $sample == "jec" ]; then
 			    echo "${fulltag}JetAnalyzer.genPtMin = cms.untracked.double(1)" >> $jetseqfile
