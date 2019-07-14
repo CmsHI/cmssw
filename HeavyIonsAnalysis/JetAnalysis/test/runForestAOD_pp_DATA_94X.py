@@ -48,9 +48,6 @@ from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, '94X_dataRun2_ReReco_EOY17_v6', '')
 process.HiForest.GlobalTagLabel = process.GlobalTag.globaltag
 
-from HeavyIonsAnalysis.Configuration.CommonFunctions_cff import overrideJEC_pp5020
-process = overrideJEC_pp5020(process)
-
 #####################################################################################
 # Define tree output
 #####################################################################################
@@ -66,6 +63,12 @@ process.TFileService = cms.Service("TFileService",
 # Jets
 #############################
 process.load('HeavyIonsAnalysis.JetAnalysis.fullJetSequence_pp_data_cff')
+
+# temporary corrections
+for m in vars(process).values():
+    if (isinstance(m, cms.EDProducer)
+            and m._TypedParameterizable__type == 'JetCorrFactorsProducer'):
+        m.payload = "AK4PF"
 
 #####################################################################################
 
