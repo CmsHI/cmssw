@@ -143,6 +143,8 @@ _pp_on_AA_2018_extraCommands = [
     'keep recoClusterCompatibility*_hiClusterCompatibility_*_*',
     'keep *_hiCentrality_*_*',
     'keep *_hiFJRhoProducer_*_*',
+    'keep *_hiFJRhoFlowModulationProducer_*_*',
+    'keep *_hiPuRhoProducer_*_*',
     'keep *_zdcreco_*_*',
     'keep ZDCDataFramesSorted_hcalDigis_*_*',
     'keep ZDCDataFramesSorted_castorDigis_*_*',
