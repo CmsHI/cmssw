@@ -147,8 +147,6 @@ void HiPuRhoProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
   fjInputs_.clear();
   fjJets_.clear();
 
-  std::cout << "FILE, LINE: " << __FILE__ << ", " << __LINE__ << std::endl;
-
   // Get the particletowers
   edm::Handle<reco::CandidateView> inputsHandle;
   iEvent.getByToken(input_candidateview_token_, inputsHandle);
@@ -163,8 +161,6 @@ void HiPuRhoProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
 
   calculatePedestal(fjInputs_);
   subtractPedestal(fjInputs_);
-
-  std::cout << "FILE, LINE: " << __FILE__ << ", " << __LINE__ << std::endl;
 
   fjJetDefinition_= JetDefPtr(new fastjet::JetDefinition(fastjet::antikt_algorithm, rParam_));
   fjClusterSeq_ = ClusterSequencePtr(new fastjet::ClusterSequence(fjInputs_, *fjJetDefinition_));
@@ -182,18 +178,11 @@ void HiPuRhoProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
   towExcludePhi_.clear();
   towExcludeEta_.clear();
 
-  std::cout << "FILE, LINE: " << __FILE__ << ", " << __LINE__ << std::endl;
-
   std::vector<fastjet::PseudoJet> orphanInput;
-  std::cout << "FILE, LINE: " << __FILE__ << ", " << __LINE__ << std::endl;
   calculateOrphanInput(orphanInput);
-  std::cout << "FILE, LINE: " << __FILE__ << ", " << __LINE__ << std::endl;
   calculatePedestal(orphanInput);
-  std::cout << "FILE, LINE: " << __FILE__ << ", " << __LINE__ << std::endl;
   packageRho();
-  std::cout << "FILE, LINE: " << __FILE__ << ", " << __LINE__ << std::endl;
   putRho(iEvent, iSetup);
-  std::cout << "FILE, LINE: " << __FILE__ << ", " << __LINE__ << std::endl;
 }
 
 void HiPuRhoProducer::inputTowers( )
@@ -293,7 +282,6 @@ void HiPuRhoProducer::calculatePedestal(std::vector<fastjet::PseudoJet> const & 
     esigma_[i] = 0.;
     ntowers[i] = 0;
 
-    //    std::cout << "Initialize: " << i << std::endl;
     eTop4_[i] = {0., 0., 0., 0.};
   }
 
@@ -347,12 +335,9 @@ void HiPuRhoProducer::calculatePedestal(std::vector<fastjet::PseudoJet> const & 
 
     if(it < 0) vi = nEtaTow_ + it;
 
-    //    std::cout << "VI: " << vi << ", " << nEtaTow_ << std::endl;
-    
     double e1 = (*(emean_.find(it))).second;
     double e2 = (*emean2.find(it)).second;
     int nt = (*gt).second - (*(ntowersWithJets_.find(it))).second;
-    //    if(postOrphan_) std::cout << "Test tow: " << (*gt).second << ", " << (*(ntowersWithJets_.find(it))).second << ", " << nt << std::endl;
 
     if(vi < nEtaTow_){
       vngeom[vi] = (*gt).second;
@@ -488,8 +473,6 @@ void HiPuRhoProducer::calculateOrphanInput(std::vector<fastjet::PseudoJet> & orp
 
   std::vector<fastjet::PseudoJet>::iterator pseudojetTMP = fjJets_.begin(),
     fjJetsEnd = fjJets_.end();
-
-  //  cout<<"First iteration found N jets : "<<fjJets_.size()<<endl;                                               
 
   nref = 0;
 
@@ -628,9 +611,6 @@ void HiPuRhoProducer::packageRho()
 
 void HiPuRhoProducer::putRho(edm::Event& iEvent,const edm::EventSetup& iSetup)
 {
-  bool debug = false;
-  if(debug) std::cout << __FILE__ << ", " << __LINE__ << std::endl;
-
   auto mapEtaRangesOut = std::make_unique<std::vector<double> >(83,-999.);
   auto mapToRhoOut = std::make_unique<std::vector<double> >(82,-999.);
   auto mapToRhoMedianOut = std::make_unique<std::vector<double> >(82,-999.);
@@ -644,13 +624,9 @@ void HiPuRhoProducer::putRho(edm::Event& iEvent,const edm::EventSetup& iSetup)
   auto areaJetsOut = std::make_unique<std::vector<double> >(0,1e-6);
   auto etaJetsOut = std::make_unique<std::vector<double> >(0,1e-6);
 
-  if(debug) std::cout << __FILE__ << ", " << __LINE__ << std::endl;
-
   for(unsigned int etaIter = 0; etaIter < etaEdges_.size(); ++etaIter){
     mapEtaRangesOut->at(etaIter) = etaEdges_.at(etaIter);
   }
-
-  if(debug) std::cout << __FILE__ << ", " << __LINE__ << std::endl;
 
   for(unsigned int rhoIter = 0; rhoIter < rho_.size(); ++rhoIter){
     mapToRhoOut->at(rhoIter) = rho_.at(rhoIter);
@@ -678,8 +654,6 @@ void HiPuRhoProducer::putRho(edm::Event& iEvent,const edm::EventSetup& iSetup)
   iEvent.put(std::move(ptJetsOut), "ptJets");
   iEvent.put(std::move(areaJetsOut), "areaJets");
   iEvent.put(std::move(etaJetsOut), "etaJets");
-
-  if(debug) std::cout << __FILE__ << ", " << __LINE__ << std::endl;
 }
 
 
