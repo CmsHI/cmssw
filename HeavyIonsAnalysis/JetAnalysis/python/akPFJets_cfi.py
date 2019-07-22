@@ -46,6 +46,16 @@ akCs4PFJets.doAreaFastjet     = cms.bool(True)
 akCs4PFJets.useExplicitGhosts = cms.bool(True)
 akCs4PFJets.GhostArea         = cms.double(0.005)
 
+# hybrid jets with flow correction
+akFlowPuCs4PFJets = akCs4PFJets.clone(
+    etaMap = cms.InputTag('hiPuRhoR3Producer','mapEtaEdges'),
+    rho = cms.InputTag('hiPuRhoR3Producer','mapToRho'),
+    rhom = cms.InputTag('hiPuRhoR3Producer','mapToRhoM'),
+    rhoFlowFitParams = cms.InputTag('hiFJRhoFlowModulationProducer','rhoFlowFitParams'),
+    jetCollInstanceName = cms.string("pfParticlesCs"),
+    useModulatedRho = cms.bool(True)
+)
+
 # legacy pu subtraction
 akULPu4PFJets = akPu4PFJets.clone(
     minimumTowersFraction = cms.double(0.0))
@@ -107,6 +117,12 @@ akCs2PFJets = akCs4PFJets.clone(rParam = 0.2)
 akCs3PFJets = akCs4PFJets.clone(rParam = 0.3)
 akCs5PFJets = akCs4PFJets.clone(rParam = 0.5)
 akCs6PFJets = akCs4PFJets.clone(rParam = 0.6)
+
+akFlowPuCs1PFJets = akFlowPuCs4PFJets.clone(rParam = 0.1)
+akFlowPuCs2PFJets = akFlowPuCs4PFJets.clone(rParam = 0.2)
+akFlowPuCs3PFJets = akFlowPuCs4PFJets.clone(rParam = 0.3)
+akFlowPuCs5PFJets = akFlowPuCs4PFJets.clone(rParam = 0.5)
+akFlowPuCs6PFJets = akFlowPuCs4PFJets.clone(rParam = 0.6)
 
 akULPu1PFJets = akPu1PFJets.clone(minimumTowersFraction = cms.double(0.0))
 akULPu2PFJets = akPu2PFJets.clone(minimumTowersFraction = cms.double(0.0))

@@ -11,9 +11,9 @@ from HeavyIonsAnalysis.JetAnalysis.akCaloJets_cfi import (
 
 # import and alias particle flow jet producers
 from HeavyIonsAnalysis.JetAnalysis.akPFJets_cfi import (
-    ak1PFJets, akPu1PFJets, akCs1PFJets,
-    ak2PFJets, akPu2PFJets, akCs2PFJets,
-    ak3PFJets, akPu3PFJets, akCs3PFJets,
-    ak4PFJets, akPu4PFJets, akCs4PFJets,
-    ak5PFJets, akPu5PFJets, akCs5PFJets,
-    ak6PFJets, akPu6PFJets, akCs6PFJets)
+    ak1PFJets, akPu1PFJets, akCs1PFJets, akFlowPuCs1PFJets,
+    ak2PFJets, akPu2PFJets, akCs2PFJets, akFlowPuCs2PFJets,
+    ak3PFJets, akPu3PFJets, akCs3PFJets, akFlowPuCs3PFJets,
+    ak4PFJets, akPu4PFJets, akCs4PFJets, akFlowPuCs4PFJets,
+    ak5PFJets, akPu5PFJets, akCs5PFJets, akFlowPuCs5PFJets,
+    ak6PFJets, akPu6PFJets, akCs6PFJets, akFlowPuCs6PFJets)
