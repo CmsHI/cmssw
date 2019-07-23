@@ -16,6 +16,7 @@ hiFJRhoAnalyzer = cms.EDAnalyzer(
     ptJets        = cms.InputTag('hiFJRhoProducer','ptJets'),
     etaJets       = cms.InputTag('hiFJRhoProducer','etaJets'),
     areaJets      = cms.InputTag('hiFJRhoProducer','areaJets'),
+    useModulatedRho = cms.bool(False),
 )
 
 hiFJRhoAnalyzerFinerBins = cms.EDAnalyzer(
@@ -34,6 +35,7 @@ hiFJRhoAnalyzerFinerBins = cms.EDAnalyzer(
     ptJets        = cms.InputTag('hiFJRhoProducerFinerBins','ptJets'),
     etaJets       = cms.InputTag('hiFJRhoProducerFinerBins','etaJets'),
     areaJets      = cms.InputTag('hiFJRhoProducerFinerBins','areaJets'),
+    useModulatedRho = cms.bool(False),
 )
 
 hiPuRhoR3Analyzer = hiFJRhoAnalyzer.clone(
@@ -57,4 +59,5 @@ hiPuRhoR3Analyzer = hiFJRhoAnalyzer.clone(
     ptJets = cms.InputTag('hiPuRhoR3Producer', 'ptJets'),
     etaJets = cms.InputTag('hiPuRhoR3Producer', 'etaJets'),
     areaJets = cms.InputTag('hiPuRhoR3Producer', 'areaJets'),
+    useModulatedRho = cms.bool(True),
 )

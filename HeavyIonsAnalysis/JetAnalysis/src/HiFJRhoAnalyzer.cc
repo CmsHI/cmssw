@@ -67,6 +67,14 @@ HiFJRhoAnalyzer::HiFJRhoAnalyzer(const edm::ParameterSet& iConfig)
   ptJetsToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>( "ptJets" ));
   areaJetsToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>( "areaJets" ));
   etaJetsToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>( "etaJets" ));
+  useModulatedRho_ = iConfig.getParameter<bool>("useModulatedRho");
+  if (useModulatedRho_) {
+    rhoFlowFitParamsToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>( "rhoFlowFitParams" ));
+    nTowToken_ = consumes<std::vector<int>>(iConfig.getParameter<edm::InputTag>( "nTow" ));
+    towExcludePtToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>( "towExcludePt" ));
+    towExcludePhiToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>( "towExcludePhi" ));
+    towExcludeEtaToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>( "towExcludeEta" ));
+  }
 }
 
 
@@ -104,6 +112,12 @@ void HiFJRhoAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& i
   rhoObj_.ptJets.clear();
   rhoObj_.areaJets.clear();
   rhoObj_.etaJets.clear();
+
+  rhoObj_.rhoFlowFitParams.clear();
+  rhoObj_.nTow.clear();
+  rhoObj_.towExcludePt.clear();
+  rhoObj_.towExcludePhi.clear();
+  rhoObj_.towExcludeEta.clear();
   
   // Get the vector of background densities
   edm::Handle<std::vector<double>> etaRanges;
@@ -122,6 +136,12 @@ void HiFJRhoAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& i
   edm::Handle<std::vector<double>> ptJets;
   edm::Handle<std::vector<double>> areaJets;
   edm::Handle<std::vector<double>> etaJets;
+
+  edm::Handle<std::vector<double>> rhoFlowFitParams;
+  edm::Handle<std::vector<int>> nTow;
+  edm::Handle<std::vector<double>> towExcludePt;
+  edm::Handle<std::vector<double>> towExcludePhi;
+  edm::Handle<std::vector<double>> towExcludeEta;
   
   iEvent.getByToken(etaToken_, etaRanges);
   iEvent.getByToken(rhoToken_, rho);
@@ -138,6 +158,14 @@ void HiFJRhoAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& i
   iEvent.getByToken(ptJetsToken_, ptJets);
   iEvent.getByToken(areaJetsToken_, areaJets);
   iEvent.getByToken(etaJetsToken_, etaJets);
+
+  if (useModulatedRho_) {
+    iEvent.getByToken(rhoFlowFitParamsToken_, rhoFlowFitParams);
+    iEvent.getByToken(nTowToken_, nTow);
+    iEvent.getByToken(towExcludePtToken_, towExcludePt);
+    iEvent.getByToken(towExcludePhiToken_, towExcludePhi);
+    iEvent.getByToken(towExcludeEtaToken_, towExcludeEta);
+  }
   
   int neta = (int)etaRanges->size();
   for(int ieta = 0; ieta<(neta-1); ieta++) {
@@ -156,6 +184,14 @@ void HiFJRhoAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& i
     rhoObj_.ptJets.push_back(ptJets->at(ijet));
     rhoObj_.areaJets.push_back(areaJets->at(ijet));
     rhoObj_.etaJets.push_back(etaJets->at(ijet));
+  }
+
+  if (useModulatedRho_) {
+    rhoObj_.rhoFlowFitParams = *rhoFlowFitParams;
+    rhoObj_.nTow = *nTow;
+    rhoObj_.towExcludePt = *towExcludePt;
+    rhoObj_.towExcludePhi = *towExcludePhi;
+    rhoObj_.towExcludeEta = *towExcludeEta;
   }
   
   // int netaGrid = (int)rhoGrid->size();
@@ -192,6 +228,13 @@ HiFJRhoAnalyzer::beginJob()
   tree_->Branch("ptJets",&(rhoObj_.ptJets));
   tree_->Branch("etaJets",&(rhoObj_.etaJets));
   tree_->Branch("areaJets",&(rhoObj_.areaJets));
+  if (useModulatedRho_) {
+    tree_->Branch("rhoFlowFitParams",&(rhoObj_.rhoFlowFitParams));
+    tree_->Branch("nTow",&(rhoObj_.nTow));
+    tree_->Branch("towExcludePt",&(rhoObj_.towExcludePt));
+    tree_->Branch("towExcludePhi",&(rhoObj_.towExcludePhi));
+    tree_->Branch("towExcludeEta",&(rhoObj_.towExcludeEta));
+  }
 }
 
 // ------------ method called once each job just after ending the event loop  ------------

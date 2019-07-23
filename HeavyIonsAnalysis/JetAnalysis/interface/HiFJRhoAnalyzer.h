@@ -57,6 +57,14 @@ class HiFJRhoAnalyzer : public edm::EDAnalyzer {
       edm::EDGetTokenT<std::vector<double>>                  areaJetsToken_;
       edm::EDGetTokenT<std::vector<double>>                  etaJetsToken_;
 
+      edm::EDGetTokenT<std::vector<double>>                  rhoFlowFitParamsToken_;
+      edm::EDGetTokenT<std::vector<int>>                     nTowToken_;
+      edm::EDGetTokenT<std::vector<double>>                  towExcludePtToken_;
+      edm::EDGetTokenT<std::vector<double>>                  towExcludePhiToken_;
+      edm::EDGetTokenT<std::vector<double>>                  towExcludeEtaToken_;
+
+      bool useModulatedRho_;
+
       //output
       TTree *tree_;
       edm::Service<TFileService> fs_;
@@ -79,6 +87,12 @@ class HiFJRhoAnalyzer : public edm::EDAnalyzer {
         std::vector<double>ptJets;
         std::vector<double>areaJets;
         std::vector<double>etaJets;
+
+        std::vector<double> rhoFlowFitParams;
+        std::vector<int> nTow;
+        std::vector<double> towExcludePt;
+        std::vector<double> towExcludePhi;
+        std::vector<double> towExcludeEta;
       };
       
       RHO rhoObj_;
