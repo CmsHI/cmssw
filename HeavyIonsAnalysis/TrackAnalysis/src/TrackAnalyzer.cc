@@ -569,6 +569,7 @@ TrackAnalyzer::fillTracks(const edm::Event& iEvent, const edm::EventSetup& iSetu
     pev_.trkPtError[pev_.nTrk] = etrk.ptError();
     pev_.trkCharge[pev_.nTrk] = etrk.charge();
     pev_.trkNHit[pev_.nTrk] = etrk.numberOfValidHits();
+    pev_.trkNlayer[pev_.nTrk] = etrk.hitPattern().trackerLayersWithMeasurement();
     pev_.trkChi2[pev_.nTrk] = etrk.chi2();
     pev_.trkNdof[pev_.nTrk] = etrk.ndof();
 
@@ -584,7 +585,6 @@ TrackAnalyzer::fillTracks(const edm::Event& iEvent, const edm::EventSetup& iSetu
       pev_.trkDxyBS[pev_.nTrk] = etrk.dxy(beamSpot.position());
       pev_.trkDxyErrorBS[pev_.nTrk] = sqrt(etrk.dxyError()*etrk.dxyError()+beamSpot.BeamWidthX()*beamSpot.BeamWidthY());
 
-      pev_.trkNlayer[pev_.nTrk] = etrk.hitPattern().trackerLayersWithMeasurement();
       pev_.trkNlayer3D[pev_.nTrk] = etrk.hitPattern().pixelLayersWithMeasurement() + etrk.hitPattern().numberOfValidStripLayersWithMonoAndStereo();
 
       int count1dhits = 0;
