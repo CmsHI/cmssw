@@ -152,6 +152,7 @@ process.ana_step = cms.Path(
     process.hiEvtAnalyzer *
     process.hltobject +
     # process.l1object +
+    process.HiGenParticleAna*
     process.genJetSequence +
     process.jetSequence +
     # Should be added in the path for VID module
