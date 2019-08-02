@@ -60,9 +60,6 @@ process.GlobalTag.toGet.extend([
         ),
     ])
 
-from HeavyIonsAnalysis.Configuration.CommonFunctions_cff import overrideJEC_PbPb5020
-process = overrideJEC_PbPb5020(process)
-
 process.load("RecoHI.HiCentralityAlgos.CentralityBin_cfi")
 process.centralityBin.Centrality = cms.InputTag("hiCentrality")
 process.centralityBin.centralityVariable = cms.string("HFtowers")
@@ -83,45 +80,6 @@ process.TFileService = cms.Service("TFileService",
 #############################
 # jet reco sequence
 process.load('HeavyIonsAnalysis.JetAnalysis.fullJetSequence_pponAA_JEC_cff')
-
-# temporary (all 4 because its the only correction that loads
-process.ak1Calocorr.payload = "AK4Calo"
-process.akPu1Calocorr.payload = "AK4Calo"
-process.ak1PFcorr.payload = "AK4PF"
-process.akPu1PFcorr.payload = "AK4PF"
-process.akCs1PFcorr.payload = "AK4PF"
-
-process.ak2Calocorr.payload = "AK4Calo"
-process.akPu2Calocorr.payload = "AK4Calo"
-process.ak2PFcorr.payload = "AK4PF"
-process.akPu2PFcorr.payload = "AK4PF"
-process.akCs2PFcorr.payload = "AK4PF"
-
-process.ak3Calocorr.payload = "AK4Calo"
-process.akPu3Calocorr.payload = "AK4Calo"
-process.ak3PFcorr.payload = "AK4PF"
-process.akPu3PFcorr.payload = "AK4PF"
-process.akCs3PFcorr.payload = "AK4PF"
-
-process.ak4Calocorr.payload = "AK4Calo"
-process.akPu4Calocorr.payload = "AK4Calo"
-process.ak4PFcorr.payload = "AK4PF"
-process.akPu4PFcorr.payload = "AK4PF"
-process.akCs4PFcorr.payload = "AK4PF"
-process.akPu4PFJets.jetPtMin = 1
-
-process.ak5Calocorr.payload = "AK4Calo"
-process.akPu5Calocorr.payload = "AK4Calo"
-process.ak5PFcorr.payload = "AK4PF"
-process.akPu5PFcorr.payload = "AK4PF"
-process.akCs5PFcorr.payload = "AK4PF"
-
-process.ak6Calocorr.payload = "AK4Calo"
-process.akPu6Calocorr.payload = "AK4Calo"
-process.ak6PFcorr.payload = "AK4PF"
-process.akPu6PFcorr.payload = "AK4PF"
-process.akCs6PFcorr.payload = "AK4PF"
-
 
 process.load('HeavyIonsAnalysis.JetAnalysis.hiFJRhoAnalyzer_cff')
 process.load("HeavyIonsAnalysis.JetAnalysis.pfcandAnalyzer_cfi")

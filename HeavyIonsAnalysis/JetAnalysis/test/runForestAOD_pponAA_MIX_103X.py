@@ -60,9 +60,6 @@ process.GlobalTag.toGet.extend([
         ),
     ])
 
-from HeavyIonsAnalysis.Configuration.CommonFunctions_cff import overrideJEC_PbPb5020
-process = overrideJEC_PbPb5020(process)
-
 process.load("RecoHI.HiCentralityAlgos.CentralityBin_cfi")
 process.centralityBin.Centrality = cms.InputTag("hiCentrality")
 process.centralityBin.centralityVariable = cms.string("HFtowers")
@@ -83,23 +80,6 @@ process.TFileService = cms.Service("TFileService",
 #############################
 # jet reco sequence
 process.load('HeavyIonsAnalysis.JetAnalysis.fullJetSequence_pponAA_MIX_cff')
-# replace above with this one for JEC:
-# process.load('HeavyIonsAnalysis.JetAnalysis.fullJetSequence_JEC_cff')
-
-# temporary
-process.akPu4Calocorr.payload = "AK4Calo"
-process.akPu4PFcorr.payload = "AK4PF"
-process.akCs4PFcorr.payload = "AK4PF"
-process.ak4PFcorr.payload = "AK4PF"
-process.akFlowPuCs4PFcorr.payload = "AK4PF"
-process.akPu3Calocorr.payload = "AK4Calo"
-process.akPu3PFcorr.payload = "AK3PF"
-process.akCs3PFcorr.payload = "AK3PF"
-process.ak3PFcorr.payload = "AK3PF"
-process.akFlowPuCs3PFcorr.payload = "AK3PF"
-process.akPu3PFJets.jetPtMin = 1
-process.akPu4PFJets.jetPtMin = 1
-
 
 process.load('HeavyIonsAnalysis.JetAnalysis.hiFJRhoAnalyzer_cff')
 process.load("HeavyIonsAnalysis.JetAnalysis.pfcandAnalyzer_cfi")

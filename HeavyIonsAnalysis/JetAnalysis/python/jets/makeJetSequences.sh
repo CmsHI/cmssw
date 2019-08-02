@@ -96,8 +96,11 @@ do
 
                                 if [ $reco == "HI" ] && [ $sub == "Pu" ]; then
                                     corrname=$(echo ${algo} | sed 's/\(.*\)/\U\1/')${sub}${radius}${object}${corrlabel}
-                                else
-                                    corrname=$(echo ${algo} | sed 's/\(.*\)/\U\1/')${radius}${object}${corrlabel}
+				# to be updated with new JECs
+				elif [ $object == "Calo" ]; then
+				    corrname="AK4Calo"
+				else
+				    corrname="AK${radius}${object}"
                                 fi
 
                                 if [ $groom != "NONE" ]; then
