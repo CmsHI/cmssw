@@ -15,6 +15,7 @@ inclusiveJetAnalyzer = cms.EDAnalyzer(
     vtxTag = cms.InputTag("hiSelectedVertex"),
     doTower = cms.untracked.bool(False),
     towersSrc = cms.InputTag("towerMaker"),
+    useRawPt = cms.untracked.bool(False),
     useHepMC = cms.untracked.bool(False),
     useQuality = cms.untracked.bool(True),
     doLifeTimeTagging = cms.untracked.bool(False),

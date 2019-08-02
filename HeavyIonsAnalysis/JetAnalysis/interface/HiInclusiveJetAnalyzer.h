@@ -69,10 +69,8 @@ private:
 
   edm::InputTag   jetTagLabel_;
   edm::EDGetTokenT<std::vector<reco::Vertex> >       vtxTag_;
-  edm::EDGetTokenT<reco::JetView>                    jetTag_;
-  edm::EDGetTokenT<pat::JetCollection>               jetTagPat_;
-  edm::EDGetTokenT<reco::JetView>                    matchTag_;
-  edm::EDGetTokenT<pat::JetCollection>               matchTagPat_;
+  edm::EDGetTokenT<pat::JetCollection>               jetTag_;
+  edm::EDGetTokenT<pat::JetCollection>               matchTag_;
   edm::EDGetTokenT<reco::PFCandidateCollection>      pfCandidateLabel_;
   edm::EDGetTokenT<reco::TrackCollection>            trackTag_;
   edm::EDGetTokenT<reco::GenParticleCollection>      genParticleSrc_;
@@ -100,8 +98,7 @@ private:
   bool verbose_;
   bool doMatch_;
   bool useVtx_;
-  bool useJEC_;
-  bool usePat_;
+  bool useRawPt_;
   bool doTower;
   bool isMC_;
   bool useHepMC_;
@@ -114,7 +111,6 @@ private:
   bool doLifeTimeTagging_;
   bool doLifeTimeTaggingExtras_;
   bool saveBfragments_;
-  bool skipCorrections_;
   bool doExtraCTagging_;
 
   bool doHiJetID_;
