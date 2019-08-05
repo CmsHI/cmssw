@@ -10,6 +10,7 @@
 #include "DataFormats/EgammaCandidates/interface/GsfElectron.h"
 #include "DataFormats/EgammaCandidates/interface/HIPhotonIsolation.h"
 #include "DataFormats/EgammaCandidates/interface/Photon.h"
+#include "DataFormats/EgammaReco/interface/SuperClusterFwd.h"
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
 #include "DataFormats/MuonReco/interface/Muon.h"
 #include "DataFormats/VertexReco/interface/Vertex.h"
@@ -41,6 +42,7 @@ class ggHiNtuplizer : public edm::EDAnalyzer {
 
    void fillGenParticles (const edm::Event&);
    void fillGenPileupInfo(const edm::Event&);
+   void fillSC           (const edm::Event&);
    void fillElectrons    (const edm::Event&, const edm::EventSetup&, reco::Vertex& pv);
    void fillPhotons      (const edm::Event&, const edm::EventSetup&, reco::Vertex& pv);
    void fillMuons        (const edm::Event&, const edm::EventSetup&, reco::Vertex& pv);
@@ -64,6 +66,7 @@ class ggHiNtuplizer : public edm::EDAnalyzer {
    bool doPhoEReg_;
    bool doRecHitsEB_;
    bool doRecHitsEE_;
+   bool doSuperClusters_;
 
    // handles to collections of objects
    edm::EDGetTokenT<std::vector<PileupSummaryInfo> >    genPileupCollection_;
@@ -73,6 +76,8 @@ class ggHiNtuplizer : public edm::EDAnalyzer {
    edm::EDGetTokenT<edm::ValueMap<bool> > eleLooseIdMapToken_;
    edm::EDGetTokenT<edm::ValueMap<bool> > eleMediumIdMapToken_;
    edm::EDGetTokenT<edm::ValueMap<bool> > eleTightIdMapToken_;
+   edm::EDGetTokenT<reco::SuperClusterCollection> barrelSCToken_;
+   edm::EDGetTokenT<reco::SuperClusterCollection> endcapSCToken_;
    edm::EDGetTokenT<edm::View<reco::Photon> >      recoPhotonsCollection_;
    edm::EDGetTokenT<edm::ValueMap<reco::HIPhotonIsolation> > recoPhotonsHiIso_;
    edm::EDGetTokenT<edm::View<reco::Muon> >        recoMuonsCollection_;
@@ -393,6 +398,13 @@ class ggHiNtuplizer : public edm::EDAnalyzer {
    std::vector<float>  pho_swissCrx_;
    std::vector<float>  pho_seedTime_;
    std::vector<int>    pho_genMatchedIndex_;
+
+   /* supercluster info */
+   int nSC_;
+   std::vector<float> scE_;
+   std::vector<float> scRawE_;
+   std::vector<float> scEta_;
+   std::vector<float> scPhi_;
 
    // rechit info
    int nRH_;

@@ -21,6 +21,7 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) :
 {
   // class instance configuration
   doGenParticles_         = ps.getParameter<bool>("doGenParticles");
+  doSuperClusters_        = ps.getParameter<bool>("doSuperClusters");
   doElectrons_            = ps.getParameter<bool>("doElectrons");
   doPhotons_              = ps.getParameter<bool>("doPhotons");
   doMuons_                = ps.getParameter<bool>("doMuons");
@@ -34,6 +35,12 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) :
   if (doGenParticles_) {
     genPileupCollection_    = consumes<std::vector<PileupSummaryInfo>>(ps.getParameter<edm::InputTag>("pileupCollection"));
     genParticlesCollection_ = consumes<std::vector<reco::GenParticle>>(ps.getParameter<edm::InputTag>("genParticleSrc"));
+  }
+  if (doSuperClusters_) {
+    barrelSCToken_ = consumes<reco::SuperClusterCollection>(
+      ps.getParameter<edm::InputTag>("superClustersEB"));
+    endcapSCToken_ = consumes<reco::SuperClusterCollection>(
+      ps.getParameter<edm::InputTag>("superClustersEE"));
   }
   if (doElectrons_) {
     gsfElectronsCollection_ = consumes<edm::View<reco::GsfElectron>>(ps.getParameter<edm::InputTag>("gsfElectronLabel"));
@@ -124,6 +131,14 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) :
     tree_->Branch("mcCalIsoDR04", &mcCalIsoDR04_);
     tree_->Branch("mcTrkIsoDR03", &mcTrkIsoDR03_);
     tree_->Branch("mcTrkIsoDR04", &mcTrkIsoDR04_);
+  }
+
+  if (doSuperClusters_) {
+    tree_->Branch("nSC",                  &nSC_);
+    tree_->Branch("scE",                  &scE_);
+    tree_->Branch("scRawE",               &scRawE_);
+    tree_->Branch("scEta",                &scEta_);
+    tree_->Branch("scPhi",                &scPhi_);
   }
 
   if (doElectrons_) {
@@ -511,7 +526,6 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) :
     tree_->Branch("muIsPF",                &muIsPF_);
     tree_->Branch("muIsSTA",               &muIsSTA_);
 
-
     tree_->Branch("muD0",                  &muD0_);
     tree_->Branch("muDz",                  &muDz_);
     tree_->Branch("muIP3D",                &muIP3D_);
@@ -527,10 +541,6 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) :
     tree_->Branch("muInnerPt",             &muInnerPt_);
     tree_->Branch("muInnerPtErr",             &muInnerPtErr_);
     tree_->Branch("muInnerEta",             &muInnerEta_);
-
-
-
-
 
     tree_->Branch("muTrkLayers",           &muTrkLayers_);
     tree_->Branch("muPixelLayers",         &muPixelLayers_);
@@ -588,6 +598,14 @@ void ggHiNtuplizer::analyze(const edm::Event& e, const edm::EventSetup& es)
     mcCalIsoDR04_         .clear();
     mcTrkIsoDR03_         .clear();
     mcTrkIsoDR04_         .clear();
+  }
+
+  if (doSuperClusters_) {
+    nSC_ = 0;
+    scE_                  .clear();
+    scRawE_               .clear();
+    scEta_                .clear();
+    scPhi_                .clear();
   }
 
   if (doElectrons_) {
@@ -952,8 +970,6 @@ void ggHiNtuplizer::analyze(const edm::Event& e, const edm::EventSetup& es)
     muIsTracker_.clear();
     muIsPF_.clear();
     muIsSTA_.clear();
-    
-
 
     muD0_                 .clear();
     muDz_                 .clear();
@@ -970,7 +986,6 @@ void ggHiNtuplizer::analyze(const edm::Event& e, const edm::EventSetup& es)
     muInnerPt_.clear();
     muInnerPtErr_.clear();
     muInnerEta_.clear();
-   
 
     muTrkLayers_          .clear();
     muPixelLayers_        .clear();
@@ -1038,6 +1053,7 @@ void ggHiNtuplizer::analyze(const edm::Event& e, const edm::EventSetup& es)
     topo = pTopo.product();
   }
 
+  if (doSuperClusters_) fillSC(e);
   if (doElectrons_) fillElectrons(e, es, pv);
   if (doPhotons_) fillPhotons(e, es, pv);
   if (doMuons_) fillMuons(e, es, pv);
@@ -1211,6 +1227,25 @@ float ggHiNtuplizer::getGenTrkIso(edm::Handle<std::vector<reco::GenParticle> > &
   }
 
   return ptSum;
+}
+
+void ggHiNtuplizer::fillSC(edm::Event const& e) {
+  edm::Handle<reco::SuperClusterCollection> barrelSCHandle;
+  e.getByToken(barrelSCToken_, barrelSCHandle);
+
+  edm::Handle<reco::SuperClusterCollection> endcapSCHandle;
+  e.getByToken(endcapSCToken_, endcapSCHandle);
+
+  for (auto const& scs : { *barrelSCHandle, *endcapSCHandle }) {
+    for (auto const& sc : scs) {
+      scE_.push_back(sc.energy());
+      scRawE_.push_back(sc.rawEnergy());
+      scEta_.push_back(sc.eta());
+      scPhi_.push_back(sc.phi());
+
+      ++nSC_;
+    }
+  }
 }
 
 void ggHiNtuplizer::fillElectrons(const edm::Event& e, const edm::EventSetup& es, reco::Vertex& pv)
