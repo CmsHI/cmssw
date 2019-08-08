@@ -32,7 +32,6 @@ mkdir $area
 
 # samples
 samples=(
-   https://github.com/bi-ran/samples/raw/master/step2_PbPb_1030pre6_HIRECO.root
    https://github.com/bi-ran/samples/raw/master/HINPbPbAutumn18DR_Pythia8_Ze10e10_TuneCP5_5p02TeV_1032_AODSIM.root
    https://github.com/bi-ran/samples/raw/master/HIHardProbes_HIRun2018A-PromptReco-v2_1031p1_AOD.root
 )
@@ -52,8 +51,6 @@ samples=(
 
 # setup foresting configs
 configs=(
-   runForestAOD_HI_MB_103X.py
-   runForestAOD_HI_MIX_103X.py
    runForestAOD_pponAA_MB_103X.py
    runForestAOD_pponAA_MIX_103X.py
    runForestAOD_pponAA_JEC_103X.py
@@ -62,11 +59,9 @@ configs=(
 
 for c in ${configs[@]}; do
    if [[ $c == *"DATA"* ]]; then
-      input=$sampledir/$(basename ${samples[2]})
-   elif [[ $c == *"HI"* ]]; then
-      input=$sampledir/$(basename ${samples[0]})
-   else
       input=$sampledir/$(basename ${samples[1]})
+   else
+      input=$sampledir/$(basename ${samples[0]})
    fi
    export input="fileNames = cms.untracked.vstring('file:"${input}"'),"
 
@@ -123,3 +118,5 @@ popd > /dev/null
 [ $keepoutput ] && echo -e "\n  output kept:\n\E[34m$area\E[0m"
 
 echo -e "\n  done\n"
+
+exit $fail
