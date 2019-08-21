@@ -2,6 +2,7 @@
 <use   name="DataFormats/EgammaCandidates"/>
 <use   name="DataFormats/HepMCCandidate"/>
 <use   name="DataFormats/ParticleFlowCandidate"/>
+<use   name="RecoEgamma/EgammaTools"/>
 <use   name="FWCore/Framework"/>
 <use   name="FWCore/ParameterSet"/>
 <use   name="Geometry/CaloGeometry"/>
