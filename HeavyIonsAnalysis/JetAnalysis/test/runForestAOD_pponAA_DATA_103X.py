@@ -114,9 +114,14 @@ process.load('HeavyIonsAnalysis.TrackAnalysis.TrkAnalyzers_cff')
 #####################
 # Photons
 #####################
+SSHIRun2018A = "HeavyIonsAnalysis/PhotonAnalysis/data/SSHIRun2018A.dat"
+process.load('HeavyIonsAnalysis.PhotonAnalysis.correctedElectronProducer_cfi')
+process.correctedElectrons.correctionFile = SSHIRun2018A
+
 process.load('HeavyIonsAnalysis.PhotonAnalysis.ggHiNtuplizer_cfi')
 process.ggHiNtuplizer.doGenParticles = False
 process.ggHiNtuplizerGED.doGenParticles = False
+process.ggHiNtuplizerGED.gsfElectronLabel = "correctedElectrons"
 
 ###############################################################################
 
@@ -177,6 +182,7 @@ process.ana_step = cms.Path(
     process.hiEvtAnalyzer +
     process.jetSequence +
     process.hiPuRhoR3Analyzer + 
+    process.correctedElectrons +
     process.ggHiNtuplizer +
     process.ggHiNtuplizerGED +
     process.hiFJRhoAnalyzer +

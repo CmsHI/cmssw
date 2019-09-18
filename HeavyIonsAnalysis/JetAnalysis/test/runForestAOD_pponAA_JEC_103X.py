@@ -123,7 +123,12 @@ process.load('HeavyIonsAnalysis.TrackAnalysis.TrkAnalyzers_cff')
 #####################
 # Photons
 #####################
+SS2018PbPbMC = "HeavyIonsAnalysis/PhotonAnalysis/data/SS2018PbPbMC.dat"
+process.load('HeavyIonsAnalysis.PhotonAnalysis.correctedElectronProducer_cfi')
+process.correctedElectrons.correctionFile = SS2018PbPbMC
+
 process.load('HeavyIonsAnalysis.PhotonAnalysis.ggHiNtuplizer_cfi')
+process.ggHiNtuplizerGED.gsfElectronLabel = "correctedElectrons"
 
 ###############################################################################
 
@@ -173,6 +178,7 @@ process.ana_step = cms.Path(
     process.genSignalSequence +
     process.jetSequence +
     process.hiPuRhoR3Analyzer + 
+    process.correctedElectrons +
     process.ggHiNtuplizer +
     process.ggHiNtuplizerGED +
     process.hiFJRhoAnalyzer +
