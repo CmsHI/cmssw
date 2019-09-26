@@ -63,7 +63,7 @@ do
                                 domatch="False"
                                 match=""
                                 eventinfotag="generator"
-                                jetcorrlevels="\'L2Relative\',\'L3Absolute\'"
+                                jetcorrlevels="\'L2Relative\'"
                                 corrlabel="_offline"
 
                                 if [ $reco == "HI" ]; then
@@ -79,10 +79,13 @@ do
                                     doTower="False"
                                 fi
 
-                                if [ $system == "pp" ] && [ $sample == "data" ] \
-                                    && [ $object == "PF" ] && [ $sub == "NONE" ] \
-                                    && [ $radius == 4 ]; then
-                                    jetcorrlevels="\'L2Relative\',\'L3Absolute\',\'L2L3Residual\'"
+                                if ([ $system == "pp" ] || [ $system == "PbPb" ]) \
+                                    && [ $object == "PF" ]; then
+                                    if [ $sample = "data" ]; then
+                                        jetcorrlevels="\'L2Relative\',\'L2L3Residual\'"
+                                    else
+                                        jetcorrlevels="\'L2Relative\'"
+                                    fi
                                 fi
 
                                 if [ $sample != "data" ]; then
@@ -98,7 +101,7 @@ do
                                     corrname=$(echo ${algo} | sed 's/\(.*\)/\U\1/')${sub}${radius}${object}${corrlabel}
 				# to be updated with new JECs
 				elif [ $object == "Calo" ]; then
-				    corrname="AK4Calo"
+				    corrname="AK4PF"
 				else
 				    corrname="AK${radius}${object}"
                                 fi
