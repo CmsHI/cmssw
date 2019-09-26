@@ -296,13 +296,13 @@ void PATJetProducer::produce(edm::Event & iEvent, const edm::EventSetup & iSetup
       if(std::find(levels.begin(), levels.end(), "L2L3Residual")!=levels.end()){
 	ajet.initializeJEC(jetCorrs[0][jetRef].jecLevel("L2L3Residual"));
       }
-      else if(std::find(levels.begin(), levels.end(), "L3Absolute")!=levels.end()){
-	ajet.initializeJEC(jetCorrs[0][jetRef].jecLevel("L3Absolute"));
+      else if(std::find(levels.begin(), levels.end(), "L2Relative")!=levels.end()){
+	ajet.initializeJEC(jetCorrs[0][jetRef].jecLevel("L2Relative"));
       }
       else{
 	ajet.initializeJEC(jetCorrs[0][jetRef].jecLevel("Uncorrected"));
 	if(printWarning_){
-	  edm::LogWarning("L3Absolute not found") << "L2L3Residual and L3Absolute are not part of the jetCorrFactors\n"
+	  edm::LogWarning("L2Relative not found") << "L2L3Residual and L2Relative are not part of the jetCorrFactors\n"
 						  << "of module " <<  jetCorrs[0][jetRef].jecSet() << ". Jets will remain"
 						  << " uncorrected."; printWarning_=false;
 	}
