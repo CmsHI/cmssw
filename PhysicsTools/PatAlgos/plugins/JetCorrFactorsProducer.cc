@@ -162,9 +162,9 @@ JetCorrFactorsProducer::evaluate(edm::View<reco::Jet>::const_iterator& jet, cons
   //For PAT jets undo previous jet energy corrections
   const Jet* patjet = dynamic_cast<Jet const *>( &*jet );
   if( patjet ){
-    corrector->setJetEta(patjet->correctedP4(0).eta()); corrector->setJetPt(patjet->correctedP4(0).pt()); corrector->setJetE(patjet->correctedP4(0).energy());
+    corrector->setJetEta(patjet->correctedP4(0).eta()); corrector->setJetPt(patjet->correctedP4(0).pt()); corrector->setJetE(patjet->correctedP4(0).energy()); corrector->setJetPhi(patjet->correctedP4(0).phi());
   } else {
-    corrector->setJetEta(jet->eta()); corrector->setJetPt(jet->pt()); corrector->setJetE(jet->energy());
+    corrector->setJetEta(jet->eta()); corrector->setJetPt(jet->pt()); corrector->setJetE(jet->energy()); corrector->setJetPhi(jet->phi());
   }
   if( emf_ && dynamic_cast<const reco::CaloJet*>(&*jet)){
     corrector->setJetEMF(dynamic_cast<const reco::CaloJet*>(&*jet)->emEnergyFraction());

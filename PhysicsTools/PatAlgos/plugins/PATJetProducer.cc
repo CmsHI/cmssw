@@ -299,6 +299,9 @@ void PATJetProducer::produce(edm::Event & iEvent, const edm::EventSetup & iSetup
       else if(std::find(levels.begin(), levels.end(), "L3Absolute")!=levels.end()){
 	ajet.initializeJEC(jetCorrs[0][jetRef].jecLevel("L3Absolute"));
       }
+      else if(std::find(levels.begin(), levels.end(), "L2Relative")!=levels.end()){
+	ajet.initializeJEC(jetCorrs[0][jetRef].jecLevel("L2Relative"));
+      }
       else{
 	ajet.initializeJEC(jetCorrs[0][jetRef].jecLevel("Uncorrected"));
 	if(printWarning_){
