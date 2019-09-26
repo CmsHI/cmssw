@@ -831,6 +831,165 @@ def overrideJEC_pp5020(process):
     if hasattr(process, 'HiForest'):
         process.HiForest.inputLines.extend([process.jec.toGet[6].tag.configValue()]) #pick the ak4PF one to record
     return process
+def overrideJEC_DATA_PbPb5020_2018(process):
+    process.load("CondCore.CondDB.CondDB_cfi")
+    process.jec = cms.ESSource("PoolDBESSource",
+                               DBParameters = cms.PSet(
+                                   messageLevel = cms.untracked.int32(0)
+                               ),
+                               timetype = cms.string('runnumber'),
+                               toGet = cms.VPSet(
+                                   cms.PSet(record = cms.string("JetCorrectionsRecord"),
+                                            tag = cms.string("JetCorrectorParametersCollection_Autumn18_HI_V6_DATA_AK2PF"),
+                                            connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS'),
+                                            label = cms.untracked.string("AK2PF")
+                                   ),
+                                   cms.PSet(record = cms.string("JetCorrectionsRecord"),
+                                            tag = cms.string("JetCorrectorParametersCollection_Autumn18_HI_V6_DATA_AK3PF"),
+                                            connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS'),
+                                            label = cms.untracked.string("AK3PF")
+                                   ),
+                                   cms.PSet(record = cms.string("JetCorrectionsRecord"),
+                                            tag = cms.string("JetCorrectorParametersCollection_Autumn18_HI_V6_DATA_AK4PF"),
+                                            connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS'),
+                                            label = cms.untracked.string("AK4PF")
+                                   ),
+                                   cms.PSet(record = cms.string("JetCorrectionsRecord"),
+                                            tag = cms.string("JetCorrectorParametersCollection_Autumn18_HI_V6_DATA_AK5PF"),
+                                            connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS'),
+                                            label = cms.untracked.string("AK5PF")
+                                   ),
+                                   cms.PSet(record = cms.string("JetCorrectionsRecord"),
+                                            tag = cms.string("JetCorrectorParametersCollection_Autumn18_HI_V6_DATA_AK6PF"),
+                                            connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS'),
+                                            label = cms.untracked.string("AK6PF")
+                                   ),
+                                )
+                            )
+    process.es_prefer_jec = cms.ESPrefer('PoolDBESSource','jec')
+    if hasattr(process, 'HiForest'):
+        process.HiForest.inputLines.extend([process.jec.toGet[2].tag.configValue()]) #pick the ak4PF one to record
+    return process
+
+def overrideJEC_MC_PbPb5020_2018(process):
+    process.load("CondCore.CondDB.CondDB_cfi")
+    process.jec = cms.ESSource("PoolDBESSource",
+                               DBParameters = cms.PSet(
+                                   messageLevel = cms.untracked.int32(0)
+                               ),
+                               timetype = cms.string('runnumber'),
+                               toGet = cms.VPSet(
+                                   cms.PSet(record = cms.string("JetCorrectionsRecord"),
+                                            tag = cms.string("JetCorrectorParametersCollection_Autumn18_HI_V6_MC_AK2PF"),
+                                            connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS'),
+                                            label = cms.untracked.string("AK2PF")
+                                   ),
+                                   cms.PSet(record = cms.string("JetCorrectionsRecord"),
+                                            tag = cms.string("JetCorrectorParametersCollection_Autumn18_HI_V6_MC_AK3PF"),
+                                            connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS'),
+                                            label = cms.untracked.string("AK3PF")
+                                   ),
+                                   cms.PSet(record = cms.string("JetCorrectionsRecord"),
+                                            tag = cms.string("JetCorrectorParametersCollection_Autumn18_HI_V6_MC_AK4PF"),
+                                            connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS'),
+                                            label = cms.untracked.string("AK4PF")
+                                   ),
+                                   cms.PSet(record = cms.string("JetCorrectionsRecord"),
+                                            tag = cms.string("JetCorrectorParametersCollection_Autumn18_HI_V6_MC_AK5PF"),
+                                            connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS'),
+                                            label = cms.untracked.string("AK5PF")
+                                   ),
+                                   cms.PSet(record = cms.string("JetCorrectionsRecord"),
+                                            tag = cms.string("JetCorrectorParametersCollection_Autumn18_HI_V6_MC_AK6PF"),
+                                            connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS'),
+                                            label = cms.untracked.string("AK6PF")
+                                   ),
+                                )
+                            )
+    process.es_prefer_jec = cms.ESPrefer('PoolDBESSource','jec')
+    if hasattr(process, 'HiForest'):
+        process.HiForest.inputLines.extend([process.jec.toGet[2].tag.configValue()]) #pick the ak4PF one to record
+    return process
+
+def overrideJEC_DATA_pp5020_2017(process):
+    process.load("CondCore.CondDB.CondDB_cfi")
+    process.jec = cms.ESSource("PoolDBESSource",
+                               DBParameters = cms.PSet(
+                                   messageLevel = cms.untracked.int32(0)
+                               ),
+                               timetype = cms.string('runnumber'),
+                               toGet = cms.VPSet(
+                                   cms.PSet(record = cms.string("JetCorrectionsRecord"),
+                                            tag = cms.string("JetCorrectorParametersCollection_Spring18_ppRef5TeV_V4_DATA_AK2PF"),
+                                            connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS'),
+                                            label = cms.untracked.string("AK2PF")
+                                   ),
+                                   cms.PSet(record = cms.string("JetCorrectionsRecord"),
+                                            tag = cms.string("JetCorrectorParametersCollection_Spring18_ppRef5TeV_V4_DATA_AK3PF"),
+                                            connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS'),
+                                            label = cms.untracked.string("AK3PF")
+                                   ),
+                                   cms.PSet(record = cms.string("JetCorrectionsRecord"),
+                                            tag = cms.string("JetCorrectorParametersCollection_Spring18_ppRef5TeV_V4_DATA_AK4PF"),
+                                            connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS'),
+                                            label = cms.untracked.string("AK4PF")
+                                   ),
+                                   cms.PSet(record = cms.string("JetCorrectionsRecord"),
+                                            tag = cms.string("JetCorrectorParametersCollection_Spring18_ppRef5TeV_V4_DATA_AK5PF"),
+                                            connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS'),
+                                            label = cms.untracked.string("AK5PF")
+                                   ),
+                                   cms.PSet(record = cms.string("JetCorrectionsRecord"),
+                                            tag = cms.string("JetCorrectorParametersCollection_Spring18_ppRef5TeV_V4_DATA_AK6PF"),
+                                            connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS'),
+                                            label = cms.untracked.string("AK6PF")
+                                   ),
+                                )
+                            )
+    process.es_prefer_jec = cms.ESPrefer('PoolDBESSource','jec')
+    if hasattr(process, 'HiForest'):
+        process.HiForest.inputLines.extend([process.jec.toGet[2].tag.configValue()]) #pick the ak4PF one to record
+    return process
+
+def overrideJEC_MC_pp5020_2017(process):
+    process.load("CondCore.CondDB.CondDB_cfi")
+    process.jec = cms.ESSource("PoolDBESSource",
+                               DBParameters = cms.PSet(
+                                   messageLevel = cms.untracked.int32(0)
+                               ),
+                               timetype = cms.string('runnumber'),
+                               toGet = cms.VPSet(
+                                   cms.PSet(record = cms.string("JetCorrectionsRecord"),
+                                            tag = cms.string("JetCorrectorParametersCollection_Spring18_ppRef5TeV_V4_MC_AK2PF"),
+                                            connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS'),
+                                            label = cms.untracked.string("AK2PF")
+                                   ),
+                                   cms.PSet(record = cms.string("JetCorrectionsRecord"),
+                                            tag = cms.string("JetCorrectorParametersCollection_Spring18_ppRef5TeV_V4_MC_AK3PF"),
+                                            connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS'),
+                                            label = cms.untracked.string("AK3PF")
+                                   ),
+                                   cms.PSet(record = cms.string("JetCorrectionsRecord"),
+                                            tag = cms.string("JetCorrectorParametersCollection_Spring18_ppRef5TeV_V4_MC_AK4PF"),
+                                            connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS'),
+                                            label = cms.untracked.string("AK4PF")
+                                   ),
+                                   cms.PSet(record = cms.string("JetCorrectionsRecord"),
+                                            tag = cms.string("JetCorrectorParametersCollection_Spring18_ppRef5TeV_V4_MC_AK5PF"),
+                                            connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS'),
+                                            label = cms.untracked.string("AK5PF")
+                                   ),
+                                   cms.PSet(record = cms.string("JetCorrectionsRecord"),
+                                            tag = cms.string("JetCorrectorParametersCollection_Spring18_ppRef5TeV_V4_MC_AK6PF"),
+                                            connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS'),
+                                            label = cms.untracked.string("AK6PF")
+                                   ),
+                                )
+                            )
+    process.es_prefer_jec = cms.ESPrefer('PoolDBESSource','jec')
+    if hasattr(process, 'HiForest'):
+        process.HiForest.inputLines.extend([process.jec.toGet[2].tag.configValue()]) #pick the ak4PF one to record
+    return process
 
 def overrideJEC_PbPb5020(process):
     process.load("CondCore.CondDB.CondDB_cfi")
