@@ -67,12 +67,8 @@ process.load("HeavyIonsAnalysis.JetAnalysis.fullJetSequence_pp_mc_cff")
 # Use this version for JEC
 # process.load("HeavyIonsAnalysis.JetAnalysis.fullJetSequence_pp_jec_cff")
 
-# temporary corrections
-for m in vars(process).values():
-    if (isinstance(m, cms.EDProducer)
-            and m._TypedParameterizable__type == 'JetCorrFactorsProducer'):
-        m.payload = "AK4PF"
-
+from HeavyIonsAnalysis.Configuration.CommonFunctions_cff import overrideJEC_MC_pp5020_2017  
+process = overrideJEC_MC_pp5020_2017(process)
 #####################################################################################
 
 ############################
