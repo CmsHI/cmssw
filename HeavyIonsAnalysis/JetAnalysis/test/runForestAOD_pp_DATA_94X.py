@@ -64,11 +64,8 @@ process.TFileService = cms.Service("TFileService",
 #############################
 process.load('HeavyIonsAnalysis.JetAnalysis.fullJetSequence_pp_data_cff')
 
-# temporary corrections
-for m in vars(process).values():
-    if (isinstance(m, cms.EDProducer)
-            and m._TypedParameterizable__type == 'JetCorrFactorsProducer'):
-        m.payload = "AK4PF"
+from HeavyIonsAnalysis.Configuration.CommonFunctions_cff import overrideJEC_DATA_pp5020_2017
+process = overrideJEC_DATA_pp5020_2017(process)
 
 #####################################################################################
 

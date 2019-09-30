@@ -33,19 +33,22 @@ do
 			doGenSubJets="False"
 			match=""
 			eventinfotag="generator"
-			jetcorrectionlevels="\'L2Relative\',\'L3Absolute\'"
+			jetcorrectionlevels="\'L2Relative\'"
 			genparticles="genParticles"
 
-			if [ $sample == "data" ] && [ $radius == 4 ] && [ $object == "PF" ]; then
-			    jetcorrectionlevels="\'L2Relative\',\'L3Absolute\',\'L2L3Residual\'"
+			if [ $sample == "data" ]; then
+			    jetcorrectionlevels="\'L2Relative\',\'L2L3Residual\'"
 			fi
 
 			if [ $sample == "mc" ] || [ $sample == "jec" ]; then
 			    ismc="True"
 			fi
 
-			corrname=`echo ${algo} | sed 's/\(.*\)/\U\1/'`${radius}${object}${corrlabel}
-
+			if [ $object == "PF" ]; then
+			    corrname="AK${radius}${object}"
+			else
+			    corrname="AK4PF"
+			fi
 			if [ $groom == "SoftDrop" ] || [ $groom == "Filter" ]; then
 			    doSubJets="True"
 			    if [ $sample == "mc" ] && [ $groom == "SoftDrop" ]; then
