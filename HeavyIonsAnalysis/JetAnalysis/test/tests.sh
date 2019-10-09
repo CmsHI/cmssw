@@ -49,6 +49,15 @@ samples=(
    [ $keepsample ] && echo -e "\n  samples will be kept:\n\E[34m$sampledir\E[0m"
 }
 
+# event-plane calibration
+calibrations=(
+   $CMSSW_BASE/src/HeavyIonsAnalysis/EventAnalysis/data/HeavyIonRPRcd_PbPb2018_offline.db
+)
+
+for c in ${calibrations[@]}; do
+   cp $c $area/
+done
+
 # setup foresting configs
 configs=(
    runForestAOD_pponAA_MB_103X.py
