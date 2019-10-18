@@ -154,7 +154,7 @@ class bTaggers:
 
         self.patJetFlavourIdLegacy = cms.Sequence( self.PatJetPartonAssociationLegacy * self.PatJetFlavourAssociationLegacy)
 
-        self.PatJetPartons = patJetPartons.clone()
+        self.PatJetPartons = patJetPartons.clone(particles = cms.InputTag("hiSignalGenParticles"))
         self.PatJetFlavourAssociation = patJetFlavourAssociation.clone(
             jets = cms.InputTag(jetname+"Jets"),
             rParam = rParam,
