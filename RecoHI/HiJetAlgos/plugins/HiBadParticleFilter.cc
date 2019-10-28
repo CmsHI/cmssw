@@ -19,7 +19,8 @@
 #include "DataFormats/TrackReco/interface/TrackFwd.h"
 #include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
 #include "DataFormats/ParticleFlowCandidate/interface/PFCandidateFwd.h"
-
+#include "DataFormats/VertexReco/interface/Vertex.h"
+#include "DataFormats/VertexReco/interface/VertexFwd.h"
 //
 // class declaration
 //
@@ -35,19 +36,17 @@ private:
   // ----------member data ---------------------------
 
   edm::EDGetTokenT<edm::View<reco::PFCandidate> >   tokenPFCandidates_;
-  edm::EDGetTokenT<edm::View<reco::Muon> >   tokenMuons_;
+  edm::EDGetTokenT<reco::VertexCollection>   tokenPV_;
 
-  const bool taggingMode_;
+  const bool            taggingMode_;
+  const bool            verbose_;
   const double          minMuonPt_;
   const double          minChargedHadronPt_;
   const double          minMuonTrackRelPtErr_;
-  const double          maxMuonSeededDzSig_;
-  const double          maxMuonSeededDxySig_;
+  const double          maxSigLoose_;
+  const double          maxSigTight_;
   const double          minCaloCompatibility_;
-  const double          minTrackRelPtErrLoose_;
-  const double          minTrackRelPtErrTight_;
-  const unsigned        minTrackNHitsLoose_;
-  const unsigned        minTrackNHitsTight_;
+  const unsigned        minTrackNHits_;
 };
 
 //
@@ -55,20 +54,20 @@ private:
 //
 HiBadParticleFilter::HiBadParticleFilter(const edm::ParameterSet& iConfig)
   : tokenPFCandidates_ ( consumes<edm::View<reco::PFCandidate> >(iConfig.getParameter<edm::InputTag> ("PFCandidates")  ))
+  , tokenPV_ ( consumes<reco::VertexCollection> (iConfig.getParameter<edm::InputTag> ("offlinePV")  ))
   , taggingMode_          ( iConfig.getParameter<bool>    ("taggingMode") )
+  , verbose_              ( iConfig.getParameter<bool>    ("verbose") )
   , minMuonPt_            ( iConfig.getParameter<double>  ("minMuonPt") )
   , minChargedHadronPt_   ( iConfig.getParameter<double>  ("minChargedHadronPt") )
   , minMuonTrackRelPtErr_ ( iConfig.getParameter<double>  ("minMuonTrackRelPtErr") )
-  , maxMuonSeededDzSig_   ( iConfig.getParameter<double>  ("maxMuonSeededDzSig") )
-  , maxMuonSeededDxySig_  ( iConfig.getParameter<double>  ("maxMuonSeededDxySig") )
+  , maxSigLoose_          ( iConfig.getParameter<double>  ("maxSigLoose") )
+  , maxSigTight_          ( iConfig.getParameter<double>  ("maxSigTight") )
   , minCaloCompatibility_ ( iConfig.getParameter<double>  ("minCaloCompatibility") )
-  , minTrackRelPtErrLoose_( iConfig.getParameter<double>  ("minTrackRelPtErrLoose") )
-  , minTrackRelPtErrTight_( iConfig.getParameter<double>  ("minTrackRelPtErrTight") )
-  , minTrackNHitsLoose_   ( iConfig.getParameter<uint>  ("minTrackNHitsLoose") )
-  , minTrackNHitsTight_   ( iConfig.getParameter<uint>  ("minTrackNHitsTight") )
+  , minTrackNHits_        ( iConfig.getParameter<uint>    ("minTrackNHits") )
 {
   produces<bool>();
   produces<reco::PFCandidateCollection>();
+  produces<reco::PFCandidateCollection>("cleaned");
 }
 
 HiBadParticleFilter::~HiBadParticleFilter() { }
@@ -89,7 +88,13 @@ HiBadParticleFilter::filter(edm::StreamID iID, edm::Event& iEvent, const edm::Ev
   Handle<CandidateView> pfCandidates;
   iEvent.getByToken(tokenPFCandidates_,pfCandidates);
 
+  const reco::VertexCollection* recoVertices;
+  edm::Handle<reco::VertexCollection> vertexCollection;
+  iEvent.getByToken(tokenPV_,vertexCollection);
+  recoVertices = vertexCollection.product();
+
   auto pOutputCandidateCollection = std::make_unique<reco::PFCandidateCollection>();
+  auto pBadCandidateCollection = std::make_unique<reco::PFCandidateCollection>();
 
 
   bool foundBadCandidate = false;
@@ -102,79 +107,180 @@ HiBadParticleFilter::filter(edm::StreamID iID, edm::Event& iEvent, const edm::Ev
     if(abs(pfCandidate.particleId()) == 3)     // muon cleaning    
       {
 	if(pfCandidate.pt() > minMuonPt_){
-    
-	if(!pfCandidate.muonRef()->isGlobalMuon() || !pfCandidate.muonRef()->isTrackerMuon() || !pfCandidate.trackRef().isNonnull())	
-	  {
+	  
+	  if(!pfCandidate.muonRef()->isGlobalMuon() || !pfCandidate.muonRef()->isTrackerMuon() || !pfCandidate.trackRef().isNonnull())	
+	    {
+	      if(verbose_) std::cout<<" bad muon fit "<<pfCandidate.pt()<<std::endl;
+	      cout<<" isGlobal "<<pfCandidate.muonRef()->isGlobalMuon()<<" isTracker "<<pfCandidate.muonRef()->isTrackerMuon()<<" has track "<<pfCandidate.trackRef().isNonnull()<<std::endl;
+	      foundBadCandidate=true;
+	      continue;
+	    }
+	  reco::TrackRef track = pfCandidate.trackRef();
+	  
+	  if(track->ptError()/track->pt()>minMuonTrackRelPtErr_ || track->pt()<pfCandidate.pt()/2.){
+	    if(verbose_){
+	      std::cout<<" bad muon err "<<pfCandidate.pt()<<std::endl;
+	      std::cout<<" rel err = "<<track->ptError()/track->pt()<<std::endl;
+		}
 	    foundBadCandidate=true;
-	    break;
+	    continue;	 
 	  }
-	reco::TrackRef track = pfCandidate.trackRef();
+	  
 
-	if(track->ptError()/track->pt()>minMuonTrackRelPtErr_){
-	  foundBadCandidate=true;
-	  break;	 
+	  if(track->algo()==13 || track->algo()==14 || track->originalAlgo() == 14 || track->originalAlgo() ==13 || track->hitPattern().trackerLayersWithMeasurement()<7){
+
+	    
+	    float xVtx = (*recoVertices)[0].position().x();
+	    float yVtx = (*recoVertices)[0].position().y();
+	    float zVtx = (*recoVertices)[0].position().z();
+	    float xVtxErr = (*recoVertices)[0].xError();
+	    float yVtxErr = (*recoVertices)[0].yError();
+	    float zVtxErr = (*recoVertices)[0].zError();
+	    
+	    math::XYZPoint vtx_temp(xVtx,yVtx,zVtx);
+
+	    float Dz = track->dz(vtx_temp);
+	    float DzError = sqrt(track->dzError()*track->dzError()+zVtxErr*zVtxErr);
+	    float Dxy = track->dxy(vtx_temp);
+	    float DxyError = sqrt(track->dxyError()*track->dxyError()+xVtxErr*yVtxErr);
+	    float dzSig = Dz/DzError;
+	    float dxySig = Dxy/DxyError;
+	    
+	    float sig3d = sqrt(dxySig*dxySig + dzSig*dzSig);
+
+	    if(sig3d > maxSigLoose_ ){
+	      if(verbose_){
+		std::cout<<" bad muon algo 14, large IP "<<pfCandidate.pt()<<std::endl;
+		std::cout<<" dxy "<<Dxy<<" dxy err "<<DxyError<<std::endl;
+		std::cout<<" dz "<<Dz<<" dz err "<<DzError<<std::endl;
+	      }
+	      pBadCandidateCollection->push_back(pfCandidate);
+	      foundBadCandidate=true;
+	      continue;	 
+	    }	  	 
+	    
+	    if(track->pt()<pfCandidate.pt()/1.5  || track->pt() > pfCandidate.pt()*1.5){
+	      if(verbose_){
+		std::cout<<" bad muon algo, bad ptack pT "<<pfCandidate.pt()<<std::endl;
+		std::cout<<" track pT "<<track->pt()<<" cand pT "<<pfCandidate.pt()<<std::endl;		
+	      }
+	      foundBadCandidate=true;
+	      pBadCandidateCollection->push_back(pfCandidate);
+	      continue;	 
+	    }
+	    if(track->originalAlgo() == 14 && track->hitPattern().trackerLayersWithMeasurement()<10){
+	      if(verbose_){
+		std::cout<<" bad muon original algo 14, small number of hits "<<pfCandidate.pt()<<std::endl;
+		std::cout<<" trakc N hits "<<track->hitPattern().trackerLayersWithMeasurement()<<std::endl;		
+	      }
+	      foundBadCandidate=true;
+	      pBadCandidateCollection->push_back(pfCandidate);
+	      continue;
+	    }
+	  }
 	}
-	
-	if(track->algo()==13 || track->algo()==14){
-	  double dxySig = fabs(track->dxy());
-	  double dxyErr = track->dxyError();
-	  if(dxyErr>0) dxySig/=dxyErr;
-
-	  double dzSig = fabs(track->dz());
-	  double dzErr = track->dzError();
-	  if(dzErr>0) dzSig/=dzErr;
-
-	  if(dxySig > maxMuonSeededDxySig_ || dzSig > maxMuonSeededDzSig_){
-	    foundBadCandidate=true;
-	    break;	 
-	  }	  	 
-	}
-      }
       }
     else if(abs(pfCandidate.particleId()) == 1)  //charged hadron cleaning
       {
-
-	if(pfCandidate.pt() > minChargedHadronPt_){
-	
-	reco::TrackRef track = pfCandidate.trackRef();
-
-	if(track->algo()==13 || track->algo()==14){
-	  double dxySig = fabs(track->dxy());
-	  double dxyErr = track->dxyError();
-	  if(dxyErr>0) dxySig/=dxyErr;
-	  
-	  double dzSig = fabs(track->dz());
-	  double dzErr = track->dzError();
-	  if(dzErr>0) dzSig/=dzErr;
-	  
-	  if(dxySig > maxMuonSeededDxySig_ || dzSig > maxMuonSeededDzSig_){
-	    foundBadCandidate=true;
-	    break;	 
-	  }	  	 
-	  	  	  
-	}
-
-	double caloEnergy = pfCandidate.ecalEnergy() + pfCandidate.hcalEnergy();
-	unsigned nHits = track->numberOfValidHits();
-	double relError =track->ptError()/track->pt();
-
-	
-	if(caloEnergy < track->p()*minCaloCompatibility_) 	// tight selection if calo incompatible
+	if(pfCandidate.pt() > minChargedHadronPt_)
 	  {
-	    if(relError > minTrackRelPtErrTight_  || nHits < minTrackNHitsTight_ ){
-	      foundBadCandidate=true;
-	      break;	 
-	    }	     
-	}
-	else {
-	    if(relError > minTrackRelPtErrLoose_  || nHits< minTrackNHitsLoose_ ){
-	      foundBadCandidate=true;
-	      break;	 
-	    }	 
-	}
-	}
-      }
+	    
+	    reco::TrackRef track = pfCandidate.trackRef();
 
+	    unsigned nHits = track->numberOfValidHits();	    
+	    unsigned nPixelHits = track->hitPattern().numberOfValidPixelHits();
+
+	    if((nHits < minTrackNHits_ && nPixelHits < 3 ) || nHits==3 ){
+	      if(verbose_) std::cout<<" bad  track with small nPixelHits, pT = "<<pfCandidate.pt()<<", nhits = "<<nPixelHits<<std::endl;
+	      foundBadCandidate=true;
+	      pBadCandidateCollection->push_back(pfCandidate);
+	      continue;	 
+	    }
+
+	    
+	    float xVtx = (*recoVertices)[0].position().x();
+	    float yVtx = (*recoVertices)[0].position().y();
+	    float zVtx = (*recoVertices)[0].position().z();
+	    float xVtxErr = (*recoVertices)[0].xError();
+	    float yVtxErr = (*recoVertices)[0].yError();
+	    float zVtxErr = (*recoVertices)[0].zError();
+	    
+	    math::XYZPoint vtx_temp(xVtx,yVtx,zVtx);
+	    
+	    float Dz = track->dz(vtx_temp);
+	    float DzError = sqrt(track->dzError()*track->dzError()+zVtxErr*zVtxErr);
+	    float Dxy = track->dxy(vtx_temp);
+	    float DxyError = sqrt(track->dxyError()*track->dxyError()+xVtxErr*yVtxErr);
+	    float dzSig = Dz/DzError;
+	    float dxySig = Dxy/DxyError;	      
+	    
+	    float sig3d = sqrt(dxySig*dxySig + dzSig*dzSig);
+
+	    if(sig3d > maxSigLoose_ ){
+	      if(verbose_) std::cout<<" bad  track impact parameter, pT = "<<pfCandidate.pt()<<", dxySig = "<<dxySig<<", dzSig = "<<dzSig<<std::endl;
+	      foundBadCandidate=true;
+	      pBadCandidateCollection->push_back(pfCandidate);
+	      continue;	 
+	    }	      
+	    
+	    if( sig3d > maxSigTight_ && nHits < minTrackNHits_ ){
+	      if(verbose_) std::cout<<" bad  track with small nhits, pT = "<<pfCandidate.pt()<<", nhits = "<<nHits<<std::endl;
+	      foundBadCandidate=true;
+	      pBadCandidateCollection->push_back(pfCandidate);
+	      continue;	 
+	    }	     
+	    
+	    
+	    if(track->algo()==13 || track->algo()==14 || track->originalAlgo()==13 || track->originalAlgo()==14  ){
+	      	      
+	      if(sig3d > maxSigLoose_ ){
+		if(verbose_) std::cout<<" bad muon-seeded track impact parameter, pT = "<<pfCandidate.pt()<<", dxySig = "<<dxySig<<", dzSig = "<<dzSig<<std::endl;
+		foundBadCandidate=true;
+		pBadCandidateCollection->push_back(pfCandidate);
+		continue;	 
+	      }	  	 
+	      
+	      if( nHits < minTrackNHits_ ){
+		if(verbose_) std::cout<<" bad muon-seeded track with small nhits, pT = "<<pfCandidate.pt()<<", nhits = "<<nHits<<std::endl;
+		foundBadCandidate=true;
+		pBadCandidateCollection->push_back(pfCandidate);
+		continue;	 
+	      }	     	      
+	    }
+
+	    double caloEnergy = pfCandidate.ecalEnergy() + pfCandidate.hcalEnergy();
+	    
+	    
+	    if(caloEnergy < track->p()*minCaloCompatibility_)
+	      {
+		
+		if(sig3d > maxSigTight_ ){
+		  if(verbose_) std::cout<<" bad calo-incompatible track impact parameter, pT = "<<pfCandidate.pt()<<", dxySig = "<<dxySig<<", dzSig = "<<dzSig<<std::endl;
+		  foundBadCandidate=true;
+		  pBadCandidateCollection->push_back(pfCandidate);
+		  continue;	 
+		}	  	 
+		
+		if( nHits < minTrackNHits_ ){
+		  if(verbose_) std::cout<<" bad calo-incompatible track with small nhits, pT = "<<pfCandidate.pt()<<", nhits = "<<nHits<<std::endl;
+		  foundBadCandidate=true;
+		  pBadCandidateCollection->push_back(pfCandidate);
+		  continue;	 
+		}	     	      		
+
+		if( nPixelHits < 3 ){
+		  if(verbose_) std::cout<<" bad calo-incompatible track with small nPixhits, pT = "<<pfCandidate.pt()<<", nhits = "<<nPixelHits<<std::endl;
+		  foundBadCandidate=true;
+		  pBadCandidateCollection->push_back(pfCandidate);
+		  continue;	 
+		}	     	      		
+
+	      }
+	    
+	  }
+      }
+  
+    
     pOutputCandidateCollection->push_back(pfCandidate);
 
 
@@ -183,10 +289,12 @@ HiBadParticleFilter::filter(edm::StreamID iID, edm::Event& iEvent, const edm::Ev
   bool pass = !foundBadCandidate;
 
   iEvent.put(std::move(pOutputCandidateCollection) );
+  iEvent.put(std::move(pBadCandidateCollection), "cleaned" );
 
   iEvent.put( std::unique_ptr<bool>(new bool(pass)) );
     
   return taggingMode_ || pass;
+  //return 1;
 
 
 }

@@ -3,6 +3,9 @@
 # Type: Data
 # Input: AOD
 
+# keep disabled by default until fully commissioned
+cleanJets = False
+
 import FWCore.ParameterSet.Config as cms
 process = cms.Process('HiForest')
 
@@ -27,7 +30,7 @@ process.source = cms.Source("PoolSource",
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
     fileNames = cms.untracked.vstring(
         "file:/afs/cern.ch/work/r/rbi/public/forest/HIHardProbes_HIRun2018A-PromptReco-v2_AOD.root"
-        ),
+),
     )
 
 # Number of events we want to process, -1 = all events
@@ -170,6 +173,11 @@ process.pfTowerspp.doHF = False
 #https://twiki.cern.ch/twiki/bin/view/CMS/HITracking2018PbPb#Peripheral%20Vertex%20Recovery
 process.load("RecoVertex.PrimaryVertexProducer.OfflinePrimaryVerticesRecovery_cfi")
 
+# clean bad PF candidates
+if cleanJets:
+    process.load("RecoHI.HiJetAlgos.HiBadParticleFilter_cfi")
+    process.pfBadCandAnalyzer = process.pfcandAnalyzer.clone(pfCandidateLabel = cms.InputTag("filteredParticleFlow","cleaned"))
+    process.pfFilter = cms.Path(process.filteredParticleFlow + process.pfBadCandAnalyzer)
 
 #########################
 # Main analysis list
@@ -260,6 +268,11 @@ process.pAna = cms.EndPath(process.skimanalysis)
 from HLTrigger.Configuration.CustomConfigs import MassReplaceInputTag
 process = MassReplaceInputTag(process,"offlinePrimaryVertices","offlinePrimaryVerticesRecovery")
 process.offlinePrimaryVerticesRecovery.oldVertexLabel = "offlinePrimaryVertices"
+
+if cleanJets == True:
+    from HLTrigger.Configuration.CustomConfigs import MassReplaceInputTag
+    process = MassReplaceInputTag(process,"particleFlow","filteredParticleFlow")                                                                                                               
+    process.filteredParticleFlow.PFCandidates  = "particleFlow"
 
 ###############################################################################
 
