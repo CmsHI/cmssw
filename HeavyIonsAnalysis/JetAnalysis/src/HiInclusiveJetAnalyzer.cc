@@ -433,7 +433,6 @@ HiInclusiveJetAnalyzer::beginJob() {
     // matched parton
     t->Branch("refparton_pt",jets_.refparton_pt,"refparton_pt[nref]/F");
     t->Branch("refparton_flavor",jets_.refparton_flavor,"refparton_flavor[nref]/I");
-    t->Branch("refparton_flavorForB",jets_.refparton_flavorForB,"refparton_flavorForB[nref]/I");
 
     if(isPythia6_){
 	    t->Branch("refparton_flavorProcess",jets_.refparton_flavorProcess,"refparton_flavorProcess[nref]/I");			
@@ -1231,27 +1230,28 @@ HiInclusiveJetAnalyzer::analyze(const Event& iEvent,
       jets_.reftau2[jets_.nref] = -999.;
       jets_.reftau3[jets_.nref] = -999.;
       
-      jets_.refparton_flavorForB[jets_.nref] = (*patjets)[j].partonFlavour();
+      jets_.jtPartonFlavor[jets_.nref] = (*patjets)[j].partonFlavour();
+      jets_.jtHadronFlavor[jets_.nref] = (*patjets)[j].hadronFlavour();
       
+          
 	//Matt's flavor production code
       if(isPythia6_){
-	      //int partonFlavor = (*patjets)[j].partonFlavour();
-	      //      jets_.refparton_flavorForB[jets_.nref] = partonFlavor;
-
-	      if(jets_.jtHadronFlavor[jets_.nref]==4||jets_.jtHadronFlavor[jets_.nref]==5){
-
-		      int partonMatchIndex = findMatchedParton(jet.eta(), jet.phi(), 0.3, genparts, jets_.jtHadronFlavor[jets_.nref]);
-		      if(partonMatchIndex<0){
-			      cout<< "jet " << jets_.nref << " declared flavor " << jets_.jtHadronFlavor[jets_.nref] << " couldn't find the parton "<<endl;
-			      jets_.refparton_flavorProcess[jets_.nref] = 0;
-		      }
-		      else{
-			      int flavorProcess =  getFlavorProcess(partonMatchIndex, genparts);
-			      jets_.refparton_flavorProcess[jets_.nref] = flavorProcess;
-		      }
-
-		      // GSP-bbbar tag
-		      if( jets_.refparton_flavorProcess[jets_.nref] == 6){
+	//int partonFlavor = (*patjets)[j].partonFlavour();
+	
+	if(jets_.jtHadronFlavor[jets_.nref]==4||jets_.jtHadronFlavor[jets_.nref]==5){
+	  
+	  int partonMatchIndex = findMatchedParton(jet.eta(), jet.phi(), 0.3, genparts, jets_.jtHadronFlavor[jets_.nref]);
+	  if(partonMatchIndex<0){
+	    cout<< "jet " << jets_.nref << " declared flavor " << jets_.jtHadronFlavor[jets_.nref] << " couldn't find the parton "<<endl;
+	    jets_.refparton_flavorProcess[jets_.nref] = 0;
+	  }
+	  else{
+	    int flavorProcess =  getFlavorProcess(partonMatchIndex, genparts);
+	    jets_.refparton_flavorProcess[jets_.nref] = flavorProcess;
+	  }
+	  
+	  // GSP-bbbar tag
+	  if( jets_.refparton_flavorProcess[jets_.nref] == 6){
 			      int MatchedPartonId= (*genparts)[partonMatchIndex].pdgId();
 			      int partonPairIndex=-1;
 			      int momIndex = findMatchedParton( (float)(*genparts)[partonMatchIndex].mother(0)->eta() , (float)(*genparts)[partonMatchIndex].mother(0)->phi(),(float)0.001,genparts, 0);
@@ -1324,28 +1324,6 @@ HiInclusiveJetAnalyzer::analyze(const Event& iEvent,
       if((*patjets)[j].genParton()){
 	jets_.refparton_pt[jets_.nref] = parton.pt();
 	jets_.refparton_flavor[jets_.nref] = parton.pdgId();
-
-	if(saveBfragments_ && abs(jets_.refparton_flavorForB[jets_.nref])==5){
-
-	  usedStringPts.clear();
-
-	  // uncomment this if you want to know the ugly truth about parton matching -matt
-	  //if(jet.pt() > 50 &&abs(parton.pdgId())!=5 && parton.pdgId()!=21)
-	  // cout<<" Identified as a b, but doesn't match b or gluon, id = "<<parton.pdgId()<<endl;
-
-	  jets_.bJetIndex[jets_.bMult] = jets_.nref;
-	  jets_.bStatus[jets_.bMult] = parton.status();
-	  jets_.bVx[jets_.bMult] = parton.vx();
-	  jets_.bVy[jets_.bMult] = parton.vy();
-	  jets_.bVz[jets_.bMult] = parton.vz();
-	  jets_.bPt[jets_.bMult] = parton.pt();
-	  jets_.bEta[jets_.bMult] = parton.eta();
-	  jets_.bPhi[jets_.bMult] = parton.phi();
-	  jets_.bPdg[jets_.bMult] = parton.pdgId();
-	  jets_.bChg[jets_.bMult] = parton.charge();
-	  jets_.bMult++;
-	  saveDaughters(parton);
-	}
       } else {
 	jets_.refparton_pt[jets_.nref] = -999;
 	jets_.refparton_flavor[jets_.nref] = -999;
@@ -1533,80 +1511,6 @@ HiInclusiveJetAnalyzer::getPtRel(const reco::PFCandidate lep, const pat::Jet& je
   return (pTrel2 > 0) ? std::sqrt(pTrel2) : 0.0;
 }
 
-// Recursive function, but this version gets called only the first time
-void
-HiInclusiveJetAnalyzer::saveDaughters(const reco::GenParticle &gen){
-
-  for(unsigned i=0;i<gen.numberOfDaughters();i++){
-    const reco::Candidate & daughter = *gen.daughter(i);
-    double daughterPt = daughter.pt();
-    if(daughterPt<1.) continue;
-    double daughterEta = daughter.eta();
-    if(fabs(daughterEta)>3.) continue;
-    int daughterPdgId = daughter.pdgId();
-    int daughterStatus = daughter.status();
-    // Special case when b->b+string, both b and string contain all daughters, so only take the string
-    if(gen.pdgId()==daughterPdgId && gen.status()==3 && daughterStatus==2) continue;
-
-    // cheesy way of finding strings which were already used
-    if(daughter.pdgId()==92){
-      for(unsigned ist=0;ist<usedStringPts.size();ist++){
-	if(fabs(daughter.pt() - usedStringPts[ist]) < 0.0001) return;
-      }
-      usedStringPts.push_back(daughter.pt());
-    }
-    jets_.bJetIndex[jets_.bMult] = jets_.nref;
-    jets_.bStatus[jets_.bMult] = daughterStatus;
-    jets_.bVx[jets_.bMult] = daughter.vx();
-    jets_.bVy[jets_.bMult] = daughter.vy();
-    jets_.bVz[jets_.bMult] = daughter.vz();
-    jets_.bPt[jets_.bMult] = daughterPt;
-    jets_.bEta[jets_.bMult] = daughterEta;
-    jets_.bPhi[jets_.bMult] = daughter.phi();
-    jets_.bPdg[jets_.bMult] = daughterPdgId;
-    jets_.bChg[jets_.bMult] = daughter.charge();
-    jets_.bMult++;
-    saveDaughters(daughter);
-  }
-}
-
-// This version called for all subsequent calls
-void
-HiInclusiveJetAnalyzer::saveDaughters(const reco::Candidate &gen){
-
-  for(unsigned i=0;i<gen.numberOfDaughters();i++){
-    const reco::Candidate & daughter = *gen.daughter(i);
-    double daughterPt = daughter.pt();
-    if(daughterPt<1.) continue;
-    double daughterEta = daughter.eta();
-    if(fabs(daughterEta)>3.) continue;
-    int daughterPdgId = daughter.pdgId();
-    int daughterStatus = daughter.status();
-    // Special case when b->b+string, both b and string contain all daughters, so only take the string
-    if(gen.pdgId()==daughterPdgId && gen.status()==3 && daughterStatus==2) continue;
-
-    // cheesy way of finding strings which were already used
-    if(daughter.pdgId()==92){
-      for(unsigned ist=0;ist<usedStringPts.size();ist++){
-	if(fabs(daughter.pt() - usedStringPts[ist]) < 0.0001) return;
-      }
-      usedStringPts.push_back(daughter.pt());
-    }
-
-    jets_.bJetIndex[jets_.bMult] = jets_.nref;
-    jets_.bStatus[jets_.bMult] = daughterStatus;
-    jets_.bVx[jets_.bMult] = daughter.vx();
-    jets_.bVy[jets_.bMult] = daughter.vy();
-    jets_.bVz[jets_.bMult] = daughter.vz();
-    jets_.bPt[jets_.bMult] = daughterPt;
-    jets_.bEta[jets_.bMult] = daughterEta;
-    jets_.bPhi[jets_.bMult] = daughter.phi();
-    jets_.bPdg[jets_.bMult] = daughterPdgId;
-    jets_.bChg[jets_.bMult] = daughter.charge();
-    jets_.bMult++;
-    saveDaughters(daughter);
-  }
-}
 
 double HiInclusiveJetAnalyzer::getEt(math::XYZPoint pos, double energy){
   double et = energy*sin(pos.theta());

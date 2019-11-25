@@ -74,8 +74,6 @@ private:
 
   double getPtRel(const reco::PFCandidate lep, const pat::Jet& jet );
 
-  void saveDaughters( const reco::GenParticle & gen);
-  void saveDaughters( const reco::Candidate & gen);
   double getEt(math::XYZPoint pos, double energy);
   math::XYZPoint getPosition(const DetId &id, reco::Vertex::Point vtx = reco::Vertex::Point(0,0,0));
   int TaggedJet(reco::Jet calojet, edm::Handle<reco::JetTagCollection > jetTags );
@@ -450,7 +448,6 @@ private:
     float refdrjt[MAXJETS];
     float refparton_pt[MAXJETS];
     int refparton_flavor[MAXJETS];
-    int refparton_flavorForB[MAXJETS];
 
     float refptG[MAXJETS];
     float refetaG[MAXJETS];
