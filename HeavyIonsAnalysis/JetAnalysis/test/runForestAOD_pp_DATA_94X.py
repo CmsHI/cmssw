@@ -48,6 +48,14 @@ from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, '94X_dataRun2_ReReco_EOY17_v6', '')
 process.HiForest.GlobalTagLabel = process.GlobalTag.globaltag
 
+process.GlobalTag.toGet.extend([
+    cms.PSet(record = cms.string("BTagTrackProbability3DRcd"),
+             tag = cms.string("JPcalib_Data94X_2017pp_v2"),
+             connect = cms.string("frontier://FrontierProd/CMS_CONDITIONS")
+
+         )
+      ])
+
 #####################################################################################
 # Define tree output
 #####################################################################################
