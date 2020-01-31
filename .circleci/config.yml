@@ -1,0 +1,75 @@
+version: 2.1
+
+commands:
+    setup-cmssw:
+        steps:
+            - run: echo 'export cmssw="CMSSW_9_4_10"' >> $BASH_ENV
+            - run: echo 'export PATH="/opt/cms/common:/opt/cms/bin:$PATH"' >> $BASH_ENV
+            - run: echo 'source /opt/cms/cmsset_default.sh' >> $BASH_ENV
+            - run: scramv1 project CMSSW $cmssw
+
+    setup-dummy-git:
+        steps:
+            - run: |
+                git config --global user.github docker-tmp
+                git config --global user.name docker-tmp
+                git config --global user.email "docker-tmp@cmsbuild"
+
+    setup-forest:
+        steps:
+            - run: |
+                cd $cmssw/src
+                eval `scramv1 runtime -sh`
+                git cms-merge-topic -u CmsHI:forest_$cmssw
+
+    merge-pull-request:
+        steps:
+            - run: |
+                mkdir ~/.ssh
+                for ip in $(dig @8.8.8.8 github.com +short); do
+                    ssh-keyscan github.com,$ip
+                    ssh-keyscan $ip
+                done 2>/dev/null >> ~/.ssh/known_hosts
+            - run: |
+                if [ -n "$CIRCLE_PR_NUMBER" ]; then
+                    cd $cmssw/src
+                    eval `scramv1 runtime -sh`
+                    git fetch $CIRCLE_REPOSITORY_URL pull/$CIRCLE_PR_NUMBER/head
+                    git merge FETCH_HEAD --no-commit
+                fi
+
+    build-forest:
+        steps:
+            - run: |
+                cd $cmssw/src
+                eval `scramv1 runtime -sh`
+                pushd HeavyIonsAnalysis/JetAnalysis/python/jets
+                ./makeJetSequences.sh
+                popd
+                scram b
+
+    test-forest:
+        steps:
+            - run: |
+                cd $cmssw/src
+                eval `scramv1 runtime -sh`
+                cd HeavyIonsAnalysis/JetAnalysis/test
+                ./tests.sh
+
+jobs:
+    test-pull-request:
+        docker:
+            - image: biran91/cmssw-scratch:slc6-cmssw-9.4.10
+        steps:
+            - setup-cmssw
+            - setup-dummy-git
+            - setup-forest
+            - merge-pull-request
+            - build-forest
+            - test-forest
+
+workflows:
+    version: 2
+    default:
+        jobs:
+            - test-pull-request

@@ -1,0 +1,255 @@
+
+
+import FWCore.ParameterSet.Config as cms
+from HeavyIonsAnalysis.JetAnalysis.patHeavyIonSequences_cff import patJetGenJetMatch, patJetPartonMatch, patJetCorrFactors, patJets
+from HeavyIonsAnalysis.JetAnalysis.inclusiveJetAnalyzer_cff import *
+from HeavyIonsAnalysis.JetAnalysis.bTaggers_cff import *
+from RecoJets.JetProducers.JetIDParams_cfi import *
+from RecoJets.JetProducers.nJettinessAdder_cfi import Njettiness
+
+ALGO_SUB_GROOM_RADIUS_OBJECT_match = patJetGenJetMatch.clone(
+    src = cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_Jets"),
+    matched = cms.InputTag("ALGO_RADIUS_MATCHGENJETS"),
+    resolveByMatchQuality = cms.bool(RESOLVEBYDIST_),
+    maxDeltaR = 0.RADIUS_
+    )
+
+ALGO_SUB_GROOM_RADIUS_OBJECT_matchGroomed = patJetGenJetMatch.clone(
+    src = cms.InputTag("ALGO_GROOM_RADIUS_GENJETS"),
+    matched = cms.InputTag("ALGO_RADIUS_MATCHGENJETS"),
+    resolveByMatchQuality = cms.bool(RESOLVEBYDIST_),
+    maxDeltaR = 0.RADIUS_
+    )
+
+ALGO_SUB_GROOM_RADIUS_OBJECT_parton = patJetPartonMatch.clone(src = cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_Jets")
+                                                        )
+
+ALGO_SUB_GROOM_RADIUS_OBJECT_corr = patJetCorrFactors.clone(
+    useNPV = cms.bool(False),
+    useRho = cms.bool(False),
+#    primaryVertices = cms.InputTag("hiSelectedVertex"),
+    levels   = cms.vstring(JETCORRECTIONLEVELS),
+    src = cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_Jets"),
+    payload = "CORRNAME_"
+    )
+
+ALGO_SUB_GROOM_RADIUS_OBJECT_JetID= cms.EDProducer('JetIDProducer', JetIDParams, src = cms.InputTag('ALGO_SUB_GROOM_RADIUS_CaloJets'))
+
+#ALGO_SUB_GROOM_RADIUS_OBJECT_clean   = heavyIonCleanedGenJets.clone(src = cms.InputTag('ALGO_RADIUS_MATCHGENJETS'))
+
+ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger = bTaggers("ALGO_SUB_GROOM_RADIUS_OBJECT_",0.RADIUS_,ISPP,DOSUBJETS_)
+
+#create objects locally since they dont load properly otherwise
+#ALGO_SUB_GROOM_RADIUS_OBJECT_match = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.match
+ALGO_SUB_GROOM_RADIUS_OBJECT_parton = patJetPartonMatch.clone(src = cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_Jets"), matched = cms.InputTag("PARTONS"))
+ALGO_SUB_GROOM_RADIUS_OBJECT_PatJetFlavourAssociationLegacy = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.PatJetFlavourAssociationLegacy
+ALGO_SUB_GROOM_RADIUS_OBJECT_PatJetPartons = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.PatJetPartons
+ALGO_SUB_GROOM_RADIUS_OBJECT_JetTracksAssociatorAtVertex = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.JetTracksAssociatorAtVertex
+ALGO_SUB_GROOM_RADIUS_OBJECT_JetTracksAssociatorAtVertex.tracks = cms.InputTag("highPurityTracks")
+ALGO_SUB_GROOM_RADIUS_OBJECT_SimpleSecondaryVertexHighEffBJetTags = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.SimpleSecondaryVertexHighEffBJetTags
+ALGO_SUB_GROOM_RADIUS_OBJECT_SimpleSecondaryVertexHighPurBJetTags = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.SimpleSecondaryVertexHighPurBJetTags
+ALGO_SUB_GROOM_RADIUS_OBJECT_CombinedSecondaryVertexBJetTags = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.CombinedSecondaryVertexBJetTags
+ALGO_SUB_GROOM_RADIUS_OBJECT_CombinedSecondaryVertexV2BJetTags = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.CombinedSecondaryVertexV2BJetTags
+ALGO_SUB_GROOM_RADIUS_OBJECT_JetBProbabilityBJetTags = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.JetBProbabilityBJetTags
+ALGO_SUB_GROOM_RADIUS_OBJECT_SoftPFMuonByPtBJetTags = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.SoftPFMuonByPtBJetTags
+ALGO_SUB_GROOM_RADIUS_OBJECT_SoftPFMuonByIP3dBJetTags = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.SoftPFMuonByIP3dBJetTags
+ALGO_SUB_GROOM_RADIUS_OBJECT_TrackCountingHighEffBJetTags = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.TrackCountingHighEffBJetTags
+ALGO_SUB_GROOM_RADIUS_OBJECT_TrackCountingHighPurBJetTags = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.TrackCountingHighPurBJetTags
+ALGO_SUB_GROOM_RADIUS_OBJECT_PatJetPartonAssociationLegacy = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.PatJetPartonAssociationLegacy
+
+ALGO_SUB_GROOM_RADIUS_OBJECT_ImpactParameterTagInfos = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.ImpactParameterTagInfos
+ALGO_SUB_GROOM_RADIUS_OBJECT_PfImpactParameterTagInfos = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.PfImpactParameterTagInfos
+ALGO_SUB_GROOM_RADIUS_OBJECT_JetProbabilityBJetTags = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.JetProbabilityBJetTags
+
+ALGO_SUB_GROOM_RADIUS_OBJECT_SecondaryVertexTagInfos = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.SecondaryVertexTagInfos
+ALGO_SUB_GROOM_RADIUS_OBJECT_SimpleSecondaryVertexHighEffBJetTags = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.SimpleSecondaryVertexHighEffBJetTags
+ALGO_SUB_GROOM_RADIUS_OBJECT_SimpleSecondaryVertexHighPurBJetTags = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.SimpleSecondaryVertexHighPurBJetTags
+ALGO_SUB_GROOM_RADIUS_OBJECT_CombinedSecondaryVertexBJetTags = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.CombinedSecondaryVertexBJetTags
+ALGO_SUB_GROOM_RADIUS_OBJECT_CombinedSecondaryVertexV2BJetTags = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.CombinedSecondaryVertexV2BJetTags
+ALGO_SUB_GROOM_RADIUS_OBJECT_PfInclusiveSecondaryVertexFinderTagInfos = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.PfInclusiveSecondaryVertexFinderTagInfos
+ALGO_SUB_GROOM_RADIUS_OBJECT_PfDeepCSVTagInfos = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.PfDeepCSVTagInfos
+ALGO_SUB_GROOM_RADIUS_OBJECT_PfDeepCSVJetTags = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.PfDeepCSVJetTags
+
+
+ALGO_SUB_GROOM_RADIUS_OBJECT_SoftPFMuonsTagInfos = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.SoftPFMuonsTagInfos
+ALGO_SUB_GROOM_RADIUS_OBJECT_SoftPFMuonBJetTags = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.SoftPFMuonBJetTags
+ALGO_SUB_GROOM_RADIUS_OBJECT_SoftPFMuonByIP3dBJetTags = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.SoftPFMuonByIP3dBJetTags
+ALGO_SUB_GROOM_RADIUS_OBJECT_SoftPFMuonByPtBJetTags = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.SoftPFMuonByPtBJetTags
+ALGO_SUB_GROOM_RADIUS_OBJECT_PatJetFlavourIdLegacy = cms.Sequence(ALGO_SUB_GROOM_RADIUS_OBJECT_PatJetPartonAssociationLegacy*ALGO_SUB_GROOM_RADIUS_OBJECT_PatJetFlavourAssociationLegacy)
+#Not working with our PU sub
+ALGO_SUB_GROOM_RADIUS_OBJECT_PatJetFlavourAssociation = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.PatJetFlavourAssociation
+ALGO_SUB_GROOM_RADIUS_OBJECT_PatJetFlavourId = cms.Sequence(ALGO_SUB_GROOM_RADIUS_OBJECT_PatJetPartons*ALGO_SUB_GROOM_RADIUS_OBJECT_PatJetFlavourAssociation)
+
+#adding the subjet taggers
+#SUBJETDUMMY_ALGO_SUB_GROOM_RADIUS_OBJECT_SubjetImpactParameterTagInfos = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.SubjetImpactParameterTagInfos
+#SUBJETDUMMY_ALGO_SUB_GROOM_RADIUS_OBJECT_SubjetJetProbabilityBJetTags = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.SubjetJetProbabilityBJetTags
+#SUBJETDUMMY_ALGO_SUB_GROOM_RADIUS_OBJECT_SubjetSecondaryVertexTagInfos = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.SubjetSecondaryVertexTagInfos
+#SUBJETDUMMY_ALGO_SUB_GROOM_RADIUS_OBJECT_SubjetJetTracksAssociatorAtVertex = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.SubjetJetTracksAssociatorAtVertex
+#SUBJETDUMMY_ALGO_SUB_GROOM_RADIUS_OBJECT_CombinedSubjetSecondaryVertexBJetTags = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.CombinedSubjetSecondaryVertexBJetTags
+#SUBJETDUMMY_ALGO_SUB_GROOM_RADIUS_OBJECT_CombinedSubjetSecondaryVertexV2BJetTags = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.CombinedSubjetSecondaryVertexV2BJetTags
+
+ALGO_SUB_GROOM_RADIUS_OBJECT_JetBtaggingIP       = cms.Sequence(ALGO_SUB_GROOM_RADIUS_OBJECT_ImpactParameterTagInfos *
+            (ALGO_SUB_GROOM_RADIUS_OBJECT_TrackCountingHighEffBJetTags +
+             ALGO_SUB_GROOM_RADIUS_OBJECT_TrackCountingHighPurBJetTags +
+             ALGO_SUB_GROOM_RADIUS_OBJECT_JetProbabilityBJetTags +
+             ALGO_SUB_GROOM_RADIUS_OBJECT_JetBProbabilityBJetTags 
+            ) *
+	     ALGO_SUB_GROOM_RADIUS_OBJECT_PfImpactParameterTagInfos 
+            )
+
+ALGO_SUB_GROOM_RADIUS_OBJECT_JetBtaggingSV = cms.Sequence(ALGO_SUB_GROOM_RADIUS_OBJECT_ImpactParameterTagInfos
+            *
+            ALGO_SUB_GROOM_RADIUS_OBJECT_SecondaryVertexTagInfos
+            * (ALGO_SUB_GROOM_RADIUS_OBJECT_SimpleSecondaryVertexHighEffBJetTags+
+                ALGO_SUB_GROOM_RADIUS_OBJECT_SimpleSecondaryVertexHighPurBJetTags+
+                ALGO_SUB_GROOM_RADIUS_OBJECT_CombinedSecondaryVertexBJetTags+
+                ALGO_SUB_GROOM_RADIUS_OBJECT_CombinedSecondaryVertexV2BJetTags
+              ) *
+	    ALGO_SUB_GROOM_RADIUS_OBJECT_PfImpactParameterTagInfos *
+	    ALGO_SUB_GROOM_RADIUS_OBJECT_PfInclusiveSecondaryVertexFinderTagInfos *
+	    ALGO_SUB_GROOM_RADIUS_OBJECT_PfDeepCSVTagInfos *
+	    ALGO_SUB_GROOM_RADIUS_OBJECT_PfDeepCSVJetTags  
+            )
+
+
+
+ALGO_SUB_GROOM_RADIUS_OBJECT_JetBtaggingMu = cms.Sequence(ALGO_SUB_GROOM_RADIUS_OBJECT_SoftPFMuonsTagInfos * (ALGO_SUB_GROOM_RADIUS_OBJECT_SoftPFMuonBJetTags
+                +
+                ALGO_SUB_GROOM_RADIUS_OBJECT_SoftPFMuonByIP3dBJetTags
+                +
+                ALGO_SUB_GROOM_RADIUS_OBJECT_SoftPFMuonByPtBJetTags               
+              )
+            )
+
+ALGO_SUB_GROOM_RADIUS_OBJECT_JetBtagging = cms.Sequence(ALGO_SUB_GROOM_RADIUS_OBJECT_JetBtaggingIP
+            *ALGO_SUB_GROOM_RADIUS_OBJECT_JetBtaggingSV
+#            *ALGO_SUB_GROOM_RADIUS_OBJECT_JetBtaggingMu
+            )
+
+ALGO_SUB_GROOM_RADIUS_OBJECT_patJetsWithBtagging = patJets.clone(jetSource = cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_Jets"),
+        genJetMatch          = cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_match"),
+        genPartonMatch       = cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_parton"),
+        jetCorrFactorsSource = cms.VInputTag(cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_corr")),
+        #JetPartonMapSource   = cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_PatJetFlavourAssociationLegacy"),
+        JetPartonMapSource   = cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_PatJetFlavourAssociation"),
+	JetFlavourInfoSource   = cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_PatJetFlavourAssociation"),
+        trackAssociationSource = cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_JetTracksAssociatorAtVertex"),
+	useLegacyJetMCFlavour = False,
+        discriminatorSources = cms.VInputTag(cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_SimpleSecondaryVertexHighEffBJetTags"),
+            cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_SimpleSecondaryVertexHighPurBJetTags"),
+            cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_CombinedSecondaryVertexBJetTags"),
+            cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_CombinedSecondaryVertexV2BJetTags"),
+            cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_JetBProbabilityBJetTags"),
+            cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_JetProbabilityBJetTags"),
+            #cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_SoftPFMuonByPtBJetTags"),
+            #cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_SoftPFMuonByIP3dBJetTags"),
+            cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_TrackCountingHighEffBJetTags"),
+            cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_TrackCountingHighPurBJetTags"),
+            cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_PfDeepCSVJetTags:probb")
+
+            ),
+        jetIDMap = cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_JetID"),
+        addBTagInfo = True,
+        addTagInfos = True,
+        addDiscriminators = True,
+        addAssociatedTracks = True,
+        addJetCharge = False,
+        addJetID = False,
+        getJetMCFlavour = ISMC,
+        addGenPartonMatch = ISMC,
+        addGenJetMatch = ISMC,
+        embedGenJetMatch = ISMC,
+        embedGenPartonMatch = ISMC,
+        # embedCaloTowers = False,
+        # embedPFCandidates = True
+        )
+
+ALGO_SUB_GROOM_RADIUS_OBJECT_Njettiness = Njettiness.clone(
+		    src = cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_Jets"),
+           	    R0  = cms.double( 0.RADIUS_)
+)
+#ppDataDummy_ALGO_SUB_GROOM_RADIUS_OBJECT_patJetsWithBtagging.userData.userFloats.src += ['ALGO_SUB_GROOM_RADIUS_OBJECT_Njettiness:tau1','ALGO_SUB_GROOM_RADIUS_OBJECT_Njettiness:tau2','ALGO_SUB_GROOM_RADIUS_OBJECT_Njettiness:tau3']
+
+ALGO_SUB_GROOM_RADIUS_OBJECT_JetAnalyzer = inclusiveJetAnalyzer.clone(jetTag = cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_patJetsWithBtagging"),
+                                                             genjetTag = 'ALGO_RADIUS_GENJETS',
+                                                             rParam = 0.RADIUS_,
+                                                             matchJets = cms.untracked.bool(DOMATCH),
+                                                             matchTag = 'MATCHED_patJetsWithBtagging',
+                                                             pfCandidateLabel = cms.untracked.InputTag('PARTICLEFLOW'),
+                                                             trackTag = cms.InputTag("TRACKS"),
+                                                             fillGenJets = ISMC,
+                                                             isMC = ISMC,
+							     doSubEvent = ISMC,
+                                                             useHepMC = cms.untracked.bool(False),
+							     genParticles = cms.untracked.InputTag("genParticles"),
+							     eventInfoTag = cms.InputTag("EVENTINFOTAG"),
+                                                             doLifeTimeTagging = cms.untracked.bool(True),
+                                                             doLifeTimeTaggingExtras = cms.untracked.bool(False),
+                                                             bTagJetName = cms.untracked.string("ALGO_SUB_GROOM_RADIUS_OBJECT_"),
+                                                             jetName = cms.untracked.string("ALGO_SUB_GROOM_RADIUS_OBJECT_"),
+                                                             genPtMin = cms.untracked.double(5),
+							     doTower = cms.untracked.bool(DOTOWERS_),
+							     doSubJets = cms.untracked.bool(DOSUBJETS_),
+                                                             doGenSubJets = cms.untracked.bool(DOGENSUBJETS_),     
+                                                             subjetGenTag = cms.untracked.InputTag("ALGO_GROOM_RADIUS_GenJets"),
+							     doExtendedFlavorTagging = cms.untracked.bool(ISMC),
+							     jetFlavourInfos = cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_PatJetFlavourAssociation"),
+							     subjetFlavourInfos = cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_PatJetFlavourAssociation","SubJets"),
+							     groomedJets = cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_Jets"),
+							     isPythia6 = cms.untracked.bool(False),
+                                                             doGenTaus = ISMC
+                                                            )
+
+#ENABLE_PPCALO_ALGO_SUB_GROOM_RADIUS_OBJECT_patJetsWithBtagging.getJetMCFlavour = False
+#ENABLE_PPCALO_ALGO_SUB_GROOM_RADIUS_OBJECT_JetAnalyzer.doExtendedFlavorTagging = False
+
+ALGO_SUB_GROOM_RADIUS_OBJECT_JetAnalyzer.trackSelection = ALGO_SUB_GROOM_RADIUS_OBJECT_SecondaryVertexTagInfos.trackSelection
+ALGO_SUB_GROOM_RADIUS_OBJECT_JetAnalyzer.trackPairV0Filter = ALGO_SUB_GROOM_RADIUS_OBJECT_SecondaryVertexTagInfos.vertexCuts.v0Filter
+
+ALGO_SUB_GROOM_RADIUS_OBJECT_JetSequence_mc = cms.Sequence(
+                                                  #ALGO_SUB_GROOM_RADIUS_OBJECT_clean
+                                                  #*
+                                                  ALGO_SUB_GROOM_RADIUS_OBJECT_match
+                                                  #*
+                                                  #ALGO_SUB_GROOM_RADIUS_OBJECT_matchGroomed
+                                                  *
+                                                  ALGO_SUB_GROOM_RADIUS_OBJECT_parton
+                                                  *
+                                                  ALGO_SUB_GROOM_RADIUS_OBJECT_corr
+                                                  *
+                                                  #ALGO_SUB_GROOM_RADIUS_OBJECT_JetID
+                                                  #*
+                                                  #ALGO_SUB_GROOM_RADIUS_OBJECT_PatJetFlavourIdLegacy  # works for PbPb
+                                                  #*
+                                                  #DISABLE_PPCALO_ALGO_SUB_GROOM_RADIUS_OBJECT_PatJetFlavourId  # doesn't work for PbPb yet
+                                                  #DISABLE_PPCALO_*
+                                                  ALGO_SUB_GROOM_RADIUS_OBJECT_JetTracksAssociatorAtVertex
+                                                  *
+                                                  ALGO_SUB_GROOM_RADIUS_OBJECT_JetBtagging
+                                                  *
+                                                  #DISABLE_PPCALO_ALGO_SUB_GROOM_RADIUS_OBJECT_Njettiness
+                                                  #DISABLE_PPCALO_*
+                                                  ALGO_SUB_GROOM_RADIUS_OBJECT_patJetsWithBtagging
+                                                  *
+                                                  ALGO_SUB_GROOM_RADIUS_OBJECT_JetAnalyzer
+                                                  )
+
+ALGO_SUB_GROOM_RADIUS_OBJECT_JetSequence_data = cms.Sequence(ALGO_SUB_GROOM_RADIUS_OBJECT_corr
+                                                    *
+                                                    #ALGO_SUB_GROOM_RADIUS_OBJECT_JetID
+                                                    #*
+                                                    ALGO_SUB_GROOM_RADIUS_OBJECT_JetTracksAssociatorAtVertex
+                                                    *
+                                                    ALGO_SUB_GROOM_RADIUS_OBJECT_JetBtagging
+                                                    *
+                                                    #DISABLE_PPCALO_ALGO_SUB_GROOM_RADIUS_OBJECT_Njettiness
+                                                    #DISABLE_PPCALO_*
+                                                    ALGO_SUB_GROOM_RADIUS_OBJECT_patJetsWithBtagging
+                                                    *
+                                                    ALGO_SUB_GROOM_RADIUS_OBJECT_JetAnalyzer
+                                                    )
+
+ALGO_SUB_GROOM_RADIUS_OBJECT_JetSequence_jec = cms.Sequence(ALGO_SUB_GROOM_RADIUS_OBJECT_JetSequence_mc)
+ALGO_SUB_GROOM_RADIUS_OBJECT_JetSequence_mb = cms.Sequence(ALGO_SUB_GROOM_RADIUS_OBJECT_JetSequence_mc)
+
+ALGO_SUB_GROOM_RADIUS_OBJECT_JetSequence = cms.Sequence(ALGO_SUB_GROOM_RADIUS_OBJECT_JetSequence_SAMPLE_)

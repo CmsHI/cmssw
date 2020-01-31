@@ -1,0 +1,50 @@
+import FWCore.ParameterSet.Config as cms
+
+from HeavyIonsAnalysis.PhotonAnalysis.ElectronVID_cff import *
+
+ggHiNtuplizer = cms.EDAnalyzer(
+    "ggHiNtuplizer",
+    doGenParticles     = cms.bool(True),
+    doElectrons        = cms.bool(False),
+    doPhotons          = cms.bool(True),
+    doMuons            = cms.bool(False),
+    runOnParticleGun   = cms.bool(False),
+    useValMapIso       = cms.bool(True),
+    doElectronVID      = cms.bool(False),
+    doEleERegression   = cms.bool(False),
+    doEffectiveAreas   = cms.bool(False),
+    doPhoERegression   = cms.bool(False),
+    doRecHitsEB        = cms.bool(False),
+    doRecHitsEE        = cms.bool(False),
+    recHitsEB          = cms.untracked.InputTag("ecalRecHit","EcalRecHitsEB"),
+    recHitsEE          = cms.untracked.InputTag("ecalRecHit","EcalRecHitsEE"),
+    pileupCollection   = cms.InputTag("addPileupInfo"),
+    genParticleSrc     = cms.InputTag("genParticles"),
+    gsfElectronLabel   = cms.InputTag("gedGsfElectrons"),
+    recoPhotonSrc      = cms.InputTag("photons"),
+    electronVetoID     = electronVetoID25nsV2,
+    electronLooseID    = electronLooseID25nsV2,
+    electronMediumID   = electronMediumID25nsV2,
+    electronTightID    = electronTightID25nsV2,
+    recoPhotonHiIsolationMap = cms.InputTag('photonIsolationHIProducerpp'),
+    recoMuonSrc        = cms.InputTag("muons"),
+    VtxLabel           = cms.InputTag("offlinePrimaryVertices"),
+    rho                = cms.InputTag("fixedGridRhoFastjetAll"),
+    beamSpot           = cms.InputTag('offlineBeamSpot'),
+    conversions        = cms.InputTag('allConversions'),
+    effAreasConfigFile = effAreasConfigFile25nsV2,
+    doPfIso            = cms.bool(False),
+    particleFlowCollection = cms.InputTag("particleFlow"),
+    removePhotonPfIsoFootprint = cms.bool(False),
+    particleBasedIsolationPhoton = cms.InputTag("DUMMY"),
+)
+
+ggHiNtuplizerGED = ggHiNtuplizer.clone(
+    doElectrons        = True,
+    doMuons            = True,
+    recoPhotonSrc      = 'gedPhotons',
+    recoPhotonHiIsolationMap = 'photonIsolationHIProducerppGED',
+    doPfIso                  = True,
+    removePhotonPfIsoFootprint = True,
+    particleBasedIsolationPhoton = 'particleBasedIsolation:gedPhotons',
+)

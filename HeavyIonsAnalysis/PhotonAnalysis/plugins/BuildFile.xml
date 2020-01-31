@@ -1,0 +1,16 @@
+<use   name="CommonTools/UtilAlgos"/>
+<use   name="DataFormats/Common"/>
+<use   name="DataFormats/Math"/>
+<use   name="EgammaAnalysis/ElectronTools"/>
+<use   name="FWCore/Framework"/>
+<use   name="FWCore/ParameterSet"/>
+<use   name="Geometry/CaloGeometry"/>
+<use   name="Geometry/Records"/>
+<use   name="HeavyIonsAnalysis/PhotonAnalysis"/>
+<use   name="RecoEcal/EgammaCoreTools"/>
+<use   name="RecoEgamma/EgammaTools"/>
+<use   name="clhep"/>
+<use   name="root"/>
+<flags   EDM_PLUGIN="1"/>
+<library   name="HeavyIonsAnalysisPhotonAnalysisPlugins" file="*.cc">
+</library>

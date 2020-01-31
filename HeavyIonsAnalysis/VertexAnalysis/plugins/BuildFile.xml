@@ -1,0 +1,8 @@
+<use name="FWCore/Utilities"/>
+<use name="DataFormats/VertexReco"/>
+<use name="FWCore/Framework"/>
+<use name="FWCore/ParameterSet"/>
+<use name="FWCore/MessageLogger"/>
+<use name="CommonTools/UtilAlgos"/>
+<use name="root"/>
+<flags EDM_PLUGIN="1"/>

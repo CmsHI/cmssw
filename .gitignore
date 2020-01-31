@@ -4,3 +4,6 @@ __init__.py
 .#*
 #*#
 *~
+*.root
+
+HeavyIonsAnalysis/JetAnalysis/python/jets/ak*JetSequence_*_*_cff.py

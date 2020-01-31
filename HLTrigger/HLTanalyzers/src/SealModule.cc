@@ -13,12 +13,8 @@
 #include "DataFormats/EgammaCandidates/interface/PhotonFwd.h"
 #include "DataFormats/EgammaCandidates/interface/Photon.h"
 
-#include "HLTrigger/HLTanalyzers/interface/HLTBitAnalyzer.h"
-#include "HLTrigger/HLTanalyzers/interface/HLTGetDigi.h"
 #include "HLTrigger/HLTanalyzers/interface/HLTGetRaw.h"
 
 DEFINE_FWK_MODULE(HLTrigReport);
 
-DEFINE_FWK_MODULE(HLTBitAnalyzer);
-DEFINE_FWK_MODULE(HLTGetDigi);
 DEFINE_FWK_MODULE(HLTGetRaw);

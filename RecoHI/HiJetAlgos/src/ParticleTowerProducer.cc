@@ -281,24 +281,38 @@ ParticleTowerProducer::endJob() {
 
 void ParticleTowerProducer::resetTowers(edm::Event& iEvent,const edm::EventSetup& iSetup)
 {
-  
-  std::vector<DetId> alldid =  geo_->getValidDetIds();
 
-  for(std::vector<DetId>::const_iterator did=alldid.begin(); did != alldid.end(); did++){
-    if( (*did).det() == DetId::Hcal ){
-       HcalDetId hid = HcalDetId(*did);
-       if( hid.depth() == 1 ) {
-	 
-	 if(!useHF_){
-	   GlobalPoint pos =geo_->getGeometry(hid)->getPosition();	 
-	   //if((hid).iphi()==1)std::cout<<" ieta "<<(hid).ieta()<<" eta "<<pos.eta()<<" iphi "<<(hid).iphi()<<" phi "<<pos.phi()<<std::endl;
-	   if(fabs(pos.eta())>3.) continue;
-	 }
-	  towers_[(*did)] = 0.;
-       }
-       
-    }
-  }
+//  the ValidDetIds doesn't reset all Towers to 0 in CMSSW_9_2_13 XeXe Data
+   
+//  std::vector<DetId> alldid =  geo_->getValidDetIds();
+//
+//  for(std::vector<DetId>::const_iterator did=alldid.begin(); did != alldid.end(); did++){
+//    if( (*did).det() == DetId::Hcal ){
+//       HcalDetId hid = HcalDetId(*did);
+//       if( hid.depth() == 1 ) {
+//	 
+//	 if(!useHF_){
+//	   GlobalPoint pos =geo_->getGeometry(hid)->getPosition();	 
+//	   //if((hid).iphi()==1)std::cout<<" ieta "<<(hid).ieta()<<" eta "<<pos.eta()<<" iphi "<<(hid).iphi()<<" phi "<<pos.phi()<<std::endl;
+//	   if(fabs(pos.eta())>3.) continue;
+//	 }
+//	  towers_[(*did)] = 0.;
+//       }
+//       
+//    }
+//  }
+
+
+	// temproray fix to reset all towers_ to 0.
+   for ( std::map< DetId, double >::const_iterator iter = towers_.begin();
+   iter != towers_.end(); ++iter ){
+
+   HcalDetId hid = HcalDetId(iter->first);
+   towers_[hid] = 0.;
+
+   }
+
+
 
 
 
