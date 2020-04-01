@@ -12,7 +12,7 @@ class MultipleAlgoIterator : public PileUpSubtractor {
     double getEta(const reco::CandidatePtr & in) const;
     void calculatePedestal(std::vector<fastjet::PseudoJet> const & coll) override;
     void subtractPedestal(std::vector<fastjet::PseudoJet> & coll) override;
-    void calculateOrphanInput(std::vector<fastjet::PseudoJet> & orphanInput);
+    void calculateOrphanInput(std::vector<fastjet::PseudoJet> & orphanInput) override;
 
     double minimumTowersFraction_;
 
