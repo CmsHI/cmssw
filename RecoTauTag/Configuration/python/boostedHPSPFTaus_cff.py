@@ -36,6 +36,7 @@ from Configuration.Eras.Modifier_pp_on_XeXe_2017_cff import pp_on_XeXe_2017
 from Configuration.Eras.Modifier_pp_on_AA_2018_cff import pp_on_AA_2018
 for e in [pp_on_XeXe_2017, pp_on_AA_2018]:
     e.toModify(ca8PFJetsCHSprunedForBoostedTaus, inputEtMin = 999999.0)
+    e.toModify(ca8PFJetsCHSprunedForBoostedTaus, src = cms.InputTag("particleFlow"))
 
 boostedTauSeeds = cms.EDProducer("BoostedTauSeedsProducer",
     subjetSrc = cms.InputTag('ca8PFJetsCHSprunedForBoostedTaus', 'subJetsForSeedingBoostedTaus'),
