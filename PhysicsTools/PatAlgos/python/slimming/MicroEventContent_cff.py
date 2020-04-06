@@ -148,6 +148,7 @@ _pp_on_AA_2018_extraCommands = [
     'keep ZDCDataFramesSorted_castorDigis_*_*',
     'keep QIE10DataFrameHcalDataFrameContainer_hcalDigis_ZDC_*',
     'keep CrossingFramePlaybackInfoNew_mix_*_*',
+    'keep booledmValueMap_*MuonID_*_*',
     #'keep *_heavyIon_*_*',
 ]
 from Configuration.Eras.Modifier_pp_on_AA_2018_cff import pp_on_AA_2018

@@ -56,3 +56,8 @@ slimmingTask = cms.Task(
 
 from Configuration.Eras.Modifier_pp_on_AA_2018_cff import pp_on_AA_2018
 pp_on_AA_2018.toReplaceWith(slimmingTask, slimmingTask.copyAndExclude([slimmedOOTPhotons]))
+
+from PhysicsTools.PatAlgos.packedPFCandidateMuonID_cfi import packedPFCandidateMuonID
+pp_on_AA_2018.toModify(packedPFCandidateMuonID, muonSelectors = cms.vstring(["AllTrackerMuons", "TMOneStationTight"]), muonIDs = cms.vstring(["SoftCutBasedId"]))
+lostTrackMuonID = packedPFCandidateMuonID.clone(candidates = cms.InputTag("lostTracks"))
+pp_on_AA_2018.toReplaceWith(slimmingTask, cms.Task(slimmingTask.copy(), packedPFCandidateMuonID, lostTrackMuonID))
