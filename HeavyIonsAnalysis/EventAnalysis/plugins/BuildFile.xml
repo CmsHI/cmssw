@@ -1,4 +1,6 @@
 <use name="CommonTools/UtilAlgos"/>
+<use name="DataFormats/PatCandidates"/>
+<use name="DataFormats/ParticleFlowCandidate"/>
 <use name="FWCore/Framework"/>
 <use name="FWCore/ParameterSet"/>
 <use name="FWCore/PluginManager"/>

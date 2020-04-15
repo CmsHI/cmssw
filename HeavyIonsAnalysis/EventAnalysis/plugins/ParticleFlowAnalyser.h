@@ -1,0 +1,45 @@
+#include "CommonTools/UtilAlgos/interface/TFileService.h"
+#include "DataFormats/PatCandidates/interface/PackedCandidate.h"
+#include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
+#include "FWCore/Framework/interface/EDAnalyzer.h"
+#include "FWCore/Framework/interface/Frameworkfwd.h"
+#include "FWCore/ServiceRegistry/interface/Service.h"
+
+#include <vector>
+
+#include "TTree.h"
+
+class ParticleFlowAnalyser : public edm::EDAnalyzer {
+public:
+  explicit ParticleFlowAnalyser(const edm::ParameterSet&);
+  ~ParticleFlowAnalyser();
+
+private:
+  virtual void beginJob();
+  virtual void analyze(const edm::Event&, const edm::EventSetup&);
+  virtual void endJob();
+
+  void clear();
+
+private:
+  // ----------member data ---------------------------
+  edm::Service<TFileService> fs_;
+
+  edm::EDGetTokenT<pat::PackedCandidateCollection> pfCandidateToken_;
+
+  float ptMin_;
+  float absEtaMax_;
+
+  int nPF_;
+  std::vector<int> pfId_;
+  std::vector<float> pfPt_;
+  std::vector<float> pfEta_;
+  std::vector<float> pfPhi_;
+  std::vector<float> pfE_;
+  std::vector<float> pfM_;
+
+  TTree* tree_;
+
+  /* required since conversion function is not static */
+  reco::PFCandidate converter_;
+};
