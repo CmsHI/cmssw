@@ -157,6 +157,11 @@ def miniAOD_customizeCommon(process):
 
     task = getPatAlgosToolsTask(process)
 
+    from PhysicsTools.PatAlgos.producersHeavyIons.heavyIonJetSetup import setupHeavyIonJetsWithBTagging
+    from Configuration.Eras.Modifier_pp_on_AA_2018_cff import pp_on_AA_2018
+    pp_on_AA_2018.toModify(process, func = lambda proc:
+	setupHeavyIonJetsWithBTagging(proc, 'akFlowPuCs4PF', 4, task))
+
     process.noHFCands = cms.EDFilter("GenericPFCandidateSelector",
                                      src=cms.InputTag("particleFlow"),
                                      cut=cms.string("abs(pdgId)!=1 && abs(pdgId)!=2 && abs(eta)<3.0")
@@ -518,14 +523,24 @@ def miniAOD_customizeData(process):
     task = getPatAlgosToolsTask(process)
     task.add(process.ctppsLocalTrackLiteProducer)
 
+def miniAOD_customizeHeavyIon(process):
+    from PhysicsTools.PatAlgos.producersHeavyIons.heavyIonJetSetup import aliasFlowPuCsJets, removeL1FastJetJECs
+    from Configuration.Eras.Modifier_pp_on_AA_2018_cff import pp_on_AA_2018
+    pp_on_AA_2018.toModify(process.slimmedJets, src = 'selectedPatJets')
+    pp_on_AA_2018.toModify(process, func = lambda proc: removeL1FastJetJECs(proc))
+    pp_on_AA_2018.toModify(process, func = lambda proc:
+	aliasFlowPuCsJets(proc, 'akFlowPuCs4PF'))
+
 def miniAOD_customizeAllData(process):
     miniAOD_customizeCommon(process)
     miniAOD_customizeData(process)
+    miniAOD_customizeHeavyIon(process)
     return process
 
 def miniAOD_customizeAllMC(process):
     miniAOD_customizeCommon(process)
     miniAOD_customizeMC(process)
+    miniAOD_customizeHeavyIon(process)
     return process
 
 def miniAOD_customizeAllMCFastSim(process):
