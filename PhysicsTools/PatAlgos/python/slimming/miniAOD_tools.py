@@ -160,7 +160,7 @@ def miniAOD_customizeCommon(process):
     from PhysicsTools.PatAlgos.producersHeavyIons.heavyIonJetSetup import setupHeavyIonJetsWithBTagging
     from Configuration.Eras.Modifier_pp_on_AA_2018_cff import pp_on_AA_2018
     pp_on_AA_2018.toModify(process, func = lambda proc:
-	setupHeavyIonJetsWithBTagging(proc, 'akFlowPuCs4PF', 4, task))
+	setupHeavyIonJetsWithBTagging(proc, 'akFlowPuCs4PF', 4, task, True))
 
     process.noHFCands = cms.EDFilter("GenericPFCandidateSelector",
                                      src=cms.InputTag("particleFlow"),
@@ -506,6 +506,10 @@ def miniAOD_customizeMC(process):
     process.patJets.embedGenPartonMatch = False
     #also jet flavour must be switched
     process.patJetFlavourAssociation.rParam = 0.4
+
+    from PhysicsTools.PatAlgos.producersHeavyIons.heavyIonJetSetup import removeJECsForMC
+    from Configuration.Eras.Modifier_pp_on_AA_2018_cff import pp_on_AA_2018
+    pp_on_AA_2018.toModify(process, func = lambda proc: removeJECsForMC(proc))
 
 def miniAOD_customizeOutput(out):
     from PhysicsTools.PatAlgos.slimming.MicroEventContent_cff import MiniAODOverrideBranchesSplitLevel

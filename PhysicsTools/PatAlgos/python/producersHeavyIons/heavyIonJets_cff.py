@@ -1,5 +1,34 @@
 import FWCore.ParameterSet.Config as cms
 
+from RecoJets.Configuration.GenJetParticles_cff import genParticlesForJets
+from RecoHI.HiJetAlgos.HiSignalParticleProducer_cfi import hiSignalGenParticles
+from RecoHI.HiJetAlgos.HiGenCleaner_cff import hiPartons
+
+allPartons = cms.EDProducer(
+    "PartonSelector",
+    src = cms.InputTag('genParticles'),
+    withLeptons = cms.bool(False),
+    )
+
+cleanedPartons = hiPartons.clone(
+    src = 'allPartons',
+    )
+
+cleanedGenJetsTask = cms.Task(
+    genParticlesForJets,
+    cleanedPartons,
+)
+
+signalPartons = allPartons.clone(
+    src = 'hiSignalGenParticles',
+    )
+
+signalGenJetsTask = cms.Task(
+    genParticlesForJets,
+    hiSignalGenParticles,
+    signalPartons,
+    )
+
 from RecoHI.HiJetAlgos.HiRecoPFJets_cff import PFTowers, pfNoPileUpJMEHI, ak4PFJetsForFlow
 from RecoHI.HiJetAlgos.hiPFCandCleaner_cfi import hiPFCandCleaner
 from RecoHI.HiJetAlgos.hiFJRhoFlowModulationProducer_cfi import hiFJRhoFlowModulationProducer
@@ -16,3 +45,9 @@ recoPFJetsHIpostAODTask = cms.Task(
     highPurityTracks,
     )
 
+recoJetsHIpostAODTask = cms.Task(
+    recoPFJetsHIpostAODTask,
+    allPartons,
+    cleanedGenJetsTask,
+    signalGenJetsTask,
+    )

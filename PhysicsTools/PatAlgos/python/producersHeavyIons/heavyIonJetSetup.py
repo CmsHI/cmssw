@@ -1,3 +1,5 @@
+from __future__ import division
+
 import six
 
 from RecoBTag.Configuration.RecoBTag_cff import *
@@ -10,19 +12,47 @@ from RecoBTag.SecondaryVertex.positiveCombinedSecondaryVertexV2Computer_cfi impo
 from RecoBTag.SecondaryVertex.secondaryVertexNegativeTagInfos_cfi import *
 
 from RecoHI.HiJetAlgos.HiRecoPFJets_cff import akFlowPuCs4PFJets
+from RecoHI.HiJetAlgos.HiGenJets_cff import ak5HiGenJets
+from RecoHI.HiJetAlgos.HiGenCleaner_cff import heavyIonCleanedGenJets
+from RecoHI.HiJetAlgos.HiSignalGenJetProducer_cfi import hiSignalGenJets
 
 from RecoJets.JetAssociationProducers.ak5JTA_cff import *
 
+from PhysicsTools.PatAlgos.mcMatchLayer0.jetFlavourId_cff import *
 from PhysicsTools.PatAlgos.mcMatchLayer0.jetMatch_cfi import *
 from PhysicsTools.PatAlgos.producersHeavyIons.heavyIonJets_cff import *
 from PhysicsTools.PatAlgos.producersLayer1.jetProducer_cfi import *
 from PhysicsTools.PatAlgos.recoLayer0.jetCorrFactors_cfi import *
 from PhysicsTools.PatAlgos.tools.helpers import *
 
-def setupHeavyIonJetsWithBTagging(process, tag, radius, task):
+def setupHeavyIonJetsWithBTagging(process, tag, radius, task, signal):
     addToProcessAndTask(
         tag + 'Jets',
         akFlowPuCs4PFJets.clone(rParam = radius / 10),
+        process,
+        task)
+
+    genjets = "HiSignalGenJets" if signal else "HiCleanedGenJets"
+    genpartons = "signalPartons" if signal else "allPartons"
+    signalpartons = "hiSignalGenParticles" if signal else "cleanedPartons"
+
+    genjetcollection = 'ak' + str(radius) + 'HiGenJets'
+
+    addToProcessAndTask(
+        genjetcollection,
+        ak5HiGenJets.clone(rParam = radius / 10),
+        process,
+        task)
+
+    addToProcessAndTask(
+        'ak' + str(radius) + 'HiSignalGenJets',
+        hiSignalGenJets.clone(src = genjetcollection),
+        process,
+        task)
+
+    addToProcessAndTask(
+        'ak' + str(radius) + 'HiCleanedGenJets',
+        heavyIonCleanedGenJets.clone(src = genjetcollection),
         process,
         task)
 
@@ -196,10 +226,53 @@ def setupHeavyIonJetsWithBTagging(process, tag, radius, task):
             src = tag + "Jets",
             ),
 
+        'patJetGenJetMatch':
+        patJetGenJetMatch.clone(
+            matched = 'ak' + str(radius) + genjets,
+            maxDeltaR = radius / 10,
+            resolveByMatchQuality = True,
+            src = tag + "Jets",
+            ),
+
+        'patJetPartonMatch':
+        patJetPartonMatch.clone(
+            matched = signalpartons,
+            src = tag + "Jets",
+            ),
+
+        'patJetPartons':
+        patJetPartons.clone(
+            particles = "hiSignalGenParticles",
+            ),
+
+        'patJetFlavourAssociation':
+        patJetFlavourAssociation.clone(
+            jets = tag + "Jets",
+            rParam = radius / 10,
+            bHadrons = "patJetPartons" + tag + ":bHadrons",
+            cHadrons = "patJetPartons" + tag + ":cHadrons",
+            leptons = "patJetPartons" + tag + ":leptons",
+            partons = "patJetPartons" + tag + ":physicsPartons",
+            ),
+
+        'patJetPartonAssociationLegacy':
+        patJetPartonAssociationLegacy.clone(
+            jets = tag + "Jets",
+            partons = genpartons,
+            ),
+
+        'patJetFlavourAssociationLegacy':
+        patJetFlavourAssociationLegacy.clone(
+            srcByReference = "patJetPartonAssociationLegacy" + tag,
+            ),
+
         'patJets':
         patJets.clone(
             jetSource = tag + "Jets",
-            genJetMatch = "patJetGenJetMatch",
+            genJetMatch = "patJetGenJetMatch" + tag,
+            genPartonMatch = "patJetPartonMatch" + tag,
+            JetFlavourInfoSource = "patJetFlavourAssociation" + tag,
+            JetPartonMapSource = "patJetFlavourAssociationLegacy" + tag,
             jetCorrFactorsSource = ["patJetCorrFactors" + tag],
             trackAssociationSource = "JetTracksAssociatorAtVertex" + tag,
             useLegacyJetMCFlavour = True,
@@ -236,3 +309,12 @@ def removeL1FastJetJECs(process):
         module = getattr(process, label)
         if module.type_() == "PATPFJetMETcorrInputProducer":
             module.offsetCorrLabel = ''
+
+def removeJECsForMC(process):
+    for label in process.producerNames().split():
+        module = getattr(process, label)
+        if module.type_() == "PATPFJetMETcorrInputProducer":
+            module.jetCorrLabel = 'Uncorrected'
+
+    process.basicJetsForMet.jetCorrLabel = 'Uncorrected'
+    process.basicJetsForMetPuppi.jetCorrLabelRes = 'Uncorrected'
