@@ -507,10 +507,6 @@ def miniAOD_customizeMC(process):
     #also jet flavour must be switched
     process.patJetFlavourAssociation.rParam = 0.4
 
-    from PhysicsTools.PatAlgos.producersHeavyIons.heavyIonJetSetup import removeJECsForMC
-    from Configuration.Eras.Modifier_pp_on_AA_2018_cff import pp_on_AA_2018
-    pp_on_AA_2018.toModify(process, func = lambda proc: removeJECsForMC(proc))
-
 def miniAOD_customizeOutput(out):
     from PhysicsTools.PatAlgos.slimming.MicroEventContent_cff import MiniAODOverrideBranchesSplitLevel
     out.overrideBranchesSplitLevel = MiniAODOverrideBranchesSplitLevel
@@ -527,24 +523,27 @@ def miniAOD_customizeData(process):
     task = getPatAlgosToolsTask(process)
     task.add(process.ctppsLocalTrackLiteProducer)
 
-def miniAOD_customizeHeavyIon(process):
-    from PhysicsTools.PatAlgos.producersHeavyIons.heavyIonJetSetup import aliasFlowPuCsJets, removeL1FastJetJECs
+def miniAOD_customizeHeavyIon(process, data):
+    from PhysicsTools.PatAlgos.producersHeavyIons.heavyIonJetSetup import aliasFlowPuCsJets, removeL1FastJetJECs, removeJECsForMC, addJECsForData
     from Configuration.Eras.Modifier_pp_on_AA_2018_cff import pp_on_AA_2018
     pp_on_AA_2018.toModify(process.slimmedJets, src = 'selectedPatJets')
     pp_on_AA_2018.toModify(process, func = lambda proc: removeL1FastJetJECs(proc))
     pp_on_AA_2018.toModify(process, func = lambda proc:
 	aliasFlowPuCsJets(proc, 'akFlowPuCs4PF'))
 
+    modifyJECs = addJECsForData if data is True else removeJECsForMC
+    pp_on_AA_2018.toModify(process, func = lambda proc: modifyJECs(proc))
+
 def miniAOD_customizeAllData(process):
     miniAOD_customizeCommon(process)
     miniAOD_customizeData(process)
-    miniAOD_customizeHeavyIon(process)
+    miniAOD_customizeHeavyIon(process, True)
     return process
 
 def miniAOD_customizeAllMC(process):
     miniAOD_customizeCommon(process)
     miniAOD_customizeMC(process)
-    miniAOD_customizeHeavyIon(process)
+    miniAOD_customizeHeavyIon(process, False)
     return process
 
 def miniAOD_customizeAllMCFastSim(process):

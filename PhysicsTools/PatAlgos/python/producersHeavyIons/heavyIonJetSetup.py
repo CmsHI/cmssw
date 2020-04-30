@@ -221,7 +221,7 @@ def setupHeavyIonJetsWithBTagging(process, tag, radius, task, signal):
         patJetCorrFactors.clone(
             useNPV = False,
             useRho = False,
-            levels = ['L2Relative', 'L2L3Residual'],
+            levels = ['L2Relative'],
             payload = "AK" + str(radius) + "PF",
             src = tag + "Jets",
             ),
@@ -318,3 +318,9 @@ def removeJECsForMC(process):
 
     process.basicJetsForMet.jetCorrLabel = 'Uncorrected'
     process.basicJetsForMetPuppi.jetCorrLabelRes = 'Uncorrected'
+
+def addJECsForData(process):
+    for label in process.producerNames().split():
+        module = getattr(process, label)
+        if module.type_() == "JetCorrFactorsProducer":
+            module.levels.append('L2L3Residual')
