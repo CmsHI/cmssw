@@ -30,7 +30,7 @@ def setupHeavyIonJetsWithBTagging(process, tag, radius, task):
         'JetTracksAssociatorAtVertex':
         ak5JetTracksAssociatorAtVertex.clone(
             jets = tag + "Jets",
-            tracks = "generalTracks",
+            tracks = "highPurityTracks",
             ),
 
         'ImpactParameterTagInfos':

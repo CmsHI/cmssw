@@ -4,6 +4,7 @@ from RecoHI.HiJetAlgos.HiRecoPFJets_cff import PFTowers, pfNoPileUpJMEHI, ak4PFJ
 from RecoHI.HiJetAlgos.hiPFCandCleaner_cfi import hiPFCandCleaner
 from RecoHI.HiJetAlgos.hiFJRhoFlowModulationProducer_cfi import hiFJRhoFlowModulationProducer
 from RecoHI.HiJetAlgos.hiPuRhoProducer_cfi import hiPuRhoProducer
+from RecoHI.HiTracking.highPurityTracks_cfi import highPurityTracks
 
 recoPFJetsHIpostAODTask = cms.Task(
     PFTowers,
@@ -12,5 +13,6 @@ recoPFJetsHIpostAODTask = cms.Task(
     ak4PFJetsForFlow,
     hiFJRhoFlowModulationProducer,
     hiPuRhoProducer,
+    highPurityTracks,
     )
 
