@@ -163,6 +163,9 @@ _pp_on_AA_2018_extraCommands = [
 
 _pp_on_AA_2018_extraCommandsGEN = [
     'keep *_heavyIon_*_*',
+    'keep recoBasicJets_*HiGenJets_*_*',
+    'drop *_slimmedGenJets__*',
+    'drop *_slimmedGenJetsFlavourInfos_*_*',
     'drop *_slimmedGenJetsAK8__*',
     'drop *_slimmedGenJetsAK8SoftDropSubJets__*',
 ]
