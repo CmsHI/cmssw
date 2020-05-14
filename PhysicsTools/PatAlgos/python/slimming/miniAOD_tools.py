@@ -120,7 +120,10 @@ def miniAOD_customizeCommon(process):
     
     from Configuration.Eras.Modifier_phase2_muon_cff import phase2_muon
     phase2_muon.toModify(process.selectedPatMuons, cut = "pt > 5 || isPFMuon || (pt > 3 && (isGlobalMuon || isStandAloneMuon || numberOfMatches > 0 || muonID('RPCMuLoose') || muonID('ME0MuonArbitrated') || muonID('GEMMuonArbitrated')) )")
-    
+
+    from Configuration.Eras.Modifier_pp_on_AA_2018_cff import pp_on_AA_2018
+    pp_on_AA_2018.toModify(process.selectedPatMuons, cut = "pt > 5 || isPFMuon || (pt > 1.2 && (isGlobalMuon || isStandAloneMuon) )")
+
     process.selectedPatElectrons.cut = cms.string("")
     process.selectedPatTaus.cut = cms.string("pt > 18. && tauID('decayModeFindingNewDMs')> 0.5")
     process.selectedPatPhotons.cut = cms.string("")
@@ -153,6 +156,11 @@ def miniAOD_customizeCommon(process):
     #noHF pfMET =========
 
     task = getPatAlgosToolsTask(process)
+
+    from PhysicsTools.PatAlgos.producersHeavyIons.heavyIonJetSetup import setupHeavyIonJetsWithBTagging
+    from Configuration.Eras.Modifier_pp_on_AA_2018_cff import pp_on_AA_2018
+    pp_on_AA_2018.toModify(process, func = lambda proc:
+	setupHeavyIonJetsWithBTagging(proc, 'akFlowPuCs4PF', 4, task, True))
 
     process.noHFCands = cms.EDFilter("GenericPFCandidateSelector",
                                      src=cms.InputTag("particleFlow"),
@@ -515,14 +523,27 @@ def miniAOD_customizeData(process):
     task = getPatAlgosToolsTask(process)
     task.add(process.ctppsLocalTrackLiteProducer)
 
+def miniAOD_customizeHeavyIon(process, data):
+    from PhysicsTools.PatAlgos.producersHeavyIons.heavyIonJetSetup import aliasFlowPuCsJets, removeL1FastJetJECs, removeJECsForMC, addJECsForData
+    from Configuration.Eras.Modifier_pp_on_AA_2018_cff import pp_on_AA_2018
+    pp_on_AA_2018.toModify(process.slimmedJets, src = 'selectedPatJets')
+    pp_on_AA_2018.toModify(process, func = lambda proc: removeL1FastJetJECs(proc))
+    pp_on_AA_2018.toModify(process, func = lambda proc:
+	aliasFlowPuCsJets(proc, 'akFlowPuCs4PF'))
+
+    modifyJECs = addJECsForData if data is True else removeJECsForMC
+    pp_on_AA_2018.toModify(process, func = lambda proc: modifyJECs(proc))
+
 def miniAOD_customizeAllData(process):
     miniAOD_customizeCommon(process)
     miniAOD_customizeData(process)
+    miniAOD_customizeHeavyIon(process, True)
     return process
 
 def miniAOD_customizeAllMC(process):
     miniAOD_customizeCommon(process)
     miniAOD_customizeMC(process)
+    miniAOD_customizeHeavyIon(process, False)
     return process
 
 def miniAOD_customizeAllMCFastSim(process):

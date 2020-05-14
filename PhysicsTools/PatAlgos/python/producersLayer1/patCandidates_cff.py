@@ -33,6 +33,11 @@ patCandidatesTask = cms.Task(
 )
 patCandidates = cms.Sequence(patCandidateSummary, patCandidatesTask)
 
+from PhysicsTools.PatAlgos.producersHeavyIons.heavyIonJets_cff import *
+_patCandidatesTask = patCandidatesTask.copy()
+_patCandidatesTask.add(recoJetsHIpostAODTask)
+_patCandidatesTask.remove(makePatOOTPhotonsTask)
+
 from Configuration.Eras.Modifier_pp_on_AA_2018_cff import pp_on_AA_2018
-pp_on_AA_2018.toReplaceWith(patCandidatesTask, patCandidatesTask.copyAndExclude([makePatOOTPhotonsTask]))
+pp_on_AA_2018.toReplaceWith(patCandidatesTask, _patCandidatesTask)
 pp_on_AA_2018.toModify(patCandidateSummary.candidates, func = lambda list: list.remove(cms.InputTag("patOOTPhotons")) )

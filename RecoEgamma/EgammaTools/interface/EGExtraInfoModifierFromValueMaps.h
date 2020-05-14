@@ -88,14 +88,14 @@ public:
   using ValueMapsTags = std::unordered_map<std::string,edm::InputTag>;
   struct electron_config {
     edm::InputTag electron_src;
-    edm::EDGetTokenT<edm::View<pat::Electron> > tok_electron_src;
+    edm::EDGetTokenT<edm::View<reco::GsfElectron> > tok_electron_src;
     ValueMapsTags valuemaps;
     ValueMaps tok_valuemaps;    
   };
 
   struct photon_config {
     edm::InputTag photon_src;
-    edm::EDGetTokenT<edm::View<pat::Photon> > tok_photon_src;
+    edm::EDGetTokenT<edm::View<reco::Photon> > tok_photon_src;
     ValueMapsTags valuemaps;
     ValueMaps tok_valuemaps; 
   };
@@ -175,11 +175,11 @@ setEvent(const edm::Event& evt) {
   ele_idx = pho_idx = 0;
 
   if( !e_conf.tok_electron_src.isUninitialized() ) {
-    edm::Handle<edm::View<pat::Electron> > eles;
+    edm::Handle<edm::View<reco::GsfElectron> > eles;
     evt.getByToken(e_conf.tok_electron_src,eles);
     
     for( unsigned i = 0; i < eles->size(); ++i ) {
-      edm::Ptr<pat::Electron> ptr = eles->ptrAt(i);
+      edm::Ptr<reco::GsfElectron> ptr = eles->ptrAt(i);
       eles_by_oop[i] = ptr;
     }    
   }
@@ -189,11 +189,11 @@ setEvent(const edm::Event& evt) {
   }
 
   if( !ph_conf.tok_photon_src.isUninitialized() ) {
-    edm::Handle<edm::View<pat::Photon> > phos;
+    edm::Handle<edm::View<reco::Photon> > phos;
     evt.getByToken(ph_conf.tok_photon_src,phos);
 
     for( unsigned i = 0; i < phos->size(); ++i ) {
-      edm::Ptr<pat::Photon> ptr = phos->ptrAt(i);
+      edm::Ptr<reco::Photon> ptr = phos->ptrAt(i);
       phos_by_oop[i] = ptr;
     }
   }
@@ -220,14 +220,14 @@ template<typename MapType,typename OutputType>
 void EGExtraInfoModifierFromValueMaps<MapType,OutputType>::
 setConsumes(edm::ConsumesCollector& sumes) {
   //setup electrons
-  if( !(empty_tag == e_conf.electron_src) ) e_conf.tok_electron_src = sumes.consumes<edm::View<pat::Electron> >(e_conf.electron_src);  
+  if( !(empty_tag == e_conf.electron_src) ) e_conf.tok_electron_src = sumes.consumes<edm::View<reco::GsfElectron> >(e_conf.electron_src);
 
   for( auto itr = e_conf.valuemaps.begin(); itr != e_conf.valuemaps.end(); ++itr ) {
     make_consumes(itr->second,e_conf.tok_valuemaps[itr->first],sumes);
   }
   
   // setup photons 
-  if( !(empty_tag == ph_conf.photon_src) ) ph_conf.tok_photon_src = sumes.consumes<edm::View<pat::Photon> >(ph_conf.photon_src);
+  if( !(empty_tag == ph_conf.photon_src) ) ph_conf.tok_photon_src = sumes.consumes<edm::View<reco::Photon> >(ph_conf.photon_src);
   
   for( auto itr = ph_conf.valuemaps.begin(); itr != ph_conf.valuemaps.end(); ++itr ) {
     make_consumes(itr->second,ph_conf.tok_valuemaps[itr->first],sumes);

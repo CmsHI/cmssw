@@ -7,6 +7,7 @@
   \brief Jet producer to produce CMS-style constituent subtracted jets
 
   \author   Marta Verweij
+  \modified for granular eta map Chris McGinn
   \version  
 
          Notes on implementation:
@@ -16,6 +17,7 @@
 
  ************************************************************/
 
+#include <vector>
 
 #include "RecoJets/JetProducers/plugins/VirtualJetProducer.h"
 
@@ -37,13 +39,20 @@ namespace cms
 
     void runAlgorithm( edm::Event& iEvent, const edm::EventSetup& iSetup ) override;
 
+    double getModulatedRhoFactor(const double phi, const double eventPlane2, const double eventPlane3, const double par1, const double par2);
+
     double csRParam_;           /// for constituent subtraction : R parameter
     double csAlpha_;            /// for HI constituent subtraction : alpha (power of pt in metric)
+
+    bool   useModulatedRho_;    /// flag to turn on/off flow-modulated rho and rhom
+    double minFlowChi2Prob_;/// flowFit chi2/ndof minimum compatability requirement
+    double maxFlowChi2Prob_;/// flowFit chi2/ndof minimum compatability requirement
 
     //input rho and rho_m + eta map
     edm::EDGetTokenT<std::vector<double>>                       etaToken_;
     edm::EDGetTokenT<std::vector<double>>                       rhoToken_;
     edm::EDGetTokenT<std::vector<double>>                       rhomToken_;
+    edm::EDGetTokenT<std::vector<double>>                       rhoFlowFitParamsToken_;
   };
 }
 #endif

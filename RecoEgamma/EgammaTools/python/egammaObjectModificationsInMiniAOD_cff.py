@@ -113,6 +113,16 @@ egamma8XLegacyEtScaleSysModifier = cms.PSet(
         )
     )
 
+# modifier for photon isolation used in heavy ions
+egammaHIPhotonIsolationModifier = cms.PSet(
+    modifierName = cms.string('EGExtraInfoModifierFromHIPhotonIsolationValueMaps'),
+    electron_config = cms.PSet(),
+    photon_config = cms.PSet(
+        photonSrc = cms.InputTag("gedPhotons"),
+        photonIsolationHI = cms.InputTag("photonIsolationHIProducerppGED")
+        )
+    )
+
 def appendReducedEgammaEnergyScaleAndSmearingModifier(modifiers):
     modifiers.append(reducedEgammaEnergyScaleAndSmearingModifier)
 
@@ -123,9 +133,15 @@ def appendEgamma8XLegacyAppendableModifiers (modifiers):
     modifiers.append(reducedEgammaEnergyScaleAndSmearingModifier)
     modifiers.append(egamma8XLegacyEtScaleSysModifier)
 
+def appendEgammaHIPhotonIsolationModifier(modifiers):
+    modifiers.append(egammaHIPhotonIsolationModifier)
+
 from Configuration.Eras.Modifier_run2_miniAOD_94XFall17_cff import run2_miniAOD_94XFall17
 run2_miniAOD_94XFall17.toModify(egamma_modifications,appendReducedEgammaEnergyScaleAndSmearingModifier)
    
 from Configuration.Eras.Modifier_run2_miniAOD_80XLegacy_cff import run2_miniAOD_80XLegacy
 run2_miniAOD_80XLegacy.toModify(egamma_modifications,appendEgamma8XLegacyAppendableModifiers)
 run2_miniAOD_80XLegacy.toModify(egamma_modifications,prependEgamma8XObjectUpdateModifier)
+
+from Configuration.Eras.Modifier_pp_on_AA_2018_cff import pp_on_AA_2018
+pp_on_AA_2018.toModify(egamma_modifications, appendEgammaHIPhotonIsolationModifier)

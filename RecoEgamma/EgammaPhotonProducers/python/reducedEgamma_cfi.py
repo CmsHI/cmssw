@@ -113,5 +113,11 @@ from Configuration.Eras.Modifier_run2_miniAOD_94XFall17_cff import run2_miniAOD_
 modifyReducedEGammaRun2MiniAOD9XFall17_ = run2_miniAOD_94XFall17.makeProcessModifier(calibrateReducedEgamma)
 from Configuration.Eras.Modifier_run2_miniAOD_80XLegacy_cff import run2_miniAOD_80XLegacy
 modifyReducedEGammaRun2MiniAOD8XLegacy_ = run2_miniAOD_80XLegacy.makeProcessModifier(calibrateReducedEgamma)
+
 from Configuration.Eras.Modifier_pp_on_AA_2018_cff import pp_on_AA_2018
-pp_on_AA_2018.toModify( reducedEgamma, ootPhotons = cms.InputTag("") )
+pp_on_AA_2018.toModify(reducedEgamma,
+    ootPhotons = cms.InputTag(""),
+    keepPhotons = "pt>15 && abs(eta)<2.5",
+    slimRelinkPhotons = "pt>15 && abs(eta)<2.5",
+    relinkPhotons = "pt>15 && abs(eta)<2.5"
+    )
