@@ -524,7 +524,7 @@ def miniAOD_customizeData(process):
     task.add(process.ctppsLocalTrackLiteProducer)
 
 def miniAOD_customizeHeavyIon(process, data):
-    from PhysicsTools.PatAlgos.producersHeavyIons.heavyIonJetSetup import aliasFlowPuCsJets, removeL1FastJetJECs, removeJECsForMC, addJECsForData
+    from PhysicsTools.PatAlgos.producersHeavyIons.heavyIonJetSetup import aliasFlowPuCsJets, removeL1FastJetJECs, removeJECsForMC, addJECsForData, overrideJECsForData, overrideJECsForMC
     from Configuration.Eras.Modifier_pp_on_AA_2018_cff import pp_on_AA_2018
     pp_on_AA_2018.toModify(process.slimmedJets, src = 'selectedPatJets')
     pp_on_AA_2018.toModify(process, func = lambda proc: removeL1FastJetJECs(proc))
@@ -532,7 +532,9 @@ def miniAOD_customizeHeavyIon(process, data):
 	aliasFlowPuCsJets(proc, 'akFlowPuCs4PF'))
 
     modifyJECs = addJECsForData if data is True else removeJECsForMC
+    overrideJECs = overrideJECsForData if data is True else overrideJECsForMC
     pp_on_AA_2018.toModify(process, func = lambda proc: modifyJECs(proc))
+    pp_on_AA_2018.toModify(process, func = lambda proc: overrideJECs(proc))
 
 def miniAOD_customizeAllData(process):
     miniAOD_customizeCommon(process)

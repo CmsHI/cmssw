@@ -15,6 +15,8 @@ from RecoHI.HiJetAlgos.HiRecoPFJets_cff import akFlowPuCs4PFJets
 from RecoHI.HiJetAlgos.HiGenJets_cff import ak5HiGenJets
 from RecoHI.HiJetAlgos.HiGenCleaner_cff import heavyIonCleanedGenJets
 from RecoHI.HiJetAlgos.HiSignalGenJetProducer_cfi import hiSignalGenJets
+from RecoHI.Configuration.CommonFunctions_cff import overrideJEC_DATA_PbPb5020_2018, overrideJEC_MC_PbPb5020_2018
+
 
 from RecoJets.JetAssociationProducers.ak5JTA_cff import *
 
@@ -324,3 +326,9 @@ def addJECsForData(process):
         module = getattr(process, label)
         if module.type_() == "JetCorrFactorsProducer":
             module.levels.append('L2L3Residual')
+
+def overrideJECsForData(process):
+    process = overrideJEC_DATA_PbPb5020_2018(process)
+
+def overrideJECsForMC(process):
+    process = overrideJEC_MC_PbPb5020_2018(process)
