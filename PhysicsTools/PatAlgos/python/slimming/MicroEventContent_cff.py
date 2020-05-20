@@ -145,9 +145,7 @@ _pp_on_AA_2018_extraCommands = [
     'keep *_hiFJRhoProducer_*_*',
     'keep *_hiFJRhoFlowModulationProducer_*_*',
     'keep *_hiPuRhoProducer_*_*',
-    'keep patJets_patJetsakFlowPuCs*_*_*',
-    'keep *_patJetsakFlowPuCs*_pfCandidates_*',
-    'keep *_patJetsakFlowPuCs*_tagInfos_*',
+    'keep *_slimmedJets_pfCandidates_*',
     'keep *_zdcreco_*_*',
     'keep ZDCDataFramesSorted_hcalDigis_*_*',
     'keep ZDCDataFramesSorted_castorDigis_*_*',
@@ -156,19 +154,11 @@ _pp_on_AA_2018_extraCommands = [
     'keep booledmValueMap_*MuonID_*_*',
     'keep floatedmValueMap_*TrackChi2_*_*',
     'keep patPackedCandidates_hipixeltracks_*_*',
-    'drop *_slimmedJetsAK8_*_*',
-    'drop *_slimmedJetsAK8PFPuppiSoftDropPacked_SubJets_*',
-    'drop *_slimmedJetsPuppi_*_*',
-    'drop *_slimmedMETsPuppi_*_*',
 ]
 
 _pp_on_AA_2018_extraCommandsGEN = [
     'keep *_heavyIon_*_*',
     'keep recoBasicJets_*HiGenJets_*_*',
-    'drop *_slimmedGenJets__*',
-    'drop *_slimmedGenJetsFlavourInfos_*_*',
-    'drop *_slimmedGenJetsAK8__*',
-    'drop *_slimmedGenJetsAK8SoftDropSubJets__*',
 ]
 
 from Configuration.Eras.Modifier_pp_on_AA_2018_cff import pp_on_AA_2018
