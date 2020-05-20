@@ -527,12 +527,38 @@ def miniAOD_customizeHeavyIon(process, data):
     from PhysicsTools.PatAlgos.producersHeavyIons.heavyIonJetSetup import aliasFlowPuCsJets, removeL1FastJetJECs, removeJECsForMC, addJECsForData
     from Configuration.Eras.Modifier_pp_on_AA_2018_cff import pp_on_AA_2018
     pp_on_AA_2018.toModify(process.slimmedJets, src = 'selectedPatJets')
+
+    pp_on_AA_2018.toModify(process.ak8PFJetsPuppi, src = 'pfNoPileUpJMEHI')
+    pp_on_AA_2018.toModify(process.patJetsAK8Puppi, jetSource = 'ak8PFJetsPuppi')
+    pp_on_AA_2018.toModify(process.slimmedJetsAK8, src = 'patJetsAK8Puppi')
+
+    pp_on_AA_2018.toModify(process.ak4PFJetsPuppi, src = 'pfNoPileUpJMEHI')
+    pp_on_AA_2018.toModify(process.patJetsPuppi, jetSource = 'ak4PFJetsPuppi')
+    pp_on_AA_2018.toModify(process.slimmedJetsPuppi, src = 'patJetsPuppi')
+
+    pp_on_AA_2018.toModify(process.slimmedJetsAK8PFPuppiSoftDropPacked, jetSrc = 'patJetsAK8Puppi', subjetSrc = 'patJetsAK8Puppi')
+
     pp_on_AA_2018.toModify(process, func = lambda proc: removeL1FastJetJECs(proc))
     pp_on_AA_2018.toModify(process, func = lambda proc:
 	aliasFlowPuCsJets(proc, 'akFlowPuCs4PF'))
 
     modifyJECs = addJECsForData if data is True else removeJECsForMC
     pp_on_AA_2018.toModify(process, func = lambda proc: modifyJECs(proc))
+
+    pp_on_AA_2018.toModify(process.pfMetPuppi, src = 'pfNoPileUpJMEHI')
+    pp_on_AA_2018.toModify(process.patMETsPuppi, computeMETSignificance = False, metSource = 'pfMetPuppi')
+    pp_on_AA_2018.toModify(process.slimmedMETsPuppi,
+        chsMET = 'patMETsPuppi',
+        rawVariation = 'patMETsPuppi',
+        t01Variation = 'patMETsPuppi',
+        t1SmearedVarsAndUncs = 'patMETsPuppi',
+        t1Uncertainties = 'patMETsPuppi',
+        tXYUncForRaw = 'patMETsPuppi',
+        tXYUncForT01 = 'patMETsPuppi',
+        tXYUncForT01Smear = 'patMETsPuppi',
+        tXYUncForT1 = 'patMETsPuppi',
+        tXYUncForT1Smear = 'patMETsPuppi',
+        trkMET = 'patMETsPuppi')
 
 def miniAOD_customizeAllData(process):
     miniAOD_customizeCommon(process)
