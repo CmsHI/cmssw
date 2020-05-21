@@ -158,7 +158,6 @@ _pp_on_AA_2018_extraCommands = [
 
 _pp_on_AA_2018_extraCommandsGEN = [
     'keep *_heavyIon_*_*',
-    'keep recoBasicJets_*HiGenJets_*_*',
 ]
 
 from Configuration.Eras.Modifier_pp_on_AA_2018_cff import pp_on_AA_2018
