@@ -29,6 +29,12 @@ signalGenJetsTask = cms.Task(
     signalPartons,
     )
 
+from RecoHI.HiJetAlgos.jetFlavourPlaceholder_cfi import jetFlavourPlaceholder
+
+slimmedGenJetsFlavourPlaceholder = jetFlavourPlaceholder.clone(
+    jets = 'ak4HiGenJets',
+    )
+
 from RecoHI.HiJetAlgos.HiRecoPFJets_cff import PFTowers, pfNoPileUpJMEHI, ak4PFJetsForFlow
 from RecoHI.HiJetAlgos.hiPFCandCleaner_cfi import hiPFCandCleaner
 from RecoHI.HiJetAlgos.hiFJRhoFlowModulationProducer_cfi import hiFJRhoFlowModulationProducer
@@ -50,4 +56,5 @@ recoJetsHIpostAODTask = cms.Task(
     allPartons,
     cleanedGenJetsTask,
     signalGenJetsTask,
+    slimmedGenJetsFlavourPlaceholder,
     )

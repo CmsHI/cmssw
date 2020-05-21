@@ -540,6 +540,8 @@ def miniAOD_customizeHeavyIon(process, data):
 
     if data is False:
         pp_on_AA_2018.toModify(process.slimmedGenJets, src = 'ak4HiGenJets')
+        pp_on_AA_2018.toModify(process.slimmedGenJetsFlavourPlaceholder, jets = 'ak4HiGenJets')
+        pp_on_AA_2018.toModify(process.slimmedGenJetsFlavourInfos, genJets = 'ak4HiGenJets', genJetFlavourInfos = 'slimmedGenJetsFlavourPlaceholder')
         pp_on_AA_2018.toModify(process.slimmedGenJetsAK8, cut = 'pt>9999', nLoose = 0)
         pp_on_AA_2018.toModify(process.slimmedGenJetsAK8SoftDropSubJets, cut = 'pt>9999', nLoose = 0)
 
