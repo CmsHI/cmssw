@@ -39,7 +39,6 @@ SubEventGenJetProducer::SubEventGenJetProducer(edm::ParameterSet const& conf):
    ignoreHydro_ = conf.getUntrackedParameter<bool>("ignoreHydro", true);
 
    if (signalOnly_) ignoreHydro_ = false;
-   produces<reco::BasicJetCollection>();
   // the subjet collections are set through the config file in the "jetCollInstanceName" field.
 
    input_cand_token_ = consumes<reco::CandidateView>(src_);
@@ -108,8 +107,7 @@ void SubEventGenJetProducer::produce(edm::Event& iEvent,const edm::EventSetup& i
 
    ////////////////
 
-   auto jets = std::make_unique<std::vector<GenJet>>();
-   subJets_ = jets.get();
+   jets_ = std::make_unique<std::vector<GenJet>>();
 
    LogDebug("VirtualJetProducer") << "Inputted towers\n";
 
@@ -126,7 +124,7 @@ void SubEventGenJetProducer::produce(edm::Event& iEvent,const edm::EventSetup& i
    //Finalize
    LogDebug("SubEventJetProducer") << "Wrote jets\n";
 
-   iEvent.put(std::move(jets));  
+   iEvent.put(std::move(jets_));
    return;
 }
 
@@ -166,7 +164,7 @@ void SubEventGenJetProducer::runAlgorithm( edm::Event & iEvent, edm::EventSetup 
     jet.setJetArea (jetArea);
     jet.setPileup (pu);
     
-    subJets_->push_back(jet);
+    jets_->push_back(jet);
    }   
 }
 
