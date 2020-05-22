@@ -78,6 +78,8 @@ pat::PATGenJetSlimmer::produce(edm::Event & iEvent, const edm::EventSetup & iSet
     auto mapping = std::make_unique<std::vector<int> >();
     mapping->reserve(src->size());
 
+    int32_t count = 0;
+
     unsigned nl = 0; // number of loose jets
     for (View<reco::GenJet>::const_iterator it = src->begin(), ed = src->end(); it != ed; ++it) {
 
@@ -96,7 +98,7 @@ pat::PATGenJetSlimmer::produce(edm::Event & iEvent, const edm::EventSetup & iSet
         out->push_back(*it);
         reco::GenJet & jet = out->back();
 
-        mapping->push_back(it-src->begin());
+        mapping->push_back(count++);
 
 
         if (clearDaughters_) {
