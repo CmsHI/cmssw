@@ -527,6 +527,7 @@ def miniAOD_customizeHeavyIon(process, data):
     from PhysicsTools.PatAlgos.producersHeavyIons.heavyIonJetSetup import aliasFlowPuCsJets, removeL1FastJetJECs, removeJECsForMC, addJECsForData
     from Configuration.Eras.Modifier_pp_on_AA_2018_cff import pp_on_AA_2018
     pp_on_AA_2018.toModify(process.slimmedJets, src = 'selectedPatJets')
+    pp_on_AA_2018.toModify(process.slimmedCaloJets, src = 'akPu4CaloJets')
 
     pp_on_AA_2018.toModify(process.ak8PFJetsPuppi, src = 'pfNoPileUpJMEHI')
     pp_on_AA_2018.toModify(process.patJetsAK8Puppi, jetSource = 'ak8PFJetsPuppi')
