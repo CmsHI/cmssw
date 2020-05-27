@@ -154,6 +154,7 @@ _pp_on_AA_2018_extraCommands = [
     'keep booledmValueMap_*MuonID_*_*',
     'keep floatedmValueMap_*TrackChi2_*_*',
     'keep patPackedCandidates_hipixeltracks_*_*',
+    'keep *_hihffilter_*_*',
 ]
 
 _pp_on_AA_2018_extraCommandsGEN = [
