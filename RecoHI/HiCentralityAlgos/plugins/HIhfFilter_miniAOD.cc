@@ -1,26 +1,6 @@
-// -*- C++ -*-
-//
-// Package:    Zproducer/HIhfFilter_miniAOD
-// Class:      HIhfFilter_miniAOD
-// 
-/**\class HIhfFilter_miniAOD HIhfFilter_miniAOD.cc Zproducer/HIhfFilter_miniAOD/plugins/HIhfFilter_miniAOD.cc
 
- Description: [one line class summary]
-
- Implementation:
-     [Notes on implementation]
-*/
-//
-// Original Author:  Dener De Souza Lemos
-//         Created:  Mon, 25 May 2020 22:27:10 GMT
-//
-//
-
-
-// system include files
 #include <memory>
 
-// user include files
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/Framework/interface/stream/EDProducer.h"
 
@@ -44,10 +24,6 @@
 #include <cmath>
 #include "TMath.h"
 
-//
-// class declaration
-//
-
 class HIhfFilter_miniAOD : public edm::stream::EDProducer<> {
    public:
       explicit HIhfFilter_miniAOD(const edm::ParameterSet&);
@@ -60,53 +36,22 @@ class HIhfFilter_miniAOD : public edm::stream::EDProducer<> {
       virtual void produce(edm::Event&, const edm::EventSetup&) override;
       virtual void endStream() override;
 
-      //virtual void beginRun(edm::Run const&, edm::EventSetup const&) override;
-      //virtual void endRun(edm::Run const&, edm::EventSetup const&) override;
-      //virtual void beginLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&) override;
-      //virtual void endLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&) override;
-
-      // ----------member data ---------------------------
-
       edm::EDGetTokenT<CaloTowerCollection>  srcTowers_;
-//      typedef std::vector<int> Int_Collection;
 
 };
 
-//
-// constants, enums and typedefs
-//
-
-
-//
-// static data member definitions
-//
-
-//
-// constructors and destructor
-//
 HIhfFilter_miniAOD::HIhfFilter_miniAOD(const edm::ParameterSet& iConfig):
   srcTowers_(consumes<CaloTowerCollection>(iConfig.getParameter<edm::InputTag>("srcTowers")))
 {
-   //register your products
-   //now do what ever other initialization is needed
    produces<std::vector<int>>("HIhfFilters");
 }
 
 
 HIhfFilter_miniAOD::~HIhfFilter_miniAOD()
 {
- 
-   // do anything here that needs to be done at destruction time
-   // (e.g. close files, deallocate resources etc.)
-
 }
 
 
-//
-// member functions
-//
-
-// ------------ method called to produce the data  ------------
 void
 HIhfFilter_miniAOD::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
@@ -148,64 +93,23 @@ HIhfFilter_miniAOD::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
   (*HIhfFiltersOut)[3] = TMath::Min(nTowersTh5HFplus_,nTowersTh5HFminus_);
 
   iEvent.put(std::move(HIhfFiltersOut),"HIhfFilters");
-
-
-
 }
 
-// ------------ method called once each stream before processing any runs, lumis or events  ------------
 void
 HIhfFilter_miniAOD::beginStream(edm::StreamID)
 {
 }
 
-// ------------ method called once each stream after processing all runs, lumis and events  ------------
 void
-HIhfFilter_miniAOD::endStream() {
+HIhfFilter_miniAOD::endStream()
+{
 }
 
-// ------------ method called when starting to processes a run  ------------
-/*
-void
-HIhfFilter_miniAOD::beginRun(edm::Run const&, edm::EventSetup const&)
-{
-}
-*/
- 
-// ------------ method called when ending the processing of a run  ------------
-/*
-void
-HIhfFilter_miniAOD::endRun(edm::Run const&, edm::EventSetup const&)
-{
-}
-*/
- 
-// ------------ method called when starting to processes a luminosity block  ------------
-/*
-void
-HIhfFilter_miniAOD::beginLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&)
-{
-}
-*/
- 
-// ------------ method called when ending the processing of a luminosity block  ------------
-/*
-void
-HIhfFilter_miniAOD::endLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&)
-{
-}
-*/
- 
-// ------------ method fills 'descriptions' with the allowed parameters for the module  ------------
 void
 HIhfFilter_miniAOD::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
-  //The following says we do not know what parameters are allowed so do no validation
-  // Please change this to state exactly what you do use, even if it is no parameters
   edm::ParameterSetDescription desc;
   desc.add<edm::InputTag>("srcTowers",edm::InputTag("towerMaker"));
   descriptions.add("HIhfFilter_miniAOD", desc);
-  //  descriptions.addDefault(desc);
 }
 
-//define this as a plug-in
 DEFINE_FWK_MODULE(HIhfFilter_miniAOD);
