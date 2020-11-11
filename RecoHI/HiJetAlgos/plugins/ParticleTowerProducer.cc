@@ -36,7 +36,6 @@
 #include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
 #include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
 #include "RecoHI/HiJetAlgos/plugins/HITowerHelper.h"
-#include "DataFormats/PatCandidates/interface/PackedCandidate.h"
 
 #include <cmath>
 #include <cstdlib>
@@ -59,7 +58,7 @@ private:
   double iphi2phi(int iphi, int ieta) const;
   // ----------member data ---------------------------
 
-  edm::EDGetTokenT<edm::View<pat::PackedCandidate>>  src_;
+  edm::EDGetTokenT<reco::PFCandidateCollection> src_;
   const bool useHF_;
 
   // tower edges from fast sim, used starting at index 30 for the HF
@@ -69,7 +68,7 @@ private:
 // constructors and destructor
 //
 ParticleTowerProducer::ParticleTowerProducer(const edm::ParameterSet& iConfig)
-    : src_(consumes<edm::View<pat::PackedCandidate>>(iConfig.getParameter<edm::InputTag>("src"))),
+    : src_(consumes<reco::PFCandidateCollection>(iConfig.getParameter<edm::InputTag>("src"))),
       useHF_(iConfig.getParameter<bool>("useHF")) {
   produces<CaloTowerCollection>();
 }
