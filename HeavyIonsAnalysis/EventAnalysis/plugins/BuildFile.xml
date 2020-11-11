@@ -1,0 +1,13 @@
+<use name="CommonTools/UtilAlgos"/>
+<use name="DataFormats/L1GlobalTrigger"/>
+<use name="DataFormats/L1TGlobal"/>
+<use name="DataFormats/ParticleFlowCandidate"/>
+<use name="DataFormats/PatCandidates"/>
+<use name="FWCore/Framework"/>
+<use name="FWCore/ParameterSet"/>
+<use name="FWCore/PluginManager"/>
+<use name="FWCore/ServiceRegistry"/>
+<use name="HLTrigger/HLTcore"/>
+<use name="rootcore"/>
+
+<flags EDM_PLUGIN="1"/>
