@@ -22,76 +22,73 @@
 #include "TTree.h"
 
 class TriggerAnalyzer : public edm::EDAnalyzer {
-  public:
-    TriggerAnalyzer(edm::ParameterSet const& conf);
-    ~TriggerAnalyzer() override;
+public:
+  TriggerAnalyzer(edm::ParameterSet const& conf);
+  ~TriggerAnalyzer() override;
 
-    void analyze(edm::Event const& e, edm::EventSetup const& iSetup) override;
-    void endJob() override;
-    void beginRun(edm::Run const&, edm::EventSetup const&) override;
+  void analyze(edm::Event const& e, edm::EventSetup const& iSetup) override;
+  void endJob() override;
+  void beginRun(edm::Run const&, edm::EventSetup const&) override;
 
-  private:
-    TTree* t_;
+private:
+  TTree* t_;
 
-    int fEvent;
-    int fLumiBlock;
-    int fRun;
-    int fBx;
-    int fOrbit;
+  int fEvent;
+  int fLumiBlock;
+  int fRun;
+  int fBx;
+  int fOrbit;
 
-    int HltEvtCnt;
-    int L1EvtCnt;
-    int* hltflag;
-    int* l1flag;
-    int* hltPrescl;
-    int* l1Prescl;
+  int HltEvtCnt;
+  int L1EvtCnt;
+  int* hltflag;
+  int* l1flag;
+  int* hltPrescl;
+  int* l1Prescl;
 
-    std::string processName_;
+  std::string processName_;
 
-    std::vector<std::string> hltdummies;
-    std::vector<std::string> l1dummies;
+  std::vector<std::string> hltdummies;
+  std::vector<std::string> l1dummies;
 
-    std::map<std::string, int> pathtoindex;
+  std::map<std::string, int> pathtoindex;
 
-    edm::EDGetTokenT<edm::TriggerResults> hltresultsToken_;
-    edm::EDGetTokenT<GlobalAlgBlkBxCollection> l1resultsToken_;
+  edm::EDGetTokenT<edm::TriggerResults> hltresultsToken_;
+  edm::EDGetTokenT<GlobalAlgBlkBxCollection> l1resultsToken_;
 
-    std::unique_ptr<HLTPrescaleProvider> hltPrescaleProvider_;
+  std::unique_ptr<HLTPrescaleProvider> hltPrescaleProvider_;
 };
 
 static constexpr int kMaxHLTFlag = 1000;
 static constexpr int kMaxL1Flag = 1000;
 
 TriggerAnalyzer::TriggerAnalyzer(edm::ParameterSet const& conf)
-  : fEvent(0),
-    fLumiBlock(-1),
-    fRun(-1),
-    fBx(-1),
-    fOrbit(-1),
-    HltEvtCnt(0),
-    L1EvtCnt(0),
-    hltflag(new int[kMaxHLTFlag]),
-    l1flag(new int[kMaxL1Flag]),
-    hltPrescl(new int[kMaxHLTFlag]),
-    l1Prescl(new int[kMaxL1Flag]),
-    processName_(conf.getParameter<std::string>("HLTProcessName")),
-    hltdummies(conf.getParameter<std::vector<std::string>>("hltdummybranches")),
-    l1dummies(conf.getParameter<std::vector<std::string>>("l1dummybranches")),
-    hltresultsToken_(consumes<edm::TriggerResults>(
-      conf.getParameter<edm::InputTag>("hltresults"))),
-    l1resultsToken_(consumes<GlobalAlgBlkBxCollection>(
-      conf.getParameter<edm::InputTag>("l1results"))),
-    hltPrescaleProvider_(new HLTPrescaleProvider(conf, consumesCollector(), *this))
-{
+    : fEvent(0),
+      fLumiBlock(-1),
+      fRun(-1),
+      fBx(-1),
+      fOrbit(-1),
+      HltEvtCnt(0),
+      L1EvtCnt(0),
+      hltflag(new int[kMaxHLTFlag]),
+      l1flag(new int[kMaxL1Flag]),
+      hltPrescl(new int[kMaxHLTFlag]),
+      l1Prescl(new int[kMaxL1Flag]),
+      processName_(conf.getParameter<std::string>("HLTProcessName")),
+      hltdummies(conf.getParameter<std::vector<std::string>>("hltdummybranches")),
+      l1dummies(conf.getParameter<std::vector<std::string>>("l1dummybranches")),
+      hltresultsToken_(consumes<edm::TriggerResults>(conf.getParameter<edm::InputTag>("hltresults"))),
+      l1resultsToken_(consumes<GlobalAlgBlkBxCollection>(conf.getParameter<edm::InputTag>("l1results"))),
+      hltPrescaleProvider_(new HLTPrescaleProvider(conf, consumesCollector(), *this)) {
   // open the tree file and initialize the tree
   edm::Service<TFileService> fs;
   t_ = fs->make<TTree>("HltTree", "");
 
-  t_->Branch("Event",     &fEvent,       "Event/l");
-  t_->Branch("LumiBlock", &fLumiBlock,   "LumiBlock/I");
-  t_->Branch("Run",       &fRun,         "Run/I");
-  t_->Branch("Bx",        &fBx,          "Bx/I");
-  t_->Branch("Orbit",     &fOrbit,       "Orbit/I");
+  t_->Branch("Event", &fEvent, "Event/l");
+  t_->Branch("LumiBlock", &fLumiBlock, "LumiBlock/I");
+  t_->Branch("Run", &fRun, "Run/I");
+  t_->Branch("Bx", &fBx, "Bx/I");
+  t_->Branch("Orbit", &fOrbit, "Orbit/I");
 }
 
 TriggerAnalyzer::~TriggerAnalyzer() {
@@ -108,11 +105,11 @@ void TriggerAnalyzer::analyze(edm::Event const& iEvent, edm::EventSetup const& i
   iEvent.getByToken(hltresultsToken_, hltresults);
   iEvent.getByToken(l1resultsToken_, l1results);
 
-  fEvent        = iEvent.id().event();
-  fLumiBlock    = iEvent.luminosityBlock();
-  fRun          = iEvent.id().run();
-  fBx           = iEvent.bunchCrossing();
-  fOrbit        = iEvent.orbitNumber();
+  fEvent = iEvent.id().event();
+  fLumiBlock = iEvent.luminosityBlock();
+  fRun = iEvent.id().run();
+  fBx = iEvent.bunchCrossing();
+  fOrbit = iEvent.orbitNumber();
 
   if (hltresults.isValid()) {
     /* reset accept status to -1 */
@@ -193,7 +190,7 @@ void TriggerAnalyzer::analyze(edm::Event const& iEvent, edm::EventSetup const& i
 
       int il1 = 0;
       // get the bit/name association
-      for (auto const & keyval: menu->getAlgorithmMap()) {
+      for (auto const& keyval : menu->getAlgorithmMap()) {
         std::string const& trigname = keyval.second.getName();
 
         if (pathtoindex.find(trigname) == pathtoindex.end()) {
@@ -203,10 +200,10 @@ void TriggerAnalyzer::analyze(edm::Event const& iEvent, edm::EventSetup const& i
           pathtoindex[trigname] = itdum + il1;
           ++il1;
         }
-      } // end algo Map
+      }  // end algo Map
 
       L1EvtCnt++;
-    } // end l1evtCnt=0
+    }  // end l1evtCnt=0
 
     GlobalAlgBlk const& result = l1results->at(0, 0);
 
@@ -233,8 +230,7 @@ void TriggerAnalyzer::analyze(edm::Event const& iEvent, edm::EventSetup const& i
 }
 
 // ------------ method called when starting to processes a run  ------------
-void
-TriggerAnalyzer::beginRun(edm::Run const& run, edm::EventSetup const& es) {
+void TriggerAnalyzer::beginRun(edm::Run const& run, edm::EventSetup const& es) {
   bool changed(true);
   if (hltPrescaleProvider_->init(run, es, processName_, changed)) {
     // if init returns TRUE, initialisation has succeeded!
@@ -244,13 +240,12 @@ TriggerAnalyzer::beginRun(edm::Run const& run, edm::EventSetup const& es) {
   } else {
     // if init returns FALSE, initialisation has NOT succeeded, which indicates
     // a problem with the file and/or code and needs to be investigated!
-    edm::LogInfo("TriggerAnalyzer") << " HLT initialisation failed for process "
-      << processName_ << std::endl;
+    edm::LogInfo("TriggerAnalyzer") << " HLT initialisation failed for process " << processName_ << std::endl;
     // In this case, all access methods will return empty values!
   }
 }
 
-void TriggerAnalyzer::endJob() { }
+void TriggerAnalyzer::endJob() {}
 
 // declare this class as a framework plugin
 #include "FWCore/Framework/interface/MakerMacros.h"

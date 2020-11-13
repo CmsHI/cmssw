@@ -12,12 +12,12 @@
 class ParticleFlowAnalyser : public edm::EDAnalyzer {
 public:
   explicit ParticleFlowAnalyser(const edm::ParameterSet&);
-  ~ParticleFlowAnalyser();
+  ~ParticleFlowAnalyser() override;
 
 private:
-  virtual void beginJob();
-  virtual void analyze(const edm::Event&, const edm::EventSetup&);
-  virtual void endJob();
+  void beginJob() override;
+  void analyze(const edm::Event&, const edm::EventSetup&) override;
+  void endJob() override;
 
   void clear();
 

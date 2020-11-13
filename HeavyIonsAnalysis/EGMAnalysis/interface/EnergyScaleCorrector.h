@@ -11,39 +11,34 @@
 #include <vector>
 
 class EnergyScaleCorrector {
-  public:
-    EnergyScaleCorrector(std::string const& file,
-                         EpCombinationTool const& combinator,
-                         TRandom* rng,
-                         float min_pt);
+public:
+  EnergyScaleCorrector(std::string const& file, EpCombinationTool const& combinator, TRandom* rng, float min_pt);
 
-    ~EnergyScaleCorrector() = default;
+  ~EnergyScaleCorrector() = default;
 
-    void calibrate(reco::GsfElectron& ele, int hiBin) const;
+  void calibrate(reco::GsfElectron& ele, int hiBin) const;
 
-  private:
-    template <typename T>
-    void readline(std::ifstream& f, std::vector<T>& data);
+private:
+  template <typename T>
+  void readline(std::ifstream& f, std::vector<T>& data);
 
-    void read(std::string const& file);
+  void read(std::string const& file);
 
-    std::pair<float, float> combined_momentum(reco::GsfElectron& ele,
-                                              float scale,
-                                              float smear) const;
+  std::pair<float, float> combined_momentum(reco::GsfElectron& ele, float scale, float smear) const;
 
-    int index_for(int value) const;
-    float scale_for(int hiBin, float eta) const;
-    float smear_for(int hiBin, float eta) const;
+  int index_for(int value) const;
+  float scale_for(int hiBin, float eta) const;
+  float smear_for(int hiBin, float eta) const;
 
-    EpCombinationTool const* combinator_;
-    TRandom* rng_;
-    float min_pt_;
+  EpCombinationTool const* combinator_;
+  TRandom* rng_;
+  float min_pt_;
 
-    std::vector<int> edges;
-    std::vector<float> eb_scale;
-    std::vector<float> ee_scale;
-    std::vector<float> eb_smear;
-    std::vector<float> ee_smear;
+  std::vector<int> edges;
+  std::vector<float> eb_scale;
+  std::vector<float> ee_scale;
+  std::vector<float> eb_smear;
+  std::vector<float> ee_smear;
 };
 
 #endif /* HEAVYIONSANALYSIS_PHOTONANALYSIS_ENERGYSCALECORRECTOR_H */

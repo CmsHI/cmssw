@@ -8,6 +8,7 @@
 <use name="FWCore/PluginManager"/>
 <use name="FWCore/ServiceRegistry"/>
 <use name="HLTrigger/HLTcore"/>
+<use name="RecoHI/HiCentralityAlgos"/>
+<use name="DataFormats/HeavyIonEvent"/>
 <use name="rootcore"/>
-
 <flags EDM_PLUGIN="1"/>

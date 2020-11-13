@@ -11,7 +11,8 @@
 // constructors and destructor
 //
 ParticleFlowAnalyser::ParticleFlowAnalyser(const edm::ParameterSet& iConfig)
-    : pfCandidateToken_(consumes<pat::PackedCandidateCollection>(iConfig.getParameter<edm::InputTag>("pfCandidateSrc"))),
+    : pfCandidateToken_(
+          consumes<pat::PackedCandidateCollection>(iConfig.getParameter<edm::InputTag>("pfCandidateSrc"))),
       ptMin_(iConfig.getParameter<double>("ptMin")),
       absEtaMax_(iConfig.getParameter<double>("absEtaMax")) {}
 

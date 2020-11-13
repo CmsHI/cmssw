@@ -16,7 +16,6 @@
 #include "Geometry/Records/interface/CaloGeometryRecord.h"
 #include "TrackingTools/TransientTrack/interface/TransientTrackBuilder.h"
 
-
 using namespace std::placeholders;
 
 ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) {

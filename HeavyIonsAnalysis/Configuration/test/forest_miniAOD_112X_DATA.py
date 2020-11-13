@@ -9,7 +9,7 @@ process = cms.Process('HiForest')
 
 # HiForest info
 process.load("HeavyIonsAnalysis.EventAnalysis.HiForestInfo_cfi")
-process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 103X, data")
+process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 112X, data")
 
 # import subprocess, os
 # version = subprocess.check_output(
@@ -24,9 +24,11 @@ process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 103X, data")
 process.source = cms.Source("PoolSource",
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
     fileNames = cms.untracked.vstring(
-        "file:step2.root"
-        ),
-    )
+        "file:/afs/cern.ch/work/m/mnguyen/public/devel/forest/CMSSW_11_2_0_pre9/src/HeavyIonsAnalysis/Configuration/test/step2_PAT.root"
+    ), 
+)
+#input file produced from:
+#"file:/afs/cern.ch/work/r/rbi/public/forest/HIHardProbes_HIRun2018A-PromptReco-v2_AOD.root"
 
 # number of events to process, set to -1 to process all events
 process.maxEvents = cms.untracked.PSet(
@@ -42,9 +44,6 @@ process.load('Configuration.StandardSequences.MagneticField_38T_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 process.load('FWCore.MessageService.MessageLogger_cfi')
 
-# from Configuration.AlCa.GlobalTag import GlobalTag
-# process.GlobalTag = GlobalTag(process.GlobalTag, '103X_dataRun2_Prompt_v2', '')
-#process.HiForestInfo.GlobalTagLabel = process.GlobalTag.globaltag
 
 from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:run2_data_promptlike_hi', '')
@@ -94,42 +93,28 @@ process.TFileService = cms.Service("TFileService",
 
 ###############################################################################
 
-# reconstruction and analysis
-################################
-
 # event analysis
 # process.load('HeavyIonsAnalysis.EventAnalysis.hltanalysis_cfi')
+process.load('HeavyIonsAnalysis.EventAnalysis.hievtanalyzer_data_cfi')
+#process.load('HeavyIonsAnalysis.EventAnalysis.hltanalysis_cfi')
+#process.load('HeavyIonsAnalysis.EventAnalysis.skimanalysis_cfi')
+#process.load('HeavyIonsAnalysis.EventAnalysis.hltobject_cfi')
+#process.load('HeavyIonsAnalysis.EventAnalysis.l1object_cfi')
+
+#from HeavyIonsAnalysis.EventAnalysis.hltobject_cfi import trigger_list_mc
+#process.hltobject.triggerNames = trigger_list_mc
+
 # process.load('HeavyIonsAnalysis.EventAnalysis.particleFlowAnalyser_cfi')
-
 ################################
-
 # electrons, photons, muons
-# process.load('HeavyIonsAnalysis.EGMAnalysis.ggHiNtuplizer_cfi')
-
-# process.load("TrackingTools.TransientTrack.TransientTrackBuilder_cfi")
-
+process.load('HeavyIonsAnalysis.EGMAnalysis.ggHiNtuplizer_cfi')
+process.load("TrackingTools.TransientTrack.TransientTrackBuilder_cfi")
 ################################
-
-# jets
-
 # jet reco sequence
 process.load('HeavyIonsAnalysis.JetAnalysis.akCs4PFJetSequence_pponPbPb_data_cff')
-
-
 ################################
-
-# b-tagging
-
-################################
-
 # tracks
 # process.load("HeavyIonsAnalysis.TrackAnalysis.TrackAnalyzers_cff")
-
-
-################################
-
-# forward (HF, Castor, ZDC)
-
 ###############################################################################
 
 
@@ -137,17 +122,13 @@ process.load('HeavyIonsAnalysis.JetAnalysis.akCs4PFJetSequence_pponPbPb_data_cff
 ###############################################################################
 # main forest sequence
 process.forest = cms.Path(
-    #process.HiForestInfo
-    #+
-    # process.hltanalysis
-    # +
-    # process.trackSequencePbPb
-    # +
-    # process.particleFlowAnalyser
-    # +
-    # process.ggHiNtuplizer
-    #+
-    process.akCs4PFJetSequence
+    process.HiForestInfo + 
+    # process.hltanalysis +
+    # process.trackSequencePbPb +
+    # process.particleFlowAnalyser +
+    process.hiEvtAnalyzer +
+    process.ggHiNtuplizer +
+    process.akCs4PFJetAnalyzer
     )
 
 #customisation
