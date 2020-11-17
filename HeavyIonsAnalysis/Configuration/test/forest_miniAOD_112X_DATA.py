@@ -114,7 +114,7 @@ process.load("TrackingTools.TransientTrack.TransientTrackBuilder_cfi")
 process.load('HeavyIonsAnalysis.JetAnalysis.akCs4PFJetSequence_pponPbPb_data_cff')
 ################################
 # tracks
-# process.load("HeavyIonsAnalysis.TrackAnalysis.TrackAnalyzers_cff")
+process.load("HeavyIonsAnalysis.TrackAnalysis.TrackAnalyzers_cff")
 ###############################################################################
 
 
@@ -124,7 +124,7 @@ process.load('HeavyIonsAnalysis.JetAnalysis.akCs4PFJetSequence_pponPbPb_data_cff
 process.forest = cms.Path(
     process.HiForestInfo + 
     # process.hltanalysis +
-    # process.trackSequencePbPb +
+    process.trackSequencePbPb +
     # process.particleFlowAnalyser +
     process.hiEvtAnalyzer +
     process.ggHiNtuplizer +
