@@ -212,15 +212,15 @@ void ParticleTowerProducer::resetTowers(edm::Event& iEvent,const edm::EventSetup
 int ParticleTowerProducer::eta2ieta(double eta) const {
   // binary search in the array of towers eta edges
 
-  int ieta = 0;
-
-  while(fabs(eta) > etaedge[ieta]){
-    ++ieta;  
+  int ieta = 1;
+  double xeta = fabs(eta);
+  while (xeta > etaedge[ieta] && ieta < ietaMax - 1) {
+    ++ieta;
   }
 
-  if(eta < 0) ieta = -ieta;
+  if (eta < 0)
+    ieta = -ieta;
   return ieta;
-
 }
 
 int ParticleTowerProducer::phi2iphi(double phi, int ieta) const {

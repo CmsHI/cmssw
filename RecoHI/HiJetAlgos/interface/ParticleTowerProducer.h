@@ -59,7 +59,7 @@ class ParticleTowerProducer : public edm::EDProducer {
   static const double etatow[];
   static const double etacent[];
   double etaedge[42];
-  
+  static constexpr int ietaMax = 42;  
   
  
   
