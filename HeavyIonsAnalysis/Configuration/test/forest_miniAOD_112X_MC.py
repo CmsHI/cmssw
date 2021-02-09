@@ -48,12 +48,12 @@ process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase1_2018_realistic_hi'
 process.HiForestInfo.GlobalTagLabel = process.GlobalTag.globaltag
 process.GlobalTag.snapshotTime = cms.string("9999-12-31 23:59:59.000")
 process.GlobalTag.toGet.extend([
-    cms.PSet(
-        record = cms.string("BTagTrackProbability3DRcd"),
-        tag = cms.string("JPcalib_Data103X_2018PbPb_v1"),
-        connect = cms.string("frontier://FrontierProd/CMS_CONDITIONS"),
-        )
-    ])
+    cms.PSet(record = cms.string("BTagTrackProbability3DRcd"),
+             tag = cms.string("JPcalib_MC103X_2018PbPb_v4"),                                                                                                                                      connect = cms.string("frontier://FrontierProd/CMS_CONDITIONS")
+             
+         )
+])
+
 
 ###############################################################################
 
@@ -100,6 +100,36 @@ process.forest = cms.Path(
     process.ggHiNtuplizer +
     process.akCs4PFJetAnalyzer
     )
+
+
+
+addCandidateTagging = False
+
+if addCandidateTagging:
+    process.load("HeavyIonsAnalysis.JetAnalysis.candidateBtaggingMiniAOD_cff")
+    
+    from PhysicsTools.PatAlgos.tools.jetTools import updateJetCollection
+    updateJetCollection(
+        process,
+        jetSource = cms.InputTag('slimmedJets'),
+        jetCorrections = ('AK4PFchs', cms.vstring(['L1FastJet', 'L2Relative', 'L3Absolute']), 'None'),
+        btagDiscriminators = ['pfCombinedSecondaryVertexV2BJetTags', 'pfDeepCSVDiscriminatorsJetTags:BvsAll', 'pfDeepCSVDiscriminatorsJetTags:CvsB', 'pfDeepCSVDiscriminatorsJetTags:CvsL'], ## to add discriminators,
+        btagPrefix = 'TEST',
+    )
+    
+    process.updatedPatJets.addJetCorrFactors = False
+    process.updatedPatJets.discriminatorSources = cms.VInputTag(
+        cms.InputTag('pfDeepCSVJetTags:probb'),
+        cms.InputTag('pfDeepCSVJetTags:probc'),
+        cms.InputTag('pfDeepCSVJetTags:probudsg'),
+        cms.InputTag('pfDeepCSVJetTags:probbb'),
+    )
+    
+    process.akCs4PFJetAnalyzer.jetTag = "updatedPatJets"
+
+    process.forest.insert(1,process.candidateBtagging*process.updatedPatJets)
+
+    process.akCs4PFJetAnalyzer.addDeepCSV = True
 
 #customisation
 #process.akCs4PFJetAnalyzer.doLifeTimeTagging = False

@@ -19,6 +19,7 @@ inclusiveJetAnalyzer = cms.EDAnalyzer(
     useHepMC = cms.untracked.bool(False),
     useQuality = cms.untracked.bool(True),
     doLifeTimeTagging = cms.untracked.bool(True),
+    addDeepCSV = cms.untracked.bool(False),
     doGenTaus = cms.untracked.bool(False),
     doGenSym = cms.untracked.bool(False),
     doSubJets = cms.untracked.bool(False),
