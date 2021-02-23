@@ -134,7 +134,7 @@ process.forest = cms.Path(
 #customisation
 
 
-addCandidateTagging = False
+addCandidateTagging = True
 
 if addCandidateTagging:
     process.load("HeavyIonsAnalysis.JetAnalysis.candidateBtaggingMiniAOD_cff")
