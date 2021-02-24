@@ -90,6 +90,7 @@ HiInclusiveJetAnalyzer::HiInclusiveJetAnalyzer(const edm::ParameterSet& iConfig)
   useRawPt_ = iConfig.getUntrackedParameter<bool>("useRawPt",true);
 
   doLifeTimeTagging_ = iConfig.getUntrackedParameter<bool>("doLifeTimeTagging",false);
+  doLifeTimeCandidateTagging_ = iConfig.getUntrackedParameter<bool>("doLifeTimeCandidateTagging",false);
   doLifeTimeTaggingExtras_ = iConfig.getUntrackedParameter<bool>("doLifeTimeTaggingExtras",true);
   saveBfragments_  = iConfig.getUntrackedParameter<bool>("saveBfragments",false);
 
@@ -116,6 +117,7 @@ HiInclusiveJetAnalyzer::HiInclusiveJetAnalyzer(const edm::ParameterSet& iConfig)
     simpleSVHighPurBJetTags_ = bTagJetName_+"SimpleSecondaryVertexHighPurBJetTags";
     combinedSVV1BJetTags_ = bTagJetName_+"CombinedSecondaryVertexBJetTags";
     combinedSVV2BJetTags_ = bTagJetName_+"CombinedSecondaryVertexV2BJetTags";
+    if(doLifeTimeCandidateTagging_) deepCSVBJetTags_ = bTagJetName_+"pfDeepCSVJetTags:probb";
   }
 
   doSubEvent_ = 0;
@@ -288,6 +290,7 @@ HiInclusiveJetAnalyzer::beginJob() {
 
     t->Branch("discr_csvV1",jets_.discr_csvV1,"discr_csvV1[nref]/F");
     t->Branch("discr_csvV2",jets_.discr_csvV2,"discr_csvV2[nref]/F");
+    if(doLifeTimeCandidateTagging_) t->Branch("discr_deepCSV",jets_.discr_deepCSV,"discr_deepCSV[nref]/F");
     t->Branch("discr_muByIp3",jets_.discr_muByIp3,"discr_muByIp3[nref]/F");
     t->Branch("discr_muByPt",jets_.discr_muByPt,"discr_muByPt[nref]/F");
     t->Branch("discr_prob",jets_.discr_prob,"discr_prob[nref]/F");
@@ -298,7 +301,7 @@ HiInclusiveJetAnalyzer::beginJob() {
     t->Branch("ndiscr_ssvHighEff",jets_.ndiscr_ssvHighEff,"ndiscr_ssvHighEff[nref]/F");
     t->Branch("ndiscr_ssvHighPur",jets_.ndiscr_ssvHighPur,"ndiscr_ssvHighPur[nref]/F");
     t->Branch("ndiscr_csvV1",jets_.ndiscr_csvV1,"ndiscr_csvV1[nref]/F");
-    t->Branch("ndiscr_csvV2",jets_.ndiscr_csvV2,"ndiscr_csvV2[nref]/F");
+    t->Branch("ndiscr_csvV2",jets_.ndiscr_csvV2,"ndiscr_csvV2[nref]/F");    
     t->Branch("ndiscr_muByPt",jets_.ndiscr_muByPt,"ndiscr_muByPt[nref]/F");
 
     t->Branch("pdiscr_csvV1",jets_.pdiscr_csvV1,"pdiscr_csvV1[nref]/F");
@@ -506,6 +509,7 @@ HiInclusiveJetAnalyzer::beginJob() {
     /* clear arrays */
     memset(jets_.discr_csvV1, 0, MAXJETS * sizeof(float));
     memset(jets_.discr_csvV2, 0, MAXJETS * sizeof(float));
+    if(doLifeTimeCandidateTagging_) memset(jets_.discr_deepCSV, 0, MAXJETS * sizeof(float));
     memset(jets_.discr_muByIp3, 0, MAXJETS * sizeof(float));
     memset(jets_.discr_muByPt, 0, MAXJETS * sizeof(float));
     memset(jets_.discr_prob, 0, MAXJETS * sizeof(float));
@@ -657,6 +661,7 @@ HiInclusiveJetAnalyzer::analyze(const Event& iEvent,
       jets_.discr_ssvHighPur[jets_.nref]=jet.bDiscriminator(simpleSVHighPurBJetTags_);
       jets_.discr_csvV1[jets_.nref]=jet.bDiscriminator(combinedSVV1BJetTags_);
       jets_.discr_csvV2[jets_.nref]=jet.bDiscriminator(combinedSVV2BJetTags_);
+      if(doLifeTimeCandidateTagging_)jets_.discr_deepCSV[jets_.nref]=jet.bDiscriminator(deepCSVBJetTags_);
       jets_.discr_prob[jets_.nref]=jet.bDiscriminator(jetPBJetTags_);
       jets_.discr_probb[jets_.nref]=jet.bDiscriminator(jetBPBJetTags_);
       jets_.discr_tcHighEff[jets_.nref]=jet.bDiscriminator(trackCHEBJetTags_);

@@ -68,6 +68,7 @@ ALGO_SUB_GROOM_RADIUS_OBJECT_PatJetPartonAssociationLegacy.partons = "MATCHPS"
 ALGO_SUB_GROOM_RADIUS_OBJECT_ImpactParameterTagInfos = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.ImpactParameterTagInfos
 ALGO_SUB_GROOM_RADIUS_OBJECT_ImpactParameterTagInfos.primaryVertex = cms.InputTag("VERTEX")
 ALGO_SUB_GROOM_RADIUS_OBJECT_JetProbabilityBJetTags = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.JetProbabilityBJetTags
+ALGO_SUB_GROOM_RADIUS_OBJECT_pfImpactParameterTagInfos = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.pfImpactParameterTagInfos
 
 ALGO_SUB_GROOM_RADIUS_OBJECT_SecondaryVertexTagInfos = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.SecondaryVertexTagInfos
 ALGO_SUB_GROOM_RADIUS_OBJECT_SimpleSecondaryVertexHighEffBJetTags = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.SimpleSecondaryVertexHighEffBJetTags
@@ -82,6 +83,10 @@ ALGO_SUB_GROOM_RADIUS_OBJECT_NegativeCombinedSecondaryVertexBJetTags = ALGO_SUB_
 ALGO_SUB_GROOM_RADIUS_OBJECT_PositiveCombinedSecondaryVertexBJetTags = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.PositiveCombinedSecondaryVertexBJetTags
 ALGO_SUB_GROOM_RADIUS_OBJECT_NegativeCombinedSecondaryVertexV2BJetTags = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.NegativeCombinedSecondaryVertexV2BJetTags
 ALGO_SUB_GROOM_RADIUS_OBJECT_PositiveCombinedSecondaryVertexV2BJetTags = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.PositiveCombinedSecondaryVertexV2BJetTags
+
+ALGO_SUB_GROOM_RADIUS_OBJECT_pfSecondaryVertexTagInfos = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.pfSecondaryVertexTagInfos
+ALGO_SUB_GROOM_RADIUS_OBJECT_pfDeepCSVTagInfos = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.pfDeepCSVTagInfos
+ALGO_SUB_GROOM_RADIUS_OBJECT_pfDeepCSVJetTags = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.pfDeepCSVJetTags
 
 ALGO_SUB_GROOM_RADIUS_OBJECT_SoftPFMuonsTagInfos = ALGO_SUB_GROOM_RADIUS_OBJECT_bTagger.SoftPFMuonsTagInfos
 ALGO_SUB_GROOM_RADIUS_OBJECT_SoftPFMuonsTagInfos.primaryVertex = cms.InputTag("VERTEX")
@@ -123,6 +128,12 @@ ALGO_SUB_GROOM_RADIUS_OBJECT_JetBtaggingNegSV = cms.Sequence(
     ALGO_SUB_GROOM_RADIUS_OBJECT_PositiveCombinedSecondaryVertexV2BJetTags
     )
 
+ALGO_SUB_GROOM_RADIUS_OBJECT_JetCandBtagging = cms.Sequence(ALGO_SUB_GROOM_RADIUS_OBJECT_pfImpactParameterTagInfos *
+    ALGO_SUB_GROOM_RADIUS_OBJECT_pfSecondaryVertexTagInfos *
+    ALGO_SUB_GROOM_RADIUS_OBJECT_pfDeepCSVTagInfos *
+    ALGO_SUB_GROOM_RADIUS_OBJECT_pfDeepCSVJetTags
+    )
+
 ALGO_SUB_GROOM_RADIUS_OBJECT_JetBtaggingMu = cms.Sequence(
     ALGO_SUB_GROOM_RADIUS_OBJECT_SoftPFMuonsTagInfos *
     ALGO_SUB_GROOM_RADIUS_OBJECT_SoftPFMuonBJetTags +
@@ -136,6 +147,7 @@ ALGO_SUB_GROOM_RADIUS_OBJECT_JetBtagging = cms.Sequence(
     ALGO_SUB_GROOM_RADIUS_OBJECT_JetBtaggingIP
     * ALGO_SUB_GROOM_RADIUS_OBJECT_JetBtaggingSV
     # * ALGO_SUB_GROOM_RADIUS_OBJECT_JetBtaggingNegSV
+    * ALGO_SUB_GROOM_RADIUS_OBJECT_JetCandBtagging
     # * ALGO_SUB_GROOM_RADIUS_OBJECT_JetBtaggingMu
     )
 
@@ -159,6 +171,10 @@ ALGO_SUB_GROOM_RADIUS_OBJECT_patJetsWithBtagging = patJets.clone(
         # cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_SoftPFMuonByIP3dBJetTags"),
         cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_TrackCountingHighEffBJetTags"),
         cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_TrackCountingHighPurBJetTags"),
+        cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_pfDeepCSVJetTags:probb"),
+        cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_pfDeepCSVJetTags:probc"),
+        cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_pfDeepCSVJetTags:probudsg"),
+        cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_pfDeepCSVJetTags:probbb"),
         ),
     tagInfoSources = cms.VInputTag(cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_ImpactParameterTagInfos"),cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_SecondaryVertexTagInfos")),
     jetIDMap = cms.InputTag("ALGO_SUB_GROOM_RADIUS_OBJECT_JetID"),
@@ -202,6 +218,7 @@ ALGO_SUB_GROOM_RADIUS_OBJECT_JetAnalyzer = inclusiveJetAnalyzer.clone(
     genParticles = cms.untracked.InputTag("genParticles"),
     eventInfoTag = cms.InputTag("EVENTINFOTAG"),
     doLifeTimeTagging = cms.untracked.bool(True),
+    doLifeTimeCandidateTagging = cms.untracked.bool(True),
     doLifeTimeTaggingExtras = cms.untracked.bool(False),
     bTagJetName = cms.untracked.string("ALGO_SUB_GROOM_RADIUS_OBJECT_"),
     jetName = cms.untracked.string("ALGO_SUB_GROOM_RADIUS_OBJECT_"),

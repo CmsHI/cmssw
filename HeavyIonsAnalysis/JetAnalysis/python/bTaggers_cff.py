@@ -14,6 +14,10 @@ from RecoBTag.SecondaryVertex.negativeCombinedSecondaryVertexV2Computer_cfi impo
 from RecoBTag.SecondaryVertex.negativeCombinedSecondaryVertexV2BJetTags_cfi import *
 from RecoBTag.SecondaryVertex.positiveCombinedSecondaryVertexV2Computer_cfi import *
 from RecoBTag.SecondaryVertex.positiveCombinedSecondaryVertexV2BJetTags_cfi import *
+from RecoBTag.ImpactParameter.pfImpactParameterTagInfos_cfi import pfImpactParameterTagInfos
+from RecoBTag.SecondaryVertex.pfSecondaryVertexTagInfos_cfi import pfSecondaryVertexTagInfos
+from RecoBTag.Combined.pfDeepCSVTagInfos_cfi import pfDeepCSVTagInfos
+from RecoBTag.Combined.pfDeepCSVJetTags_cfi import pfDeepCSVJetTags
 
 from RecoJets.JetAssociationProducers.ak5JTA_cff import *
 from RecoBTag.Configuration.RecoBTag_cff import *
@@ -34,6 +38,7 @@ class bTaggers:
         self.JetProbabilityBJetTags.tagInfos       = cms.VInputTag(cms.InputTag(jetname+"ImpactParameterTagInfos"))
         self.JetBProbabilityBJetTags               = jetBProbabilityBJetTags.clone()
         self.JetBProbabilityBJetTags.tagInfos      = cms.VInputTag(cms.InputTag(jetname+"ImpactParameterTagInfos"))
+        self.pfImpactParameterTagInfos = pfImpactParameterTagInfos.clone(jets = jetname+"Jets")
 
         self.SecondaryVertexTagInfos                     = secondaryVertexTagInfos.clone()
         self.SecondaryVertexTagInfos.trackIPTagInfos     = cms.InputTag(jetname+"ImpactParameterTagInfos")
@@ -83,6 +88,10 @@ class bTaggers:
         self.PositiveCombinedSecondaryVertexV2BJetTags.tagInfos    = cms.VInputTag(cms.InputTag(jetname+"ImpactParameterTagInfos"),
                                                                                  cms.InputTag(jetname+"SecondaryVertexTagInfos"))
 
+        self.pfSecondaryVertexTagInfos = pfSecondaryVertexTagInfos.clone(trackIPTagInfos = jetname+"pfImpactParameterTagInfos")
+        self.pfDeepCSVTagInfos = pfDeepCSVTagInfos.clone(svTagInfos = jetname+"pfSecondaryVertexTagInfos") 
+        self.pfDeepCSVJetTags = pfDeepCSVJetTags.clone(src = jetname+"pfDeepCSVTagInfos") 
+
         self.SoftPFMuonsTagInfos                = softPFMuonsTagInfos.clone()
         self.SoftPFMuonsTagInfos.jets           = cms.InputTag(jetname+"Jets")
         #self.SoftPFMuonsTagInfos.primaryVertex  = cms.InputTag("offlinePrimaryVertices")
@@ -127,6 +136,11 @@ class bTaggers:
                     )
                 )
 
+        self.JetCandBtagging = cms.Sequence(self.pfImpactParameterTagInfos *
+                                            self.pfSecondaryVertexTagInfos *
+                                            self.pfDeepCSVTagInfos *
+                                            self.pfDeepCSVJetTags
+                                        )
 
         self.JetBtaggingMu = cms.Sequence(self.SoftPFMuonsTagInfos 
                                           * (self.SoftPFMuonBJetTags +
@@ -140,6 +154,7 @@ class bTaggers:
         self.JetBtagging = cms.Sequence(self.JetBtaggingIP
                 *self.JetBtaggingSV
                 *self.JetBtaggingNegSV
+                *self.JetCandBtagging                        
                 *self.JetBtaggingMu
                 )
 

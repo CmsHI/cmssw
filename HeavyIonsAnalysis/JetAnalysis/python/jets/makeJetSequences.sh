@@ -119,7 +119,7 @@ do
                                 jetseqfile=${fulltag}JetSequence_${reco}on${system}_${sample}_cff.py
 
 				if [ $sub == "Cs" ] || [ $sub == "FlowPuCs" ] || [ $sub == "Pu" ]; then
-                                    cat templateSequence_bTag_LegacyFlavor_cff.py.txt | sed \
+				    cat templateSequence_bTag_LegacyFlavor_cff.py.txt | sed \
 					-e "s/ALGO_/$algo/g" \
 					-e "s/SUB_/$subt/g" \
 					-e "s/GROOM_/$groomt/g" \
@@ -148,7 +148,6 @@ do
 					-e "s/RESOLVEBYDIST_/$resolveByDist/g" \
 					-e "s/SYSTEM_/$systemt/g" \
 					> $jetseqfile
-				    
                                 else
                                     cat templateSequence_bTag_cff.py.txt | sed \
 					-e "s/ALGO_/$algo/g" \
