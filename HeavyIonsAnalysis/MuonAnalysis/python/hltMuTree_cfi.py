@@ -5,6 +5,6 @@ hltMuTree = cms.EDAnalyzer("HLTMuTree",
                            vertices = cms.InputTag("offlineSlimmedPrimaryVertices"),
                            doReco = cms.untracked.bool(True),
                            doGen = cms.untracked.bool(True),
-                           genparticle = cms.InputTag("genParticles"),
+                           genparticle = cms.InputTag("packedGenParticles"),
                            simtrack = cms.InputTag("mergedtruth","MergedTrackTruth"),
 )

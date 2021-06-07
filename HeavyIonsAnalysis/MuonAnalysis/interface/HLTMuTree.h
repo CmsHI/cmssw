@@ -29,6 +29,7 @@
 #include "DataFormats/Candidate/interface/CandidateFwd.h"
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
 #include "DataFormats/HepMCCandidate/interface/GenParticleFwd.h"
+#include "DataFormats/PatCandidates/interface/PackedGenParticle.h"
 #include "DataFormats/MuonReco/interface/Muon.h"
 #include "DataFormats/MuonReco/interface/MuonSelectors.h"
 #include "DataFormats/MuonReco/interface/MuonFwd.h"
@@ -82,7 +83,8 @@ private:
   // ----------member data ---------------------------
   //edm::InputTag   tagRecoMu;
   edm::EDGetTokenT<edm::View<reco::Muon> >  tagRecoMu;
-  edm::InputTag   tagGenPtl;
+  edm::EDGetTokenT<edm::View<pat::PackedGenParticle> >  tagGenPtl;
+  //edm::InputTag   tagGenPtl;
   edm::InputTag   tagSimTrk;
   //edm::InputTag   tagVtx;
   edm::EDGetTokenT<reco::VertexCollection> tagVtx;
