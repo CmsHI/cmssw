@@ -1,6 +1,6 @@
 ### HiForest Configuration
 # Input: miniAOD
-# Type: data
+# Type: mc
 
 import FWCore.ParameterSet.Config as cms
 from Configuration.Eras.Era_Run2_2018_pp_on_AA_cff import Run2_2018_pp_on_AA
@@ -11,7 +11,7 @@ process = cms.Process('HiForest', Run2_2018_pp_on_AA,run2_miniAOD_pp_on_AA_103X)
 
 # HiForest info
 process.load("HeavyIonsAnalysis.EventAnalysis.HiForestInfo_cfi")
-process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 112X, data")
+process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 112X, mc")
 
 # import subprocess, os
 # version = subprocess.check_output(
@@ -26,11 +26,9 @@ process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 112X, data")
 process.source = cms.Source("PoolSource",
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
     fileNames = cms.untracked.vstring(
-        "file:/afs/cern.ch/work/m/mnguyen/public/devel/forest/CMSSW_11_2_0_pre9/src/HeavyIonsAnalysis/Configuration/test/step2_PAT.root"
+        'file:/afs/cern.ch/work/m/mnguyen/public/integration/CMSSW_11_2_4_patch4/src/step3_inMINIAODSIM.root'
     ), 
 )
-#input file produced from:
-#"file:/afs/cern.ch/work/r/rbi/public/forest/HIHardProbes_HIRun2018A-PromptReco-v2_AOD.root"
 
 # number of events to process, set to -1 to process all events
 process.maxEvents = cms.untracked.PSet(
@@ -48,33 +46,16 @@ process.load('FWCore.MessageService.MessageLogger_cfi')
 
 
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:run2_data_promptlike_hi', '')
+process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase1_2018_realistic_hi', '')
 process.HiForestInfo.GlobalTagLabel = process.GlobalTag.globaltag
-
-centralityTag = "CentralityTable_HFtowers200_DataPbPb_periHYDJETshape_run2v1031x02_offline"
-process.HiForestInfo.info.append(centralityTag)
-
-print('\n')
-print('\033[31m~*~ CENTRALITY TABLE FOR 2018 PBPB DATA ~*~\033[0m')
-print('\033[36m~*~ TAG: ' + centralityTag + ' ~*~\033[0m')
-print('\n')
 process.GlobalTag.snapshotTime = cms.string("9999-12-31 23:59:59.000")
 process.GlobalTag.toGet.extend([
-    cms.PSet(
-        record = cms.string("HeavyIonRcd"),
-        tag = cms.string(centralityTag),
-        label = cms.untracked.string("HFtowers"),
-        connect = cms.string("frontier://FrontierProd/CMS_CONDITIONS"),
-        ),
-    ])
+    cms.PSet(record = cms.string("BTagTrackProbability3DRcd"),
+             tag = cms.string("JPcalib_MC103X_2018PbPb_v4"), 
+             connect = cms.string("frontier://FrontierProd/CMS_CONDITIONS")             
+         )
+])
 
-process.GlobalTag.toGet.extend([
-    cms.PSet(
-        record = cms.string("BTagTrackProbability3DRcd"),
-        tag = cms.string("JPcalib_Data103X_2018PbPb_v1"),
-        connect = cms.string("frontier://FrontierProd/CMS_CONDITIONS"),
-        )
-    ])
 
 ###############################################################################
 
@@ -97,7 +78,7 @@ process.TFileService = cms.Service("TFileService",
 
 # event analysis
 # process.load('HeavyIonsAnalysis.EventAnalysis.hltanalysis_cfi')
-process.load('HeavyIonsAnalysis.EventAnalysis.hievtanalyzer_data_cfi')
+process.load('HeavyIonsAnalysis.EventAnalysis.hievtanalyzer_mc_cfi')
 #process.load('HeavyIonsAnalysis.EventAnalysis.hltanalysis_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.skimanalysis_cfi')
 #process.load('HeavyIonsAnalysis.EventAnalysis.hltobject_cfi')
@@ -113,10 +94,14 @@ process.load('HeavyIonsAnalysis.EGMAnalysis.ggHiNtuplizer_cfi')
 process.load("TrackingTools.TransientTrack.TransientTrackBuilder_cfi")
 ################################
 # jet reco sequence
-process.load('HeavyIonsAnalysis.JetAnalysis.akCs4PFJetSequence_pponPbPb_data_cff')
+process.load('HeavyIonsAnalysis.JetAnalysis.akCs4PFJetSequence_pponPbPb_mc_cff')
 ################################
 # tracks
 process.load("HeavyIonsAnalysis.TrackAnalysis.TrackAnalyzers_cff")
+#muons
+process.load("HeavyIonsAnalysis.MuonAnalysis.unpackedMuons_cfi")
+process.load("HeavyIonsAnalysis.MuonAnalysis.hltMuTree_cfi")
+
 ###############################################################################
 
 
@@ -130,7 +115,9 @@ process.forest = cms.Path(
     # process.particleFlowAnalyser +
     process.hiEvtAnalyzer +
     process.ggHiNtuplizer +
-    process.akCs4PFJetAnalyzer
+    process.akCs4PFJetAnalyzer +
+    process.unpackedMuons +
+    process.hltMuTree
     )
 
 #customisation
@@ -140,13 +127,13 @@ addR3Jets = False
 if addR3Jets :
     process.load("HeavyIonsAnalysis.JetAnalysis.extraJets_cff")
     from HeavyIonsAnalysis.JetAnalysis.clusterJetsFromMiniAOD_cff import setupHeavyIonJets
-    setupHeavyIonJets('akCs3PF', process.extraJetsData, process, 0)
+    setupHeavyIonJets('akCs3PF', process.extraJetsMC, process, 1)
     
     process.akCs3PFJetAnalyzer = process.akCs4PFJetAnalyzer.clone(
         jetTag = "akCs3PFpatJets",
     )
     
-    process.forest += process.extraJetsData * process.akCs3PFJetAnalyzer
+    process.forest += process.extraJetsMC * process.akCs3PFJetAnalyzer
 
 
 

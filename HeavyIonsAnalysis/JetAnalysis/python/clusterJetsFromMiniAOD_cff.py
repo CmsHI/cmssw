@@ -19,7 +19,7 @@ def setupHeavyIonJets(tag, sequence, process, isMC):
     radius = get_radius(tag)
 
     addToSequence( tag+'Jets',
-                   akCs4PFJets.clone(rParam = radius/10, src = 'packedPFCandidates'),
+                   akCs4PFJets.clone(rParam = radius/10, src = 'packedPFCandidates', useModulatedRho = False),
                    process, sequence)
 
     addToSequence( tag+'patJetCorrFactors',
