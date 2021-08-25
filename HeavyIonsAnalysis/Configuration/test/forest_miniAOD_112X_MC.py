@@ -91,6 +91,7 @@ process.load('HeavyIonsAnalysis.EventAnalysis.skimanalysis_cfi')
 ################################
 # electrons, photons, muons
 process.load('HeavyIonsAnalysis.EGMAnalysis.ggHiNtuplizer_cfi')
+process.ggHiNtuplizer.doGenParticles = cms.bool(True)
 process.load("TrackingTools.TransientTrack.TransientTrackBuilder_cfi")
 ################################
 # jet reco sequence
