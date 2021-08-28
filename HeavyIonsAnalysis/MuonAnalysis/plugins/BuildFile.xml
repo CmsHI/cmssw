@@ -1,0 +1,5 @@
+<use   name="RecoTracker/TkTrackingRegions"/>
+<use   name="TrackingTools/IPTools"/>
+<flags   EDM_PLUGIN="1"/>
+<library   file="*.cc" name="HeavyIonsAnalysisMuonAnalysisPlugins">
+</library>

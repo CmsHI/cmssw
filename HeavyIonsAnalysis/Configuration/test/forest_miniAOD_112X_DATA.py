@@ -3,7 +3,9 @@
 # Type: data
 
 import FWCore.ParameterSet.Config as cms
-process = cms.Process('HiForest')
+from Configuration.Eras.Era_Run2_2018_pp_on_AA_cff import Run2_2018_pp_on_AA
+from Configuration.ProcessModifiers.run2_miniAOD_pp_on_AA_103X_cff import run2_miniAOD_pp_on_AA_103X
+process = cms.Process('HiForest', Run2_2018_pp_on_AA,run2_miniAOD_pp_on_AA_103X)
 
 ###############################################################################
 
@@ -133,6 +135,21 @@ process.forest = cms.Path(
 
 #customisation
 
+addR3Jets = False
+
+if addR3Jets :
+    process.load("HeavyIonsAnalysis.JetAnalysis.extraJets_cff")
+    from HeavyIonsAnalysis.JetAnalysis.clusterJetsFromMiniAOD_cff import setupHeavyIonJets
+    setupHeavyIonJets('akCs3PF', process.extraJetsData, process, 0)
+    
+    process.akCs3PFJetAnalyzer = process.akCs4PFJetAnalyzer.clone(
+        jetTag = "akCs3PFpatJets",
+    )
+    
+    process.forest += process.extraJetsData * process.akCs3PFJetAnalyzer
+
+
+
 
 addCandidateTagging = True
 
@@ -169,4 +186,6 @@ if addCandidateTagging:
 process.load('HeavyIonsAnalysis.EventAnalysis.collisionEventSelection_cff')
 process.pclusterCompatibilityFilter = cms.Path(process.clusterCompatibilityFilter)
 process.pprimaryVertexFilter = cms.Path(process.primaryVertexFilter)
+process.load('HeavyIonsAnalysis.EventAnalysis.hffilter_cfi')
+process.pphfCoincFilter2Th4 = cms.Path(process.phfCoincFilter2Th4)
 process.pAna = cms.EndPath(process.skimanalysis)

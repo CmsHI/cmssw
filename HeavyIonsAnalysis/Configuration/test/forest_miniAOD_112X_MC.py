@@ -3,7 +3,9 @@
 # Type: mc
 
 import FWCore.ParameterSet.Config as cms
-process = cms.Process('HiForest')
+from Configuration.Eras.Era_Run2_2018_pp_on_AA_cff import Run2_2018_pp_on_AA
+from Configuration.ProcessModifiers.run2_miniAOD_pp_on_AA_103X_cff import run2_miniAOD_pp_on_AA_103X
+process = cms.Process('HiForest', Run2_2018_pp_on_AA,run2_miniAOD_pp_on_AA_103X)
 
 ###############################################################################
 
@@ -24,9 +26,9 @@ process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 112X, mc")
 process.source = cms.Source("PoolSource",
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
     fileNames = cms.untracked.vstring(
-        "/store/relval/CMSSW_11_2_0/RelValPyquen_DiJet_pt80to120_2760GeV_2021/MINIAODSIM/PU_112X_mcRun3_2021_realistic_HI_v13-v1/10000/192f6a7f-b549-49e2-b353-fde88b9b78ce.root"
-        ),
-    )
+        'file:/afs/cern.ch/work/m/mnguyen/public/integration/CMSSW_11_2_4_patch4/src/step3_inMINIAODSIM.root'
+    ), 
+)
 
 # number of events to process, set to -1 to process all events
 process.maxEvents = cms.untracked.PSet(
@@ -49,8 +51,8 @@ process.HiForestInfo.GlobalTagLabel = process.GlobalTag.globaltag
 process.GlobalTag.snapshotTime = cms.string("9999-12-31 23:59:59.000")
 process.GlobalTag.toGet.extend([
     cms.PSet(record = cms.string("BTagTrackProbability3DRcd"),
-             tag = cms.string("JPcalib_MC103X_2018PbPb_v4"),                                                                                                                                      connect = cms.string("frontier://FrontierProd/CMS_CONDITIONS")
-             
+             tag = cms.string("JPcalib_MC103X_2018PbPb_v4"), 
+             connect = cms.string("frontier://FrontierProd/CMS_CONDITIONS")             
          )
 ])
 
@@ -59,37 +61,54 @@ process.GlobalTag.toGet.extend([
 
 # root output
 process.TFileService = cms.Service("TFileService",
-                                   fileName = cms.string("HiForestMiniAOD.root")
-)
+    fileName = cms.string("HiForestMiniAOD.root"))
 
 # # edm output for debugging purposes
 # process.output = cms.OutputModule(
 #     "PoolOutputModule",
 #     fileName = cms.untracked.string('HiForestEDM.root'),
-#     outputCommands = cms.untracked.vstring('keep *',)
+#     outputCommands = cms.untracked.vstring(
+#         'keep *',
+#         )
 #     )
+
 # process.output_path = cms.EndPath(process.output)
 
 ###############################################################################
-
 
 # event analysis
 process.load('HeavyIonsAnalysis.EventAnalysis.hltanalysis_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.particleFlowAnalyser_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.hievtanalyzer_mc_cfi')
+#process.load('HeavyIonsAnalysis.EventAnalysis.hltanalysis_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.skimanalysis_cfi')
+#process.load('HeavyIonsAnalysis.EventAnalysis.hltobject_cfi')
+#process.load('HeavyIonsAnalysis.EventAnalysis.l1object_cfi')
+
+#from HeavyIonsAnalysis.EventAnalysis.hltobject_cfi import trigger_list_mc
+#process.hltobject.triggerNames = trigger_list_mc
+
+# process.load('HeavyIonsAnalysis.EventAnalysis.particleFlowAnalyser_cfi')
 ################################
 # electrons, photons, muons
 process.load('HeavyIonsAnalysis.EGMAnalysis.ggHiNtuplizer_cfi')
+process.ggHiNtuplizer.doGenParticles = cms.bool(True)
 process.load("TrackingTools.TransientTrack.TransientTrackBuilder_cfi")
 ################################
-# jets
+# jet reco sequence
 process.load('HeavyIonsAnalysis.JetAnalysis.akCs4PFJetSequence_pponPbPb_mc_cff')
 ################################
 # tracks
 process.load("HeavyIonsAnalysis.TrackAnalysis.TrackAnalyzers_cff")
+#muons
+process.load("HeavyIonsAnalysis.MuonAnalysis.unpackedMuons_cfi")
+process.load("HeavyIonsAnalysis.MuonAnalysis.hltMuTree_cfi")
+
+###############################################################################
 
 
+
+###############################################################################
 # main forest sequence
 process.forest = cms.Path(
     process.HiForestInfo +
@@ -98,8 +117,26 @@ process.forest = cms.Path(
     process.particleFlowAnalyser +
     process.hiEvtAnalyzer +
     process.ggHiNtuplizer +
-    process.akCs4PFJetAnalyzer
+    process.akCs4PFJetAnalyzer +
+    process.unpackedMuons +
+    process.hltMuTree
     )
+
+#customisation
+
+addR3Jets = False
+
+if addR3Jets :
+    process.load("HeavyIonsAnalysis.JetAnalysis.extraJets_cff")
+    from HeavyIonsAnalysis.JetAnalysis.clusterJetsFromMiniAOD_cff import setupHeavyIonJets
+    setupHeavyIonJets('akCs3PF', process.extraJetsMC, process, 1)
+    
+    process.akCs3PFJetAnalyzer = process.akCs4PFJetAnalyzer.clone(
+        jetTag = "akCs3PFpatJets",
+    )
+    
+    process.forest += process.extraJetsMC * process.akCs3PFJetAnalyzer
+
 
 
 
@@ -131,9 +168,6 @@ if addCandidateTagging:
 
     process.akCs4PFJetAnalyzer.addDeepCSV = True
 
-#customisation
-#process.akCs4PFJetAnalyzer.doLifeTimeTagging = False
-
 #########################
 # Event Selection -> add the needed filters here
 #########################
@@ -142,5 +176,3 @@ process.load('HeavyIonsAnalysis.EventAnalysis.collisionEventSelection_cff')
 process.pclusterCompatibilityFilter = cms.Path(process.clusterCompatibilityFilter)
 process.pprimaryVertexFilter = cms.Path(process.primaryVertexFilter)
 process.pAna = cms.EndPath(process.skimanalysis)
-
-

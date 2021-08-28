@@ -7,9 +7,18 @@ ggHiNtuplizer = cms.EDAnalyzer("ggHiNtuplizer",
     doMuons = cms.bool(True),
 
     isParticleGun = cms.bool(False),
+    useValMapIso = cms.bool(True),
 
-    pileupSrc = cms.InputTag("addPileupInfo"),
-    genParticleSrc = cms.InputTag("genParticles"),
+    doPhoERegression = cms.bool(True),
+    doRecHitsEB = cms.bool(True),
+    doRecHitsEE = cms.bool(True),
+    recHitsEB = cms.untracked.InputTag("reducedEgamma","reducedEBRecHits"),
+    recHitsEE = cms.untracked.InputTag("reducedEgamma","reducedEERecHits"),
+
+    pileupSrc = cms.InputTag("slimmedAddPileupInfo"),
+    genParticleSrc = cms.InputTag("packedGenParticles"), # use prunedGenParticles for reco::GenParticle objects
+    signalGenParticleSrc = cms.InputTag("packedGenParticlesSignal"),
+    doPackedGenParticle = cms.bool(True), # use False if prunedGenParticles is genParticleSrc
     vertexSrc = cms.InputTag("offlineSlimmedPrimaryVertices"),
     rhoSrc = cms.InputTag("fixedGridRhoFastjetAll"),
     electronSrc = cms.InputTag("slimmedElectrons"),
@@ -17,4 +26,8 @@ ggHiNtuplizer = cms.EDAnalyzer("ggHiNtuplizer",
     muonSrc = cms.InputTag("slimmedMuons"),
     beamSpotSrc = cms.InputTag('offlineBeamSpot'),
     conversionsSrc = cms.InputTag('reducedEgamma:reducedConversions'),
+
+    doPfIso = cms.bool(True),
+    particleFlowCollection = cms.InputTag("packedPFCandidates"),
+    isPackedPFCandidate = cms.bool(True), # use False if "particleFlow" is particleFlowCollection
 )

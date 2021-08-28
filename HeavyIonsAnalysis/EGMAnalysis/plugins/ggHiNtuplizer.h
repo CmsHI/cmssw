@@ -7,8 +7,13 @@
 #include "DataFormats/EcalRecHit/interface/EcalRecHit.h"
 #include "DataFormats/EgammaCandidates/interface/Conversion.h"
 #include "DataFormats/EgammaCandidates/interface/GsfElectron.h"
+#include "DataFormats/EgammaCandidates/interface/HIPhotonIsolation.h"
 #include "DataFormats/EgammaCandidates/interface/Photon.h"
+#include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
+#include "DataFormats/PatCandidates/interface/Photon.h"
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
+#include "DataFormats/PatCandidates/interface/PackedGenParticle.h"
+#include "DataFormats/Candidate/interface/Candidate.h"
 #include "DataFormats/MuonReco/interface/Muon.h"
 #include "DataFormats/VertexReco/interface/Vertex.h"
 #include "FWCore/Framework/interface/EDAnalyzer.h"
@@ -18,10 +23,13 @@
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Utilities/interface/EDGetToken.h"
+#include "Geometry/CaloGeometry/interface/CaloGeometry.h"
 //#include "RecoEgamma/EgammaTools/interface/ConversionTools.h"
 #include "CommonTools/Egamma/interface/ConversionTools.h"
 #include "SimDataFormats/PileupSummaryInfo/interface/PileupSummaryInfo.h"
 #include "TrackingTools/TransientTrack/interface/TransientTrackBuilder.h"
+
+#include "HeavyIonsAnalysis/EGMAnalysis/interface/pfIsoCalculator.h"
 
 #include <TTree.h>
 
@@ -33,21 +41,39 @@ public:
 private:
   void analyze(const edm::Event&, const edm::EventSetup&) override;
 
-  void fillPileupInfo(const edm::Event&);
+  void fillGenPileupInfo(const edm::Event&);
   void fillGenParticles(const edm::Event&);
   void fillElectrons(const edm::Event&, const edm::EventSetup&, reco::Vertex&);
   void fillPhotons(const edm::Event&, const edm::EventSetup&, reco::Vertex&);
   void fillMuons(const edm::Event&, const edm::EventSetup&, reco::Vertex&);
 
+  template <typename T, typename T2>
+  void fillGenCandidates(const edm::Handle<std::vector<T>> & handle, const edm::Handle<edm::View<T2>> & signalPartHandle, bool hasSignalPart = false);
+
   // Et and pT sums
-  float getGenCalIso(edm::Handle<std::vector<reco::GenParticle>>&,
-                     reco::GenParticleCollection::const_iterator,
+  template <typename T, typename T2>
+  float getGenCalIso(const edm::Handle<edm::View<T>>& handle,
+                     T2 thisPart,
                      float dR2Max,
                      bool removeMu,
                      bool removeNu);
-  float getGenTrkIso(edm::Handle<std::vector<reco::GenParticle>>&,
-                     reco::GenParticleCollection::const_iterator,
+  bool getGenCalIsoPass(const reco::Candidate * p,
+                     const reco::Candidate * thisPart,
+                     float dR2Max,
+                     bool removeMu,
+                     bool removeNu);
+  template <typename T, typename T2>
+  float getGenTrkIso(const edm::Handle<edm::View<T>>& handle,
+                     T2 thisPart,
                      float dR2Max);
+  bool getGenTrkIsoPass(const reco::Candidate * p,
+                     const reco::Candidate * thisPart,
+                     float dR2Max);
+
+  template <typename T>
+  inline bool isGenParticle(const T&) const { return std::is_base_of<reco::GenParticle, T>::value; }
+  template <typename T>
+  inline bool isPackedGenParticle(const T&) const { return std::is_base_of<pat::PackedGenParticle, T>::value; }
 
   // switches
   bool doGenParticles_;
@@ -56,19 +82,36 @@ private:
   bool doMuons_;
 
   bool isParticleGun_;
+  bool useValMapIso_;
+  bool doPfIso_;
+
+  bool doPhoEReg_;
+  bool doRecHitsEB_;
+  bool doRecHitsEE_;
 
   // handles to collections of objects
   edm::EDGetTokenT<std::vector<PileupSummaryInfo>> pileupToken_;
   edm::EDGetTokenT<std::vector<reco::GenParticle>> genParticlesToken_;
+  edm::EDGetTokenT<std::vector<pat::PackedGenParticle>> packedGenParticlesToken_;
+  edm::EDGetTokenT<edm::View<pat::PackedGenParticle>>  signalPackedGenParticlesToken_;
+  bool doPackedGenParticle_;
   edm::EDGetTokenT<std::vector<reco::Vertex>> vertexToken_;
   edm::EDGetTokenT<double> rhoToken_;
   edm::EDGetTokenT<edm::View<reco::GsfElectron>> electronsToken_;
-  edm::EDGetTokenT<edm::View<reco::Photon>> photonsToken_;
+  edm::EDGetTokenT<edm::View<pat::Photon>> photonsToken_;
   edm::EDGetTokenT<edm::View<reco::Muon>> muonsToken_;
   edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;
   edm::EDGetTokenT<reco::ConversionCollection> conversionsToken_;
+  edm::EDGetTokenT<edm::View<pat::PackedCandidate>> packedPFCandToken_;
+  edm::EDGetTokenT<edm::View<reco::PFCandidate>> recoPFCandToken_;
+  bool isPackedPFCandidate_;
 
   const TransientTrackBuilder* tb;
+
+  edm::EDGetTokenT<EcalRecHitCollection> recHitsEB_;
+  edm::EDGetTokenT<EcalRecHitCollection> recHitsEE_;
+
+  const CaloGeometry *geo;
 
   TTree* tree_;
 
@@ -109,6 +152,7 @@ private:
   std::vector<int> mcGMomPID_;
 
   std::vector<int> mcIndex_;
+  std::vector<int> mcSube_;
 
   std::vector<float> mcCalIsoDR03_;
   std::vector<float> mcCalIsoDR04_;
@@ -185,6 +229,13 @@ private:
   std::vector<float> elePFNeuIso_;
   std::vector<float> elePFPUIso_;
 
+  std::vector<float> elePFChIso03_;
+  std::vector<float> elePFPhoIso03_;
+  std::vector<float> elePFNeuIso03_;
+  std::vector<float> elePFChIso04_;
+  std::vector<float> elePFPhoIso04_;
+  std::vector<float> elePFNeuIso04_;
+
   std::vector<float> eleSeedCryEta_;
   std::vector<float> eleSeedCryPhi_;
   std::vector<float> eleSeedCryIeta_;
@@ -246,6 +297,51 @@ private:
   std::vector<float> phoMaxEnergyXtal_2012_;
   std::vector<float> phoSigmaEtaEta_2012_;
 
+  std::vector<float>  phoHadTowerOverEm1_;
+  std::vector<float>  phoHadTowerOverEm2_;
+  std::vector<float>  phoHoverE1_;
+  std::vector<float>  phoHoverE2_;
+
+  std::vector<float>  phoSigmaIEtaIPhi_;
+  std::vector<float>  phoSigmaIPhiIPhi_;
+  std::vector<float>  phoR1x5_;
+  std::vector<float>  phoR2x5_;
+  std::vector<float>  phoE2nd_;
+  std::vector<float>  phoETop_;
+  std::vector<float>  phoEBottom_;
+  std::vector<float>  phoELeft_;
+  std::vector<float>  phoERight_;
+  std::vector<float>  phoE1x3_;
+  std::vector<float>  phoE2x2_;
+  std::vector<float>  phoE2x5Max_;
+  std::vector<float>  phoE2x5Top_;
+  std::vector<float>  phoE2x5Bottom_;
+  std::vector<float>  phoE2x5Left_;
+  std::vector<float>  phoE2x5Right_;
+  //std::vector<float>  phoSMMajor_;   // TODO: enable when they become available in future releases
+  //std::vector<float>  phoSMMinor_;   // TODO: enable when they become available in future releases
+  //std::vector<float>  phoSMAlpha_;   // TODO: enable when they become available in future releases
+
+  std::vector<float>  phoSigmaIEtaIPhi_2012_;
+  std::vector<float>  phoSigmaIPhiIPhi_2012_;
+  std::vector<float>  phoR1x5_2012_;
+  std::vector<float>  phoR2x5_2012_;
+  std::vector<float>  phoE2nd_2012_;
+  std::vector<float>  phoETop_2012_;
+  std::vector<float>  phoEBottom_2012_;
+  std::vector<float>  phoELeft_2012_;
+  std::vector<float>  phoERight_2012_;
+  std::vector<float>  phoE1x3_2012_;
+  std::vector<float>  phoE2x2_2012_;
+  std::vector<float>  phoE2x5Max_2012_;
+  std::vector<float>  phoE2x5Top_2012_;
+  std::vector<float>  phoE2x5Bottom_2012_;
+  std::vector<float>  phoE2x5Left_2012_;
+  std::vector<float>  phoE2x5Right_2012_;
+  //std::vector<float>  phoSMMajor_2012_;   // TODO: enable when they become available in future releases
+  //std::vector<float>  phoSMMinor_2012_;   // TODO: enable when they become available in future releases
+  //std::vector<float>  phoSMAlpha_2012_;   // TODO: enable when they become available in future releases
+
   std::vector<float> phoBC1E_;
   std::vector<float> phoBC1Ecorr_;
   std::vector<float> phoBC1Eta_;
@@ -256,7 +352,130 @@ private:
   std::vector<int> phoBC1inUnClean_;
   std::vector<uint32_t> phoBC1rawID_;
 
+  std::vector<float> pho_ecalClusterIsoR1_;
+  std::vector<float> pho_ecalClusterIsoR2_;
+  std::vector<float> pho_ecalClusterIsoR3_;
+  std::vector<float> pho_ecalClusterIsoR4_;
+  std::vector<float> pho_ecalClusterIsoR5_;
+  std::vector<float> pho_hcalRechitIsoR1_;
+  std::vector<float> pho_hcalRechitIsoR2_;
+  std::vector<float> pho_hcalRechitIsoR3_;
+  std::vector<float> pho_hcalRechitIsoR4_;
+  std::vector<float> pho_hcalRechitIsoR5_;
+  std::vector<float> pho_trackIsoR1PtCut20_;
+  std::vector<float> pho_trackIsoR2PtCut20_;
+  std::vector<float> pho_trackIsoR3PtCut20_;
+  std::vector<float> pho_trackIsoR4PtCut20_;
+  std::vector<float> pho_trackIsoR5PtCut20_;
+  std::vector<float> pho_swissCrx_;
+  std::vector<float> pho_seedTime_;
+
   std::vector<int> pho_genMatchedIndex_;
+
+  // rechit info
+  int nRH_;
+  std::vector<uint32_t> rhRawId_;
+  std::vector<int> rhieta_;
+  std::vector<int> rhiphi_;
+  std::vector<int> rhix_;
+  std::vector<int> rhiy_;
+  std::vector<float> rhE_;
+  std::vector<float> rhEt_;
+  std::vector<float> rhEta_;
+  std::vector<float> rhPhi_;
+  std::vector<float> rhChi2_;
+  std::vector<float> rhEerror_;
+  std::vector<uint32_t> rhFlags_;
+  std::vector<int> rhPhoIdx_;   // index of the photon this rechit belongs to
+  std::vector<int> rhBCIdx_; // index of this rechit's BC in the SC
+
+  // photon pf isolation stuff
+  std::vector<float> pfcIso1_;
+  std::vector<float> pfcIso2_;
+  std::vector<float> pfcIso3_;
+  std::vector<float> pfcIso4_;
+  std::vector<float> pfcIso5_;
+
+  std::vector<float> pfpIso1_;
+  std::vector<float> pfpIso2_;
+  std::vector<float> pfpIso3_;
+  std::vector<float> pfpIso4_;
+  std::vector<float> pfpIso5_;
+
+  std::vector<float> pfnIso1_;
+  std::vector<float> pfnIso2_;
+  std::vector<float> pfnIso3_;
+  std::vector<float> pfnIso4_;
+  std::vector<float> pfnIso5_;
+
+  std::vector<float> pfpIso1subSC_;
+  std::vector<float> pfpIso2subSC_;
+  std::vector<float> pfpIso3subSC_;
+  std::vector<float> pfpIso4subSC_;
+  std::vector<float> pfpIso5subSC_;
+
+  // photon pf isolation UE-subtracted
+  std::vector<float> pfcIso1subUE_;
+  std::vector<float> pfcIso2subUE_;
+  std::vector<float> pfcIso3subUE_;
+  std::vector<float> pfcIso4subUE_;
+  std::vector<float> pfcIso5subUE_;
+
+  std::vector<float> pfpIso1subUE_;
+  std::vector<float> pfpIso2subUE_;
+  std::vector<float> pfpIso3subUE_;
+  std::vector<float> pfpIso4subUE_;
+  std::vector<float> pfpIso5subUE_;
+
+  std::vector<float> pfnIso1subUE_;
+  std::vector<float> pfnIso2subUE_;
+  std::vector<float> pfnIso3subUE_;
+  std::vector<float> pfnIso4subUE_;
+  std::vector<float> pfnIso5subUE_;
+
+  std::vector<float> pfpIso1subSCsubUE_;
+  std::vector<float> pfpIso2subSCsubUE_;
+  std::vector<float> pfpIso3subSCsubUE_;
+  std::vector<float> pfpIso4subSCsubUE_;
+  std::vector<float> pfpIso5subSCsubUE_;
+
+  // photon pf isolation with pT cut and UE-subtracted
+  std::vector<float> pfcIso1pTgt1p0subUE_;
+  std::vector<float> pfcIso2pTgt1p0subUE_;
+  std::vector<float> pfcIso3pTgt1p0subUE_;
+  std::vector<float> pfcIso4pTgt1p0subUE_;
+  std::vector<float> pfcIso5pTgt1p0subUE_;
+
+  std::vector<float> pfcIso1pTgt2p0subUE_;
+  std::vector<float> pfcIso2pTgt2p0subUE_;
+  std::vector<float> pfcIso3pTgt2p0subUE_;
+  std::vector<float> pfcIso4pTgt2p0subUE_;
+  std::vector<float> pfcIso5pTgt2p0subUE_;
+
+  // remove if deemed useless
+  std::vector<float> pfcIso1pTgt3p0subUE_;
+  std::vector<float> pfcIso2pTgt3p0subUE_;
+  std::vector<float> pfcIso3pTgt3p0subUE_;
+  std::vector<float> pfcIso4pTgt3p0subUE_;
+  std::vector<float> pfcIso5pTgt3p0subUE_;
+  // remove if deemed useless - END
+
+  // photon pf isolation UE-subtracted and cone excluded
+  std::vector<float> pfcIso2subUEec_;
+  std::vector<float> pfcIso3subUEec_;
+  std::vector<float> pfcIso4subUEec_;
+
+  std::vector<float> pfpIso2subUEec_;
+  std::vector<float> pfpIso3subUEec_;
+  std::vector<float> pfpIso4subUEec_;
+
+  std::vector<float> pfnIso2subUEec_;
+  std::vector<float> pfnIso3subUEec_;
+  std::vector<float> pfnIso4subUEec_;
+
+  std::vector<float> pfcIso2pTgt2p0subUEec_;
+  std::vector<float> pfcIso3pTgt2p0subUEec_;
+  std::vector<float> pfcIso4pTgt2p0subUEec_;
 
   // muons
   int nMu_;
