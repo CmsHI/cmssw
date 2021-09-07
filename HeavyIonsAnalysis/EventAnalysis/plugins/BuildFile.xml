@@ -10,5 +10,7 @@
 <use name="HLTrigger/HLTcore"/>
 <use name="RecoHI/HiCentralityAlgos"/>
 <use name="DataFormats/HeavyIonEvent"/>
+<use name="SimGeneral/HepPDTRecord"/>
 <use name="rootcore"/>
+<use name="heppdt"/>
 <flags EDM_PLUGIN="1"/>
