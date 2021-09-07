@@ -119,6 +119,7 @@ private:
 
   edm::EDGetTokenT<edm::HepMCProduct> src_;
   edm::EDGetTokenT<std::vector<pat::PackedGenParticle>> genParticleSrc_;
+  edm::EDGetTokenT<edm::View<pat::PackedGenParticle>> signalPackedGenParticleSrc_;
   edm::EDGetTokenT<edm::GenHIEvent> genHIsrc_;
 
   edm::ESHandle < ParticleDataTable > pdt;
@@ -151,6 +152,7 @@ HiGenAnalyzer::HiGenAnalyzer(const edm::ParameterSet& iConfig)
     src_ = consumes<edm::HepMCProduct>(iConfig.getUntrackedParameter<edm::InputTag>("src",edm::InputTag("generator")));
   } else {
     genParticleSrc_ = consumes<std::vector<pat::PackedGenParticle>>(iConfig.getParameter<edm::InputTag>("genParticleSrc"));
+    signalPackedGenParticleSrc_ = consumes<edm::View<pat::PackedGenParticle>>(iConfig.getParameter<edm::InputTag>("signalGenParticleSrc"));
   }
   if(doHI_){
     genHIsrc_ = consumes<edm::GenHIEvent>(iConfig.getUntrackedParameter<edm::InputTag>("genHiSrc",edm::InputTag("heavyIon")));
@@ -321,6 +323,9 @@ HiGenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     edm::Handle<std::vector<pat::PackedGenParticle>> parts;
     iEvent.getByToken(genParticleSrc_,parts);
 
+    edm::Handle<edm::View<pat::PackedGenParticle> > signalPackedGenParticles;
+    bool hasSignalPackedGen = iEvent.getByToken(signalPackedGenParticleSrc_, signalPackedGenParticles);
+
     for(UInt_t i = 0; i < parts->size(); ++i){
       //const reco::GenParticle& p = (*parts)[i];
       const pat::PackedGenParticle& p = (*parts)[i];
@@ -333,8 +338,20 @@ HiGenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
       hev_.phi.push_back( p.phi());
       hev_.pdg.push_back( p.pdgId());
       hev_.chg.push_back( p.charge());
-      //hev_.sube.push_back( p.collisionId());
-      hev_.sube.push_back( -999 ); 
+      // collisionId_ is not kept in pat::PackedGenParticle, use "packedGenParticlesSignal" (added by https://github.com/cms-sw/cmssw/pull/32668/) to tag particles from signal process
+      if (hasSignalPackedGen) {
+        int tmpSube = 1;
+        for (auto pSig = signalPackedGenParticles->begin(); pSig != signalPackedGenParticles->end(); ++pSig) {
+          if ( &(*pSig) == &(*parts)[i] ) {
+            tmpSube = 0;
+            break;
+          }
+        }
+        hev_.sube.push_back( tmpSube );
+      }
+      else {
+        hev_.sube.push_back( -999 );
+      }
       hev_.sta.push_back( p.status());
       hev_.matchingID.push_back( i);
       hev_.nMothers.push_back( p.numberOfMothers());

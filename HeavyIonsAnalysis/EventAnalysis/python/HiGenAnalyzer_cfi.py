@@ -9,6 +9,7 @@ HiGenParticleAna = cms.EDAnalyzer(
     stableOnly = cms.untracked.bool(True),
     src = cms.untracked.InputTag("generator"),
     genParticleSrc = cms.InputTag("packedGenParticles"),
+    signalGenParticleSrc = cms.InputTag("packedGenParticlesSignal"),
     genHIsrc = cms.untracked.InputTag("heavyIon"),
     doParticles = cms.untracked.bool(True),
     doHI = cms.untracked.bool(False)  ## Relevant info (its AOD counterpart is edm::GenHIEvent "heavyIon") is missing currently.
