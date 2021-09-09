@@ -143,7 +143,7 @@ if addR3Jets :
     process.load("HeavyIonsAnalysis.JetAnalysis.extraJets_cff")
     from HeavyIonsAnalysis.JetAnalysis.clusterJetsFromMiniAOD_cff import setupHeavyIonJets
     setupHeavyIonJets('akCs3PF', process.extraJetsData, process, 0)
-
+    process.akCs3PFpatJetCorrFactors.levels = ['L2Relative','L2L3Residual']
     process.akCs3PFJetAnalyzer = process.akCs4PFJetAnalyzer.clone(
         jetTag = "akCs3PFpatJets",
     )
