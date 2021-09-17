@@ -99,11 +99,11 @@ process.TFileService = cms.Service("TFileService",
 process.load('HeavyIonsAnalysis.EventAnalysis.hltanalysis_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.hievtanalyzer_data_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.skimanalysis_cfi')
-#process.load('HeavyIonsAnalysis.EventAnalysis.hltobject_cfi')
+process.load('HeavyIonsAnalysis.EventAnalysis.hltobject_cfi')
 #process.load('HeavyIonsAnalysis.EventAnalysis.l1object_cfi')
 
-#from HeavyIonsAnalysis.EventAnalysis.hltobject_cfi import trigger_list_data
-#process.hltobject.triggerNames = trigger_list_data
+from HeavyIonsAnalysis.EventAnalysis.hltobject_cfi import trigger_list_data
+process.hltobject.triggerNames = trigger_list_data
 
 process.load('HeavyIonsAnalysis.EventAnalysis.particleFlowAnalyser_cfi')
 ################################
@@ -126,7 +126,7 @@ process.load("HeavyIonsAnalysis.TrackAnalysis.TrackAnalyzers_cff")
 process.forest = cms.Path(
     process.HiForestInfo +
     process.hltanalysis +
-    #process.hltobject +
+    process.hltobject +
     process.trackSequencePbPb +
     process.particleFlowAnalyser +
     process.hiEvtAnalyzer +
