@@ -108,8 +108,13 @@ process.hltobject.triggerNames = trigger_list_data
 process.load('HeavyIonsAnalysis.EventAnalysis.particleFlowAnalyser_cfi')
 ################################
 # electrons, photons, muons
+SSHIRun2018A = "HeavyIonsAnalysis/EGMAnalysis/data/SSHIRun2018A.dat"
+process.load('HeavyIonsAnalysis.EGMAnalysis.correctedElectronProducer_cfi')
+process.correctedElectrons.correctionFile = SSHIRun2018A
+
 process.load('HeavyIonsAnalysis.MuonAnalysis.unpackedMuons_cfi')
 process.load('HeavyIonsAnalysis.EGMAnalysis.ggHiNtuplizer_cfi')
+process.ggHiNtuplizer.electronSrc = "correctedElectrons"
 process.load("TrackingTools.TransientTrack.TransientTrackBuilder_cfi")
 ################################
 # jet reco sequence
@@ -132,6 +137,7 @@ process.forest = cms.Path(
     process.particleFlowAnalyser +
     process.hiEvtAnalyzer +
     process.unpackedMuons +
+    process.correctedElectrons +
     process.ggHiNtuplizer +
     process.akCs4PFJetAnalyzer
     )
