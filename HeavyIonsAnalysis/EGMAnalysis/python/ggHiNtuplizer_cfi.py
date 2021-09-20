@@ -6,6 +6,9 @@ ggHiNtuplizer = cms.EDAnalyzer("ggHiNtuplizer",
     doPhotons = cms.bool(True),
     doMuons = cms.bool(True),
 
+    doEffectiveAreas = cms.bool(True),
+    effAreasConfigFile = cms.FileInPath('HeavyIonsAnalysis/EGMAnalysis/data/EffectiveAreas_94X_v0'),
+
     isParticleGun = cms.bool(False),
     useValMapIso = cms.bool(True),
 

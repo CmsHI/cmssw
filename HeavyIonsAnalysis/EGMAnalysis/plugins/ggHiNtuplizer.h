@@ -26,6 +26,7 @@
 #include "Geometry/CaloGeometry/interface/CaloGeometry.h"
 //#include "RecoEgamma/EgammaTools/interface/ConversionTools.h"
 #include "CommonTools/Egamma/interface/ConversionTools.h"
+#include "CommonTools/Egamma/interface/EffectiveAreas.h"
 #include "SimDataFormats/PileupSummaryInfo/interface/PileupSummaryInfo.h"
 #include "TrackingTools/TransientTrack/interface/TransientTrackBuilder.h"
 
@@ -80,6 +81,9 @@ private:
   bool doElectrons_;
   bool doPhotons_;
   bool doMuons_;
+
+  bool doEffectiveAreas_;
+  EffectiveAreas effectiveAreas_;
 
   bool isParticleGun_;
   bool useValMapIso_;
@@ -230,6 +234,10 @@ private:
   std::vector<float> elePFPhoIso_;
   std::vector<float> elePFNeuIso_;
   std::vector<float> elePFPUIso_;
+
+  std::vector<float> elePFRelIsoWithEA_;
+  std::vector<float> elePFRelIsoWithDBeta_;
+  std::vector<float> eleEffAreaTimesRho_;
 
   std::vector<float> elePFChIso03_;
   std::vector<float> elePFPhoIso03_;
