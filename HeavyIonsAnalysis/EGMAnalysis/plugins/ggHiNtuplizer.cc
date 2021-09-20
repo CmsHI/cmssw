@@ -46,6 +46,12 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) :
           edm::InputTag("ecalRecHit","EcalRecHitsEE")));
   }
 
+  doSuperClusters_ = ps.getParameter<bool>("doSuperClusters");
+  if (doSuperClusters_) {
+    scToken_ = consumes<std::vector<reco::SuperCluster>>(
+      ps.getParameter<edm::InputTag>("superClusters"));
+  }
+
   doPfIso_ = ps.getParameter<bool>("doPfIso");
   if (doPfIso_) {
 
@@ -136,6 +142,14 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) :
     tree_->Branch("mcCalIsoDR04", &mcCalIsoDR04_);
     tree_->Branch("mcTrkIsoDR03", &mcTrkIsoDR03_);
     tree_->Branch("mcTrkIsoDR04", &mcTrkIsoDR04_);
+  }
+
+  if (doSuperClusters_) {
+    tree_->Branch("nSC", &nSC_);
+    tree_->Branch("scE", &scE_);
+    tree_->Branch("scRawE", &scRawE_);
+    tree_->Branch("scEta", &scEta_);
+    tree_->Branch("scPhi", &scPhi_);
   }
 
   if (doElectrons_) {
@@ -570,6 +584,14 @@ void ggHiNtuplizer::analyze(const edm::Event& e, const edm::EventSetup& es) {
     mcTrkIsoDR04_.clear();
   }
 
+  if (doSuperClusters_) {
+    nSC_ = 0;
+    scE_.clear();
+    scRawE_.clear();
+    scEta_.clear();
+    scPhi_.clear();
+  }
+
   if (doElectrons_) {
     nEle_ = 0;
 
@@ -982,6 +1004,9 @@ void ggHiNtuplizer::analyze(const edm::Event& e, const edm::EventSetup& es) {
     geo = pGeo.product();
   }
 
+
+  if (doSuperClusters_)
+    fillSC(e);
   if (doElectrons_)
     fillElectrons(e, es, pv);
   if (doPhotons_)
@@ -1265,6 +1290,20 @@ bool ggHiNtuplizer::getGenTrkIsoPass(const reco::Candidate * p,
       return false;
 
     return true;
+}
+
+void ggHiNtuplizer::fillSC(edm::Event const& e) {
+  edm::Handle<std::vector<reco::SuperCluster>> scHandle;
+  e.getByToken(scToken_, scHandle);
+
+  for (auto const& sc : *scHandle) {
+    scE_.push_back(sc.energy());
+    scRawE_.push_back(sc.rawEnergy());
+    scEta_.push_back(sc.eta());
+    scPhi_.push_back(sc.phi());
+
+    ++nSC_;
+  }
 }
 
 void ggHiNtuplizer::fillElectrons(const edm::Event& e, const edm::EventSetup& es, reco::Vertex& pv) {

@@ -5,6 +5,7 @@
 #include "DataFormats/Common/interface/Handle.h"
 #include "DataFormats/Common/interface/View.h"
 #include "DataFormats/EcalRecHit/interface/EcalRecHit.h"
+#include "DataFormats/EgammaReco/interface/SuperCluster.h"
 #include "DataFormats/EgammaCandidates/interface/Conversion.h"
 #include "DataFormats/EgammaCandidates/interface/GsfElectron.h"
 #include "DataFormats/EgammaCandidates/interface/HIPhotonIsolation.h"
@@ -44,6 +45,7 @@ private:
 
   void fillGenPileupInfo(const edm::Event&);
   void fillGenParticles(const edm::Event&);
+  void fillSC (const edm::Event&);
   void fillElectrons(const edm::Event&, const edm::EventSetup&, reco::Vertex&);
   void fillPhotons(const edm::Event&, const edm::EventSetup&, reco::Vertex&);
   void fillMuons(const edm::Event&, const edm::EventSetup&, reco::Vertex&);
@@ -92,6 +94,7 @@ private:
   bool doPhoEReg_;
   bool doRecHitsEB_;
   bool doRecHitsEE_;
+  bool doSuperClusters_;
 
   // handles to collections of objects
   edm::EDGetTokenT<std::vector<PileupSummaryInfo>> pileupToken_;
@@ -114,6 +117,8 @@ private:
 
   edm::EDGetTokenT<EcalRecHitCollection> recHitsEB_;
   edm::EDGetTokenT<EcalRecHitCollection> recHitsEE_;
+
+  edm::EDGetTokenT<std::vector<reco::SuperCluster>> scToken_;
 
   const CaloGeometry *geo;
 
@@ -164,6 +169,13 @@ private:
   std::vector<float> mcCalIsoDR04_;
   std::vector<float> mcTrkIsoDR03_;
   std::vector<float> mcTrkIsoDR04_;
+
+  /* supercluster info */
+  int nSC_;
+  std::vector<float> scE_;
+  std::vector<float> scRawE_;
+  std::vector<float> scEta_;
+  std::vector<float> scPhi_;
 
   // electrons
   int nEle_;
