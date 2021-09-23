@@ -15,7 +15,7 @@ using namespace edm;
 using namespace HepMC;
 
 MuonAnalyzer::MuonAnalyzer(const edm::ParameterSet& ps) {
-  doGen_ = ps.getParameter<bool>("doGenParticles");
+  doGen_ = ps.getParameter<bool>("doGen");
   doReco_ = ps.getUntrackedParameter<bool>("doReco");
 
   vertexToken_ = consumes<std::vector<reco::Vertex>>(ps.getParameter<edm::InputTag>("vertexSrc"));
