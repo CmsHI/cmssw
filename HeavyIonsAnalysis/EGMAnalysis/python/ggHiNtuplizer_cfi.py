@@ -2,11 +2,18 @@ import FWCore.ParameterSet.Config as cms
 
 ggHiNtuplizer = cms.EDAnalyzer("ggHiNtuplizer",
     doGenParticles = cms.bool(False),
+    doSuperClusters = cms.bool(False),
     doElectrons = cms.bool(True),
     doPhotons = cms.bool(True),
     doMuons = cms.bool(True),
 
     isParticleGun = cms.bool(False),
+
+    doEffectiveAreas = cms.bool(True),
+    effAreasConfigFile = cms.FileInPath('HeavyIonsAnalysis/EGMAnalysis/data/EffectiveAreas_94X_v0'),
+
+    superClusters = cms.InputTag("reducedEgamma:reducedSuperClusters"),
+
     useValMapIso = cms.bool(True),
 
     doPhoERegression = cms.bool(True),

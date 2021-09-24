@@ -99,19 +99,24 @@ process.TFileService = cms.Service("TFileService",
 process.load('HeavyIonsAnalysis.EventAnalysis.hltanalysis_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.hievtanalyzer_data_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.skimanalysis_cfi')
-#process.load('HeavyIonsAnalysis.EventAnalysis.hltobject_cfi')
-#process.load('HeavyIonsAnalysis.EventAnalysis.l1object_cfi')
+process.load('HeavyIonsAnalysis.EventAnalysis.hltobject_cfi')
+process.load('HeavyIonsAnalysis.EventAnalysis.l1object_cfi')
 
-#from HeavyIonsAnalysis.EventAnalysis.hltobject_cfi import trigger_list_data
-#process.hltobject.triggerNames = trigger_list_data
+from HeavyIonsAnalysis.EventAnalysis.hltobject_cfi import trigger_list_data
+process.hltobject.triggerNames = trigger_list_data
 
 process.load('HeavyIonsAnalysis.EventAnalysis.particleFlowAnalyser_cfi')
 ################################
 # electrons, photons, muons
+SSHIRun2018A = "HeavyIonsAnalysis/EGMAnalysis/data/SSHIRun2018A.dat"
+process.load('HeavyIonsAnalysis.EGMAnalysis.correctedElectronProducer_cfi')
+process.correctedElectrons.correctionFile = SSHIRun2018A
+
 process.load('HeavyIonsAnalysis.MuonAnalysis.unpackedMuons_cfi')
 process.load("HeavyIonsAnalysis.MuonAnalysis.muonAnalyzer_cfi")
 process.load('HeavyIonsAnalysis.EGMAnalysis.ggHiNtuplizer_cfi')
 process.ggHiNtuplizer.doMuons = cms.bool(False)
+process.ggHiNtuplizer.electronSrc = "correctedElectrons"
 process.load("TrackingTools.TransientTrack.TransientTrackBuilder_cfi")
 ################################
 # jet reco sequence
@@ -128,11 +133,13 @@ process.load("HeavyIonsAnalysis.TrackAnalysis.TrackAnalyzers_cff")
 process.forest = cms.Path(
     process.HiForestInfo +
     process.hltanalysis +
-    #process.hltobject +
+    process.hltobject +
+    process.l1object +
     process.trackSequencePbPb +
     process.particleFlowAnalyser +
     process.hiEvtAnalyzer +
     process.unpackedMuons +
+    process.correctedElectrons +
     process.ggHiNtuplizer +
     process.akCs4PFJetAnalyzer +
     process.muonAnalyzer
@@ -146,7 +153,7 @@ if addR3Jets :
     process.load("HeavyIonsAnalysis.JetAnalysis.extraJets_cff")
     from HeavyIonsAnalysis.JetAnalysis.clusterJetsFromMiniAOD_cff import setupHeavyIonJets
     setupHeavyIonJets('akCs3PF', process.extraJetsData, process, 0)
-
+    process.akCs3PFpatJetCorrFactors.levels = ['L2Relative','L2L3Residual']
     process.akCs3PFJetAnalyzer = process.akCs4PFJetAnalyzer.clone(
         jetTag = "akCs3PFpatJets",
     )

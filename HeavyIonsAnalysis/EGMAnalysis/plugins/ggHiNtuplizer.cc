@@ -19,11 +19,15 @@
 
 using namespace std::placeholders;
 
-ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) {
+ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) :
+  effectiveAreas_( (ps.getParameter<edm::FileInPath>("effAreasConfigFile")).fullPath() )
+{
   doGenParticles_ = ps.getParameter<bool>("doGenParticles");
   doElectrons_ = ps.getParameter<bool>("doElectrons");
   doPhotons_ = ps.getParameter<bool>("doPhotons");
   doMuons_ = ps.getParameter<bool>("doMuons");
+
+  doEffectiveAreas_ = ps.getParameter<bool>("doEffectiveAreas");
 
   isParticleGun_ = ps.getParameter<bool>("isParticleGun");
   useValMapIso_ = ps.getParameter<bool>("useValMapIso");
@@ -40,6 +44,12 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) {
       recHitsEE_ = consumes<EcalRecHitCollection> (
         ps.getUntrackedParameter<edm::InputTag>("recHitsEE",
           edm::InputTag("ecalRecHit","EcalRecHitsEE")));
+  }
+
+  doSuperClusters_ = ps.getParameter<bool>("doSuperClusters");
+  if (doSuperClusters_) {
+    scToken_ = consumes<std::vector<reco::SuperCluster>>(
+      ps.getParameter<edm::InputTag>("superClusters"));
   }
 
   doPfIso_ = ps.getParameter<bool>("doPfIso");
@@ -134,6 +144,14 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) {
     tree_->Branch("mcTrkIsoDR04", &mcTrkIsoDR04_);
   }
 
+  if (doSuperClusters_) {
+    tree_->Branch("nSC", &nSC_);
+    tree_->Branch("scE", &scE_);
+    tree_->Branch("scRawE", &scRawE_);
+    tree_->Branch("scEta", &scEta_);
+    tree_->Branch("scPhi", &scPhi_);
+  }
+
   if (doElectrons_) {
     tree_->Branch("nEle", &nEle_);
 
@@ -203,6 +221,12 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) {
     tree_->Branch("elePFPhoIso", &elePFPhoIso_);
     tree_->Branch("elePFNeuIso", &elePFNeuIso_);
     tree_->Branch("elePFPUIso", &elePFPUIso_);
+
+    if (doEffectiveAreas_) {
+      tree_->Branch("elePFRelIsoWithEA",     &elePFRelIsoWithEA_);
+      tree_->Branch("elePFRelIsoWithDBeta",  &elePFRelIsoWithDBeta_);
+      tree_->Branch("eleEffAreaTimesRho",    &eleEffAreaTimesRho_);
+    }
 
     if (doPfIso_) {
       tree_->Branch("elePFChIso03",          &elePFChIso03_);
@@ -560,6 +584,14 @@ void ggHiNtuplizer::analyze(const edm::Event& e, const edm::EventSetup& es) {
     mcTrkIsoDR04_.clear();
   }
 
+  if (doSuperClusters_) {
+    nSC_ = 0;
+    scE_.clear();
+    scRawE_.clear();
+    scEta_.clear();
+    scPhi_.clear();
+  }
+
   if (doElectrons_) {
     nEle_ = 0;
 
@@ -621,6 +653,10 @@ void ggHiNtuplizer::analyze(const edm::Event& e, const edm::EventSetup& es) {
     elePFPhoIso_.clear();
     elePFNeuIso_.clear();
     elePFPUIso_.clear();
+
+    elePFRelIsoWithEA_.clear();
+    elePFRelIsoWithDBeta_.clear();
+    eleEffAreaTimesRho_.clear();
 
     if (doPfIso_) {
       elePFChIso03_.clear();
@@ -968,6 +1004,9 @@ void ggHiNtuplizer::analyze(const edm::Event& e, const edm::EventSetup& es) {
     geo = pGeo.product();
   }
 
+
+  if (doSuperClusters_)
+    fillSC(e);
   if (doElectrons_)
     fillElectrons(e, es, pv);
   if (doPhotons_)
@@ -1253,6 +1292,20 @@ bool ggHiNtuplizer::getGenTrkIsoPass(const reco::Candidate * p,
     return true;
 }
 
+void ggHiNtuplizer::fillSC(edm::Event const& e) {
+  edm::Handle<std::vector<reco::SuperCluster>> scHandle;
+  e.getByToken(scToken_, scHandle);
+
+  for (auto const& sc : *scHandle) {
+    scE_.push_back(sc.energy());
+    scRawE_.push_back(sc.rawEnergy());
+    scEta_.push_back(sc.eta());
+    scPhi_.push_back(sc.phi());
+
+    ++nSC_;
+  }
+}
+
 void ggHiNtuplizer::fillElectrons(const edm::Event& e, const edm::EventSetup& es, reco::Vertex& pv) {
   // Fills tree branches with electrons.
   edm::Handle<edm::View<reco::GsfElectron>> gsfElectrons;
@@ -1338,6 +1391,15 @@ void ggHiNtuplizer::fillElectrons(const edm::Event& e, const edm::EventSetup& es
     elePFPhoIso_.push_back(pfIso.sumPhotonEt);
     elePFNeuIso_.push_back(pfIso.sumNeutralHadronEt);
     elePFPUIso_.push_back(pfIso.sumPUPt);
+
+    if (doEffectiveAreas_) {
+      double area = effectiveAreas_.getEffectiveArea(ele->superCluster()->eta());
+      elePFRelIsoWithEA_.push_back((pfIso.sumChargedHadronPt + std::max(0.0,
+        pfIso.sumNeutralHadronEt + pfIso.sumPhotonEt - rho_ * area)) / ele->pt());
+      elePFRelIsoWithDBeta_.push_back((pfIso.sumChargedHadronPt + std::max(0.0,
+        pfIso.sumNeutralHadronEt + pfIso.sumPhotonEt - 0.5 * pfIso.sumPUPt)) / ele->pt());
+      eleEffAreaTimesRho_.push_back(area * rho_);
+    }
 
     // initialize with unphysical values
     float eleIP3D = -999;

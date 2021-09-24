@@ -76,24 +76,37 @@ process.TFileService = cms.Service("TFileService",
 
 ###############################################################################
 
+#############################
+# Gen Analyzer
+#############################
+process.load('HeavyIonsAnalysis.EventAnalysis.HiGenAnalyzer_cfi')
+# making cuts looser so that we can actually check dNdEta
+process.HiGenParticleAna.ptMin = cms.untracked.double(0.4) # default is 5
+process.HiGenParticleAna.etaMax = cms.untracked.double(5.) # default is 2.5
+
 # event analysis
 process.load('HeavyIonsAnalysis.EventAnalysis.hltanalysis_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.particleFlowAnalyser_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.hievtanalyzer_mc_cfi')
 #process.load('HeavyIonsAnalysis.EventAnalysis.hltanalysis_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.skimanalysis_cfi')
-#process.load('HeavyIonsAnalysis.EventAnalysis.hltobject_cfi')
-#process.load('HeavyIonsAnalysis.EventAnalysis.l1object_cfi')
+process.load('HeavyIonsAnalysis.EventAnalysis.hltobject_cfi')
+process.load('HeavyIonsAnalysis.EventAnalysis.l1object_cfi')
 
-#from HeavyIonsAnalysis.EventAnalysis.hltobject_cfi import trigger_list_mc
-#process.hltobject.triggerNames = trigger_list_mc
+from HeavyIonsAnalysis.EventAnalysis.hltobject_cfi import trigger_list_mc
+process.hltobject.triggerNames = trigger_list_mc
 
 # process.load('HeavyIonsAnalysis.EventAnalysis.particleFlowAnalyser_cfi')
 ################################
 # electrons, photons, muons
+SS2018PbPbMC = "HeavyIonsAnalysis/EGMAnalysis/data/SS2018PbPbMC.dat"
+process.load('HeavyIonsAnalysis.EGMAnalysis.correctedElectronProducer_cfi')
+process.correctedElectrons.correctionFile = SS2018PbPbMC
+
 process.load('HeavyIonsAnalysis.EGMAnalysis.ggHiNtuplizer_cfi')
 process.ggHiNtuplizer.doGenParticles = cms.bool(True)
 process.ggHiNtuplizer.doMuons = cms.bool(False)
+process.ggHiNtuplizer.electronSrc = "correctedElectrons"
 process.load("TrackingTools.TransientTrack.TransientTrackBuilder_cfi")
 ################################
 # jet reco sequence
@@ -115,10 +128,14 @@ process.muonAnalyzer.doGen = cms.bool(True)
 process.forest = cms.Path(
     process.HiForestInfo +
     process.hltanalysis +
+    process.hltobject +
+    process.l1object +
     process.trackSequencePbPb +
     process.particleFlowAnalyser +
     process.hiEvtAnalyzer +
+    process.HiGenParticleAna +
     process.unpackedMuons +
+    process.correctedElectrons +
     process.ggHiNtuplizer +
     process.akCs4PFJetAnalyzer +
     process.muonAnalyzer
@@ -132,7 +149,7 @@ if addR3Jets :
     process.load("HeavyIonsAnalysis.JetAnalysis.extraJets_cff")
     from HeavyIonsAnalysis.JetAnalysis.clusterJetsFromMiniAOD_cff import setupHeavyIonJets
     setupHeavyIonJets('akCs3PF', process.extraJetsMC, process, 1)
-
+    process.akCs3PFpatJetCorrFactors.levels = ['L2Relative', 'L3Absolute']
     process.akCs3PFJetAnalyzer = process.akCs4PFJetAnalyzer.clone(
         jetTag = "akCs3PFpatJets",
     )
