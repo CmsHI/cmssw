@@ -169,7 +169,7 @@ void TrackAnalyzer::beginJob()
   trackTree_->Branch("trkEta",&trkEta);
   trackTree_->Branch("trkPhi",&trkPhi);
   trackTree_->Branch("trkCharge",&trkCharge);
-  trackTree_->Branch("trkPDFId",&trkPDGId);
+  trackTree_->Branch("trkPDGId",&trkPDGId);
   trackTree_->Branch("trkNHits",&trkNHits);
   trackTree_->Branch("trkNPixHits",&trkNPixHits);
   trackTree_->Branch("trkNLayers",&trkNLayers);
