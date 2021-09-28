@@ -109,6 +109,7 @@ class TrackAnalyzer : public edm::EDAnalyzer {
      std::vector< int > nTracksVtx;
      std::vector< float > ptSumVtx;
 
+     int nTrk;
      std::vector< float > trkPt;
      std::vector< float > trkPtError;
      std::vector< float > trkEta;
@@ -153,6 +154,7 @@ void TrackAnalyzer::clearVectors(){
   nTracksVtx.clear();
   ptSumVtx.clear();
 
+  nTrk = 0;
   trkPt.clear();
   trkPtError.clear();
   trkEta.clear();

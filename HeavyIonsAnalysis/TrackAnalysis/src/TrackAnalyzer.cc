@@ -139,6 +139,15 @@ TrackAnalyzer::fillTracks(const edm::Event& iEvent, const edm::EventSetup& iSetu
         trkDxyFirstVtx.push_back( c.dxy( v ) );
         trkDxyErrFirstVtx.push_back( sqrt( c.dxyError()*c.dxyError() + xErrVtx.at(0) * yErrVtx.at(0) ) );
       }
+      else {
+        trkFirstVtxQuality.push_back( -999999 );
+        trkDzFirstVtx.push_back( -999999 );
+        trkDzErrFirstVtx.push_back( -999999 );
+        trkDxyFirstVtx.push_back( -999999 );
+        trkDxyErrFirstVtx.push_back( -999999 );
+      }
+
+      nTrk++;
     }
   }
 }
@@ -168,6 +177,7 @@ void TrackAnalyzer::beginJob()
   trackTree_->Branch("ptSumVtx",&ptSumVtx);
 
   // Tracks
+  trackTree_->Branch("nTrk",&nTrk);
   trackTree_->Branch("trkPt",&trkPt);
   trackTree_->Branch("trkPtError",&trkPtError);
   trackTree_->Branch("trkEta",&trkEta);
