@@ -122,6 +122,10 @@ class TrackAnalyzer : public edm::EDAnalyzer {
      std::vector< bool > highPurity;
      std::vector< float > trkNormChi2;
 
+     std::vector< float > pfEnergy;
+     std::vector< float > pfEcal;
+     std::vector< float > pfHcal;
+
      std::vector< int > trkAssociatedVtxIndx;
      std::vector< int > trkAssociatedVtxQuality;
      std::vector< float > trkDzAssociatedVtx;
@@ -160,6 +164,10 @@ void TrackAnalyzer::clearVectors(){
   trkNLayers.clear();
   trkNormChi2.clear();
   highPurity.clear();
+
+  pfEnergy.clear();
+  pfEcal.clear();
+  pfHcal.clear();
 
   trkAssociatedVtxIndx.clear();
   trkAssociatedVtxQuality.clear();

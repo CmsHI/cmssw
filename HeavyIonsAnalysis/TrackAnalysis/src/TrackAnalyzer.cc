@@ -118,6 +118,10 @@ TrackAnalyzer::fillTracks(const edm::Event& iEvent, const edm::EventSetup& iSetu
       highPurity.push_back( t.quality(reco::TrackBase::qualityByName("highPurity")));
       trkNormChi2.push_back( (*chi2Map)[cands->ptrAt(it)] );
 
+      pfEnergy.push_back( c.energy() );
+      pfEcal.push_back( c.energy() * (c.caloFraction() - c.hcalFraction()) );
+      pfHcal.push_back( c.energy() * c.hcalFraction() );
+
       //DCA info for associated vtx
       trkAssociatedVtxIndx.push_back( c.vertexRef().key() );
       trkAssociatedVtxQuality.push_back( c.fromPV(c.vertexRef().key() ));
@@ -175,6 +179,11 @@ void TrackAnalyzer::beginJob()
   trackTree_->Branch("trkNLayers",&trkNLayers);
   trackTree_->Branch("trkNormChi2",&trkNormChi2);
   trackTree_->Branch("highPurity",&highPurity);
+
+  trackTree_->Branch("pfEnergy",&pfEnergy);
+  trackTree_->Branch("pfEcal",&pfEcal);
+  trackTree_->Branch("pfHcal",&pfHcal);
+
   trackTree_->Branch("trkAssociatedVtxIndx",&trkAssociatedVtxIndx);
   trackTree_->Branch("trkAssociatedVtxQuality",&trkAssociatedVtxQuality);
   trackTree_->Branch("trkDzAssociatedVtx",&trkDzAssociatedVtx);
