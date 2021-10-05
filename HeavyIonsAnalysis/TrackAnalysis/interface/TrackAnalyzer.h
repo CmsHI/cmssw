@@ -89,6 +89,8 @@ class TrackAnalyzer : public edm::EDAnalyzer {
      edm::EDGetTokenT<edm::ValueMap<float>> chi2MapLost_;
 
      edm::Service<TFileService> fs;
+
+     int iMaxPtSumVtx;
  
      // Root object
      TTree* trackTree_;
@@ -97,6 +99,8 @@ class TrackAnalyzer : public edm::EDAnalyzer {
      int nRun;
      int nEv;
      int nLumi;
+
+     int nVtx;
      std::vector< float > xVtx;
      std::vector< float > yVtx;
      std::vector< float > zVtx;
@@ -142,6 +146,7 @@ class TrackAnalyzer : public edm::EDAnalyzer {
 };
 
 void TrackAnalyzer::clearVectors(){
+  nVtx = 0;
   xVtx.clear();
   yVtx.clear();
   zVtx.clear();

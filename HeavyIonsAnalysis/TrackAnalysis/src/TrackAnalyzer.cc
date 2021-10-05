@@ -53,8 +53,10 @@ void TrackAnalyzer::fillVertices(const edm::Event& iEvent) {
   iEvent.getByToken(vertexSrc_,vertexCollection);
   recoVertices = vertexCollection.product();
 
-  unsigned int nVertex = recoVertices->size();
-  for (unsigned int i = 0; i < nVertex; ++i) {
+  iMaxPtSumVtx = -1;
+  float maxPtSum = -999;
+  nVtx = (int)recoVertices->size();
+  for (int i = 0; i < nVtx; ++i) {
     xVtx.push_back( recoVertices->at(i).position().x() );
     yVtx.push_back( recoVertices->at(i).position().y() );
     zVtx.push_back( recoVertices->at(i).position().z() );
@@ -75,6 +77,10 @@ void TrackAnalyzer::fillVertices(const edm::Event& iEvent) {
       ptSum += (*ref)->pt();
     }
     ptSumVtx.push_back( ptSum );
+    if (ptSum > maxPtSum) {
+      iMaxPtSumVtx = i;
+      maxPtSum = ptSum;
+    }
   }   
 }
 
@@ -131,13 +137,13 @@ TrackAnalyzer::fillTracks(const edm::Event& iEvent, const edm::EventSetup& iSetu
       trkDxyErrAssociatedVtx.push_back( sqrt( c.dxyError()*c.dxyError() + c.vertexRef()->xError() * c.vertexRef()->yError() ) );
    
       //DCA info for first (highest pt) vtx
-      if( !xVtx.empty() ){
-        math::XYZPoint v(xVtx.at(0),yVtx.at(0), zVtx.at(0));   
-        trkFirstVtxQuality.push_back( c.fromPV( 0 ));
+      if( iMaxPtSumVtx >= 0 ){
+        math::XYZPoint v(xVtx.at(iMaxPtSumVtx),yVtx.at(iMaxPtSumVtx), zVtx.at(iMaxPtSumVtx));
+        trkFirstVtxQuality.push_back( c.fromPV( iMaxPtSumVtx ));
         trkDzFirstVtx.push_back( t.dz( v ) );
-        trkDzErrFirstVtx.push_back( sqrt( t.dzError()*t.dzError() + zErrVtx.at(0) * zErrVtx.at(0) ) ); // WARNING !! reco::Track::dzError() and pat::PackedCandidate::dzError() give different values. Former must be used for HIN track ID.
+        trkDzErrFirstVtx.push_back( sqrt( t.dzError()*t.dzError() + zErrVtx.at(iMaxPtSumVtx) * zErrVtx.at(iMaxPtSumVtx) ) ); // WARNING !! reco::Track::dzError() and pat::PackedCandidate::dzError() give different values. Former must be used for HIN track ID.
         trkDxyFirstVtx.push_back( t.dxy( v ) );
-        trkDxyErrFirstVtx.push_back( sqrt( t.dxyError()*t.dxyError() + xErrVtx.at(0) * yErrVtx.at(0) ) );
+        trkDxyErrFirstVtx.push_back( sqrt( t.dxyError()*t.dxyError() + xErrVtx.at(iMaxPtSumVtx) * yErrVtx.at(iMaxPtSumVtx) ) );
       }
       else {
         trkFirstVtxQuality.push_back( -999999 );
@@ -164,6 +170,7 @@ void TrackAnalyzer::beginJob()
   trackTree_->Branch("nLumi",&nLumi,"nLumi/I");
 
   // vertex
+  trackTree_->Branch("nVtx",&nVtx);
   trackTree_->Branch("xVtx",&xVtx);
   trackTree_->Branch("yVtx",&yVtx);
   trackTree_->Branch("zVtx",&zVtx);
