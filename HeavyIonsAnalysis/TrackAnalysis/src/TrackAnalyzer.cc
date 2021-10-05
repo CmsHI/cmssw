@@ -134,10 +134,10 @@ TrackAnalyzer::fillTracks(const edm::Event& iEvent, const edm::EventSetup& iSetu
       if( !xVtx.empty() ){
         math::XYZPoint v(xVtx.at(0),yVtx.at(0), zVtx.at(0));   
         trkFirstVtxQuality.push_back( c.fromPV( 0 ));
-        trkDzFirstVtx.push_back( c.dz( v ) );
-        trkDzErrFirstVtx.push_back( sqrt( c.dzError()*c.dzError() + zErrVtx.at(0) * zErrVtx.at(0) ) );
-        trkDxyFirstVtx.push_back( c.dxy( v ) );
-        trkDxyErrFirstVtx.push_back( sqrt( c.dxyError()*c.dxyError() + xErrVtx.at(0) * yErrVtx.at(0) ) );
+        trkDzFirstVtx.push_back( t.dz( v ) );
+        trkDzErrFirstVtx.push_back( sqrt( t.dzError()*t.dzError() + zErrVtx.at(0) * zErrVtx.at(0) ) ); // WARNING !! reco::Track::dzError() and pat::PackedCandidate::dzError() give different values. Former must be used for HIN track ID.
+        trkDxyFirstVtx.push_back( t.dxy( v ) );
+        trkDxyErrFirstVtx.push_back( sqrt( t.dxyError()*t.dxyError() + xErrVtx.at(0) * yErrVtx.at(0) ) );
       }
       else {
         trkFirstVtxQuality.push_back( -999999 );
