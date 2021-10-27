@@ -33,6 +33,7 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) :
   doRecHitsEE_            = ps.getParameter<bool>("doRecHitsEE");
   doPfIso_                = ps.getParameter<bool>("doPfIso");
   calcIDTrkIso_           = ps.getParameter<bool>("calcIDTrkIso");
+  saveAssoPFcands_        = ps.getParameter<bool>("saveAssociatedPFcands");
   removePhotonPfIsoFootprint_ = ps.getParameter<bool>("removePhotonPfIsoFootprint");
   if (doGenParticles_) {
     genPileupCollection_    = consumes<std::vector<PileupSummaryInfo>>(ps.getParameter<edm::InputTag>("pileupCollection"));
@@ -84,16 +85,15 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) :
   if (doPfIso_) {
     pfCollection_         = consumes<edm::View<reco::PFCandidate> > (
       ps.getParameter<edm::InputTag>("particleFlowCollection"));
-
-    if (removePhotonPfIsoFootprint_) {
-      particleBasedIsolationPhoton_ = mayConsume<edm::ValueMap<std::vector<reco::PFCandidateRef>>> (
-        ps.getParameter<edm::InputTag>("particleBasedIsolationPhoton"));
-    }
   }
   if (calcIDTrkIso_) {
     trackSrc_ = consumes<std::vector<reco::Track>>(ps.getParameter<edm::InputTag>("trackSrc"));
     mvaSrc_ = consumes<std::vector<float>>(ps.getParameter<edm::InputTag>("mvaSrc"));
     collisonSystemTag_ = ps.getParameter<std::string>("collSystemTag");
+  }
+  if (saveAssoPFcands_ || (doPfIso_ && removePhotonPfIsoFootprint_)) {
+      particleBasedIsolationPhoton_ = mayConsume<edm::ValueMap<std::vector<reco::PFCandidateRef>>> (
+        ps.getParameter<edm::InputTag>("particleBasedIsolationPhoton"));
   }
 
   // initialize output TTree
@@ -541,6 +541,15 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) :
       tree_->Branch("pho_trkIso3pTgt2p0subUE",&pho_trkIso3pTgt2p0subUE_);
       tree_->Branch("pho_trkIso3IDpTgt2p0",&pho_trkIso3IDpTgt2p0_);
       tree_->Branch("pho_trkIso3IDpTgt2p0subUE",&pho_trkIso3IDpTgt2p0subUE_);
+    }
+
+    if (saveAssoPFcands_) {
+      tree_->Branch("nPhoPF", &nPhoPF_);
+      tree_->Branch("ppfPhoIdx",&ppfPhoIdx_);
+      tree_->Branch("ppfId",&ppfId_);
+      tree_->Branch("ppfPt",&ppfPt_);
+      tree_->Branch("ppfEta",&ppfEta_);
+      tree_->Branch("ppfPhi",&ppfPhi_);
     }
   }
 
@@ -1011,6 +1020,14 @@ void ggHiNtuplizer::analyze(const edm::Event& e, const edm::EventSetup& es)
       pho_trkIso3IDpTgt2p0subUE_.clear();
     }
 
+    if (saveAssoPFcands_) {
+      nPhoPF_ = 0;
+      ppfPhoIdx_.clear();
+      ppfId_.clear();
+      ppfPt_.clear();
+      ppfEta_.clear();
+      ppfPhi_.clear();
+    }
   }
 
   if (doMuons_) {
@@ -1845,14 +1862,14 @@ void ggHiNtuplizer::fillPhotons(const edm::Event& e, const edm::EventSetup& es, 
         }
     }
 
+    std::vector<reco::PFCandidateRef> particlesInIsoMap = {};
+    if (saveAssoPFcands_ || (doPfIso_ && removePhotonPfIsoFootprint_)) {
+      edm::Ptr<reco::Photon> phoPtr(recoPhotonsHandle, pho - recoPhotonsHandle->begin());
+      particlesInIsoMap = (*particleBasedIsolationPhotonMap)[phoPtr];
+    }
+
     if (doPfIso_) {
       pfIsoCalculator pfIso(e, pfCollection_, pv.position());
-
-      std::vector<reco::PFCandidateRef> particlesInIsoMap = {};
-      if (removePhotonPfIsoFootprint_) {
-         edm::Ptr<reco::Photon> phoPtr(recoPhotonsHandle, pho - recoPhotonsHandle->begin());
-         particlesInIsoMap = (*particleBasedIsolationPhotonMap)[phoPtr];
-      }
 
       // particle flow isolation
       pfcIso1_.push_back( pfIso.getPfIso(*pho, reco::PFCandidate::h, 0.1, 0.0, 0.0, 0, pfIsoCalculator::removePFcand, particlesInIsoMap));
@@ -1947,6 +1964,18 @@ void ggHiNtuplizer::fillPhotons(const edm::Event& e, const edm::EventSetup& es, 
       pho_trkIso3pTgt2p0subUE_.push_back( idTrkIso.getTrkIsoSubUE(tmpEta, tmpPhi, 0.3, 0.0, 2.0, 0.0, false, false) );
       pho_trkIso3IDpTgt2p0_.push_back( idTrkIso.getTrkIso(tmpEta, tmpPhi, 0.3, 0.0, 2.0, 0.0, true) );
       pho_trkIso3IDpTgt2p0subUE_.push_back( idTrkIso.getTrkIsoSubUE(tmpEta, tmpPhi, 0.3, 0.0, 2.0, 0.0, true, false) );
+    }
+
+    if (saveAssoPFcands_) {
+      // reco::PFCandidateRef
+      for (auto& it : particlesInIsoMap) {
+        nPhoPF_++;
+        ppfPhoIdx_.push_back(nPho_);
+        ppfId_.push_back((int)(it->particleId()));
+        ppfPt_.push_back((it->pt()));
+        ppfEta_.push_back((it->eta()));
+        ppfPhi_.push_back((it->phi()));
+      }
     }
 
     //////////////////////////////////// MC matching ////////////////////////////////////

@@ -69,6 +69,8 @@ class ggHiNtuplizer : public edm::EDAnalyzer {
    bool doRecHitsEE_;
    bool doSuperClusters_;
 
+   bool saveAssoPFcands_; // flag to save information about PF candidates associated to a photon
+
    // handles to collections of objects
    edm::EDGetTokenT<std::vector<PileupSummaryInfo> >    genPileupCollection_;
    edm::EDGetTokenT<std::vector<reco::GenParticle> >    genParticlesCollection_;
@@ -520,6 +522,14 @@ class ggHiNtuplizer : public edm::EDAnalyzer {
    std::vector<float> pho_trkIso3pTgt2p0subUE_;
    std::vector<float> pho_trkIso3IDpTgt2p0_;
    std::vector<float> pho_trkIso3IDpTgt2p0subUE_;
+
+   // PF candidates associated with a reco::photon
+   int nPhoPF_;
+   std::vector<int> ppfPhoIdx_;   // index of the reco::photon this PF cand is associated to
+   std::vector<int> ppfId_;
+   std::vector<float> ppfPt_;
+   std::vector<float> ppfEta_;
+   std::vector<float> ppfPhi_;
 
    // reco::Muon
    Int_t          nMu_;
