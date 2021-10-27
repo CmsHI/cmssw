@@ -36,6 +36,10 @@ ggHiNtuplizer = cms.EDAnalyzer("ggHiNtuplizer",
     conversions        = cms.InputTag('allConversions'),
     effAreasConfigFile = cms.FileInPath('HeavyIonsAnalysis/PhotonAnalysis/data/EffectiveAreas_94X_v0'),
     doPfIso            = cms.bool(False),
+    calcIDTrkIso       = cms.bool(False),
+    trackSrc = cms.InputTag("generalTracks"),
+    mvaSrc = cms.InputTag("generalTracks","MVAValues"),
+    collSystemTag = cms.string("pbpb18"),
     particleFlowCollection = cms.InputTag("particleFlow"),
     removePhotonPfIsoFootprint = cms.bool(False),
     particleBasedIsolationPhoton = cms.InputTag("DUMMY"),
@@ -48,5 +52,6 @@ ggHiNtuplizerGED = ggHiNtuplizer.clone(
     recoPhotonHiIsolationMap = 'photonIsolationHIProducerppGED',
     doPfIso                  = True,
     removePhotonPfIsoFootprint = True,
+    calcIDTrkIso             = True,
     particleBasedIsolationPhoton = cms.InputTag("particleBasedIsolation", "gedPhotons")
 )

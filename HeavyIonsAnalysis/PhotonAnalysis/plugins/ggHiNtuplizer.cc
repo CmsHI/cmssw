@@ -15,6 +15,7 @@
 #include "HeavyIonsAnalysis/PhotonAnalysis/interface/GenParticleParentage.h"
 #include "HeavyIonsAnalysis/PhotonAnalysis/interface/ggHiNtuplizer.h"
 #include "HeavyIonsAnalysis/PhotonAnalysis/src/pfIsoCalculator.h"
+#include "HeavyIonsAnalysis/PhotonAnalysis/interface/trkIsoCalculator.h"
 
 ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) :
   effectiveAreas_( (ps.getParameter<edm::FileInPath>("effAreasConfigFile")).fullPath() )
@@ -31,6 +32,7 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) :
   doRecHitsEB_            = ps.getParameter<bool>("doRecHitsEB");
   doRecHitsEE_            = ps.getParameter<bool>("doRecHitsEE");
   doPfIso_                = ps.getParameter<bool>("doPfIso");
+  calcIDTrkIso_           = ps.getParameter<bool>("calcIDTrkIso");
   removePhotonPfIsoFootprint_ = ps.getParameter<bool>("removePhotonPfIsoFootprint");
   if (doGenParticles_) {
     genPileupCollection_    = consumes<std::vector<PileupSummaryInfo>>(ps.getParameter<edm::InputTag>("pileupCollection"));
@@ -87,6 +89,11 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) :
       particleBasedIsolationPhoton_ = mayConsume<edm::ValueMap<std::vector<reco::PFCandidateRef>>> (
         ps.getParameter<edm::InputTag>("particleBasedIsolationPhoton"));
     }
+  }
+  if (calcIDTrkIso_) {
+    trackSrc_ = consumes<std::vector<reco::Track>>(ps.getParameter<edm::InputTag>("trackSrc"));
+    mvaSrc_ = consumes<std::vector<float>>(ps.getParameter<edm::InputTag>("mvaSrc"));
+    collisonSystemTag_ = ps.getParameter<std::string>("collSystemTag");
   }
 
   // initialize output TTree
@@ -526,6 +533,14 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) :
       tree_->Branch("pfcIso2pTgt2p0subUEec",&pfcIso2pTgt2p0subUEec_);
       tree_->Branch("pfcIso3pTgt2p0subUEec",&pfcIso3pTgt2p0subUEec_);
       tree_->Branch("pfcIso4pTgt2p0subUEec",&pfcIso4pTgt2p0subUEec_);
+    }
+
+    if (calcIDTrkIso_) {
+
+      tree_->Branch("pho_trkIso3pTgt2p0",&pho_trkIso3pTgt2p0_);
+      tree_->Branch("pho_trkIso3pTgt2p0subUE",&pho_trkIso3pTgt2p0subUE_);
+      tree_->Branch("pho_trkIso3IDpTgt2p0",&pho_trkIso3IDpTgt2p0_);
+      tree_->Branch("pho_trkIso3IDpTgt2p0subUE",&pho_trkIso3IDpTgt2p0subUE_);
     }
   }
 
@@ -988,6 +1003,14 @@ void ggHiNtuplizer::analyze(const edm::Event& e, const edm::EventSetup& es)
       pfcIso3pTgt2p0subUEec_.clear();
       pfcIso4pTgt2p0subUEec_.clear();
     }
+
+    if (calcIDTrkIso_) {
+      pho_trkIso3pTgt2p0_.clear();
+      pho_trkIso3pTgt2p0subUE_.clear();
+      pho_trkIso3IDpTgt2p0_.clear();
+      pho_trkIso3IDpTgt2p0subUE_.clear();
+    }
+
   }
 
   if (doMuons_) {
@@ -1544,6 +1567,11 @@ void ggHiNtuplizer::fillPhotons(const edm::Event& e, const edm::EventSetup& es, 
    e.getByToken(particleBasedIsolationPhoton_, particleBasedIsolationPhotonMap);
   }
 
+  trkIsoCalculator idTrkIso;
+  if (calcIDTrkIso_) {
+   idTrkIso.set(e, trackSrc_, mvaSrc_, pfCollection_, pv, collisonSystemTag_);
+  }
+
   edm::Handle<EcalRecHitCollection> recHitsEBHandle;
   if (doRecHitsEB_) {
       e.getByToken(recHitsEB_, recHitsEBHandle);
@@ -1908,6 +1936,17 @@ void ggHiNtuplizer::fillPhotons(const edm::Event& e, const edm::EventSetup& es, 
       pfcIso2pTgt2p0subUEec_.push_back( pfIso.getPfIsoSubUE(*pho, reco::PFCandidate::h, 0.2, 0.0, 2.0, 0, pfIsoCalculator::removePFcand, particlesInIsoMap, true));
       pfcIso3pTgt2p0subUEec_.push_back( pfIso.getPfIsoSubUE(*pho, reco::PFCandidate::h, 0.3, 0.0, 2.0, 0, pfIsoCalculator::removePFcand, particlesInIsoMap, true));
       pfcIso4pTgt2p0subUEec_.push_back( pfIso.getPfIsoSubUE(*pho, reco::PFCandidate::h, 0.4, 0.0, 2.0, 0, pfIsoCalculator::removePFcand, particlesInIsoMap, true));
+    }
+
+    if (calcIDTrkIso_) {
+
+      float tmpEta = pho->superCluster()->eta();
+      float tmpPhi = pho->superCluster()->phi();
+
+      pho_trkIso3pTgt2p0_.push_back( idTrkIso.getTrkIso(tmpEta, tmpPhi, 0.3, 0.0, 2.0, 0.0, false) );
+      pho_trkIso3pTgt2p0subUE_.push_back( idTrkIso.getTrkIsoSubUE(tmpEta, tmpPhi, 0.3, 0.0, 2.0, 0.0, false, false) );
+      pho_trkIso3IDpTgt2p0_.push_back( idTrkIso.getTrkIso(tmpEta, tmpPhi, 0.3, 0.0, 2.0, 0.0, true) );
+      pho_trkIso3IDpTgt2p0subUE_.push_back( idTrkIso.getTrkIsoSubUE(tmpEta, tmpPhi, 0.3, 0.0, 2.0, 0.0, true, false) );
     }
 
     //////////////////////////////////// MC matching ////////////////////////////////////

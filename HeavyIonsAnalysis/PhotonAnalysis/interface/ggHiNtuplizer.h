@@ -60,6 +60,7 @@ class ggHiNtuplizer : public edm::EDAnalyzer {
    bool useValMapIso_;
    bool doPfIso_;
    bool removePhotonPfIsoFootprint_;
+   bool calcIDTrkIso_;
    bool doEleEReg_;
    bool doEffectiveAreas_;
    bool doVID_;
@@ -88,6 +89,10 @@ class ggHiNtuplizer : public edm::EDAnalyzer {
    edm::EDGetTokenT<edm::View<reco::PFCandidate> >    pfCollection_;
 
    edm::EDGetToken particleBasedIsolationPhoton_;
+
+   edm::EDGetTokenT<std::vector<reco::Track>>    trackSrc_;
+   edm::EDGetTokenT<std::vector<float>>    mvaSrc_;
+   std::string collisonSystemTag_;
 
    edm::EDGetTokenT<EcalRecHitCollection> recHitsEB_;
    edm::EDGetTokenT<EcalRecHitCollection> recHitsEE_;
@@ -510,6 +515,11 @@ class ggHiNtuplizer : public edm::EDAnalyzer {
    std::vector<float> pfcIso2pTgt2p0subUEec_;
    std::vector<float> pfcIso3pTgt2p0subUEec_;
    std::vector<float> pfcIso4pTgt2p0subUEec_;
+
+   std::vector<float> pho_trkIso3pTgt2p0_;
+   std::vector<float> pho_trkIso3pTgt2p0subUE_;
+   std::vector<float> pho_trkIso3IDpTgt2p0_;
+   std::vector<float> pho_trkIso3IDpTgt2p0subUE_;
 
    // reco::Muon
    Int_t          nMu_;
