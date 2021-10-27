@@ -10,6 +10,8 @@ trkIsoCalculator::trkIsoCalculator()
   strTrkQuality = "highPurity";
 
   collSys = CollisionSystem::undef;
+
+  track_pfcand_map = std::unordered_map<int, int>();
 }
 
 void trkIsoCalculator::set(const edm::Event &iEvent,
@@ -55,7 +57,6 @@ double trkIsoCalculator::getTrkIso(double egEta, double egPhi, double r1, double
 
   for (unsigned it = 0; it<tracks_->size(); ++it) {
     const reco::Track & etrk = (*tracks_)[it];
-    reco::TrackRef trackRef = reco::TrackRef(tracks_,it);
 
     double teta = etrk.eta();
     double tphi = etrk.phi();
@@ -89,7 +90,6 @@ double trkIsoCalculator::getTrkIsoSubUE(double egEta, double egPhi, double r1, d
 
     for (unsigned it = 0; it<tracks_->size(); ++it) {
         const reco::Track & etrk = (*tracks_)[it];
-        reco::TrackRef trackRef = reco::TrackRef(tracks_,it);
 
         double teta = etrk.eta();
         double tphi = etrk.phi();
@@ -224,34 +224,18 @@ bool trkIsoCalculator::passedTrkSelection(const reco::Track & trk, unsigned inde
 
 int trkIsoCalculator::getMatchedPfCand(unsigned indexTrk)
 {
-  edm::Ref<reco::TrackCollection>::key_type trk_key = reco::TrackRef(tracks_, indexTrk).key();
-
   if (doMapTrk2PfCand) {
+    //edm::Ref<reco::TrackCollection>::key_type trk_key = reco::TrackRef(tracks_, indexTrk).key();
 
-    auto it = track_pfcand_map.find(trk_key);
+    reco::TrackRef trackRef = reco::TrackRef(tracks_,indexTrk);
+    auto indexTrkRef = trackRef.key();
+
+    auto it = track_pfcand_map.find(indexTrkRef);
     if (it == track_pfcand_map.end()) { 
       return -1;
     }
     else {
       return it->second;
-    }
-  }
-  else {
-    for (std::size_t i = 0; i < pfCands->size(); ++i) {
-      auto const& cand = (*pfCands)[i];
-
-      int type = cand.particleId();
-      // only charged hadrons and leptons can be asscociated with a track
-      if (!(type == reco::PFCandidate::h ||
-            type == reco::PFCandidate::e ||
-            type == reco::PFCandidate::mu)
-          ) { 
-        continue; 
-      }
-
-      if (trk_key == cand.trackRef().key()) {
-        return (int)i;
-      }
     }
   }
 
@@ -262,27 +246,20 @@ void trkIsoCalculator::makeMapTrk2PfCand()
 {
   // https://github.com/cms-sw/cmssw/blob/master/DataFormats/Common/interface/Ref.h : typedef unsigned int edm::Ref<reco::TrackCollection>::key_type;
 
-  for (unsigned itTrk = 0; itTrk < tracks_->size(); ++itTrk) {
-    edm::Ref<reco::TrackCollection>::key_type trk_key = reco::TrackRef(tracks_, itTrk).key();
+  for (std::size_t iPF = 0; iPF < pfCands->size(); ++iPF) {
+    auto const& pfCand = (*pfCands)[iPF];
 
-    for (std::size_t iPF = 0; iPF < pfCands->size(); ++iPF) {
-      auto const& pfCand = (*pfCands)[iPF];
-
-      int type = pfCand.particleId();
-      // only charged hadrons and leptons can be asscociated with a track
-      if (!(type == reco::PFCandidate::h ||
-            type == reco::PFCandidate::e ||
-            type == reco::PFCandidate::mu)
-          ) { 
-        continue; 
-      }
-
-      if (trk_key == pfCand.trackRef().key()) {
-        track_pfcand_map.insert ( std::pair<edm::Ref<reco::TrackCollection>::key_type,int>(trk_key, (int)iPF) );
-      }
+    int type = pfCand.particleId();
+    // only charged hadrons and leptons can be asscociated with a track
+    if (!(type == reco::PFCandidate::h ||
+          type == reco::PFCandidate::e ||
+          type == reco::PFCandidate::mu)
+        ) {
+      continue;
     }
 
-    track_pfcand_map.insert ( std::pair<edm::Ref<reco::TrackCollection>::key_type,int>(trk_key, -1) );
+    auto keyTrkRef = pfCand.trackRef().key();
+    track_pfcand_map[keyTrkRef] = iPF;
   }
 }
 
