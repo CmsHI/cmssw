@@ -474,7 +474,7 @@ class ggHiNtuplizer : public edm::EDAnalyzer {
    std::vector<float> pfpIso4subSC_;
    std::vector<float> pfpIso5subSC_;
 
-   // photon pf isolation UE-subtracted
+   // photon pf isolation UE-subtracted and cone excluded
    std::vector<float> pfcIso1subUE_;
    std::vector<float> pfcIso2subUE_;
    std::vector<float> pfcIso3subUE_;
@@ -519,23 +519,6 @@ class ggHiNtuplizer : public edm::EDAnalyzer {
    std::vector<float> pfcIso4pTgt3p0subUE_;
    std::vector<float> pfcIso5pTgt3p0subUE_;
    // remove if deemed useless - END
-
-   // photon pf isolation UE-subtracted and cone excluded
-   std::vector<float> pfcIso2subUEec_;
-   std::vector<float> pfcIso3subUEec_;
-   std::vector<float> pfcIso4subUEec_;
-
-   std::vector<float> pfpIso2subUEec_;
-   std::vector<float> pfpIso3subUEec_;
-   std::vector<float> pfpIso4subUEec_;
-
-   std::vector<float> pfnIso2subUEec_;
-   std::vector<float> pfnIso3subUEec_;
-   std::vector<float> pfnIso4subUEec_;
-
-   std::vector<float> pfcIso2pTgt2p0subUEec_;
-   std::vector<float> pfcIso3pTgt2p0subUEec_;
-   std::vector<float> pfcIso4pTgt2p0subUEec_;
 
    std::vector<float> pho_trkIso3pTgt2p0_;
    std::vector<float> pho_trkIso3pTgt2p0subUE_;

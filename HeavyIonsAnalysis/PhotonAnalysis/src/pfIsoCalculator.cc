@@ -152,6 +152,8 @@ double pfIsoCalculator::getPfIsoSubUE(const reco::Photon& photon, int pfId,
   double ueEt = totalEt;
   double ueArea = areaStrip;
   if (excludeCone) {
+    // Note the result for excludeCone=True is a scaled version ofthe result for excludeCone=False
+    // In particular : f[excludeCone=True] = f[excludeCone=False] * 4 / (4 - R)
     ueEt = totalEt - coneEt;
     ueArea = areaStrip - areaCone;
   }
