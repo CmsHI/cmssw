@@ -35,6 +35,7 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) :
   calcIDTrkIso_           = ps.getParameter<bool>("calcIDTrkIso");
   saveAssoPFcands_        = ps.getParameter<bool>("saveAssociatedPFcands");
   removePhotonPfIsoFootprint_ = ps.getParameter<bool>("removePhotonPfIsoFootprint");
+  doEvtPlane_             = ps.getParameter<bool>("doEvtPlane");
   if (doGenParticles_) {
     genPileupCollection_    = consumes<std::vector<PileupSummaryInfo>>(ps.getParameter<edm::InputTag>("pileupCollection"));
     genParticlesCollection_ = consumes<std::vector<reco::GenParticle>>(ps.getParameter<edm::InputTag>("genParticleSrc"));
@@ -72,19 +73,16 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) :
   }
   doPhoEReg_              = ps.getParameter<bool>("doPhoERegression");
   if (doRecHitsEB_ || doEleEReg_) {
-      recHitsEB_ = consumes<EcalRecHitCollection> (
-        ps.getUntrackedParameter<edm::InputTag>("recHitsEB",
-          edm::InputTag("ecalRecHit","EcalRecHitsEB")));
+    recHitsEB_ = consumes<EcalRecHitCollection> (
+      ps.getUntrackedParameter<edm::InputTag>("recHitsEB", edm::InputTag("ecalRecHit","EcalRecHitsEB")));
   }
   if (doRecHitsEE_ || doEleEReg_) {
-      recHitsEE_ = consumes<EcalRecHitCollection> (
-        ps.getUntrackedParameter<edm::InputTag>("recHitsEE",
-          edm::InputTag("ecalRecHit","EcalRecHitsEE")));
+    recHitsEE_ = consumes<EcalRecHitCollection> (
+      ps.getUntrackedParameter<edm::InputTag>("recHitsEE", edm::InputTag("ecalRecHit","EcalRecHitsEE")));
   }
 
   if (doPfIso_) {
-    pfCollection_         = consumes<edm::View<reco::PFCandidate> > (
-      ps.getParameter<edm::InputTag>("particleFlowCollection"));
+    pfCollection_ = consumes<edm::View<reco::PFCandidate>> (ps.getParameter<edm::InputTag>("particleFlowCollection"));
   }
   if (calcIDTrkIso_) {
     trackSrc_ = consumes<std::vector<reco::Track>>(ps.getParameter<edm::InputTag>("trackSrc"));
@@ -92,8 +90,12 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) :
     collisonSystemTag_ = ps.getParameter<std::string>("collSystemTag");
   }
   if (saveAssoPFcands_ || (doPfIso_ && removePhotonPfIsoFootprint_)) {
-      particleBasedIsolationPhoton_ = mayConsume<edm::ValueMap<std::vector<reco::PFCandidateRef>>> (
-        ps.getParameter<edm::InputTag>("particleBasedIsolationPhoton"));
+    particleBasedIsolationPhoton_ = mayConsume<edm::ValueMap<std::vector<reco::PFCandidateRef>>> (
+      ps.getParameter<edm::InputTag>("particleBasedIsolationPhoton"));
+  }
+  if (doEvtPlane_) {
+    evtPlaneTag_ = consumes<reco::EvtPlaneCollection>(ps.getParameter<edm::InputTag>("evtPlane"));
+    indexEvtPlane_ = ps.getParameter<int>("indexEvtPlane");
   }
 
   // initialize output TTree
@@ -106,6 +108,15 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) :
   tree_->Branch("isData", &isData_);
   if (doEffectiveAreas_) {
     tree_->Branch("rho",  &rho_);
+  }
+  if (doEvtPlane_) {
+    tree_->Branch("angEvtPlane",  &angEvtPlane_);
+    tree_->Branch("indexEvtPlane",  &indexEvtPlane_);
+    tree_->Branch("phi_nTot",  &phi_nTot_);
+    tree_->Branch("phi_minBinN",  &phi_minBinN_);
+    tree_->Branch("phi_fit_chi2",  &phi_fit_chi2_);
+    tree_->Branch("phi_fit_chi2prob",  &phi_fit_chi2prob_);
+    tree_->Branch("phi_fit_v2",  &phi_fit_v2_);
   }
 
   if (doGenParticles_) {
@@ -1092,6 +1103,26 @@ void ggHiNtuplizer::analyze(const edm::Event& e, const edm::EventSetup& es)
     e.getByToken(rhoToken_, rhoH);
 
     rho_ = *rhoH;
+  }
+
+  if (doEvtPlane_) {
+    edm::Handle<reco::EvtPlaneCollection> evtPlanes;
+    e.getByToken(evtPlaneTag_,evtPlanes);
+
+    angEvtPlane_ = -999888;
+    phi_nTot_ = 0;
+    phi_minBinN_ = 999999;
+    phi_fit_chi2_ = -1;
+    phi_fit_chi2prob_ = -1;
+    phi_fit_v2_ = -999777;
+    if(evtPlanes.isValid()){
+      int nEvtPlanes = evtPlanes->size();
+      if (indexEvtPlane_ < nEvtPlanes) {
+        angEvtPlane_ = (*evtPlanes)[indexEvtPlane_].angle(0);
+
+        setPhivn(e);
+      }
+    }
   }
 
   // MC truth
@@ -2120,6 +2151,64 @@ void ggHiNtuplizer::fillMuons(const edm::Event& e, const edm::EventSetup& es, re
 
     nMu_++;
   } // muons loop
+}
+
+void ggHiNtuplizer::setPhivn(const edm::Event& e)
+{
+  const int nBinsX = 20;
+  h1D_phi = new TH1D("h1D_phi", "Particle #phi distribution;#phi;Counts", nBinsX, -1*TMath::Pi(), TMath::Pi());
+  h1D_phi->Reset();
+
+  edm::Handle<edm::View<reco::PFCandidate>> pfCands;
+  e.getByToken(pfCollection_, pfCands);
+
+  for (auto pf = pfCands->begin(); pf != pfCands->end(); ++pf) {
+    if ( pf->particleId() != 1 )   continue;
+    if ( !(pf->pt() > 0.3) )  continue;
+    if ( !(pf->pt() < 3) )  continue;
+    if ( !(std::abs(pf->eta()) < 1.0) )  continue;
+
+    h1D_phi->Fill( pf->phi() );
+  }
+
+  phi_nTot_ = h1D_phi->Integral();
+  for (int iBin = 1; iBin <= nBinsX; ++iBin) {
+    int tmpBinN = h1D_phi->GetBinContent(iBin);
+    if (tmpBinN < phi_minBinN_) {
+      phi_minBinN_ = tmpBinN;
+    }
+  }
+
+  const double initN0 = phi_nTot_ / nBinsX;
+
+  const int nFncParams = 3;
+  f1_phi = new TF1("f1_phi", fnc_fourier_v2, -1*TMath::Pi(), TMath::Pi(), nFncParams);
+  f1_phi->SetParameter(0, initN0); // N0
+  f1_phi->SetParameter(1, 0); // v2
+  f1_phi->FixParameter(2, angEvtPlane_); // set to event plane angle
+  h1D_phi->Fit(f1_phi, "Q M R N");
+
+  phi_fit_chi2_ = f1_phi->GetChisquare();
+  phi_fit_chi2prob_ = f1_phi->GetProb();
+  phi_fit_v2_ = f1_phi->GetParameter(1);
+
+  h1D_phi->Delete();
+  f1_phi->Delete();
+}
+
+/*
+ * Fourier expansion of the particle density, as function of phi up to 2nd order
+ */
+double ggHiNtuplizer::fnc_fourier_v2(double* xx, double* params)
+{
+    double phi = xx[0];
+
+    double N0 = params[0];
+    double v2 = params[1];
+    double phiEPv2 = params[2];
+
+    double res = N0 * (1 + 2*v2*TMath::Cos( 2* reco::deltaPhi(phi, phiEPv2) ));
+    return res;
 }
 
 DEFINE_FWK_MODULE(ggHiNtuplizer);

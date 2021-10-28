@@ -14,6 +14,7 @@
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
 #include "DataFormats/MuonReco/interface/Muon.h"
 #include "DataFormats/VertexReco/interface/Vertex.h"
+#include "DataFormats/HeavyIonEvent/interface/EvtPlane.h"
 #include "FWCore/Framework/interface/EDAnalyzer.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
@@ -28,6 +29,8 @@
 #include "TrackingTools/TransientTrack/interface/TransientTrackBuilder.h"
 
 #include <TTree.h>
+#include <TH1D.h>
+#include <TF1.h>
 
 class ggHiNtuplizer : public edm::EDAnalyzer {
 
@@ -50,6 +53,8 @@ class ggHiNtuplizer : public edm::EDAnalyzer {
    // Et and pT sums
    float getGenCalIso(edm::Handle<std::vector<reco::GenParticle> >&, reco::GenParticleCollection::const_iterator, float dRMax, bool removeMu, bool removeNu);
    float getGenTrkIso(edm::Handle<std::vector<reco::GenParticle> >&, reco::GenParticleCollection::const_iterator, float dRMax);
+   void setPhivn(const edm::Event &);
+   static double fnc_fourier_v2(double* xx, double* params);
 
    // switches
    bool doGenParticles_;
@@ -68,6 +73,7 @@ class ggHiNtuplizer : public edm::EDAnalyzer {
    bool doRecHitsEB_;
    bool doRecHitsEE_;
    bool doSuperClusters_;
+   bool doEvtPlane_;
 
    bool saveAssoPFcands_; // flag to save information about PF candidates associated to a photon
 
@@ -99,6 +105,9 @@ class ggHiNtuplizer : public edm::EDAnalyzer {
    edm::EDGetTokenT<EcalRecHitCollection> recHitsEB_;
    edm::EDGetTokenT<EcalRecHitCollection> recHitsEE_;
 
+   edm::EDGetTokenT<reco::EvtPlaneCollection> evtPlaneTag_;
+   int indexEvtPlane_;
+
    const CaloGeometry *geo;
    const CaloTopology* topo;
    const TransientTrackBuilder* tb;
@@ -113,6 +122,16 @@ class ggHiNtuplizer : public edm::EDAnalyzer {
    UInt_t         lumis_;
    Bool_t         isData_;
    Float_t        rho_;
+
+   // event plane
+   float angEvtPlane_;
+   int phi_nTot_;
+   int phi_minBinN_;
+   float phi_fit_chi2_;
+   float phi_fit_chi2prob_;
+   float phi_fit_v2_;
+   TH1D* h1D_phi;
+   TF1* f1_phi;
 
    // PileupSummaryInfo
    Int_t          nPUInfo_;

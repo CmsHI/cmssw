@@ -44,6 +44,9 @@ ggHiNtuplizer = cms.EDAnalyzer("ggHiNtuplizer",
     removePhotonPfIsoFootprint = cms.bool(False),
     particleBasedIsolationPhoton = cms.InputTag("DUMMY"),
     saveAssociatedPFcands = cms.bool(False),
+    doEvtPlane = cms.bool(False),
+    evtPlane = cms.InputTag("hiEvtPlane"),
+    indexEvtPlane = cms.int32(2),
 )
 
 ggHiNtuplizerGED = ggHiNtuplizer.clone(
@@ -55,5 +58,6 @@ ggHiNtuplizerGED = ggHiNtuplizer.clone(
     removePhotonPfIsoFootprint = True,
     calcIDTrkIso             = True,
     particleBasedIsolationPhoton = cms.InputTag("particleBasedIsolation", "gedPhotons"),
-    saveAssociatedPFcands = True
+    saveAssociatedPFcands = True,
+    doEvtPlane = False,
 )
