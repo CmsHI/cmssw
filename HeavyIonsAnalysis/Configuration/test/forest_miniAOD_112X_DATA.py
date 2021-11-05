@@ -154,7 +154,7 @@ if addR3Jets or addR4Jets :
     from HeavyIonsAnalysis.JetAnalysis.clusterJetsFromMiniAOD_cff import setupHeavyIonJets
 
     if addR3Jets :
-        setupHeavyIonJets('akCs3PF', process.extraJetsMC, process, isMC = 1, radius = 0.30, JECTag = 'AK3PF')
+        setupHeavyIonJets('akCs3PF', process.extraJetsMC, process, isMC = 0, radius = 0.30, JECTag = 'AK3PF')
         process.akCs3PFpatJetCorrFactors.levels = ['L2Relative', 'L2L3Residual']
         process.akCs3PFJetAnalyzer = process.akCs4PFJetAnalyzer.clone(
             jetTag = "akCs3PFpatJets"
@@ -164,7 +164,7 @@ if addR3Jets or addR4Jets :
 
     if addR4Jets :
         # Recluster using an alias "X" in order not to get mixed up with the default AK4 collections
-        setupHeavyIonJets('akCsXPF', process.extraJetsMC, process, isMC = 1, radius = 0.40, JECTag = 'AK4PF')
+        setupHeavyIonJets('akCsXPF', process.extraJetsMC, process, isMC = 0, radius = 0.40, JECTag = 'AK4PF')
         process.akCsXPFpatJetCorrFactors.levels = ['L2Relative', 'L2L3Residual']
         process.akCs4PFJetAnalyzer.jetTag = cms.InputTag('akCsXPFpatJets')
 
