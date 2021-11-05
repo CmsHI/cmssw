@@ -14,53 +14,65 @@ def addToSequence(label, module, process, sequence):
     setattr(process, label, module)
     sequence += getattr(process, label)
 
-def setupHeavyIonJets(tag, sequence, process, isMC):
+def setupHeavyIonJets(tag, sequence, process, isMC, radius = -1, JECTag = 'None'):
 
-    radius = get_radius(tag)
+    if radius < 0:
+       radiustag = get_radius(tag)
+       radius = radiustag * 0.1
+    else:
+       radiustag = get_radius(tag)
 
     addToSequence( tag+'Jets',
-                   akCs4PFJets.clone(rParam = radius/10, src = 'packedPFCandidates', useModulatedRho = False),
+                   akCs4PFJets.clone(rParam = radius, src = 'packedPFCandidates', useModulatedRho = False),
                    process, sequence)
 
+    if JECTag == 'None':
+       JECTag = 'AK' + str(radiustag) + 'PF'
+
     addToSequence( tag+'patJetCorrFactors',
-                   patJetCorrFactors.clone(payload = 'AK'+str(radius)+'PF', src = tag+'Jets'),
+                   patJetCorrFactors.clone(payload = JECTag, src = tag+'Jets'),
                    process, sequence)
 
     if isMC :
         addToSequence( tag+'patJetPartonMatch',
-                       patJetPartonMatch.clone(maxDeltaR = radius/10, matched = 'hiSignalGenParticles', src = tag+'Jets'),
+                       patJetPartonMatch.clone(maxDeltaR = radius,
+                          matched = 'hiSignalGenParticles',
+                          src = tag+'Jets'),
                        process, sequence)
-        
-        genjetcollection = 'ak'+str(radius)+'GenJetsNoNu'
-        
+
+        genjetcollection = 'ak'+str(radiustag)+'GenJetsNoNu'
+
         addToSequence( genjetcollection,
-                       ak4GenJetsNoNu.clone(src = 'packedGenParticlesSignal'),
+                       ak4GenJetsNoNu.clone(src = 'packedGenParticlesSignal', rParam = radius),
                        process, sequence)
-        
+
         addToSequence( tag+'patJetGenJetMatch',
-                       patJetGenJetMatch.clone(maxDeltaR = radius/10, matched = genjetcollection,  src = tag + 'Jets'),
+                       patJetGenJetMatch.clone(maxDeltaR = radius,
+                          matched = genjetcollection,
+                          src = tag + 'Jets'),
                        process, sequence)
-        
+
         addToSequence( tag+'patJetPartonAssociationLegacy',
                        patJetPartonAssociationLegacy.clone(jets = tag + 'Jets'),
                        process, sequence)
-        
+
         addToSequence( tag+'patJetFlavourAssociationLegacy',
                        patJetFlavourAssociationLegacy.clone(srcByReference = tag+'patJetPartonAssociationLegacy'),
                        process, sequence)
-        
+
         addToSequence( tag+'patJetPartons',
                        patJetPartons.clone(partonMode = 'Pythia8'),
                        process, sequence)
-        
+
     addToSequence( tag+'pfImpactParameterTagInfos',
-                   pfImpactParameterTagInfos.clone(jets = tag +'Jets', candidates = 'packedPFCandidates', primaryVertex = 'offlineSlimmedPrimaryVerticesRecovery'),
+                   pfImpactParameterTagInfos.clone(jets = tag +'Jets',
+                      candidates = 'packedPFCandidates', primaryVertex = 'offlineSlimmedPrimaryVerticesRecovery'),
                    process, sequence)
-    
+
     addToSequence( tag+'pfSecondaryVertexTagInfos',
                    pfSecondaryVertexTagInfos.clone(trackIPTagInfos = tag+'pfImpactParameterTagInfos'),
                    process, sequence)
-    
+
     addToSequence( tag+'pfDeepCSVTagInfos',
                    pfDeepCSVTagInfos.clone(svTagInfos = tag+'pfSecondaryVertexTagInfos'),
                    process, sequence)
@@ -68,7 +80,7 @@ def setupHeavyIonJets(tag, sequence, process, isMC):
     addToSequence( tag+'pfDeepCSVJetTags',
                    pfDeepCSVJetTags.clone(src = tag+'pfDeepCSVTagInfos'),
                    process, sequence)
-    
+
     addToSequence( tag+'patJets',
                    patJets.clone(
                        JetFlavourInfoSource = tag+'patJetFlavourAssociation',
@@ -81,4 +93,4 @@ def setupHeavyIonJets(tag, sequence, process, isMC):
                        addAssociatedTracks = False,
                    ),
                    process, sequence)
-    
+
