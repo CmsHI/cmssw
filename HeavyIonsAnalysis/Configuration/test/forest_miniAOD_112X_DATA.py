@@ -163,10 +163,10 @@ if addR3Jets or addR4Jets :
         process.forest += process.extraJetsData * process.akCs3PFJetAnalyzer
 
     if addR4Jets :
-        # Recluster using an alias "X" in order not to get mixed up with the default AK4 collections
-        setupHeavyIonJets('akCsXPF', process.extraJetsData, process, isMC = 0, radius = 0.40, JECTag = 'AK4PF')
-        process.akCsXPFpatJetCorrFactors.levels = ['L2Relative', 'L2L3Residual']
-        process.akCs4PFJetAnalyzer.jetTag = cms.InputTag('akCsXPFpatJets')
+        # Recluster using an alias "0" in order not to get mixed up with the default AK4 collections
+        setupHeavyIonJets('akCs0PF', process.extraJetsData, process, isMC = 0, radius = 0.40, JECTag = 'AK4PF')
+        process.akCs0PFpatJetCorrFactors.levels = ['L2Relative', 'L2L3Residual']
+        process.akCs4PFJetAnalyzer.jetTag = cms.InputTag('akCs0PFpatJets')
 
         process.forest += process.extraJetsData * process.akCs4PFJetAnalyzer
 
