@@ -84,6 +84,7 @@ HiPFCandAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
     int id = pfcand.particleId();
     if (skipCharged_ && (abs(id) == 1 || abs(id) == 3)) continue;
 
+    pfEvt_.pfKey_.push_back( pfcand.sourceCandidatePtr(0).key() );
     pfEvt_.pfId_.push_back( id );
     pfEvt_.pfPt_.push_back( pt );
     pfEvt_.pfEnergy_.push_back( pfcand.energy() );
@@ -195,6 +196,7 @@ void TreePFCandEventData::SetBranches(bool doJets, bool doMC, bool doCaloEnergy,
 {
   // -- particle info --
   tree_->Branch("nPFpart", &nPFpart_, "nPFpart/I");
+  tree_->Branch("pfKey", &pfKey_);
   tree_->Branch("pfId", &pfId_);
   tree_->Branch("pfPt", &pfPt_);
   tree_->Branch("pfEnergy", &pfEnergy_);
@@ -239,6 +241,7 @@ void TreePFCandEventData::SetBranches(bool doJets, bool doMC, bool doCaloEnergy,
 void TreePFCandEventData::Clear()
 {
   nPFpart_ = 0;
+  pfKey_.clear();
   pfId_.clear();
   pfPt_.clear();
   pfEnergy_.clear();

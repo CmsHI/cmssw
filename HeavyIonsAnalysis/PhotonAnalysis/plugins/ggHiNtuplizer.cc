@@ -541,6 +541,7 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) :
     if (saveAssoPFcands_) {
       tree_->Branch("nPhoPF", &nPhoPF_);
       tree_->Branch("ppfPhoIdx",&ppfPhoIdx_);
+      tree_->Branch("ppfKey",&ppfKey_);
       tree_->Branch("ppfId",&ppfId_);
       tree_->Branch("ppfPt",&ppfPt_);
       tree_->Branch("ppfEta",&ppfEta_);
@@ -1002,6 +1003,7 @@ void ggHiNtuplizer::analyze(const edm::Event& e, const edm::EventSetup& es)
     if (saveAssoPFcands_) {
       nPhoPF_ = 0;
       ppfPhoIdx_.clear();
+      ppfKey_.clear();
       ppfId_.clear();
       ppfPt_.clear();
       ppfEta_.clear();
@@ -1954,6 +1956,7 @@ void ggHiNtuplizer::fillPhotons(const edm::Event& e, const edm::EventSetup& es, 
       for (auto& it : particlesInIsoMap) {
         nPhoPF_++;
         ppfPhoIdx_.push_back(nPho_);
+        ppfKey_.push_back(it.key());
         ppfId_.push_back((int)(it->particleId()));
         ppfPt_.push_back((it->pt()));
         ppfEta_.push_back((it->eta()));

@@ -528,6 +528,7 @@ class ggHiNtuplizer : public edm::EDAnalyzer {
    // PF candidates associated with a reco::photon
    int nPhoPF_;
    std::vector<int> ppfPhoIdx_;   // index of the reco::photon this PF cand is associated to
+   std::vector<unsigned long> ppfKey_;   // key for this PF cand, ref https://github.com/cms-sw/cmssw/blob/master/DataFormats/Common/interface/Ptr.h#L163
    std::vector<int> ppfId_;
    std::vector<float> ppfPt_;
    std::vector<float> ppfEta_;
