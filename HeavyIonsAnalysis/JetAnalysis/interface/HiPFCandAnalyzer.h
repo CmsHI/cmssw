@@ -28,6 +28,10 @@ class TreePFCandEventData
     std::vector<Float_t> pfPhi_;
     std::vector<Float_t> pfM_;
 
+    std::vector<Float_t> pfvx_;
+    std::vector<Float_t> pfvy_;
+    std::vector<Float_t> pfvz_;
+
     std::vector<Float_t> pfEcalE_;
     std::vector<Float_t> pfEcalEraw_;
     std::vector<Float_t> pfHcalE_;
