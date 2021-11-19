@@ -14,13 +14,26 @@ pfIsoCalculator::pfIsoCalculator(const edm::Event &iEvent,
 // copied from https://github.com/cms-sw/cmssw/blob/master/RecoEgamma/PhotonIdentification/plugins/PhotonIDValueMapProducer.cc#L26
 template <class T>
 bool pfIsoCalculator::isInFootprint(const T& footprint,
-                   const edm::Ptr<reco::Candidate>& candidate)
+                   const edm::Ptr<reco::PFCandidate>& candidate, const int matchOpt)
 {
-    for (auto& it : footprint) {
-        if (it.key() == candidate.key())
-            return true;
+  for (auto& it : footprint) {
+
+    if (matchOpt == pfIsoCalculator::PFcand_matchKey) {
+      if (it.key() == candidate.key()) {
+        return true;
+      }
     }
-    return false;
+    else if (matchOpt == pfIsoCalculator::PFcand_matchKin) {
+
+      if ((int)(it->particleId()) != (int)(candidate->particleId())) continue;
+      if ( std::abs(it->pt()-candidate->pt()) / it->pt() > limit_match_kin ) continue;
+      if ( std::abs((it->eta()-candidate->eta())/it->eta()) > limit_match_kin ) continue;
+      if ( std::abs(reco::deltaPhi(it->phi(), candidate->phi())/it->phi()) > limit_match_kin ) continue;
+
+      return true;
+    }
+  }
+  return false;
 }
 
 double pfIsoCalculator::getPfIso(const reco::Photon& photon, int pfId,
@@ -45,13 +58,13 @@ double pfIsoCalculator::getPfIso(const reco::Photon& photon, int pfId,
     double dR2 = dEta*dEta + dPhi*dPhi;
     double pfPt = pf->pt();
 
-    if (footprintRemoval == pfIsoCalculator::removePFcand) {
+    if (footprintRemoval == pfIsoCalculator::PFcand_matchKey || footprintRemoval == pfIsoCalculator::PFcand_matchKin) {
       // remove the photon itself and associated PF candidates
       if ( pf->superClusterRef() == photon.superCluster() ) {
         continue;
       }
-      edm::Ptr<reco::Candidate> candPtr(candidatesView, pf - candidatesView->begin());
-      if ( isInFootprint(particlesInIsoMap, candPtr) ) {
+      edm::Ptr<reco::PFCandidate> candPtr(candidatesView, pf - candidatesView->begin());
+      if ( isInFootprint(particlesInIsoMap, candPtr, footprintRemoval) ) {
         continue;
       }
     }
@@ -95,13 +108,13 @@ double pfIsoCalculator::getPfIsoSubUE(const reco::Photon& photon, int pfId,
     if (dEta > r1) continue;
     if (dEta < jWidth)  continue;
 
-    if (footprintRemoval == pfIsoCalculator::removePFcand) {
+    if (footprintRemoval == pfIsoCalculator::PFcand_matchKey || footprintRemoval == pfIsoCalculator::PFcand_matchKin) {
       // remove the photon itself and associated PF candidates
       if ( pf->superClusterRef() == photon.superCluster() ) {
         continue;
       }
-      edm::Ptr<reco::Candidate> candPtr(candidatesView, pf - candidatesView->begin());
-      if ( isInFootprint(particlesInIsoMap, candPtr) ) {
+      edm::Ptr<reco::PFCandidate> candPtr(candidatesView, pf - candidatesView->begin());
+      if ( isInFootprint(particlesInIsoMap, candPtr, footprintRemoval) ) {
         continue;
       }
     }

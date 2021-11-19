@@ -28,6 +28,8 @@
 #include "SimDataFormats/PileupSummaryInfo/interface/PileupSummaryInfo.h"
 #include "TrackingTools/TransientTrack/interface/TransientTrackBuilder.h"
 
+#include "HeavyIonsAnalysis/PhotonAnalysis/src/pfIsoCalculator.h"
+
 #include <TTree.h>
 #include <TH1D.h>
 #include <TF1.h>
@@ -76,6 +78,8 @@ class ggHiNtuplizer : public edm::EDAnalyzer {
    bool doEvtPlane_;
 
    bool saveAssoPFcands_; // flag to save information about PF candidates associated to a photon
+
+   pfIsoCalculator::footprintOptions optFP;
 
    // handles to collections of objects
    edm::EDGetTokenT<std::vector<PileupSummaryInfo> >    genPileupCollection_;
