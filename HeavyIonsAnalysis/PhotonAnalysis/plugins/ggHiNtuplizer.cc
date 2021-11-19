@@ -35,6 +35,7 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) :
   saveAssoPFcands_        = ps.getParameter<bool>("saveAssociatedPFcands");
   removePhotonPfIsoFootprint_ = ps.getParameter<bool>("removePhotonPfIsoFootprint");
   doEvtPlane_             = ps.getParameter<bool>("doEvtPlane");
+  calcEvtPlanePF_         = ps.getParameter<bool>("calcEvtPlanePF");
   if (doGenParticles_) {
     genPileupCollection_    = consumes<std::vector<PileupSummaryInfo>>(ps.getParameter<edm::InputTag>("pileupCollection"));
     genParticlesCollection_ = consumes<std::vector<reco::GenParticle>>(ps.getParameter<edm::InputTag>("genParticleSrc"));
@@ -80,8 +81,9 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) :
       ps.getUntrackedParameter<edm::InputTag>("recHitsEE", edm::InputTag("ecalRecHit","EcalRecHitsEE")));
   }
 
+  bool needPFCands = (calcEvtPlanePF_ || doPfIso_);
   optFP = pfIsoCalculator::noRemoval;
-  if (doPfIso_) {
+  if (needPFCands) {
     edm::InputTag pfCollectionInputTag = ps.getParameter<edm::InputTag>("particleFlowCollection");
     // Keys help to find the footprint in PF collection only if it is the original collection, i.e. "particleFlow"
     // If PF collection is "filteredParticleFlow", then can match footprint only using kinematics
@@ -122,6 +124,11 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps) :
     tree_->Branch("phi_fit_chi2",  &phi_fit_chi2_);
     tree_->Branch("phi_fit_chi2prob",  &phi_fit_chi2prob_);
     tree_->Branch("phi_fit_v2",  &phi_fit_v2_);
+  }
+
+  if (calcEvtPlanePF_) {
+    tree_->Branch("angEP2pf",  &angEP2pf_);
+    tree_->Branch("angEP3pf",  &angEP3pf_);
   }
 
   if (doGenParticles_) {
@@ -1100,6 +1107,11 @@ void ggHiNtuplizer::analyze(const edm::Event& e, const edm::EventSetup& es)
     }
   }
 
+  if (calcEvtPlanePF_) {
+    angEP2pf_.clear();
+    angEP3pf_.clear();
+  }
+
   // MC truth
   if (doGenParticles_ && !isData_) {
     fillGenPileupInfo(e);
@@ -1136,6 +1148,7 @@ void ggHiNtuplizer::analyze(const edm::Event& e, const edm::EventSetup& es)
   if (doElectrons_) fillElectrons(e, es, pv);
   if (doPhotons_) fillPhotons(e, es, pv);
   if (doMuons_) fillMuons(e, es, pv);
+  if (calcEvtPlanePF_) fillEventPlanesPF(e);
 
   tree_->Fill();
 }
@@ -2111,6 +2124,49 @@ void ggHiNtuplizer::fillMuons(const edm::Event& e, const edm::EventSetup& es, re
 
     nMu_++;
   } // muons loop
+}
+
+void ggHiNtuplizer::fillEventPlanesPF (const edm::Event& e)
+{
+  const int nEP = evtPlanesPF::N_evtPlanesPF;
+
+  std::vector<double> ep2Cos(nEP, 0);
+  std::vector<double> ep2Sin(nEP, 0);
+  std::vector<double> ep3Cos(nEP, 0);
+  std::vector<double> ep3Sin(nEP, 0);
+
+  edm::Handle<edm::View<reco::PFCandidate>> pfCands;
+  e.getByToken(pfCollection_, pfCands);
+
+  for (auto pf = pfCands->begin(); pf != pfCands->end(); ++pf) {
+    if ( pf->particleId() != 1 )   continue;
+    if ( !(pf->pt() > 0.3) )  continue;
+    if ( !(pf->pt() < 3) )  continue;
+
+    double pfEta = pf->eta();
+
+    for (int iEP = 0; iEP < nEP; ++iEP) {
+
+      if (iEP == evtPlanesPF::angEP_abseta_1p0_to_2p0) {
+        if ( !(1 <= std::abs(pfEta) && std::abs(pfEta) < 2) )  continue;
+      }
+      else {
+        if ( !(EP_PF_etaMin[iEP] <= pfEta && pfEta < EP_PF_etaMax[iEP]) )  continue;
+      }
+
+      double pfPhi = pf->phi();
+      ep2Cos[iEP] += std::cos(2 * pfPhi);
+      ep2Sin[iEP] += std::sin(2 * pfPhi);
+
+      ep3Cos[iEP] += std::cos(3 * pfPhi);
+      ep3Sin[iEP] += std::sin(3 * pfPhi);
+    }
+  }
+
+  for (int iEP = 0; iEP < nEP; ++iEP) {
+    angEP2pf_.push_back( std::atan2(ep2Sin[iEP], ep2Cos[iEP]) / 2. );
+    angEP3pf_.push_back( std::atan2(ep3Sin[iEP], ep3Cos[iEP]) / 3. );
+  }
 }
 
 void ggHiNtuplizer::setPhivn(const edm::Event& e)

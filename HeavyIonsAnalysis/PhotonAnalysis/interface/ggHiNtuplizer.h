@@ -51,6 +51,7 @@ class ggHiNtuplizer : public edm::EDAnalyzer {
    void fillElectrons    (const edm::Event&, const edm::EventSetup&, reco::Vertex& pv);
    void fillPhotons      (const edm::Event&, const edm::EventSetup&, reco::Vertex& pv);
    void fillMuons        (const edm::Event&, const edm::EventSetup&, reco::Vertex& pv);
+   void fillEventPlanesPF (const edm::Event&);
 
    // Et and pT sums
    float getGenCalIso(edm::Handle<std::vector<reco::GenParticle> >&, reco::GenParticleCollection::const_iterator, float dRMax, bool removeMu, bool removeNu);
@@ -76,6 +77,7 @@ class ggHiNtuplizer : public edm::EDAnalyzer {
    bool doRecHitsEE_;
    bool doSuperClusters_;
    bool doEvtPlane_;
+   bool calcEvtPlanePF_;
 
    bool saveAssoPFcands_; // flag to save information about PF candidates associated to a photon
 
@@ -136,6 +138,40 @@ class ggHiNtuplizer : public edm::EDAnalyzer {
    float phi_fit_v2_;
    TH1D* h1D_phi;
    TF1* f1_phi;
+
+   enum evtPlanesPF {
+     angEP_abseta_0_to_1p0=0,    // |eta| < 1
+     angEP_abseta_0_to_2p0=1,    // |eta| < 2
+     angEP_abseta_1p0_to_2p0=2,  // 1 < |eta| < 2
+     angEP_eta_m2p0_to_m1p0=3,   // -2 < eta < -1
+     angEP_eta_m1p0_to_0p0=4,    // -1 < eta < 0
+     angEP_eta_0p0_to_p1p0=5,    // 0 < eta < 1
+     angEP_eta_p1p0_to_p2p0=6,   // 1 < eta < 2
+     N_evtPlanesPF=7
+   };
+
+   const float EP_PF_etaMin[N_evtPlanesPF] = {
+     -1,
+     -2,
+     999,
+     -2,
+     -1,
+     0,
+     1,
+   };
+
+   const float EP_PF_etaMax[N_evtPlanesPF] = {
+     1,
+     2,
+     999,
+     -1,
+     0,
+     1,
+     2,
+   };
+
+   std::vector<float>  angEP2pf_;
+   std::vector<float>  angEP3pf_;
 
    // PileupSummaryInfo
    Int_t          nPUInfo_;
