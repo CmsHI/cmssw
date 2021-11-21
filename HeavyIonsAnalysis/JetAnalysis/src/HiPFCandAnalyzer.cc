@@ -146,12 +146,12 @@ HiPFCandAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
 	 type == reco::PFCandidate::mu      //type3
 	 )
       ){
-        pfEvt_.trkAlgo_.push_back( -999 );  
+        pfEvt_.trkAlgo_.push_back( 0 );
         pfEvt_.trkPtError_.push_back( -999 );  
-        pfEvt_.trkNHit_.push_back( -999 );  
+        pfEvt_.trkNHit_.push_back( 0 );
         pfEvt_.trkChi2_.push_back( 0 );  
-        pfEvt_.trkNdof_.push_back( -999 );
-        pfEvt_.trkNlayer_.push_back( -999 );
+        pfEvt_.trkNdof_.push_back( 0 );
+        pfEvt_.trkNlayer_.push_back( 0 );
         pfEvt_.highPurity_.push_back( 0 );
         if (doTrackMVA_) {
           pfEvt_.trkMVA_.push_back( -999 );
@@ -196,12 +196,12 @@ HiPFCandAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
           }
       }
       else{
-        pfEvt_.trkAlgo_.push_back( -999 );  
+        pfEvt_.trkAlgo_.push_back( 0 );
         pfEvt_.trkPtError_.push_back( -999 );  
-        pfEvt_.trkNHit_.push_back( -999 );  
+        pfEvt_.trkNHit_.push_back( 0 );
         pfEvt_.trkChi2_.push_back( 0 );  
-        pfEvt_.trkNdof_.push_back( -999 );
-        pfEvt_.trkNlayer_.push_back( -999 );
+        pfEvt_.trkNdof_.push_back( 0 );
+        pfEvt_.trkNlayer_.push_back( 0 );
         pfEvt_.highPurity_.push_back( 0 );
 
         if (doTrackMVA_) {
