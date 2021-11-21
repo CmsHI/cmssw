@@ -48,6 +48,16 @@ HiPFCandAnalyzer::HiPFCandAnalyzer(const edm::ParameterSet& iConfig)
     trkLabel_ = consumes<reco::TrackCollection>(
       iConfig.getParameter<edm::InputTag>("trackLabel"));
   }
+
+  doTrackMVA_ = doTrackMatching_ && (iConfig.getParameter<bool>("doTrackMVA"));
+  if (doTrackMVA_) {
+    mvaSrc_ = consumes<std::vector<float>>(iConfig.getParameter<edm::InputTag>("mvaSrc"));
+  }
+
+  doTrackVtx_ = doTrackMatching_ && (iConfig.getParameter<bool>("doTrackVtx"));
+  if (doTrackVtx_) {
+    vtxCollection_ = consumes<std::vector<reco::Vertex>>(iConfig.getParameter<edm::InputTag>("vtxLabel"));
+  }
 }
 
 HiPFCandAnalyzer::~HiPFCandAnalyzer()
@@ -64,7 +74,7 @@ HiPFCandAnalyzer::~HiPFCandAnalyzer()
 void
 HiPFCandAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
-  pfEvt_.Clear();
+  pfEvt_.Clear(doJets_, doMC_, doCaloEnergy_, doTrackMatching_, doTrackMVA_, doTrackVtx_);
 
   edm::Handle<reco::PFCandidateCollection> pfCandidates;
   iEvent.getByToken(pfCandidatePF_, pfCandidates);
@@ -72,6 +82,22 @@ HiPFCandAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
   edm::Handle<reco::TrackCollection > tracks;
   if (doTrackMatching_) {
     iEvent.getByToken(trkLabel_, tracks);
+  }
+
+  edm::Handle<std::vector<float>> trkmvaH;
+  if (doTrackMVA_) {
+    iEvent.getByToken(mvaSrc_, trkmvaH);
+  }
+
+  edm::Handle<std::vector<reco::Vertex> > vtxHandle;
+  reco::Vertex pv(math::XYZPoint(0, 0, -999), math::Error<3>::type());
+  if (doTrackVtx_) {
+    iEvent.getByToken(vtxCollection_, vtxHandle);
+    for (const auto& v : *vtxHandle)
+      if (!v.isFake()) {
+        pv = v;
+        break;
+    }
   }
 
   for (const auto& pfcand : *pfCandidates) {
@@ -124,7 +150,18 @@ HiPFCandAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
         pfEvt_.trkPtError_.push_back( -999 );  
         pfEvt_.trkNHit_.push_back( -999 );  
         pfEvt_.trkChi2_.push_back( 0 );  
-        pfEvt_.trkNdof_.push_back( -999 );  
+        pfEvt_.trkNdof_.push_back( -999 );
+        pfEvt_.trkNlayer_.push_back( -999 );
+        pfEvt_.highPurity_.push_back( 0 );
+        if (doTrackMVA_) {
+          pfEvt_.trkMVA_.push_back( -999 );
+        }
+        if (doTrackVtx_) {
+          pfEvt_.trkDz1_.push_back( -999 );
+          pfEvt_.trkDzError1_.push_back( -999 );
+          pfEvt_.trkDxy1_.push_back( -999 );
+          pfEvt_.trkDxyError1_.push_back( -999 );
+        }
         continue;
       }
 
@@ -137,14 +174,46 @@ HiPFCandAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
           pfEvt_.trkPtError_.push_back( trk.ptError() );  
           pfEvt_.trkNHit_.push_back( trk.numberOfValidHits() );  
           pfEvt_.trkChi2_.push_back( trk.chi2() );  
-          pfEvt_.trkNdof_.push_back( trk.ndof() );  
+          pfEvt_.trkNdof_.push_back( trk.ndof() );
+          pfEvt_.trkNlayer_.push_back( trk.hitPattern().trackerLayersWithMeasurement() );
+          bool isHighPurity = (trk.quality(reco::TrackBase::qualityByName("highPurity"))) ? 1 : 0;
+          pfEvt_.highPurity_.push_back( isHighPurity );
+
+          if (doTrackMVA_) {
+            if (trk.algo() == 11) { //sets jet-core iteration tracks to MVA of +/-1 based on their highPurity bit (even though no MVA is used)
+              pfEvt_.trkMVA_.push_back( (isHighPurity ? 1 : -1) );
+            } else {
+              pfEvt_.trkMVA_.push_back( (*trkmvaH)[trackKey] );
+            }
+          }
+
+          if (doTrackVtx_) {
+            math::XYZPoint v1(pv.position().x(), pv.position().y(), pv.position().z());
+            pfEvt_.trkDz1_.push_back( trk.dz(v1) );
+            pfEvt_.trkDzError1_.push_back( std::sqrt(trk.dzError()*trk.dzError()+pv.zError()*pv.zError()) );
+            pfEvt_.trkDxy1_.push_back( trk.dxy(v1) );
+            pfEvt_.trkDxyError1_.push_back( std::sqrt(trk.dxyError()*trk.dxyError()+pv.xError()*pv.yError()) );
+          }
       }
       else{
         pfEvt_.trkAlgo_.push_back( -999 );  
         pfEvt_.trkPtError_.push_back( -999 );  
         pfEvt_.trkNHit_.push_back( -999 );  
         pfEvt_.trkChi2_.push_back( 0 );  
-        pfEvt_.trkNdof_.push_back( -999 );  
+        pfEvt_.trkNdof_.push_back( -999 );
+        pfEvt_.trkNlayer_.push_back( -999 );
+        pfEvt_.highPurity_.push_back( 0 );
+
+        if (doTrackMVA_) {
+          pfEvt_.trkMVA_.push_back( -999 );
+        }
+
+        if (doTrackVtx_) {
+          pfEvt_.trkDz1_.push_back( -999 );
+          pfEvt_.trkDzError1_.push_back( -999 );
+          pfEvt_.trkDxy1_.push_back( -999 );
+          pfEvt_.trkDxyError1_.push_back( -999 );
+        }
       }
     }
   }
@@ -194,7 +263,7 @@ void HiPFCandAnalyzer::beginJob()
 {
   pfTree_ = fs->make<TTree>("pfTree", "pf candidate tree");
   pfEvt_.SetTree(pfTree_);
-  pfEvt_.SetBranches(doJets_, doMC_, doCaloEnergy_, doTrackMatching_);
+  pfEvt_.SetBranches(doJets_, doMC_, doCaloEnergy_, doTrackMatching_, doTrackMVA_, doTrackVtx_);
 }
 
 // ------------ method called once each job just after ending the event loop  ------------
@@ -203,7 +272,7 @@ HiPFCandAnalyzer::endJob() {
 }
 
 // set branches
-void TreePFCandEventData::SetBranches(bool doJets, bool doMC, bool doCaloEnergy, bool doTrackMatching)
+void TreePFCandEventData::SetBranches(bool doJets, bool doMC, bool doCaloEnergy, bool doTrackMatching, bool doTrackMVA, bool doTrackVtx)
 {
   // -- particle info --
   tree_->Branch("nPFpart", &nPFpart_, "nPFpart/I");
@@ -233,6 +302,19 @@ void TreePFCandEventData::SetBranches(bool doJets, bool doMC, bool doCaloEnergy,
     tree_->Branch("trkNHit",&trkNHit_);
     tree_->Branch("trkChi2",&trkChi2_);
     tree_->Branch("trkNdof",&trkNdof_);
+    tree_->Branch("trkNlayer",&trkNlayer_);
+    tree_->Branch("highPurity",&highPurity_);
+  }
+
+  if (doTrackMVA) {
+    tree_->Branch("trkMVA",&trkMVA_);
+  }
+
+  if(doTrackVtx) {
+    tree_->Branch("trkDz1",&trkDz1_);
+    tree_->Branch("trkDzError1",&trkDzError1_);
+    tree_->Branch("trkDxy1",&trkDxy1_);
+    tree_->Branch("trkDxyError1",&trkDxyError1_);
   }
 
   // -- jet info --
@@ -253,7 +335,7 @@ void TreePFCandEventData::SetBranches(bool doJets, bool doMC, bool doCaloEnergy,
   }
 }
 
-void TreePFCandEventData::Clear()
+void TreePFCandEventData::Clear(bool doJets, bool doMC, bool doCaloEnergy, bool doTrackMatching, bool doTrackMVA, bool doTrackVtx)
 {
   nPFpart_ = 0;
   pfKey_.clear();
@@ -268,28 +350,49 @@ void TreePFCandEventData::Clear()
   pfvy_.clear();
   pfvz_.clear();
 
-  pfEcalE_.clear();
-  pfEcalEraw_.clear();
-  pfHcalE_.clear();
-  pfHcalEraw_.clear();
+  if (doCaloEnergy) {
+    pfEcalE_.clear();
+    pfEcalEraw_.clear();
+    pfHcalE_.clear();
+    pfHcalEraw_.clear();
+  }
 
-  trkAlgo_.clear();
-  trkPtError_.clear();
-  trkNHit_.clear();
-  trkChi2_.clear();
-  trkNdof_.clear();  
+  if (doTrackMatching) {
+    trkAlgo_.clear();
+    trkPtError_.clear();
+    trkNHit_.clear();
+    trkChi2_.clear();
+    trkNdof_.clear();
+    trkNlayer_.clear();
+    highPurity_.clear();
+  }
 
-  nGENpart_ = 0;
-  genPDGId_.clear();
-  genPt_.clear();
-  genEta_.clear();
-  genPhi_.clear();
+  if (doTrackMVA) {
+    trkMVA_.clear();
+  }
 
-  njets_ = 0;
-  jetPt_.clear();
-  jetEnergy_.clear();
-  jetEta_.clear();
-  jetPhi_.clear();
+  if (doTrackVtx) {
+    trkDz1_.clear();
+    trkDzError1_.clear();
+    trkDxy1_.clear();
+    trkDxyError1_.clear();
+  }
+
+  if (doMC) {
+    nGENpart_ = 0;
+    genPDGId_.clear();
+    genPt_.clear();
+    genEta_.clear();
+    genPhi_.clear();
+  }
+
+  if (doJets) {
+    njets_ = 0;
+    jetPt_.clear();
+    jetEnergy_.clear();
+    jetEta_.clear();
+    jetPhi_.clear();
+  }
 }
 
 DEFINE_FWK_MODULE(HiPFCandAnalyzer);

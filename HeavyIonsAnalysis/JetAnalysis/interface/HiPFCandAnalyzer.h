@@ -16,8 +16,8 @@ class TreePFCandEventData
 {
   public:
     void SetTree(TTree * t) { tree_ = t; }
-    void SetBranches(bool doJets, bool doMC, bool doCaloEnergy, bool doTrackMatching);
-    void Clear();
+    void SetBranches(bool doJets, bool doMC, bool doCaloEnergy, bool doTrackMatching, bool doTrackMVA, bool doTrackVtx);
+    void Clear(bool doJets, bool doMC, bool doCaloEnergy, bool doTrackMatching, bool doTrackMVA, bool doTrackVtx);
 
     Int_t nPFpart_;
     std::vector<unsigned long> pfKey_;   // key for this PF cand, ref https://github.com/cms-sw/cmssw/blob/master/DataFormats/Common/interface/Ptr.h#L163
@@ -42,6 +42,15 @@ class TreePFCandEventData
     std::vector<Float_t> trkNHit_;
     std::vector<Float_t> trkChi2_;
     std::vector<Float_t> trkNdof_;
+    std::vector<Float_t> trkNlayer_;
+    std::vector<bool> highPurity_;
+
+    std::vector<Float_t> trkMVA_;
+
+    std::vector<Float_t> trkDz1_;
+    std::vector<Float_t> trkDzError1_;
+    std::vector<Float_t> trkDxy1_;
+    std::vector<Float_t> trkDxyError1_;
     
     Int_t nGENpart_;
     std::vector<Int_t> genPDGId_;
@@ -77,6 +86,8 @@ class HiPFCandAnalyzer : public edm::EDAnalyzer {
     edm::EDGetTokenT<reco::GenParticleCollection> genLabel_;
     edm::EDGetTokenT<pat::JetCollection> jetLabel_;
     edm::EDGetTokenT<reco::TrackCollection> trkLabel_;
+    edm::EDGetTokenT<std::vector<float>> mvaSrc_;
+    edm::EDGetTokenT<std::vector<reco::Vertex>> vtxCollection_;
 
     TreePFCandEventData pfEvt_;
     TTree *pfTree_;
@@ -92,4 +103,6 @@ class HiPFCandAnalyzer : public edm::EDAnalyzer {
     bool doCaloEnergy_;
     bool skipCharged_;
     bool doTrackMatching_;
+    bool doTrackMVA_;  // effective only if track matching flag is enabled
+    bool doTrackVtx_;  // effective only if track matching flag is enabled
 };

@@ -15,7 +15,13 @@ pfcandAnalyzer = cms.EDAnalyzer(
     skipCharged      = cms.bool(False),
   
     doTrackMatching  = cms.bool(False),
-    trackLabel       = cms.InputTag("generalTracks")
+    trackLabel       = cms.InputTag("generalTracks"),
+
+    doTrackMVA       = cms.bool(False), # This flag has an effect only if track matching flag is enabled
+    mvaSrc = cms.InputTag("generalTracks","MVAValues"),
+
+    doTrackVtx       = cms.bool(False), # This flag has an effect only if track matching flag is enabled
+    vtxLabel         = cms.InputTag("offlinePrimaryVerticesRecovery"),
     )
 
 pfcandAnalyzerCS = pfcandAnalyzer.clone(
