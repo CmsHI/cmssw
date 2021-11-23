@@ -150,22 +150,22 @@ if addR3Jets or addR4Jets :
     from HeavyIonsAnalysis.JetAnalysis.clusterJetsFromMiniAOD_cff import setupHeavyIonJets
 
     if addR3Jets :
-        setupHeavyIonJets('akCs3PF', process.extraJetsMC, process, isMC = 1, radius = 0.30, JECTag = 'AK3PF')
+        process.jetsR3 = cms.Sequence()
+        setupHeavyIonJets('akCs3PF', process.jetsR3, process, isMC = 1, radius = 0.30, JECTag = 'AK3PF')
         process.akCs3PFpatJetCorrFactors.levels = ['L2Relative', 'L3Absolute']
-        process.akCs3PFJetAnalyzer = process.akCs4PFJetAnalyzer.clone(
-            jetTag = "akCs3PFpatJets", genjetTag = "ak3GenJetsNoNu"
-        )
-
-        process.forest += process.extraJetsMC * process.akCs3PFJetAnalyzer
+        process.load("HeavyIonsAnalysis.JetAnalysis.candidateBtaggingMiniAOD_cff")
+        process.akCs3PFJetAnalyzer = process.akCs4PFJetAnalyzer.clone(jetTag = "akCs3PFpatJets", jetName = 'akCs3PF', genjetTag = "ak3GenJetsNoNu")      
+        process.forest += process.extraJetsMC * process.jetsR3 * process.akCs3PFJetAnalyzer
 
     if addR4Jets :
         # Recluster using an alias "0" in order not to get mixed up with the default AK4 collections
-        setupHeavyIonJets('akCs0PF', process.extraJetsMC, process, isMC = 1, radius = 0.40, JECTag = 'AK4PF')
+        process.jetsR4 = cms.Sequence()
+        setupHeavyIonJets('akCs0PF', process.jetsR4, process, isMC = 1, radius = 0.40, JECTag = 'AK4PF')
         process.akCs0PFpatJetCorrFactors.levels = ['L2Relative', 'L3Absolute']
-        process.akCs4PFJetAnalyzer.jetTag = cms.InputTag('akCs0PFpatJets')
-
-        process.forest += process.extraJetsMC * process.akCs4PFJetAnalyzer
-
+        process.load("HeavyIonsAnalysis.JetAnalysis.candidateBtaggingMiniAOD_cff")
+        process.akCs4PFJetAnalyzer.jetTag = 'akCs0PFpatJets'
+        process.akCs4PFJetAnalyzer.jetName = 'akCs0PF'
+        process.forest += process.extraJetsMC * process.jetsR4 * process.akCs4PFJetAnalyzer
 
 
 
@@ -195,7 +195,6 @@ if addCandidateTagging:
 
     process.forest.insert(1,process.candidateBtagging*process.updatedPatJets)
 
-    process.akCs4PFJetAnalyzer.addDeepCSV = True
 
 #########################
 # Event Selection -> add the needed filters here

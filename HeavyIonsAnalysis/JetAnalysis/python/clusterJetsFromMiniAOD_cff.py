@@ -4,6 +4,7 @@ from PhysicsTools.PatAlgos.producersLayer1.jetProducer_cff import *
 from RecoJets.Configuration.RecoGenJets_cff import ak4GenJetsNoNu
 from RecoBTag.ImpactParameter.pfImpactParameterTagInfos_cfi import pfImpactParameterTagInfos
 from RecoBTag.SecondaryVertex.pfSecondaryVertexTagInfos_cfi import pfSecondaryVertexTagInfos
+from RecoBTag.ImpactParameter.pfJetProbabilityBJetTags_cfi import pfJetProbabilityBJetTags
 from RecoBTag.Combined.pfDeepCSVTagInfos_cfi import pfDeepCSVTagInfos
 from RecoBTag.Combined.pfDeepCSVJetTags_cfi import pfDeepCSVJetTags
 
@@ -81,6 +82,10 @@ def setupHeavyIonJets(tag, sequence, process, isMC, radius = -1, JECTag = 'None'
                    pfDeepCSVJetTags.clone(src = tag+'pfDeepCSVTagInfos'),
                    process, sequence)
 
+    addToSequence( tag+'pfJetProbabilityBJetTags',
+                   pfJetProbabilityBJetTags.clone(tagInfos = [tag+'pfImpactParameterTagInfos']),
+                   process, sequence)
+
     addToSequence( tag+'patJets',
                    patJets.clone(
                        JetFlavourInfoSource = tag+'patJetFlavourAssociation',
@@ -89,7 +94,7 @@ def setupHeavyIonJets(tag, sequence, process, isMC, radius = -1, JECTag = 'None'
                        genPartonMatch = tag+'patJetPartonMatch',
                        jetCorrFactorsSource = cms.VInputTag(tag+'patJetCorrFactors'),
                        jetSource = tag+'Jets',
-                       discriminatorSources = cms.VInputTag(cms.InputTag(tag+'pfDeepCSVJetTags','probb'), cms.InputTag(tag+'pfDeepCSVJetTags','probc'), cms.InputTag(tag+'pfDeepCSVJetTags','probudsg'), cms.InputTag(tag+'pfDeepCSVJetTags','probbb')),
+                       discriminatorSources = cms.VInputTag(cms.InputTag(tag+'pfDeepCSVJetTags','probb'), cms.InputTag(tag+'pfDeepCSVJetTags','probc'), cms.InputTag(tag+'pfDeepCSVJetTags','probudsg'), cms.InputTag(tag+'pfDeepCSVJetTags','probbb'), cms.InputTag(tag+'pfJetProbabilityBJetTags')),
                        addAssociatedTracks = False,
                    ),
                    process, sequence)

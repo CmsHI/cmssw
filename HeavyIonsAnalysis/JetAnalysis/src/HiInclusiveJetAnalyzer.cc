@@ -75,8 +75,8 @@ HiInclusiveJetAnalyzer::HiInclusiveJetAnalyzer(const edm::ParameterSet& iConfig)
   }
   useRawPt_ = iConfig.getUntrackedParameter<bool>("useRawPt", true);
 
-  doLifeTimeTagging_ = iConfig.getUntrackedParameter<bool>("doLifeTimeTagging", true);
-  addDeepCSV_ = iConfig.getUntrackedParameter<bool>("addDeepCSV", false);
+  doLegacyBtagging_ = iConfig.getUntrackedParameter<bool>("doLegacyBtagging", true);
+  doCandidateBtagging_ = iConfig.getUntrackedParameter<bool>("doCandidateBtagging", true);
 
   pfCandidateLabel_ =
       consumes<edm::View<pat::PackedCandidate>>(iConfig.getUntrackedParameter<edm::InputTag>("pfCandidateLabel"));
@@ -85,7 +85,7 @@ HiInclusiveJetAnalyzer::HiInclusiveJetAnalyzer(const edm::ParameterSet& iConfig)
     genParticleSrc_ =
         consumes<reco::GenParticleCollection>(iConfig.getUntrackedParameter<edm::InputTag>("genParticles"));
 
-  if (doLifeTimeTagging_) {
+  if (doLegacyBtagging_) {
     trackCHEBJetTags_ = "trackCountingHighEffBJetTags";
     trackCHPBJetTags_ = "trackCountingHighPurBJetTags";
     jetPBJetTags_ = "jetProbabilityBJetTags";
@@ -93,9 +93,11 @@ HiInclusiveJetAnalyzer::HiInclusiveJetAnalyzer(const edm::ParameterSet& iConfig)
     simpleSVHighEffBJetTags_ = "simpleSecondaryVertexHighEffBJetTags";
     simpleSVHighPurBJetTags_ = "simpleSecondaryVertexHighPurBJetTags";
     combinedSVV2BJetTags_ = "combinedSecondaryVertexV2BJetTags";
-    deepCSVJetTags_ = "pfDeepCSVJetTags:probb";
   }
-
+  if (doCandidateBtagging_) {
+    deepCSVJetTags_ = jetName_ + "pfDeepCSVJetTags:probb";
+    pfJPJetTags_ = jetName_ + "pfJetProbabilityBJetTags";
+  }
   doSubEvent_ = false;
 
   if (isMC_) {
@@ -244,11 +246,10 @@ void HiInclusiveJetAnalyzer::beginJob() {
   }
 
   // b-jet discriminators
-  if (doLifeTimeTagging_) {
+  if (doLegacyBtagging_) {
     t->Branch("discr_ssvHighEff", jets_.discr_ssvHighEff, "discr_ssvHighEff[nref]/F");
     t->Branch("discr_ssvHighPur", jets_.discr_ssvHighPur, "discr_ssvHighPur[nref]/F");
     t->Branch("discr_csvV2", jets_.discr_csvV2, "discr_csvV2[nref]/F");
-    if(addDeepCSV_)t->Branch("discr_deepCSV", jets_.discr_deepCSV, "discr_deepCSV[nref]/F");
     t->Branch("discr_muByIp3", jets_.discr_muByIp3, "discr_muByIp3[nref]/F");
     t->Branch("discr_muByPt", jets_.discr_muByPt, "discr_muByPt[nref]/F");
     t->Branch("discr_prob", jets_.discr_prob, "discr_prob[nref]/F");
@@ -264,7 +265,10 @@ void HiInclusiveJetAnalyzer::beginJob() {
     t->Branch("muptrel", jets_.muptrel, "muptrel[nref]/F");
     t->Branch("muchg", jets_.muchg, "muchg[nref]/I");
   }
-
+  if(doCandidateBtagging_){
+    t->Branch("discr_deepCSV", jets_.discr_deepCSV, "discr_deepCSV[nref]/F");
+    t->Branch("discr_pfJP", jets_.discr_pfJP, "discr_pfJP[nref]/F");
+    }
   if (isMC_) {
     if (useHepMC_) {
       t->Branch("beamId1", &jets_.beamId1, "beamId1/I");
@@ -387,10 +391,9 @@ void HiInclusiveJetAnalyzer::beginJob() {
     }
   }
 
-  if (doLifeTimeTagging_) {
+  if (doLegacyBtagging_) {
     /* clear arrays */
     memset(jets_.discr_csvV2, 0, MAXJETS * sizeof(float));
-    if(addDeepCSV_) memset(jets_.discr_deepCSV, 0, MAXJETS * sizeof(float));
     memset(jets_.discr_muByIp3, 0, MAXJETS * sizeof(float));
     memset(jets_.discr_muByPt, 0, MAXJETS * sizeof(float));
     memset(jets_.discr_prob, 0, MAXJETS * sizeof(float));
@@ -399,6 +402,10 @@ void HiInclusiveJetAnalyzer::beginJob() {
     memset(jets_.discr_tcHighPur, 0, MAXJETS * sizeof(float));
     memset(jets_.discr_ssvHighEff, 0, MAXJETS * sizeof(float));
     memset(jets_.discr_ssvHighPur, 0, MAXJETS * sizeof(float));
+  }
+  if (doCandidateBtagging_) {
+    memset(jets_.discr_deepCSV, 0, MAXJETS * sizeof(float));
+    memset(jets_.discr_pfJP, 0, MAXJETS * sizeof(float));
   }
 }
 
@@ -484,11 +491,14 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
     if (std::abs(jet.eta()) > jetAbsEtaMax_)
       continue;
 
-    if (doLifeTimeTagging_) {
+    if (doCandidateBtagging_){
+      jets_.discr_deepCSV[jets_.nref]=jet.bDiscriminator(deepCSVJetTags_);
+      jets_.discr_pfJP[jets_.nref]=jet.bDiscriminator(pfJPJetTags_);
+    }
+    if (doLegacyBtagging_) {
       jets_.discr_ssvHighEff[jets_.nref] = jet.bDiscriminator(simpleSVHighEffBJetTags_);
       jets_.discr_ssvHighPur[jets_.nref] = jet.bDiscriminator(simpleSVHighPurBJetTags_);
       jets_.discr_csvV2[jets_.nref] = jet.bDiscriminator(combinedSVV2BJetTags_);
-      if(addDeepCSV_)jets_.discr_deepCSV[jets_.nref]=jet.bDiscriminator(deepCSVJetTags_);
       jets_.discr_prob[jets_.nref] = jet.bDiscriminator(jetPBJetTags_);
       jets_.discr_probb[jets_.nref] = jet.bDiscriminator(jetBPBJetTags_);
       jets_.discr_tcHighEff[jets_.nref] = jet.bDiscriminator(trackCHEBJetTags_);

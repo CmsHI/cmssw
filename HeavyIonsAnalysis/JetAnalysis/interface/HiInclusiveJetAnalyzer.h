@@ -91,8 +91,8 @@ private:
 
   bool doSubEvent_;
   double genPtMin_;
-  bool doLifeTimeTagging_;
-  bool addDeepCSV_;
+  bool doLegacyBtagging_;
+  bool doCandidateBtagging_;
 
   bool doHiJetID_;
   bool doStandardJetID_;
@@ -119,6 +119,7 @@ private:
   std::string simpleSVHighPurBJetTags_;
   std::string combinedSVV2BJetTags_;
   std::string deepCSVJetTags_;
+  std::string pfJPJetTags_;
 
   static const int MAXJETS = 1000;
   static const int MAXTRACKS = 5000;
@@ -257,6 +258,7 @@ private:
 
     float discr_csvV2[MAXJETS]={0};
     float discr_deepCSV[MAXJETS]={0};
+    float discr_pfJP[MAXJETS]={0};
     float discr_muByIp3[MAXJETS]={0};
     float discr_muByPt[MAXJETS]={0};
     float discr_prob[MAXJETS]={0};

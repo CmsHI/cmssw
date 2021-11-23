@@ -15,6 +15,10 @@ from RecoBTag.SecondaryVertex.pfSecondaryVertexTagInfos_cfi import pfSecondaryVe
 #inclusiveCandidateVertexFinder.tracks= "packedPFCandidates"
 #candidateVertexArbitrator.tracks = "packedPFCandidates"
 #candidateVertexArbitrator.primaryVertices = "offlineSlimmedPrimaryVerticesRecovery"
+from TrackingTools.TransientTrack.TransientTrackBuilder_cfi import *
+from RecoBTau.JetTagComputer.jetTagRecord_cfi import *
+from RecoBTag.ImpactParameter.candidateJetProbabilityComputer_cfi import  *
+from RecoBTag.ImpactParameter.pfJetProbabilityBJetTags_cfi import pfJetProbabilityBJetTags
 from RecoBTag.Combined.pfDeepCSVTagInfos_cfi import pfDeepCSVTagInfos
 from RecoBTag.Combined.pfDeepCSVJetTags_cfi import pfDeepCSVJetTags
 pfDeepCSVTagInfos.svTagInfos = "pfSecondaryVertexTagInfos"
@@ -27,6 +31,7 @@ candidateBtagging = cms.Sequence(
     #candidateVertexArbitrator +
     #inclusiveCandidateSecondaryVertices +
     #pfInclusiveSecondaryVertexFinderTagInfos +
+    pfJetProbabilityBJetTags +
     pfDeepCSVTagInfos + 
     pfDeepCSVJetTags
 )
