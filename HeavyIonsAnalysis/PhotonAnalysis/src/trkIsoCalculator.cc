@@ -167,10 +167,14 @@ bool trkIsoCalculator::passedTrkSelection(const reco::Track & trk, unsigned inde
 
         if (trk.pt() > 20) {
 
+          std::cout << "trk pt,eta,phi = " << trk.pt() << " , " << trk.eta() << " , " << trk.phi() << std::endl;
           int iPF = getMatchedPfCand(index);
           if (iPF >= 0) {
             float Et = (((*pfCands)[iPF]).ecalEnergy() + ((*pfCands)[iPF]).hcalEnergy()) / std::cosh(trk.eta());
             if ( !(Et > 0.5 * trk.pt()) )  return false;
+          }
+          else {
+            return false;
           }
         }
     }
@@ -190,6 +194,9 @@ bool trkIsoCalculator::passedTrkSelection(const reco::Track & trk, unsigned inde
           if (iPF >= 0) {
             float Et = (((*pfCands)[iPF]).ecalEnergy() + ((*pfCands)[iPF]).hcalEnergy()) / std::cosh(trk.eta());
             if ( !(Et > 0.5 * trk.pt()) )  return false;
+          }
+          else {
+            return false;
           }
         }
     }
@@ -214,6 +221,9 @@ bool trkIsoCalculator::passedTrkSelection(const reco::Track & trk, unsigned inde
           if (iPF >= 0) {
             float Et = (((*pfCands)[iPF]).ecalEnergy() + ((*pfCands)[iPF]).hcalEnergy()) / std::cosh(trk.eta());
             if ( !(Et > 0.5 * trk.pt()) )  return false;
+          }
+          else {
+            return false;
           }
         }
     }
