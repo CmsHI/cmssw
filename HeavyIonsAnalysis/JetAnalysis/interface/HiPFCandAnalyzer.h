@@ -37,6 +37,10 @@ class TreePFCandEventData
     std::vector<Float_t> pfHcalE_;
     std::vector<Float_t> pfHcalEraw_;
 
+    std::vector<unsigned long> trkKey_;
+    std::vector<Float_t> trkPt_;
+    std::vector<Float_t> trkEta_;
+    std::vector<Float_t> trkPhi_;
     std::vector<unsigned char> trkAlgo_;
     std::vector<Float_t> trkPtError_;
     std::vector<unsigned char> trkNHit_;

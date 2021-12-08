@@ -146,6 +146,10 @@ HiPFCandAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
 	 type == reco::PFCandidate::mu      //type3
 	 )
       ){
+        pfEvt_.trkKey_.push_back( 0 );
+        pfEvt_.trkPt_.push_back( -999 );
+        pfEvt_.trkEta_.push_back( -999 );
+        pfEvt_.trkPhi_.push_back( -999 );
         pfEvt_.trkAlgo_.push_back( 0 );
         pfEvt_.trkPtError_.push_back( -999 );  
         pfEvt_.trkNHit_.push_back( 0 );
@@ -166,10 +170,14 @@ HiPFCandAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
       }
 
       //find the track key
-      unsigned int trackKey = pfcand.trackRef().key();     
+      unsigned long trackKey = pfcand.trackRef().key();
 
       if(trackKey < tracks->size()){
           const reco::Track & trk = (*tracks)[trackKey];
+          pfEvt_.trkKey_.push_back( trackKey );
+          pfEvt_.trkPt_.push_back( trk.pt() );
+          pfEvt_.trkEta_.push_back( trk.eta() );
+          pfEvt_.trkPhi_.push_back( trk.phi() );
           pfEvt_.trkAlgo_.push_back( trk.algo() );  
           pfEvt_.trkPtError_.push_back( trk.ptError() );  
           pfEvt_.trkNHit_.push_back( trk.numberOfValidHits() );  
@@ -196,6 +204,10 @@ HiPFCandAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
           }
       }
       else{
+        pfEvt_.trkKey_.push_back( 0 );
+        pfEvt_.trkPt_.push_back( -999 );
+        pfEvt_.trkEta_.push_back( -999 );
+        pfEvt_.trkPhi_.push_back( -999 );
         pfEvt_.trkAlgo_.push_back( 0 );
         pfEvt_.trkPtError_.push_back( -999 );  
         pfEvt_.trkNHit_.push_back( 0 );
@@ -297,6 +309,10 @@ void TreePFCandEventData::SetBranches(bool doJets, bool doMC, bool doCaloEnergy,
   }
 
   if(doTrackMatching) {
+    tree_->Branch("trkKey",&trkKey_);
+    tree_->Branch("trkPt",&trkPt_);
+    tree_->Branch("trkEta",&trkEta_);
+    tree_->Branch("trkPhi",&trkPhi_);
     tree_->Branch("trkAlgo",&trkAlgo_);
     tree_->Branch("trkPtError",&trkPtError_);
     tree_->Branch("trkNHit",&trkNHit_);
@@ -358,6 +374,10 @@ void TreePFCandEventData::Clear(bool doJets, bool doMC, bool doCaloEnergy, bool 
   }
 
   if (doTrackMatching) {
+    trkKey_.clear();
+    trkPt_.clear();
+    trkEta_.clear();
+    trkPhi_.clear();
     trkAlgo_.clear();
     trkPtError_.clear();
     trkNHit_.clear();
