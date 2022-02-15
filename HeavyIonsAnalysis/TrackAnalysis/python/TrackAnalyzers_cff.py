@@ -1,6 +1,6 @@
 import FWCore.ParameterSet.Config as cms
 
-from PhysicsTools.PatAlgos.slimming.unpackedTracksAndVertices_cfi import *
+from HeavyIonsAnalysis.TrackAnalysis.unpackedTracksAndVertices_cfi import *
 from HeavyIonsAnalysis.TrackAnalysis.TrackAnalyzer_cfi import *
 
 PbPbTracks = trackAnalyzer.clone()

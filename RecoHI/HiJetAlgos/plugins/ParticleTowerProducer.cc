@@ -36,6 +36,7 @@
 #include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
 #include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
 #include "RecoHI/HiJetAlgos/plugins/HITowerHelper.h"
+#include "DataFormats/PatCandidates/interface/PackedCandidate.h"
 
 #include <cmath>
 #include <cstdlib>
@@ -59,6 +60,7 @@ private:
   // ----------member data ---------------------------
 
   edm::EDGetTokenT<reco::PFCandidateCollection> src_;
+  edm::EDGetTokenT<edm::View<pat::PackedCandidate>>  srcPacked_;
   const bool useHF_;
 
   // tower edges from fast sim, used starting at index 30 for the HF
@@ -68,8 +70,9 @@ private:
 // constructors and destructor
 //
 ParticleTowerProducer::ParticleTowerProducer(const edm::ParameterSet& iConfig)
-    : src_(consumes<reco::PFCandidateCollection>(iConfig.getParameter<edm::InputTag>("src"))),
-      useHF_(iConfig.getParameter<bool>("useHF")) {
+  : src_(consumes<reco::PFCandidateCollection>(iConfig.getParameter<edm::InputTag>("src"))),
+    srcPacked_(consumes<edm::View<pat::PackedCandidate>>(iConfig.getParameter<edm::InputTag>("src"))),
+    useHF_(iConfig.getParameter<bool>("useHF")) {
   produces<CaloTowerCollection>();
 }
 
@@ -86,18 +89,35 @@ void ParticleTowerProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
   EtaPhiMap towers_;
   towers_.clear();
 
-  auto const& inputs = iEvent.get(src_);
-  for (auto const& particle : inputs) {
-    double eta = particle.eta();
 
-    int ieta = eta2ieta(eta);
-    int iphi = phi2iphi(particle.phi(), ieta);
+  edm::Handle<reco::PFCandidateCollection> pfCandHandle;
+  edm::Handle<edm::View<pat::PackedCandidate> > packedPFCandHandle;
 
-    if (!useHF_ && abs(ieta) > 29)
-      continue;
+  bool isPF = iEvent.getByToken(src_, pfCandHandle);
+  bool isPackedPF = iEvent.getByToken(srcPacked_, packedPFCandHandle);
 
-    EtaPhi ep(ieta, iphi);
-    towers_[ep] += particle.et();
+
+  if(isPF){
+    auto const& inputs = iEvent.get(src_);
+    for (auto const& particle : inputs){ 
+      double eta = particle.eta();
+      int ieta = eta2ieta(eta);
+      int iphi = phi2iphi(particle.phi(), ieta);      
+      if (!useHF_ && abs(ieta) > 29) continue;      
+      EtaPhi ep(ieta, iphi);
+      towers_[ep] += particle.et();
+    }
+  }
+  else if(isPackedPF){
+    auto const& inputs = iEvent.get(srcPacked_);
+    for (auto const& particle : inputs){ 
+      double eta = particle.eta();      
+      int ieta = eta2ieta(eta);
+      int iphi = phi2iphi(particle.phi(), ieta);      
+      if (!useHF_ && abs(ieta) > 29) continue;      
+      EtaPhi ep(ieta, iphi);
+      towers_[ep] += particle.et();
+    }
   }
 
   auto prod = std::make_unique<CaloTowerCollection>();
@@ -120,6 +140,8 @@ void ParticleTowerProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
 
   iEvent.put(std::move(prod));
 }
+
+
 
 // Taken from FastSimulation/CalorimeterProperties/src/HCALProperties.cc
 // Note this returns an abs(ieta)

@@ -89,6 +89,8 @@ class TrackAnalyzer : public edm::EDAnalyzer {
      edm::EDGetTokenT<edm::ValueMap<float>> chi2MapLost_;
 
      edm::Service<TFileService> fs;
+
+     int iMaxPtSumVtx;
  
      // Root object
      TTree* trackTree_;
@@ -97,6 +99,8 @@ class TrackAnalyzer : public edm::EDAnalyzer {
      int nRun;
      int nEv;
      int nLumi;
+
+     int nVtx;
      std::vector< float > xVtx;
      std::vector< float > yVtx;
      std::vector< float > zVtx;
@@ -109,6 +113,7 @@ class TrackAnalyzer : public edm::EDAnalyzer {
      std::vector< int > nTracksVtx;
      std::vector< float > ptSumVtx;
 
+     int nTrk;
      std::vector< float > trkPt;
      std::vector< float > trkPtError;
      std::vector< float > trkEta;
@@ -121,6 +126,10 @@ class TrackAnalyzer : public edm::EDAnalyzer {
      std::vector< char > trkNLayers;
      std::vector< bool > highPurity;
      std::vector< float > trkNormChi2;
+
+     std::vector< float > pfEnergy;
+     std::vector< float > pfEcal;
+     std::vector< float > pfHcal;
 
      std::vector< int > trkAssociatedVtxIndx;
      std::vector< int > trkAssociatedVtxQuality;
@@ -137,6 +146,7 @@ class TrackAnalyzer : public edm::EDAnalyzer {
 };
 
 void TrackAnalyzer::clearVectors(){
+  nVtx = 0;
   xVtx.clear();
   yVtx.clear();
   zVtx.clear();
@@ -149,6 +159,7 @@ void TrackAnalyzer::clearVectors(){
   nTracksVtx.clear();
   ptSumVtx.clear();
 
+  nTrk = 0;
   trkPt.clear();
   trkPtError.clear();
   trkEta.clear();
@@ -160,6 +171,10 @@ void TrackAnalyzer::clearVectors(){
   trkNLayers.clear();
   trkNormChi2.clear();
   highPurity.clear();
+
+  pfEnergy.clear();
+  pfEcal.clear();
+  pfHcal.clear();
 
   trkAssociatedVtxIndx.clear();
   trkAssociatedVtxQuality.clear();

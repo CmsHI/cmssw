@@ -11,7 +11,6 @@ akCs4PFJetAnalyzer = inclusiveJetAnalyzer.clone(
     genParticles = cms.untracked.InputTag("prunedGenParticles"),
     eventInfoTag = cms.InputTag("generator"),
     jetName = cms.untracked.string("akCs4PF"),
-    bTagJetName = cms.untracked.string("akCs4PF"),
     genPtMin = cms.untracked.double(5),
     hltTrgResults = cms.untracked.string('TriggerResults::'+'HISIGNAL'),
     )

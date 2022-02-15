@@ -60,7 +60,7 @@ private:
 };
 
 static constexpr int kMaxHLTFlag = 1000;
-static constexpr int kMaxL1Flag = 1000;
+static constexpr int kMaxL1Flag = 1000.;
 
 TriggerAnalyzer::TriggerAnalyzer(edm::ParameterSet const& conf)
     : fEvent(0),
@@ -79,7 +79,7 @@ TriggerAnalyzer::TriggerAnalyzer(edm::ParameterSet const& conf)
       l1dummies(conf.getParameter<std::vector<std::string>>("l1dummybranches")),
       hltresultsToken_(consumes<edm::TriggerResults>(conf.getParameter<edm::InputTag>("hltresults"))),
       l1resultsToken_(consumes<GlobalAlgBlkBxCollection>(conf.getParameter<edm::InputTag>("l1results"))),
-      hltPrescaleProvider_(new HLTPrescaleProvider(conf, consumesCollector(), *this)) {
+      hltPrescaleProvider_(new HLTPrescaleProvider(conf.getParameter<edm::ParameterSet>("hltPSProvCfg"), consumesCollector(), *this)) {
   // open the tree file and initialize the tree
   edm::Service<TFileService> fs;
   t_ = fs->make<TTree>("HltTree", "");
@@ -217,7 +217,7 @@ void TriggerAnalyzer::analyze(edm::Event const& iEvent, edm::EventSetup const& i
       bool accept = result.getAlgoDecisionFinal(l1index);
       l1flag[index] = accept;
 
-      l1GtUtils.getPrescaleByBit(l1index, l1Prescl[index]);
+      l1GtUtils.getPrescaleByBit(l1index, (double &)l1Prescl[index]);
     }
 
     // l1results.isValid

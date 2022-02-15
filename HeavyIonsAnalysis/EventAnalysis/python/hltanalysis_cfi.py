@@ -9,4 +9,5 @@ hltanalysis = cms.EDAnalyzer(
     l1results = cms.InputTag('gtStage2Digis'),
     hltdummybranches = dummy_branches_for_PbPb_2018_HLT,
     l1dummybranches = dummy_branches_for_PbPb_2018_L1,
+    hltPSProvCfg=cms.PSet(stageL1Trigger = cms.uint32(2)),
     )

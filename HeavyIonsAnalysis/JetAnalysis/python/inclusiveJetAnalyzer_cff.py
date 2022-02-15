@@ -18,7 +18,6 @@ inclusiveJetAnalyzer = cms.EDAnalyzer(
     useRawPt = cms.untracked.bool(False),
     useHepMC = cms.untracked.bool(False),
     useQuality = cms.untracked.bool(True),
-    doLifeTimeTagging = cms.untracked.bool(True),
     doGenTaus = cms.untracked.bool(False),
     doGenSym = cms.untracked.bool(False),
     doSubJets = cms.untracked.bool(False),
@@ -27,4 +26,6 @@ inclusiveJetAnalyzer = cms.EDAnalyzer(
     doHiJetID = cms.untracked.bool(False),
     doStandardJetID = cms.untracked.bool(False),
     doSubEvent = cms.untracked.bool(False),
+    doLegacyBtagging = cms.untracked.bool(False),
+    doCandidateBtagging = cms.untracked.bool(True),
     )
