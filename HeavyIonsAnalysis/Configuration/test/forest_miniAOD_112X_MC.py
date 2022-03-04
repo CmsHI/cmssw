@@ -143,7 +143,7 @@ process.forest = cms.Path(
 
 addR3Jets = False
 addR4Jets = True
-useECS = True
+useECS = False
 
 if addR3Jets or addR4Jets :
     process.load("HeavyIonsAnalysis.JetAnalysis.extraJets_cff")
