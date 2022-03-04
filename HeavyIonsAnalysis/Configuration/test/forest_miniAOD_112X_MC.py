@@ -26,7 +26,7 @@ process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 112X, mc")
 process.source = cms.Source("PoolSource",
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
     fileNames = cms.untracked.vstring(
-        'file:/afs/cern.ch/work/m/mnguyen/public/integration/CMSSW_11_2_4_patch4/src/step3_inMINIAODSIM.root'
+        '/store/himc/HINPbPbSpring21MiniAOD/DiJet_pThat-15_TuneCP5_HydjetDrumMB_5p02TeV_Pythia8/MINIAODSIM/FixL1CaloGT_New_Release_112X_upgrade2018_realistic_HI_v9-v1/2520000/00147e49-765a-424c-a7e0-29860f11847d.root'
     ),
 )
 
@@ -96,7 +96,6 @@ process.load('HeavyIonsAnalysis.EventAnalysis.l1object_cfi')
 from HeavyIonsAnalysis.EventAnalysis.hltobject_cfi import trigger_list_mc
 process.hltobject.triggerNames = trigger_list_mc
 
-# process.load('HeavyIonsAnalysis.EventAnalysis.particleFlowAnalyser_cfi')
 ################################
 # electrons, photons, muons
 SS2018PbPbMC = "HeavyIonsAnalysis/EGMAnalysis/data/SS2018PbPbMC.dat"
@@ -144,9 +143,17 @@ process.forest = cms.Path(
 
 addR3Jets = False
 addR4Jets = True
+useECS = True
 
 if addR3Jets or addR4Jets :
     process.load("HeavyIonsAnalysis.JetAnalysis.extraJets_cff")
+    process.load("RecoHI.HiJetAlgos.EventConstSub_cfi")
+
+    if useECS:
+        process.forest += process.extraECSJetsMC
+    else:
+        process.forest += process.extraJetsMC
+
     from HeavyIonsAnalysis.JetAnalysis.clusterJetsFromMiniAOD_cff import setupHeavyIonJets
 
     if addR3Jets :
@@ -155,7 +162,9 @@ if addR3Jets or addR4Jets :
         process.akCs3PFpatJetCorrFactors.levels = ['L2Relative', 'L3Absolute']
         process.load("HeavyIonsAnalysis.JetAnalysis.candidateBtaggingMiniAOD_cff")
         process.akCs3PFJetAnalyzer = process.akCs4PFJetAnalyzer.clone(jetTag = "akCs3PFpatJets", jetName = 'akCs3PF', genjetTag = "ak3GenJetsNoNu")      
-        process.forest += process.extraJetsMC * process.jetsR3 * process.akCs3PFJetAnalyzer
+        process.forest += process.jetsR3 * process.akCs3PFJetAnalyzer
+        if useECS: 
+            process.akCs3PFJets.src = 'EventConstSub'
 
     if addR4Jets :
         # Recluster using an alias "0" in order not to get mixed up with the default AK4 collections
@@ -165,8 +174,9 @@ if addR3Jets or addR4Jets :
         process.load("HeavyIonsAnalysis.JetAnalysis.candidateBtaggingMiniAOD_cff")
         process.akCs4PFJetAnalyzer.jetTag = 'akCs0PFpatJets'
         process.akCs4PFJetAnalyzer.jetName = 'akCs0PF'
-        process.forest += process.extraJetsMC * process.jetsR4 * process.akCs4PFJetAnalyzer
-
+        process.forest += process.jetsR4 * process.akCs4PFJetAnalyzer
+        if useECS: 
+            process.akCs0PFJets.src = 'EventConstSub'
 
 
 addCandidateTagging = False

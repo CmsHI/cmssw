@@ -21,4 +21,3 @@
 <use name="CalibFormats/HcalObjects"/>
 <use name="DQMServices/Core"/>
 <flags EDM_PLUGIN="1"/>
-<library   file="src/*.cc" name="QWNtrkOffline"/>

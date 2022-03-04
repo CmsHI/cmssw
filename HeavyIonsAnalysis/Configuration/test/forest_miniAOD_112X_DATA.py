@@ -137,7 +137,6 @@ process.zdcanalyzer.zdcRecHitSrc = cms.InputTag("QWzdcreco")
 process.zdcanalyzer.calZDCDigi = True
 ################################
 
-
 ###############################################################################
 # main forest sequence
 process.forest = cms.Path(
@@ -154,16 +153,23 @@ process.forest = cms.Path(
     process.zdcdigi +
     process.QWzdcreco +
     process.zdcanalyzer +
-    process.muonAnalyzer
+    process.muonAnalyzer 
     )
 
 #customisation
 
 addR3Jets = False
 addR4Jets = True
+useECS = True
 
 if addR3Jets or addR4Jets :
     process.load("HeavyIonsAnalysis.JetAnalysis.extraJets_cff")
+    
+    if useECS: 
+        process.forest += process.extraECSJetsData 
+    else: 
+        process.forest += process.extraJetsData
+
     from HeavyIonsAnalysis.JetAnalysis.clusterJetsFromMiniAOD_cff import setupHeavyIonJets
 
     if addR3Jets :
@@ -172,7 +178,10 @@ if addR3Jets or addR4Jets :
         process.akCs3PFpatJetCorrFactors.levels = ['L2Relative', 'L2L3Residual']
         process.load("HeavyIonsAnalysis.JetAnalysis.candidateBtaggingMiniAOD_cff")
         process.akCs3PFJetAnalyzer = process.akCs4PFJetAnalyzer.clone(jetTag = "akCs3PFpatJets", jetName = 'akCs3PF')
-        process.forest += process.extraJetsData * process.jetsR3 * process.akCs3PFJetAnalyzer
+        process.forest += process.jetsR3 * process.akCs3PFJetAnalyzer
+        if useECS: 
+            process.akCs3PFJets.src = 'EventConstSub'
+
 
     if addR4Jets :
         # Recluster using an alias "0" in order not to get mixed up with the default AK4 collections
@@ -182,7 +191,9 @@ if addR3Jets or addR4Jets :
         process.load("HeavyIonsAnalysis.JetAnalysis.candidateBtaggingMiniAOD_cff")
         process.akCs4PFJetAnalyzer.jetTag = 'akCs0PFpatJets'
         process.akCs4PFJetAnalyzer.jetName = 'akCs0PF'
-        process.forest += process.extraJetsData * process.jetsR4 * process.akCs4PFJetAnalyzer
+        process.forest += process.jetsR4 * process.akCs4PFJetAnalyzer
+        if useECS: 
+            process.akCs0PFJets.src = 'EventConstSub'
 
 # this is only for non-reclustered jets
 addCandidateTagging = False
@@ -212,6 +223,9 @@ if addCandidateTagging:
     process.forest.insert(1,process.candidateBtagging*process.updatedPatJets)
 
 
+
+
+
 #########################
 # Event Selection -> add the needed filters here
 #########################
@@ -222,3 +236,5 @@ process.pprimaryVertexFilter = cms.Path(process.primaryVertexFilter)
 process.load('HeavyIonsAnalysis.EventAnalysis.hffilter_cfi')
 process.pphfCoincFilter2Th4 = cms.Path(process.phfCoincFilter2Th4)
 process.pAna = cms.EndPath(process.skimanalysis)
+
+

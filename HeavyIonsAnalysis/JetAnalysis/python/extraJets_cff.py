@@ -8,3 +8,6 @@ hiSignalGenParticles.src = "prunedGenParticles"
 extraJetsData = cms.Sequence(PFTowers + hiPuRho)
 extraJetsMC = cms.Sequence(PFTowers + hiPuRho + hiSignalGenParticles + allPartons)
 
+from RecoHI.HiJetAlgos.EventConstSub_cfi import EventConstSub
+extraECSJetsData = cms.Sequence(PFTowers + hiPuRho + EventConstSub)
+extraECSJetsMC = cms.Sequence(PFTowers + hiPuRho + EventConstSub + hiSignalGenParticles + allPartons)
