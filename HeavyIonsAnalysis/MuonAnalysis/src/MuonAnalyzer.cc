@@ -21,8 +21,10 @@ MuonAnalyzer::MuonAnalyzer(const edm::ParameterSet& ps) {
   vertexToken_ = consumes<std::vector<reco::Vertex>>(ps.getParameter<edm::InputTag>("vertexSrc"));
   genToken_ = consumes<edm::View<pat::PackedGenParticle>>(ps.getParameter<edm::InputTag>("genparticle"));
   muonToken_ = consumes<edm::View<pat::Muon>>(ps.getParameter<edm::InputTag>("muonSrc"));
+  trackBuilderToken_ = esConsumes(edm::ESInputTag("", "TransientTrackBuilder"));
 
   // initialize output TTree
+  usesResource(TFileService::kSharedResource);
   edm::Service<TFileService> fs;
   tree_ = fs->make<TTree>("MuonTree", "muon tree");
 
@@ -266,9 +268,7 @@ void MuonAnalyzer::analyze(const edm::Event& e, const edm::EventSetup& es) {
       }
     }
 
-    edm::ESHandle<TransientTrackBuilder> trackBuilder;
-    es.get<TransientTrackRecord>().get("TransientTrackBuilder", trackBuilder);
-    tb = trackBuilder.product();
+    const auto& tb = es.getHandle(trackBuilderToken_);
 
     // fill tree branches with reconstructed muons.
     edm::Handle<edm::View<pat::Muon>> recoMuons;

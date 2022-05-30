@@ -1,4 +1,4 @@
-#include "FWCore/Framework/interface/EDAnalyzer.h"
+#include "FWCore/Framework/interface/one/EDAnalyzer.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
@@ -34,6 +34,7 @@
 #include "TrackingTools/PatternTools/interface/ClosestApproachInRPhi.h"
 
 #include "TrackingTools/TransientTrack/interface/TransientTrackBuilder.h"
+#include "TrackingTools/Records/interface/TransientTrackRecord.h"
 
 #include "HepMC/GenEvent.h"
 #include "HepMC/GenParticle.h"
@@ -42,7 +43,7 @@
 
 #include <TTree.h>
 
-class MuonAnalyzer : public edm::EDAnalyzer {
+class MuonAnalyzer : public edm::one::EDAnalyzer<edm::one::SharedResources> {
 public:
   MuonAnalyzer(const edm::ParameterSet&);
   ~MuonAnalyzer() override;
@@ -54,11 +55,10 @@ private:
   edm::EDGetTokenT<reco::VertexCollection> vertexToken_;
   edm::EDGetTokenT<edm::View<pat::PackedGenParticle>> genToken_;
   edm::EDGetTokenT<edm::View<pat::Muon>> muonToken_;
+  edm::ESGetToken<TransientTrackBuilder, TransientTrackRecord> trackBuilderToken_;
 
   bool doGen_;
   bool doReco_;
-
-  const TransientTrackBuilder* tb;
 
   TTree* tree_;
 

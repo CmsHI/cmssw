@@ -8,3 +8,8 @@ muonAnalyzer = cms.EDAnalyzer("MuonAnalyzer",
                            genparticle = cms.InputTag("packedGenParticles"),
                            simtrack = cms.InputTag("mergedtruth","MergedTrackTruth"),
 )
+
+from HeavyIonsAnalysis.TrackAnalysis.unpackedTracksAndVertices_cfi import unpackedTracksAndVertices
+from HeavyIonsAnalysis.MuonAnalysis.unpackedMuons_cfi import unpackedMuons
+
+muonSequence = cms.Sequence(unpackedTracksAndVertices + unpackedMuons + muonAnalyzer)

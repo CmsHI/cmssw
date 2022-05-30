@@ -19,7 +19,8 @@ namespace pat {
               consumes<edm::ValueMap<float> >(iConfig.getParameter<edm::InputTag>("lostTrackNormChi2Map"))),
           primaryVertexToken_(consumes<reco::VertexCollection>(iConfig.getParameter<edm::InputTag>("primaryVertices"))),
           secondaryVertexToken_(consumes<reco::VertexCompositePtrCandidateCollection>(
-              iConfig.getParameter<edm::InputTag>("secondaryVertices"))) {
+              iConfig.getParameter<edm::InputTag>("secondaryVertices"))),
+          recoverTracks_(iConfig.getParameter<bool>("recoverTracks")){
       produces<reco::TrackCollection>();
       produces<reco::VertexCollection>();
       produces<reco::VertexCollection>("secondary");
@@ -38,6 +39,7 @@ namespace pat {
     const edm::EDGetTokenT<edm::ValueMap<float> > lostTrackNormChi2MapToken_;
     const edm::EDGetTokenT<reco::VertexCollection> primaryVertexToken_;
     const edm::EDGetTokenT<reco::VertexCompositePtrCandidateCollection> secondaryVertexToken_;
+    const bool recoverTracks_;
   };
 
 }  // namespace pat
@@ -62,31 +64,55 @@ void pat::TrackAndVertexUnpacker::produce(edm::StreamID, edm::Event& iEvent, con
     pcAssoc[isPF] = std::vector<int>(cands->size(), -1);
     for (size_t iC = 0; iC < cands->size(); iC++) {
       const auto& cand = (*cands)[iC];
-      if (!cand.hasTrackDetails() || cand.charge() == 0)
-        continue;
-      const auto& track = cand.pseudoTrack();
+      if (cand.charge() == 0) continue;
       const auto& normChi2 = normChi2Map.get(cands.id(), iC);
-      const auto ndof = track.ndof() != 0 ? track.ndof() : 0.1;
-      // create output track
-      outTracks->emplace_back(normChi2 * ndof,
-                              ndof,
-                              track.referencePoint(),
-                              track.momentum(),
-                              track.charge(),
-                              track.covariance(),
-                              track.algo(),
-                              reco::TrackBase::loose,
-                              track.t0(),
-                              track.beta(),
-                              track.covt0t0(),
-                              track.covBetaBeta());
-      auto& outTrack = outTracks->back();
-      outTrack.setQualityMask(track.qualityMask());
-      outTrack.setOriginalAlgorithm(track.originalAlgo());
-      outTrack.setAlgoMask(track.algoMask());
-      outTrack.setNLoops(track.nLoops());
-      outTrack.setStopReason(track.stopReason());
-      const_cast<reco::HitPattern&>(outTrack.hitPattern()) = track.hitPattern();
+      // case: track from packed candidate with track information
+      if (cand.hasTrackDetails()) {
+        const auto& track = cand.pseudoTrack();
+        const auto ndof = track.ndof() != 0 ? track.ndof() : 0.1;
+        // create output track
+        outTracks->emplace_back(normChi2 * ndof,
+                                ndof,
+                                track.referencePoint(),
+                                track.momentum(),
+                                track.charge(),
+                                track.covariance(),
+                                track.algo(),
+                                reco::TrackBase::loose,
+                                track.t0(),
+                                track.beta(),
+                                track.covt0t0(),
+                                track.covBetaBeta());
+        auto& outTrack = outTracks->back();
+        outTrack.setQualityMask(track.qualityMask());
+        outTrack.setOriginalAlgorithm(track.originalAlgo());
+        outTrack.setAlgoMask(track.algoMask());
+        outTrack.setNLoops(track.nLoops());
+        outTrack.setStopReason(track.stopReason());
+        const_cast<reco::HitPattern&>(outTrack.hitPattern()) = track.hitPattern();
+      }
+      // case: track from packed candidate without track information
+      else if (recoverTracks_ && (!isPF || cand.covarianceVersion() > 0)) {
+        const auto& lostHits = cand.lostInnerHits();
+        math::RhoEtaPhiVector p3(cand.ptTrk(), cand.etaAtVtx(), cand.phiAtVtx());
+        // create output track
+        outTracks->emplace_back((normChi2!=0 ? normChi2 : 1.E12) * 0.1,
+                                0.1,
+                                cand.vertex(),
+                                math::XYZVector(p3.x(), p3.y(), p3.z()),
+                                cand.charge(),
+                                reco::TrackBase::CovarianceMatrix(ROOT::Math::SMatrixIdentity()) * 1.E12,
+                                reco::TrackBase::initialStep,
+                                cand.trackHighPurity() ? reco::TrackBase::highPurity : reco::TrackBase::loose);
+        auto& outTrack = outTracks->back();
+        if (lostHits == pat::PackedCandidate::validHitInFirstPixelBarrelLayer)
+          outTrack.appendTrackerHitPattern(PixelSubdetector::PixelBarrel, 1, 0, TrackingRecHit::valid);
+        else if (lostHits >= pat::PackedCandidate::oneLostInnerHit)
+          outTrack.appendTrackerHitPattern(PixelSubdetector::PixelBarrel, 1, 0, TrackingRecHit::missing_inner);
+        if (lostHits == pat::PackedCandidate::moreLostInnerHits)
+          outTrack.appendTrackerHitPattern(PixelSubdetector::PixelBarrel, 2, 0, TrackingRecHit::missing_inner);
+      }
+      else continue;
       const size_t iT = outTracks->size() - 1;
       // associate track to primary vertices
       const auto& pvRef = cand.vertexRef();
@@ -152,6 +178,7 @@ void pat::TrackAndVertexUnpacker::fillDescriptions(edm::ConfigurationDescription
       ->setComment("primary vertex collection");
   desc.add<edm::InputTag>("secondaryVertices", edm::InputTag("slimmedSecondaryVertices"))
       ->setComment("secondary vertex collection");
+  desc.add<bool>("recoverTracks", false)->setComment("recover tracks");
   descriptions.add("unpackedTracksAndVertices", desc);
 }
 
