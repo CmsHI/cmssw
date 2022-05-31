@@ -67,6 +67,8 @@ struct MyZDCRecHit {
   int section[18];
   int channel[18];
   int saturation[18];
+  float sumPlus;
+  float sumMinus;
 };
 
 struct MyZDCDigi {
@@ -110,6 +112,7 @@ private:
 
   int nZdcTs_;
   bool calZDCDigi_;
+  bool verbose_;
 
   edm::Service<TFileService> fs;
   //edm::ESHandle<CaloGeometry> geo;
@@ -151,6 +154,7 @@ ZDCTreeProducer::ZDCTreeProducer(const edm::ParameterSet& iConfig) {
 
   nZdcTs_ = iConfig.getParameter<int>("nZdcTs");
   calZDCDigi_ = iConfig.getParameter<bool>("calZDCDigi");
+  verbose_ = iConfig.getParameter<bool>("verbose");
   geometryToken_ = esConsumes();
 }
 
@@ -172,6 +176,9 @@ void ZDCTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetu
     ev.getByToken(zdcRecHitSrc_, zdcrechits);
 
     int nhits = 0;
+    zdcRecHit.sumPlus = 0;
+    zdcRecHit.sumMinus = 0;
+
     for (auto const& rh : *zdcrechits) {
       HcalZDCDetId zdcid = rh.id();
       if (nhits < 18) {
@@ -180,6 +187,13 @@ void ZDCTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetu
         zdcRecHit.section[nhits] = zdcid.section();
         zdcRecHit.channel[nhits] = zdcid.channel();
         zdcRecHit.saturation[nhits] = static_cast<int>(rh.flagField(HcalCaloFlagLabels::ADCSaturationBit));
+      }
+
+      if (rh.id().zside() > 0) {
+          zdcRecHit.sumPlus += rh.energy();
+      }
+      if (rh.id().zside() < 0) {
+          zdcRecHit.sumMinus += rh.energy();
       }
 
       nhits++;
@@ -200,11 +214,14 @@ void ZDCTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetu
     int nhits = 0;
     //    for (auto const& rh : *zdcdigis)  {
 
-    std::cout << "zdcdigis->size() : " << zdcdigis->size() << std::endl;
-    std::cout << "zdcdigis->samples() : " << zdcdigis->samples() << std::endl;
+    if(verbose_)
+    {
+      std::cout << "zdcdigis->size() : " << zdcdigis->size() << std::endl;
+      std::cout << "zdcdigis->samples() : " << zdcdigis->samples() << std::endl;
+    }
 
     for (auto it = zdcdigis->begin(); it != zdcdigis->end(); it++) {
-      std::cout << "--- nhits : " << nhits << std::endl;
+      if(verbose_) std::cout << "--- nhits : " << nhits << std::endl;
 
       const QIE10DataFrame digi = static_cast<const QIE10DataFrame>(*it);
 
@@ -214,14 +231,14 @@ void ZDCTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetu
 
       //const ZDCDataFrame & rh = (*zdcdigis)[it];
       if (calZDCDigi_) {
-        std::cout << "###DIGI1?" << std::endl;
+        if(verbose_) std::cout << "###DIGI1?" << std::endl;
 
         const HcalQIECoder* qiecoder = conditions->getHcalCoder(zdcid);
         const HcalQIEShape* qieshape = conditions->getHcalShape(qiecoder);
         HcalCoderDb coder(*qiecoder, *qieshape);
         //        coder.adc2fC(rh,caldigi);
         coder.adc2fC(digi, caldigi);
-        std::cout << "###--- END DIGI1?" << std::endl;
+        if(verbose_) std::cout << "###--- END DIGI1?" << std::endl;
       }
 
       if (nhits < 18) {
@@ -230,16 +247,16 @@ void ZDCTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetu
         zdcDigi.channel[nhits] = zdcid.channel();
 
         for (int ts = 0; ts < digi.samples(); ts++) {
-          std::cout << "###DIGI2? --- ts : " << ts << std::endl;
+          if(verbose_) std::cout << "###DIGI2? --- ts : " << ts << std::endl;
 
           zdcDigi.chargefC[ts][nhits] = calZDCDigi_ ? caldigi[ts] : QWAna::ZDC2018::QIE10_nominal_fC[digi[ts].adc()];
           zdcDigi.adc[ts][nhits] = digi[ts].adc();
-          std::cout << "###--- END DIGI2?" << std::endl;
+          if(verbose_) std::cout << "###--- END DIGI2?" << std::endl;
         }
       }
       nhits++;
     }  // end loop zdc rechits
-    std::cout << "###DIGI END?" << std::endl;
+    if(verbose_) std::cout << "###DIGI END?" << std::endl;
 
     zdcDigi.n = nhits;
     zdcDigiTree->Fill();
@@ -256,6 +273,8 @@ void ZDCTreeProducer::beginJob() {
     zdcRecHitTree->Branch("zside", zdcRecHit.zside, "zside[n]/I");
     zdcRecHitTree->Branch("section", zdcRecHit.section, "section[n]/I");
     zdcRecHitTree->Branch("channel", zdcRecHit.channel, "channel[n]/I");
+    zdcRecHitTree->Branch("sumPlus", &zdcRecHit.sumPlus, "sumPlus/F");
+    zdcRecHitTree->Branch("sumMinus", &zdcRecHit.sumMinus, "sumMinus/F");
   }
 
   if (doZDCDigi_) {

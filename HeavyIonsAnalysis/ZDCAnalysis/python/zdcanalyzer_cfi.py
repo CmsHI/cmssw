@@ -10,4 +10,5 @@ zdcanalyzer = cms.EDAnalyzer("ZDCTreeProducer",
 
     nZdcTs = cms.int32(10),
     calZDCDigi = cms.bool(False),#True
+	verbose = cms.bool(True),
     )
