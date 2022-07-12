@@ -62,6 +62,7 @@ private:
 
   edm::InputTag jetTagLabel_;
   edm::EDGetTokenT<pat::JetCollection> jetTag_;
+  edm::EDGetTokenT<reco::CaloJetCollection> caloJetTag_;
   edm::EDGetTokenT<pat::JetCollection> matchTag_;
   edm::EDGetTokenT<edm::View<pat::PackedCandidate>> pfCandidateLabel_;
   edm::EDGetTokenT<reco::GenParticleCollection> genParticleSrc_;
@@ -106,6 +107,7 @@ private:
   bool doSubJets_;
   bool doJetConstituents_;
   bool doGenSubJets_;
+  bool doCaloJets_;
 
   TTree* t;
   edm::Service<TFileService> fs1;
@@ -123,12 +125,14 @@ private:
 
   static const int MAXJETS = 1000;
   static const int MAXTRACKS = 5000;
+  static const int MAXCALO = 1000;
 
   struct JRA {
     int nref = 0;
     int run = 0;
     int evt = 0;
     int lumi = 0;
+    int ncalo = 0;
 
     float rawpt[MAXJETS] = {0};
     float jtpt[MAXJETS] = {0};
@@ -386,6 +390,12 @@ private:
     std::vector<std::vector<float>> genSDConstituentsEta = {};
     std::vector<std::vector<float>> genSDConstituentsPhi = {};
     std::vector<std::vector<float>> genSDConstituentsM = {};
+
+    float calopt[MAXCALO] = {0};
+    float caloeta[MAXCALO] = {0};
+    float calophi[MAXCALO] = {0};
+
+
   };
 
   JRA jets_;

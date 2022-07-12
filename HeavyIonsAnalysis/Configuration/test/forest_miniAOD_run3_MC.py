@@ -126,6 +126,7 @@ process.forest = cms.Path(
     process.hiEvtAnalyzer +
     process.HiGenParticleAna +
     process.correctedElectrons +
+    process.akCs4PFJetAnalyzer +
     process.ggHiNtuplizer #+
     #process.unpackedMuons +
     #process.muonAnalyzer
@@ -134,7 +135,7 @@ process.forest = cms.Path(
 #customisation
 
 addR3Jets = False
-addR4Jets = True
+addR4Jets = False
 
 if addR3Jets or addR4Jets :
     process.load("HeavyIonsAnalysis.JetAnalysis.extraJets_cff")

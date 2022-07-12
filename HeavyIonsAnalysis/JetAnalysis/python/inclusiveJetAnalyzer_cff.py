@@ -3,6 +3,7 @@ import FWCore.ParameterSet.Config as cms
 inclusiveJetAnalyzer = cms.EDAnalyzer(
     "HiInclusiveJetAnalyzer",
     jetTag = cms.InputTag("ak4PFJets"),
+    caloJetTag = cms.InputTag("slimmedCaloJets"),
     jetPtMin = cms.double(5.0),
     matchTag = cms.untracked.InputTag("akPu4PFpatJets"),
     genjetTag = cms.InputTag("ak4HiGenJets"),

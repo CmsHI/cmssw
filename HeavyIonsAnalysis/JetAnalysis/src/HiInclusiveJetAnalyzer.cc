@@ -27,6 +27,7 @@ using namespace reco;
 HiInclusiveJetAnalyzer::HiInclusiveJetAnalyzer(const edm::ParameterSet& iConfig) {
   doMatch_ = iConfig.getUntrackedParameter<bool>("matchJets", false);
   jetTag_ = consumes<pat::JetCollection>(iConfig.getParameter<InputTag>("jetTag"));
+  caloJetTag_ = consumes<reco::CaloJetCollection>(iConfig.getParameter<InputTag>("caloJetTag"));
   matchTag_ = consumes<pat::JetCollection>(iConfig.getUntrackedParameter<InputTag>("matchTag"));
 
   useQuality_ = iConfig.getUntrackedParameter<bool>("useQuality", true);
@@ -37,6 +38,7 @@ HiInclusiveJetAnalyzer::HiInclusiveJetAnalyzer(const edm::ParameterSet& iConfig)
   doGenSym_ = iConfig.getUntrackedParameter<bool>("doGenSym", false);
   doSubJets_ = iConfig.getUntrackedParameter<bool>("doSubJets", false);
   doJetConstituents_ = iConfig.getUntrackedParameter<bool>("doJetConstituents", false);
+  doCaloJets_ = iConfig.getUntrackedParameter<bool>("doCaloJets", true);
   doGenSubJets_ = iConfig.getUntrackedParameter<bool>("doGenSubJets", false);
   if (doGenSubJets_)
     subjetGenTag_ = consumes<reco::JetView>(iConfig.getUntrackedParameter<InputTag>("subjetGenTag"));
@@ -118,6 +120,7 @@ void HiInclusiveJetAnalyzer::beginJob() {
   t->Branch("evt", &jets_.evt, "evt/I");
   t->Branch("lumi", &jets_.lumi, "lumi/I");
   t->Branch("nref", &jets_.nref, "nref/I");
+  t->Branch("ncalo", &jets_.ncalo, "ncalo/I");
   t->Branch("rawpt", jets_.rawpt, "rawpt[nref]/F");
   t->Branch("jtpt", jets_.jtpt, "jtpt[nref]/F");
   t->Branch("jteta", jets_.jteta, "jteta[nref]/F");
@@ -126,6 +129,13 @@ void HiInclusiveJetAnalyzer::beginJob() {
   t->Branch("jtpu", jets_.jtpu, "jtpu[nref]/F");
   t->Branch("jtm", jets_.jtm, "jtm[nref]/F");
   t->Branch("jtarea", jets_.jtarea, "jtarea[nref]/F");
+
+  if(doCaloJets_){
+    t->Branch("ncalo", &jets_.ncalo, "ncalo/I");
+    t->Branch("calopt", jets_.calopt, "calopt[ncalo]/F");
+    t->Branch("caloeta", jets_.caloeta, "caloeta[ncalo]/F");
+    t->Branch("calophi", jets_.calophi, "calophi[ncalo]/F");
+  }
 
   //for reWTA reclustering
   if (doWTARecluster_) {
@@ -424,6 +434,9 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
   edm::Handle<pat::JetCollection> jets;
   iEvent.getByToken(jetTag_, jets);
 
+  edm::Handle<reco::CaloJetCollection> calojets;
+  if(doCaloJets_)iEvent.getByToken(caloJetTag_, calojets);
+
   edm::Handle<pat::JetCollection> matchedjets;
   iEvent.getByToken(matchTag_, matchedjets);
 
@@ -443,6 +456,7 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
 
   // FILL JRA TREE
   jets_.nref = 0;
+  jets_.ncalo = 0;
 
   if (doJetConstituents_) {
     jets_.jtConstituentsId.clear();
@@ -970,6 +984,16 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
         }
         jets_.ngen++;
       }
+    }
+  }
+  
+  if(doCaloJets_){
+    for (unsigned int j = 0; j < calojets->size(); ++j) {
+      const reco::Jet& jet = (*calojets)[j];
+      jets_.calopt[jets_.ncalo] = jet.pt();
+      jets_.caloeta[jets_.ncalo] = jet.eta();
+      jets_.calophi[jets_.ncalo] = jet.phi();
+      jets_.ncalo++;
     }
   }
 
