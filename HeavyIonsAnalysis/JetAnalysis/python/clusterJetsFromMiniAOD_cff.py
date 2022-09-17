@@ -172,13 +172,19 @@ def setupPprefJets(tag, sequence, process, isMC, radius = -1, JECTag = 'None'):
 
     addToSequence( tag+'patJets',
                    patJets.clone(
-                       JetFlavourInfoSource = tag+'patJetFlavourAssociation',
-                       JetPartonMapSource = tag+'patJetFlavourAssociationLegacy',
+                       jetSource = tag+'Jets',
                        genJetMatch = tag+'patJetGenJetMatch',
                        genPartonMatch = tag+'patJetPartonMatch',
+                       JetFlavourInfoSource = tag+'patJetFlavourAssociation',
+                       JetPartonMapSource = tag+'patJetFlavourAssociationLegacy',
                        jetCorrFactorsSource = cms.VInputTag(tag+'patJetCorrFactors'),
-                       jetSource = tag+'Jets',
+                       trackAssociationSource = "",
+                       useLegacyJetMCFlavour = True,
                        discriminatorSources = cms.VInputTag(cms.InputTag(tag+'pfDeepCSVJetTags','probb'), cms.InputTag(tag+'pfDeepCSVJetTags','probc'), cms.InputTag(tag+'pfDeepCSVJetTags','probudsg'), cms.InputTag(tag+'pfDeepCSVJetTags','probbb'), cms.InputTag(tag+'pfJetProbabilityBJetTags')),
-                       addAssociatedTracks = False,
+                       tagInfoSources = [],
+                       addJetCharge = False,
+                       addTagInfos = False,
+                       addDiscriminators = False,
+                       addAssociatedTracks = False
                    ),
                    process, sequence)

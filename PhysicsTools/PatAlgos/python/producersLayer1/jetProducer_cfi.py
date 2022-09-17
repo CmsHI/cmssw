@@ -139,22 +139,4 @@ pp_on_PbPb_run3.toModify(_patJets,
                          addAssociatedTracks    = False,
 )
 
-from Configuration.Eras.Modifier_ppRef_run3_cff import ppRef_run3
-ppRef_run3.toModify(_patJets, 
-                         jetSource = "ak4PFJets",
-                         genJetMatch = "patJetGenJetMatch",
-                         genPartonMatch = "patJetPartonMatch",
-                         JetFlavourInfoSource = "patJetFlavourAssociation",
-                         JetPartonMapSource = "patJetFlavourAssociationLegacy",
-                         jetCorrFactorsSource = ["patJetCorrFactors"],
-                         trackAssociationSource = "",
-                         useLegacyJetMCFlavour = True,
-                         discriminatorSources = [],
-                         tagInfoSources = [],
-                         addJetCharge = False,
-                         addTagInfos = False,
-                         addDiscriminators = False,
-                         addAssociatedTracks    = False,
-)
-
 patJets = _patJets.clone()
