@@ -334,13 +334,21 @@ void HiEvtAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
     vz = vertex->begin()->z();
   }
 
-  edm::Handle<reco::HFFilterInfo> HFfilter;
-  iEvent.getByToken(HFfilters_, HFfilter);
+  // No HF filter info for ppref
+  if(doHiMC_){
+    edm::Handle<reco::HFFilterInfo> HFfilter;
+    iEvent.getByToken(HFfilters_, HFfilter);
 
-  numMinHFTower2 = HFfilter->numMinHFTowers2;
-  numMinHFTower3 = HFfilter->numMinHFTowers3;
-  numMinHFTower4 = HFfilter->numMinHFTowers4;
-  numMinHFTower5 = HFfilter->numMinHFTowers5;
+    numMinHFTower2 = HFfilter->numMinHFTowers2;
+    numMinHFTower3 = HFfilter->numMinHFTowers3;
+    numMinHFTower4 = HFfilter->numMinHFTowers4;
+    numMinHFTower5 = HFfilter->numMinHFTowers5;
+  } else {
+    numMinHFTower2 = 0;
+    numMinHFTower3 = 0;
+    numMinHFTower4 = 0;
+    numMinHFTower5 = 0;
+  }
 
   thi_->Fill();
 }

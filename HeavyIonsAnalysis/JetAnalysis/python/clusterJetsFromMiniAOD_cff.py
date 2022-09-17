@@ -99,3 +99,86 @@ def setupHeavyIonJets(tag, sequence, process, isMC, radius = -1, JECTag = 'None'
                    ),
                    process, sequence)
 
+def setupPprefJets(tag, sequence, process, isMC, radius = -1, JECTag = 'None'):
+
+    if radius < 0:
+       radiustag = get_radius(tag)
+       radius = radiustag * 0.1
+    else:
+       radiustag = get_radius(tag)
+
+    addToSequence( tag+'Jets',
+                   ak4PFJets.clone(rParam = radius, src = 'packedPFCandidates'),
+                   process, sequence)
+
+    if JECTag == 'None':
+       JECTag = 'AK' + str(radiustag) + 'PF'
+
+    addToSequence( tag+'patJetCorrFactors',
+                   patJetCorrFactors.clone(payload = JECTag, src = tag+'Jets'),
+                   process, sequence)
+
+    if isMC :
+        addToSequence( tag+'patJetPartonMatch',
+                       patJetPartonMatch.clone(maxDeltaR = radius,
+                          matched = 'hiSignalGenParticles',
+                          src = tag+'Jets'),
+                       process, sequence)
+
+        genjetcollection = 'ak'+str(radiustag)+'GenJetsNoNu'
+
+        addToSequence( genjetcollection,
+                       ak4GenJetsNoNu.clone(src = 'packedGenParticles', rParam = radius),
+                       process, sequence)
+
+        addToSequence( tag+'patJetGenJetMatch',
+                       patJetGenJetMatch.clone(maxDeltaR = radius,
+                          matched = genjetcollection,
+                          src = tag + 'Jets'),
+                       process, sequence)
+
+        addToSequence( tag+'patJetPartonAssociationLegacy',
+                       patJetPartonAssociationLegacy.clone(jets = tag + 'Jets', partons = "allPartons"),
+                       process, sequence)
+
+        addToSequence( tag+'patJetFlavourAssociationLegacy',
+                       patJetFlavourAssociationLegacy.clone(srcByReference = tag+'patJetPartonAssociationLegacy'),
+                       process, sequence)
+
+        addToSequence( tag+'patJetPartons',
+                       patJetPartons.clone(particles = "hiSignalGenParticles" ,partonMode = 'Pythia8'),
+                       process, sequence)
+
+    addToSequence( tag+'pfImpactParameterTagInfos',
+                   pfImpactParameterTagInfos.clone(jets = tag +'Jets',
+                      candidates = 'packedPFCandidates', primaryVertex = 'offlineSlimmedPrimaryVertices'),
+                   process, sequence)
+
+    addToSequence( tag+'pfSecondaryVertexTagInfos',
+                   pfSecondaryVertexTagInfos.clone(trackIPTagInfos = tag+'pfImpactParameterTagInfos'),
+                   process, sequence)
+
+    addToSequence( tag+'pfDeepCSVTagInfos',
+                   pfDeepCSVTagInfos.clone(svTagInfos = tag+'pfSecondaryVertexTagInfos'),
+                   process, sequence)
+
+    addToSequence( tag+'pfDeepCSVJetTags',
+                   pfDeepCSVJetTags.clone(src = tag+'pfDeepCSVTagInfos'),
+                   process, sequence)
+
+    addToSequence( tag+'pfJetProbabilityBJetTags',
+                   pfJetProbabilityBJetTags.clone(tagInfos = [tag+'pfImpactParameterTagInfos']),
+                   process, sequence)
+
+    addToSequence( tag+'patJets',
+                   patJets.clone(
+                       JetFlavourInfoSource = tag+'patJetFlavourAssociation',
+                       JetPartonMapSource = tag+'patJetFlavourAssociationLegacy',
+                       genJetMatch = tag+'patJetGenJetMatch',
+                       genPartonMatch = tag+'patJetPartonMatch',
+                       jetCorrFactorsSource = cms.VInputTag(tag+'patJetCorrFactors'),
+                       jetSource = tag+'Jets',
+                       discriminatorSources = cms.VInputTag(cms.InputTag(tag+'pfDeepCSVJetTags','probb'), cms.InputTag(tag+'pfDeepCSVJetTags','probc'), cms.InputTag(tag+'pfDeepCSVJetTags','probudsg'), cms.InputTag(tag+'pfDeepCSVJetTags','probbb'), cms.InputTag(tag+'pfJetProbabilityBJetTags')),
+                       addAssociatedTracks = False,
+                   ),
+                   process, sequence)
