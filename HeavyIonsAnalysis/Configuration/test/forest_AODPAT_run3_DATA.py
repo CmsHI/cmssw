@@ -3,7 +3,8 @@
 # Type: data
 
 import FWCore.ParameterSet.Config as cms
-process = cms.Process('HiForest')
+from Configuration.Eras.Era_Run3_pp_on_PbPb_cff import Run3_pp_on_PbPb
+process = cms.Process('HiForest',Run3_pp_on_PbPb)
 
 ###############################################################################
 
@@ -11,12 +12,6 @@ process = cms.Process('HiForest')
 process.load("HeavyIonsAnalysis.EventAnalysis.HiForestInfo_cfi")
 process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 125X, data")
 
-# import subprocess, os
-# version = subprocess.check_output(
-#     ['git', '-C', os.path.expandvars('$CMSSW_BASE/src'), 'describe', '--tags'])
-# if version == '':
-#     version = 'no git info'
-# process.HiForestInfo.HiForestVersion = cms.string(version)
 
 ###############################################################################
 
@@ -24,72 +19,36 @@ process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 125X, data")
 process.source = cms.Source("PoolSource",
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
     fileNames = cms.untracked.vstring(
-        '/store/group/phys_heavyions/mnguyen/HIRun2022A/RecoPatfromRaw_RAW2DIGI_L1Reco_RECO_PAT_inMINIAOD.root',
+        '/store/hidata/HIRun2022A/HITestRaw0/AOD/PromptReco-v1/000/362/293/00000/397cc4f3-4eb7-41b9-b2d1-baa004c7f61a.root'
     ), 
 )
 
 # number of events to process, set to -1 to process all events
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(-1)
+    input = cms.untracked.int32(100)
     )
 
 ###############################################################################
 
 # load Global Tag, geometry, etc.
-process.load('Configuration.Geometry.GeometryDB_cff')
+#process.load('Configuration.Geometry.GeometryDB_cff')
+process.load('Configuration.StandardSequences.GeometryDB_cff')
+process.load('Configuration.StandardSequences.GeometryRecoDB_cff')
 process.load('Configuration.StandardSequences.Services_cff')
 process.load('Configuration.StandardSequences.MagneticField_38T_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 process.load('FWCore.MessageService.MessageLogger_cfi')
 
+#stuff for PAT
+process.load('SimGeneral.HepPDTESSource.pythiapdt_cfi')
+process.load('Configuration.StandardSequences.PAT_cff')
 
 from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, '125X_dataRun3_relval_v4', '')
 process.HiForestInfo.GlobalTagLabel = process.GlobalTag.globaltag
 
-#centralityTag = "CentralityTable_HFtowers200_DataPbPb_periHYDJETshape_run2v1031x02_offline"
-#process.HiForestInfo.info.append(centralityTag)
-#
-#print('\n')
-#print('\033[31m~*~ CENTRALITY TABLE FOR 2018 PBPB DATA ~*~\033[0m')
-#print('\033[36m~*~ TAG: ' + centralityTag + ' ~*~\033[0m')
-#print('\n')
-#process.GlobalTag.snapshotTime = cms.string("9999-12-31 23:59:59.000")
-#process.GlobalTag.toGet.extend([
-#    cms.PSet(
-#        record = cms.string("HeavyIonRcd"),
-#        tag = cms.string(centralityTag),
-#        label = cms.untracked.string("HFtowers"),
-#        connect = cms.string("frontier://FrontierProd/CMS_CONDITIONS"),
-#        ),
-#    ])
-#
-#process.GlobalTag.toGet.extend([
-#    cms.PSet(
-#        record = cms.string("BTagTrackProbability3DRcd"),
-#        tag = cms.string("JPcalib_Data103X_2018PbPb_v1"),
-#        connect = cms.string("frontier://FrontierProd/CMS_CONDITIONS"),
-#        )
-#    ])
-#
-###############################################################################
 
-# root output
-process.TFileService = cms.Service("TFileService",
-    fileName = cms.string("/tmp/mnguyen/HiForestMiniAOD.root"))
-
-# # edm output for debugging purposes
-# process.output = cms.OutputModule(
-#     "PoolOutputModule",
-#     fileName = cms.untracked.string('HiForestEDM.root'),
-#     outputCommands = cms.untracked.vstring(
-#         'keep *',
-#         )
-#     )
-
-# process.output_path = cms.EndPath(process.output)
-
-###############################################################################
+#PAT stuff
 
 # event analysis
 # process.load('HeavyIonsAnalysis.EventAnalysis.hltanalysis_cfi')
@@ -106,6 +65,7 @@ process.load('HeavyIonsAnalysis.EventAnalysis.particleFlowAnalyser_cfi')
 ################################
 # electrons, photons, muons
 process.load('HeavyIonsAnalysis.EGMAnalysis.ggHiNtuplizer_cfi')
+process.ggHiNtuplizer.doMuons = cms.bool(False)
 process.load("TrackingTools.TransientTrack.TransientTrackBuilder_cfi")
 ################################
 # jet reco sequence
@@ -125,9 +85,39 @@ process.forest = cms.Path(
     process.trackSequencePbPb +
     process.particleFlowAnalyser +
     process.hiEvtAnalyzer +
-    #process.ggHiNtuplizer +
+    process.ggHiNtuplizer +
     process.akCs4PFJetAnalyzer
     )
+
+
+# Schedule definition
+process.schedule = cms.Schedule(process.forest)
+process.schedule.associate(process.patTask)
+from PhysicsTools.PatAlgos.tools.helpers import associatePatAlgosToolsTask
+associatePatAlgosToolsTask(process)
+
+
+# customisation of the process.
+
+# Automatic addition of the customisation function from PhysicsTools.PatAlgos.slimming.miniAOD_tools
+from PhysicsTools.PatAlgos.slimming.miniAOD_tools import miniAOD_customizeAllData 
+
+#call to customisation function miniAOD_customizeAllData imported from PhysicsTools.PatAlgos.slimming.miniAOD_tools
+process = miniAOD_customizeAllData(process)
+
+# End of customisation functions
+
+# Customisation from command line
+
+
+
+# root output
+process.TFileService = cms.Service("TFileService",
+    fileName = cms.string("HiForestMiniAOD.root"))
+
+
+###############################################################################
+
 
 #customisation
 
@@ -137,16 +127,25 @@ process.forest = cms.Path(
 # Event Selection -> add the needed filters here
 #########################
 
-process.load('HeavyIonsAnalysis.EventAnalysis.collisionEventSelection_cff')
+
+# Selection of at least a two-track fitted vertex                                                                                                                                                                     
+process.primaryVertexFilterHI = cms.EDFilter("VertexSelector",
+    src = cms.InputTag("offlineSlimmedPrimaryVerticesRecovery"),
+    cut = cms.string("!isFake && abs(z) <= 25 && position.Rho <= 2"), #in miniADO trackSize()==0, however there is no influence.                                                                                      
+    filter = cms.bool(True), # otherwise it won't filter the events                                                                                                                                                   
+)
+
+process.load("HeavyIonsAnalysis.EventAnalysis.clusterCompatibilityFilter_cfi")
+
 process.pclusterCompatibilityFilter = cms.Path(process.clusterCompatibilityFilter)
-process.pprimaryVertexFilter = cms.Path(process.primaryVertexFilter)
+process.pprimaryVertexFilterHI = cms.Path(process.primaryVertexFilterHI)
 process.pAna = cms.EndPath(process.skimanalysis)
 
 from HLTrigger.HLTfilters.hltHighLevel_cfi import hltHighLevel
 process.hltfilter = hltHighLevel.clone(
     HLTPaths = [
-        #"HLT_HIZeroBias_v4",                                                                                                                                                                                  
-        "HLT_HIMinimumBias_v2",
+        "HLT_HIZeroBias_v4",                                                                                                                                                                                  
+        #"HLT_HIMinimumBias_v2",
     ]
 )
 process.filterSequence = cms.Sequence(
@@ -159,3 +158,7 @@ process.skimanalysis.superFilters = cms.vstring("superFilterPath")
 for path in process.paths:
     getattr(process, path)._seq = process.filterSequence * getattr(process,path)._seq
 
+# Add early deletion of temporary data products to reduce peak memory need
+from Configuration.StandardSequences.earlyDeleteSettings_cff import customiseEarlyDelete
+process = customiseEarlyDelete(process)
+# End adding early deletion
