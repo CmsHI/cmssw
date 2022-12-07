@@ -116,6 +116,7 @@ private:
   std::vector<float> recoPFNeuIso_;
   std::vector<float> recoPFPUIso_;
 
+  std::vector<bool> recoIDHybridSoft_;
   std::vector<bool> recoIDSoft_;
   std::vector<bool> recoIDLoose_;
   std::vector<bool> recoIDMedium_;
@@ -124,6 +125,13 @@ private:
   std::vector<bool> recoIDGlobalHighPt_;
   std::vector<bool> recoIDTrkHighPt_;
   std::vector<bool> recoIDInTime_;
+
+  std::vector<bool> recoMVAIDSoft_;
+  std::vector<bool> recoMVAIDLoose_;
+  std::vector<bool> recoMVAIDMedium_;
+  std::vector<bool> recoMVAIDTight_;
+  std::vector<bool> recoMVAIDLooseLowPt_;
+  std::vector<bool> recoMVAIDMediumLowPt_;
 
   // inner tracker
   int nInner_;

@@ -44,6 +44,7 @@ MuonAnalyzer::MuonAnalyzer(const edm::ParameterSet& ps) {
   tree_->Branch("genPhi", &genPhi_);
   tree_->Branch("genMotherID", &genMotherID_);
 
+  // reco muon candidates
   tree_->Branch("nReco", &nReco_);
   tree_->Branch("recoP", &recoP_);
   tree_->Branch("recoPt", &recoPt_);
@@ -70,6 +71,7 @@ MuonAnalyzer::MuonAnalyzer(const edm::ParameterSet& ps) {
   tree_->Branch("recoPFPhoIso", &recoPFPhoIso_);
   tree_->Branch("recoPFNeuIso", &recoPFNeuIso_);
   tree_->Branch("recoPFPUIso", &recoPFPUIso_);
+  tree_->Branch("recoIDHybridSoft", &recoIDHybridSoft_);
   tree_->Branch("recoIDSoft", &recoIDSoft_);
   tree_->Branch("recoIDLoose", &recoIDLoose_);
   tree_->Branch("recoIDMedium", &recoIDMedium_);
@@ -78,8 +80,14 @@ MuonAnalyzer::MuonAnalyzer(const edm::ParameterSet& ps) {
   tree_->Branch("recoIDGlobalHighPt", &recoIDGlobalHighPt_);
   tree_->Branch("recoIDTrkHighPt", &recoIDTrkHighPt_);
   tree_->Branch("recoIDInTime", &recoIDInTime_);
+  tree_->Branch("recoMVAIDSoft", &recoMVAIDSoft_);
+  tree_->Branch("recoMVAIDLoose", &recoMVAIDLoose_);
+  tree_->Branch("recoMVAIDMedium", &recoMVAIDMedium_);
+  tree_->Branch("recoMVAIDTight", &recoMVAIDTight_);
+  tree_->Branch("recoMVAIDLooseLowPt", &recoMVAIDLooseLowPt_);
+  tree_->Branch("recoMVAIDMediumLowPt", &recoMVAIDMediumLowPt_);
 
-  // inner tracker
+  // inner tracks
   tree_->Branch("nInner", &nInner_);
   tree_->Branch("innerDxy", &innerDxy_);
   tree_->Branch("innerDz", &innerDz_);
@@ -96,7 +104,7 @@ MuonAnalyzer::MuonAnalyzer(const edm::ParameterSet& ps) {
   tree_->Branch("innerIsHighPurityTrack", &innerIsHighPurityTrack_);
   tree_->Branch("innerNormChi2", &innerNormChi2_);
 
-  // global
+  // global muons
   tree_->Branch("nGlobal", &nGlobal_);
   tree_->Branch("globalP", &globalP_);
   tree_->Branch("globalPt", &globalPt_);
@@ -156,6 +164,7 @@ void MuonAnalyzer::analyze(const edm::Event& e, const edm::EventSetup& es) {
   recoPFPhoIso_.clear();
   recoPFNeuIso_.clear();
   recoPFPUIso_.clear();
+  recoIDHybridSoft_.clear();
   recoIDSoft_.clear();
   recoIDLoose_.clear();
   recoIDMedium_.clear();
@@ -164,6 +173,13 @@ void MuonAnalyzer::analyze(const edm::Event& e, const edm::EventSetup& es) {
   recoIDGlobalHighPt_.clear();
   recoIDTrkHighPt_.clear();
   recoIDInTime_.clear();
+
+  recoMVAIDSoft_.clear();
+  recoMVAIDLoose_.clear();
+  recoMVAIDMedium_.clear();
+  recoMVAIDTight_.clear();
+  recoMVAIDLooseLowPt_.clear();
+  recoMVAIDMediumLowPt_.clear();
 
   nInner_ = 0;
   innerDxy_.clear();
@@ -313,7 +329,7 @@ void MuonAnalyzer::analyze(const edm::Event& e, const edm::EventSetup& es) {
       recoIP3DErr_.push_back(recoIP3DErr);
 
       // inner track info
-      if (mu.innerTrack().isNonnull() && mu.isTrackerMuon()) {
+      if (mu.innerTrack().isNonnull()) {
         const reco::TrackRef innMu = mu.innerTrack();
 
         const reco::HitPattern& hitPat = innMu->hitPattern();
@@ -340,8 +356,29 @@ void MuonAnalyzer::analyze(const edm::Event& e, const edm::EventSetup& es) {
 
         innerNormChi2_.push_back(innMu->normalizedChi2());
 
-        // global muons, avoiding overlaps with inner track variables if possible
-        if (mu.globalTrack().isNonnull() && mu.isGlobalMuon()) {
+      } else {
+        innerDxy_.push_back(-99);
+        innerDz_.push_back(-99);
+        innerDxyErr_.push_back(-99);
+        innerDzErr_.push_back(-99);
+
+        innerP_.push_back(-99);
+        innerPt_.push_back(-99);
+        innerPtErr_.push_back(-99);
+        innerEta_.push_back(-99);
+
+        innerTrkLayers_.push_back(-99);
+        innerNTrkHits_.push_back(-99);
+        innerPixelLayers_.push_back(-99);
+        innerNPixelHits_.push_back(-99);
+
+        innerIsHighPurityTrack_.push_back(false);
+
+        innerNormChi2_.push_back(-99);
+      }
+
+      // global muons, avoiding overlaps with inner track variables if possible
+      if (mu.globalTrack().isNonnull() && mu.isGlobalMuon()) {
           const reco::TrackRef glbMu = mu.globalTrack();
 
           nGlobal_++;
@@ -378,27 +415,6 @@ void MuonAnalyzer::analyze(const edm::Event& e, const edm::EventSetup& es) {
           globalNMuonHits_.push_back(-99);
         }
 
-      } else {
-        innerDxy_.push_back(-99);
-        innerDz_.push_back(-99);
-        innerDxyErr_.push_back(-99);
-        innerDzErr_.push_back(-99);
-
-        innerP_.push_back(-99);
-        innerPt_.push_back(-99);
-        innerPtErr_.push_back(-99);
-        innerEta_.push_back(-99);
-
-        innerTrkLayers_.push_back(-99);
-        innerNTrkHits_.push_back(-99);
-        innerPixelLayers_.push_back(-99);
-        innerNPixelHits_.push_back(-99);
-
-        innerIsHighPurityTrack_.push_back(false);
-
-        innerNormChi2_.push_back(-99);
-      }
-
       recoNMatchedStations_.push_back(mu.numberOfMatchedStations());
       recoIsoTrk_.push_back(mu.isolationR03().sumPt);
       recoPFChIso_.push_back(mu.pfIsolationR04().sumChargedHadronPt);
@@ -406,7 +422,11 @@ void MuonAnalyzer::analyze(const edm::Event& e, const edm::EventSetup& es) {
       recoPFNeuIso_.push_back(mu.pfIsolationR04().sumNeutralHadronEt);
       recoPFPUIso_.push_back(mu.pfIsolationR04().sumPUPt);
 
-      recoIDSoft_.push_back(mu.passed(reco::Muon::SoftMvaId));
+      recoIDHybridSoft_.push_back(mu.isGlobalMuon() && mu.isTrackerMuon() && mu.innerTrack()->hitPattern().trackerLayersWithMeasurement() > 5 && mu.innerTrack()->hitPattern().pixelLayersWithMeasurement() > 0 && fabs(mu.innerTrack()->dxy(pv.position()) < 0.3) && fabs(mu.innerTrack()->dz(pv.position()) < 20.));
+
+      //  muon selectors available at https://github.com/cms-sw/cmssw/blob/4c9240b33ace61c92c6803f0c4eace9ba06e6c8d/DataFormats/MuonReco/interface/Muon.h#L202
+      // Cut-based Ids
+      recoIDSoft_.push_back(mu.passed(reco::Muon::SoftCutBasedId));
       recoIDLoose_.push_back(mu.passed(reco::Muon::CutBasedIdLoose));
       recoIDMedium_.push_back(mu.passed(reco::Muon::CutBasedIdMedium));
       recoIDMediumPrompt_.push_back(mu.passed(reco::Muon::CutBasedIdMediumPrompt));
@@ -414,6 +434,14 @@ void MuonAnalyzer::analyze(const edm::Event& e, const edm::EventSetup& es) {
       recoIDGlobalHighPt_.push_back(mu.passed(reco::Muon::CutBasedIdGlobalHighPt));
       recoIDTrkHighPt_.push_back(mu.passed(reco::Muon::CutBasedIdTrkHighPt));
       recoIDInTime_.push_back(mu.passed(reco::Muon::InTimeMuon));
+
+      // MVA-based Ids
+      recoMVAIDSoft_.push_back(mu.passed(reco::Muon::SoftMvaId));
+      recoMVAIDLoose_.push_back(mu.passed(reco::Muon::MvaLoose));
+      recoMVAIDMedium_.push_back(mu.passed(reco::Muon::MvaMedium));
+      recoMVAIDTight_.push_back(mu.passed(reco::Muon::MvaTight));
+      recoMVAIDLooseLowPt_.push_back(mu.passed(reco::Muon::LowPtMvaLoose));
+      recoMVAIDMediumLowPt_.push_back(mu.passed(reco::Muon::LowPtMvaMedium));
 
     }  // muons loop
   }    // end of doReco_
