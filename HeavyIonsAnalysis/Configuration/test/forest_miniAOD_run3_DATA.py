@@ -76,7 +76,7 @@ process.HiForestInfo.GlobalTagLabel = process.GlobalTag.globaltag
 
 # root output
 process.TFileService = cms.Service("TFileService",
-    fileName = cms.string("/tmp/mnguyen/HiForestMiniAOD.root"))
+    fileName = cms.string("HiForestMiniAOD.root"))
 
 # # edm output for debugging purposes
 # process.output = cms.OutputModule(
@@ -106,6 +106,7 @@ process.load('HeavyIonsAnalysis.EventAnalysis.particleFlowAnalyser_cfi')
 ################################
 # electrons, photons, muons
 process.load('HeavyIonsAnalysis.EGMAnalysis.ggHiNtuplizer_cfi')
+process.ggHiNtuplizer.doMuons = cms.bool(False)
 process.load("TrackingTools.TransientTrack.TransientTrackBuilder_cfi")
 ################################
 # jet reco sequence
@@ -113,6 +114,9 @@ process.load('HeavyIonsAnalysis.JetAnalysis.akCs4PFJetSequence_pponPbPb_data_cff
 ################################
 # tracks
 process.load("HeavyIonsAnalysis.TrackAnalysis.TrackAnalyzers_cff")
+# muons (FTW)
+process.load("HeavyIonsAnalysis.MuonAnalysis.unpackedMuons_cfi")
+process.load("HeavyIonsAnalysis.MuonAnalysis.muonAnalyzer_cfi")
 ###############################################################################
 
 
@@ -126,7 +130,9 @@ process.forest = cms.Path(
     process.particleFlowAnalyser +
     process.hiEvtAnalyzer +
     #process.ggHiNtuplizer +
-    process.akCs4PFJetAnalyzer
+    process.akCs4PFJetAnalyzer +
+    process.unpackedMuons +
+    process.muonAnalyzer
     )
 
 #customisation
@@ -145,7 +151,7 @@ process.pAna = cms.EndPath(process.skimanalysis)
 from HLTrigger.HLTfilters.hltHighLevel_cfi import hltHighLevel
 process.hltfilter = hltHighLevel.clone(
     HLTPaths = [
-        #"HLT_HIZeroBias_v4",                                                                                                                                                                                  
+        #"HLT_HIZeroBias_v4",                                                     
         "HLT_HIMinimumBias_v2",
     ]
 )

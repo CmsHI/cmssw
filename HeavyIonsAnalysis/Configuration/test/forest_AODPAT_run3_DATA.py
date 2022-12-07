@@ -73,6 +73,9 @@ process.load('HeavyIonsAnalysis.JetAnalysis.akCs4PFJetSequence_pponPbPb_data_cff
 ################################
 # tracks
 process.load("HeavyIonsAnalysis.TrackAnalysis.TrackAnalyzers_cff")
+# muons (FTW)
+process.load("HeavyIonsAnalysis.MuonAnalysis.unpackedMuons_cfi")
+process.load("HeavyIonsAnalysis.MuonAnalysis.muonAnalyzer_cfi")
 ###############################################################################
 
 
@@ -86,7 +89,9 @@ process.forest = cms.Path(
     process.particleFlowAnalyser +
     process.hiEvtAnalyzer +
     process.ggHiNtuplizer +
-    process.akCs4PFJetAnalyzer
+    process.akCs4PFJetAnalyzer +
+    process.unpackedMuons +
+    process.muonAnalyzer
     )
 
 
