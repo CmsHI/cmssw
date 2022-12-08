@@ -3,6 +3,7 @@ import FWCore.ParameterSet.Config as cms
 hiEvtAnalyzer = cms.EDAnalyzer('HiEvtAnalyzer',
    CentralitySrc    = cms.InputTag("hiCentrality"),
    CentralityBinSrc = cms.InputTag("centralityBin","HFtowers"),
+   pfCandidateSrc   = cms.InputTag('packedPFCandidates'),
    EvtPlane         = cms.InputTag("hiEvtPlane"),
    EvtPlaneFlat     = cms.InputTag("hiEvtPlaneFlat",""),   
    HiMC             = cms.InputTag("heavyIon"),                            
