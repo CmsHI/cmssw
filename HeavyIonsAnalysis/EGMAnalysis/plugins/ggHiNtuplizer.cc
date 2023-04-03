@@ -990,7 +990,7 @@ void ggHiNtuplizer::analyze(const edm::Event& e, const edm::EventSetup& es) {
 
   tb = &es.getData(ttbESToken_);
 
-  if (doRecHitsEB_ || doRecHitsEE_)
+  if (doRecHitsEB_ || doRecHitsEE_ || doElectrons_)
     geo = &es.getData(geometryToken_);
 
   if (doSuperClusters_)
