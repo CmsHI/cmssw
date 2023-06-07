@@ -126,7 +126,7 @@ def setupHeavyIonJets(tag, sequence, process, isMC, radius = -1, JECTag = 'None'
 
     addToSequence( tag+'pfImpactParameterTagInfos',
                    pfImpactParameterTagInfos.clone(jets = tag +'Jets',
-                      candidates = 'packedPFCandidates', primaryVertex = 'offlineSlimmedPrimaryVerticesRecovery'),
+                      candidates = 'packedPFCandidates', primaryVertex = 'offlineSlimmedPrimaryVertices'),
                    process, sequence)
 
     addToSequence( tag+'pfSecondaryVertexTagInfos',
