@@ -31,7 +31,9 @@ using namespace HepMC;
 //
 // constructors and destructor
 //
-HLTMuTree::HLTMuTree(const edm::ParameterSet& iConfig) {
+HLTMuTree::HLTMuTree(const edm::ParameterSet& iConfig):
+  transientTrackToken_(esConsumes(edm::ESInputTag("", "TransientTrackBuilder")))
+{
   //now do what ever initialization is needed
   //tagRecoMu = iConfig.getParameter<edm::InputTag>("muons");
   tagRecoMu = consumes<edm::View<reco::Muon> >(iConfig.getParameter<edm::InputTag>("muons"));
@@ -326,8 +328,7 @@ void HLTMuTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     //iEvent.getByLabel(tagRecoMu,muons2);
     iEvent.getByToken(tagRecoMu, muons2);
 
-    const edm::ESGetToken<TransientTrackBuilder, TransientTrackRecord> transientTrackToken(esConsumes(edm::ESInputTag("", "TransientTrackBuilder")));
-    edm::ESHandle<TransientTrackBuilder> theTTBuilder = iSetup.getHandle(transientTrackToken);
+    edm::ESHandle<TransientTrackBuilder> theTTBuilder = iSetup.getHandle(transientTrackToken_);
     KalmanVertexFitter vtxFitter;
 
     int nDiMu = 0;

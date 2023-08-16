@@ -214,6 +214,8 @@ private:
   edm::EDGetTokenT<std::vector<double>> jetRhoSrc_;
   edm::EDGetTokenT<std::vector<double>> jetSigmaSrc_;
 
+  edm::ESGetToken<HcalDbService, HcalDbRecord> hcalDatabaseToken_;
+
   bool useJets_;
   bool doBasicClusters_;
   bool doTowers_;
@@ -244,7 +246,9 @@ constexpr double cone2 = 0.5 * 0.5;
 //
 // constructors and destructor
 //
-RecHitTreeProducer::RecHitTreeProducer(const edm::ParameterSet& iConfig) {
+RecHitTreeProducer::RecHitTreeProducer(const edm::ParameterSet& iConfig):
+  hcalDatabaseToken_(esConsumes<HcalDbService, HcalDbRecord>())
+{
   //now do what ever initialization is needed
   doEbyEonly_ = iConfig.getParameter<bool>("doEbyEonly");
 
@@ -689,8 +693,7 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
     edm::Handle<ZDCDigiCollection> zdcdigis;
     ev.getByToken(zdcDigiSrc_,zdcdigis);
 
-    edm::ESGetToken<HcalDbService, HcalDbRecord> hcalDatabaseToken;
-    edm::ESHandle<HcalDbService> conditions = iSetup.getHandle(hcalDatabaseToken); 
+    edm::ESHandle<HcalDbService> conditions = iSetup.getHandle(hcalDatabaseToken_); 
 
     int nhits = 0;
     for (auto const& rh : *zdcdigis)  {
