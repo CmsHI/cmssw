@@ -39,6 +39,8 @@ private:
 
   std::map<uint32_t, std::vector<double>> pedestal_;
   std::map<std::string, uint32_t> cname_;
+
+  edm::ESGetToken<HcalDbService, HcalDbRecord> hcalDatabaseToken_;
 };
 
 QWZDC2018Producer2::QWZDC2018Producer2(const edm::ParameterSet& pset)
@@ -46,7 +48,9 @@ QWZDC2018Producer2::QWZDC2018Producer2(const edm::ParameterSet& pset)
       SOI_(pset.getUntrackedParameter<int>("SOI", 4)),
       bHardCode_(pset.getUntrackedParameter<bool>(
           "HardCode", true)),  // has to be hard coded now, calibration format is not working at the moment =_=
-      bDebug_(pset.getUntrackedParameter<bool>("Debug", false)) {
+      bDebug_(pset.getUntrackedParameter<bool>("Debug", false)),
+      hcalDatabaseToken_(esConsumes<HcalDbService, HcalDbRecord>())      
+{
   consumes<QIE10DigiCollection>(Src_);
 
   for (int channel = 0; channel < 16; channel++) {
@@ -128,8 +132,7 @@ void QWZDC2018Producer2::produce(edm::Event& iEvent, const edm::EventSetup& iSet
 
   ESHandle<HcalDbService> conditions;
   if (!bHardCode_){
-    edm::ESGetToken<HcalDbService, HcalDbRecord> hcalDatabaseToken;
-    conditions = iSetup.getHandle(hcalDatabaseToken);
+    conditions = iSetup.getHandle(hcalDatabaseToken_);
   }
 
   Handle<QIE10DigiCollection> digis;

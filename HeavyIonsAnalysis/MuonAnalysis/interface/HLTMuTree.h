@@ -90,6 +90,8 @@ private:
   edm::InputTag MuCandTag2;
   edm::InputTag MuCandTag3;
 
+  edm::ESGetToken<TransientTrackBuilder, TransientTrackRecord> transientTrackToken_;
+
   Bool_t doReco;
   Bool_t doGen;
   Bool_t doHLT;
