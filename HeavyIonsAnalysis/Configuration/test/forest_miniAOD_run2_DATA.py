@@ -119,7 +119,7 @@ process.load('HeavyIonsAnalysis.ZDCAnalysis.zdcanalyzer_cfi')
 process.zdcanalyzer.doZDCRecHit = True
 process.zdcanalyzer.doZDCDigi = False
 process.zdcanalyzer.zdcRecHitSrc = cms.InputTag("QWzdcreco")
-process.zdcanalyzer.calZDCDigi = True
+process.zdcanalyzer.calZDCDigi = False
 ################################
 
 
