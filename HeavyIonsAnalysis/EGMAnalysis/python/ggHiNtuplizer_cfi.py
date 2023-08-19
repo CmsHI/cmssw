@@ -3,7 +3,7 @@ import FWCore.ParameterSet.Config as cms
 ggHiNtuplizer = cms.EDAnalyzer("ggHiNtuplizer",
     doGenParticles = cms.bool(False),
     doSuperClusters = cms.bool(False),
-    doElectrons = cms.bool(False),
+    doElectrons = cms.bool(True),
     doPhotons = cms.bool(True),
     doMuons = cms.bool(True),
 
