@@ -13,7 +13,6 @@
 #include "SimDataFormats/GeneratorProducts/interface/GenEventInfoProduct.h"
 #include "SimDataFormats/GeneratorProducts/interface/HepMCProduct.h"
 #include "DataFormats/PatCandidates/interface/PackedCandidate.h"
-#include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
 #include "fastjet/contrib/Njettiness.hh"
 #include "fastjet/AreaDefinition.hh"
 #include "fastjet/ClusterSequence.hh"
@@ -948,17 +947,19 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
 
       //reWTA reclustering----------------------------------
       if (doWTARecluster_) {
-        std::vector<fastjet::PseudoJet> candidates;
-        auto daughters = genjet.getJetConstituents();
-        for (auto it = daughters.begin(); it != daughters.end(); ++it) {
-          candidates.push_back(fastjet::PseudoJet((**it).px(), (**it).py(), (**it).pz(), (**it).energy()));
-        }
-        auto cs = new fastjet::ClusterSequence(candidates, WTAjtDef);
-        std::vector<fastjet::PseudoJet> wtajt = fastjet::sorted_by_pt(cs->inclusive_jets(0));
+        if (genjet_pt > genPtMin_) {
+          std::vector<fastjet::PseudoJet> candidates;
+          auto daughters = genjet.getJetConstituents();
+          for (auto it = daughters.begin(); it != daughters.end(); ++it) {
+            candidates.push_back(fastjet::PseudoJet((**it).px(), (**it).py(), (**it).pz(), (**it).energy()));
+          }
+          auto cs = new fastjet::ClusterSequence(candidates, WTAjtDef);
+          std::vector<fastjet::PseudoJet> wtajt = fastjet::sorted_by_pt(cs->inclusive_jets(0));
 
-        jets_.WTAgeneta[jets_.ngen] = (!wtajt.empty()) ? wtajt[0].eta() : -999;
-        jets_.WTAgenphi[jets_.ngen] = (!wtajt.empty()) ? wtajt[0].phi_std() : -999;
-        delete cs;
+          jets_.WTAgeneta[jets_.ngen] = (!wtajt.empty()) ? wtajt[0].eta() : -999;
+          jets_.WTAgenphi[jets_.ngen] = (!wtajt.empty()) ? wtajt[0].phi_std() : -999;
+          delete cs;
+        }
       }
       //-------------------------------------------------
 
