@@ -130,16 +130,22 @@ process.forest = cms.Path(
 
 #customisation
 
+# Select the types of jets filled
 addR3Jets = False
 addR3FlowJets = False
 addR4Jets = True
 addR4FlowJets = True
+addUnsubtractedR4Jets = True
+
+# Choose which additional information is added to jet trees
+doHIJetID = True             # Fill jet ID and composition information branches
+doWTARecluster = True        # Add jet phi and eta for WTA axis
 
 # this is only for non-reclustered jets
 addCandidateTagging = False
 
 
-if addR3Jets or addR3FlowJets or addR4Jets or addR4FlowJets :
+if addR3Jets or addR3FlowJets or addR4Jets or addR4FlowJets or addUnsubtractedR4Jets :
     process.load("HeavyIonsAnalysis.JetAnalysis.extraJets_cff")
     from HeavyIonsAnalysis.JetAnalysis.clusterJetsFromMiniAOD_cff import setupHeavyIonJets
     process.load("HeavyIonsAnalysis.JetAnalysis.candidateBtaggingMiniAOD_cff")
@@ -148,14 +154,14 @@ if addR3Jets or addR3FlowJets or addR4Jets or addR4FlowJets :
         process.jetsR3 = cms.Sequence()
         setupHeavyIonJets('akCs3PF', process.jetsR3, process, isMC = 0, radius = 0.30, JECTag = 'AK3PF', doFlow = False)
         process.akCs3PFpatJetCorrFactors.levels = ['L2Relative', 'L2L3Residual']
-        process.akCs3PFJetAnalyzer = process.akCs4PFJetAnalyzer.clone(jetTag = "akCs3PFpatJets", jetName = 'akCs3PF')
+        process.akCs3PFJetAnalyzer = process.akCs4PFJetAnalyzer.clone(jetTag = "akCs3PFpatJets", jetName = 'akCs3PF', doHiJetID = doHIJetID, doWTARecluster = doWTARecluster)
         process.forest += process.extraJetsData * process.jetsR3 * process.akCs3PFJetAnalyzer
 
     if addR3FlowJets :
         process.jetsR3flow = cms.Sequence()
         setupHeavyIonJets('akCs3PFFlow', process.jetsR3flow, process, isMC = 0, radius = 0.30, JECTag = 'AK3PF', doFlow = True)
         process.akCs3PFFlowpatJetCorrFactors.levels = ['L2Relative', 'L2L3Residual']
-        process.akFlowPuCs3PFJetAnalyzer = process.akCs4PFJetAnalyzer.clone(jetTag = "akCs3PFFlowpatJets", jetName = 'akCs3PFFlow')
+        process.akFlowPuCs3PFJetAnalyzer = process.akCs4PFJetAnalyzer.clone(jetTag = "akCs3PFFlowpatJets", jetName = 'akCs3PFFlow', doHiJetID = doHIJetID, doWTARecluster = doWTARecluster)
         process.forest += process.extraFlowJetsData * process.jetsR3flow * process.akFlowPuCs3PFJetAnalyzer
 
     if addR4Jets :
@@ -165,6 +171,8 @@ if addR3Jets or addR3FlowJets or addR4Jets or addR4FlowJets :
         process.akCs0PFpatJetCorrFactors.levels = ['L2Relative', 'L2L3Residual']
         process.akCs4PFJetAnalyzer.jetTag = 'akCs0PFpatJets'
         process.akCs4PFJetAnalyzer.jetName = 'akCs0PF'
+        process.akCs4PFJetAnalyzer.doHiJetID = doHIJetID
+        process.akCs4PFJetAnalyzer.doWTARecluster = doWTARecluster
         process.forest += process.extraJetsData * process.jetsR4 * process.akCs4PFJetAnalyzer
 
     if addR4FlowJets :
@@ -173,7 +181,19 @@ if addR3Jets or addR3FlowJets or addR4Jets or addR4FlowJets :
         process.akCs4PFFlowpatJetCorrFactors.levels = ['L2Relative', 'L2L3Residual']
         process.akFlowPuCs4PFJetAnalyzer.jetTag = 'akCs4PFFlowpatJets'
         process.akFlowPuCs4PFJetAnalyzer.jetName = 'akCs4PFFlow'
+        process.akFlowPuCs4PFJetAnalyzer.doHiJetID = doHIJetID
+        process.akFlowPuCs4PFJetAnalyzer.doWTARecluster = doWTARecluster
         process.forest += process.extraFlowJetsData * process.jetsR4flow * process.akFlowPuCs4PFJetAnalyzer
+
+    if addUnsubtractedR4Jets:
+        process.load('HeavyIonsAnalysis.JetAnalysis.ak4PFJetSequence_ppref_data_cff')
+        from HeavyIonsAnalysis.JetAnalysis.clusterJetsFromMiniAOD_cff import setupPprefJets
+        process.unsubtractedJetR4 = cms.Sequence()
+        setupPprefJets('ak04PF', process.unsubtractedJetR4, process, isMC = 0, radius = 0.40, JECTag = 'AK4PF')
+        process.ak04PFpatJetCorrFactors.levels = ['L2Relative', 'L2L3Residual']
+        process.ak4PFJetAnalyzer.jetTag = "ak04PFpatJets"
+        process.ak4PFJetAnalyzer.jetName = "ak04PF"
+        process.forest += process.extraJetsData * process.unsubtractedJetR4 * process.ak4PFJetAnalyzer
 
 
 if addCandidateTagging:

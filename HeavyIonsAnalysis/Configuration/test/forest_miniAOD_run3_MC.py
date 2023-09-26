@@ -138,10 +138,12 @@ process.forest = cms.Path(
 
 addR3Jets = False
 addR3FlowJets = False
-addR4Jets = True
+addR4Jets = False
 addR4FlowJets = True
 matchJets = True             # Enables q/g and heavy flavor jet identification in MC
 addCandidateTagging = False
+doHIJetID = True             # Fill jet ID and composition information branches
+doWTARecluster = False        # Add jet phi and eta for WTA axis
 
 if addR3Jets or addR3FlowJets or addR4Jets or addR4FlowJets :
     process.load("HeavyIonsAnalysis.JetAnalysis.extraJets_cff")
@@ -153,7 +155,7 @@ if addR3Jets or addR3FlowJets or addR4Jets or addR4FlowJets :
         jetName = 'akCs3PF'
         setupHeavyIonJets(jetName, process.jetsR3, process, isMC = 1, radius = 0.30, JECTag = 'AK3PF', doFlow = False, matchJets = matchJets)
         process.akCs3PFpatJetCorrFactors.levels = ['L2Relative', 'L3Absolute']
-        process.akCs3PFJetAnalyzer = process.akCs4PFJetAnalyzer.clone(jetTag = jetName + "patJets", jetName = jetName, genjetTag = "ak3GenJetsNoNu", matchJets = matchJets, matchTag = "ak3PFMatchingFor" + jetName + "patJets")
+        process.akCs3PFJetAnalyzer = process.akCs4PFJetAnalyzer.clone(jetTag = jetName + "patJets", jetName = jetName, genjetTag = "ak3GenJetsNoNu", matchJets = matchJets, matchTag = "ak3PFMatchingFor" + jetName + "patJets", doHiJetID = doHIJetID, doWTARecluster = doWTARecluster)
         process.forest += process.extraJetsMC * process.jetsR3 * process.akCs3PFJetAnalyzer
 
     if addR3FlowJets :
@@ -161,7 +163,7 @@ if addR3Jets or addR3FlowJets or addR4Jets or addR4FlowJets :
         jetName = 'akCs3PFFlow'
         setupHeavyIonJets(jetName, process.jetsR3flow, process, isMC = 1, radius = 0.30, JECTag = 'AK3PF', doFlow = True, matchJets = matchJets)
         process.akCs3PFFlowpatJetCorrFactors.levels = ['L2Relative', 'L3Absolute']
-        process.akFlowPuCs3PFJetAnalyzer = process.akCs4PFJetAnalyzer.clone(jetTag = jetName + "patJets", jetName = jetName, genjetTag = "ak3GenJetsNoNu", matchJets = matchJets, matchTag = "ak3PFMatchingFor" + jetName + "patJets")
+        process.akFlowPuCs3PFJetAnalyzer = process.akCs4PFJetAnalyzer.clone(jetTag = jetName + "patJets", jetName = jetName, genjetTag = "ak3GenJetsNoNu", matchJets = matchJets, matchTag = "ak3PFMatchingFor" + jetName + "patJets", doHiJetID = doHIJetID, doWTARecluster = doWTARecluster)
         process.forest += process.extraFlowJetsMC * process.jetsR3flow * process.akFlowPuCs3PFJetAnalyzer
 
     if addR4Jets :
@@ -174,6 +176,8 @@ if addR3Jets or addR3FlowJets or addR4Jets or addR4FlowJets :
         process.akCs4PFJetAnalyzer.jetName = jetName
         process.akCs4PFJetAnalyzer.matchJets = matchJets
         process.akCs4PFJetAnalyzer.matchTag = 'ak4PFMatchingFor' + jetName + 'patJets'
+        process.akCs4PFJetAnalyzer.doHiJetID = doHIJetID
+        process.akCs4PFJetAnalyzer.doWTARecluster = doWTARecluster
         process.forest += process.extraJetsMC * process.jetsR4 * process.akCs4PFJetAnalyzer
 
     if addR4FlowJets :
@@ -185,6 +189,8 @@ if addR3Jets or addR3FlowJets or addR4Jets or addR4FlowJets :
         process.akFlowPuCs4PFJetAnalyzer.jetName = jetName
         process.akFlowPuCs4PFJetAnalyzer.matchJets = matchJets
         process.akFlowPuCs4PFJetAnalyzer.matchTag = 'ak4PFMatchingFor' + jetName + 'patJets'
+        process.akFlowPuCs4PFJetAnalyzer.doHiJetID = doHIJetID
+        process.akFlowPuCs4PFJetAnalyzer.doWTARecluster = doWTARecluster
         process.forest += process.extraFlowJetsMC * process.jetsR4flow * process.akFlowPuCs4PFJetAnalyzer 
 
 
