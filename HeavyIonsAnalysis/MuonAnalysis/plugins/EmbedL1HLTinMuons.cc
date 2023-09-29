@@ -137,7 +137,7 @@ void pat::EmbedL1HLTinMuons::fillDescriptions(edm::ConfigurationDescriptions& de
   desc.add<edm::InputTag>("muons", edm::InputTag("unpackedMuons"))->setComment("muon input collection");
   desc.add<edm::InputTag>("triggerResults", edm::InputTag("TriggerResults::HLT"))
       ->setComment("trigger results collection");
-  desc.add<edm::InputTag>("triggerObjects", edm::InputTag("slimmedPatTrigger::PAT"))
+  desc.add<edm::InputTag>("triggerObjects", edm::InputTag("slimmedPatTrigger"))
       ->setComment("trigger objects collection");
   descriptions.add("unpackedMuonsWithTrigger", desc);
 }
