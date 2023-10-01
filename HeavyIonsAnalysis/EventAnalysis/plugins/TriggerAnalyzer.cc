@@ -35,7 +35,7 @@ public:
 private:
   TTree* t_;
 
-  int fEvent;
+  unsigned long long fEvent;
   int fLumiBlock;
   int fRun;
   int fBx;
