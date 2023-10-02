@@ -1,26 +1,13 @@
 #include "HeavyIonsAnalysis/TrackAnalysis/interface/TrackAnalyzer.h"
 
-TrackAnalyzer::TrackAnalyzer(const edm::ParameterSet& iConfig) {
-  doTrack_ = iConfig.getUntrackedParameter<bool>("doTrack", true);
-
-  trackPtMin_ = iConfig.getUntrackedParameter<double>("trackPtMin", 0.01);
-
-  vertexSrcLabel_ = iConfig.getParameter<edm::InputTag>("vertexSrc");
-  vertexSrc_ = consumes<reco::VertexCollection>(vertexSrcLabel_);
-
-  packedCandLabel_ = iConfig.getParameter<edm::InputTag>("packedCandSrc");
-  packedCandSrc_ = consumes<edm::View<pat::PackedCandidate>>(packedCandLabel_);
-
-  lostTracksLabel_ = iConfig.getParameter<edm::InputTag>("lostTracksSrc");
-  lostTracksSrc_ = consumes<edm::View<pat::PackedCandidate>>(lostTracksLabel_);
-
-  beamSpotProducer_ = consumes<reco::BeamSpot>(
-      iConfig.getUntrackedParameter<edm::InputTag>("beamSpotSrc", edm::InputTag("offlineBeamSpot")));
-
-  chi2MapLabel_ = iConfig.getParameter<edm::InputTag>("chi2Map");
-  chi2Map_ = consumes<edm::ValueMap<float>>(chi2MapLabel_);
-  chi2MapLostLabel_ = iConfig.getParameter<edm::InputTag>("chi2MapLost");
-  chi2MapLost_ = consumes<edm::ValueMap<float>>(chi2MapLostLabel_);
+TrackAnalyzer::TrackAnalyzer(const edm::ParameterSet& iConfig) :
+  doTrack_(iConfig.getUntrackedParameter<bool>("doTrack", true)),
+  trackPtMin_(iConfig.getUntrackedParameter<double>("trackPtMin", 0.01)),
+  vertexSrc_(consumes<reco::VertexCollection>(iConfig.getParameter<edm::InputTag>("vertexSrc"))),
+  trackSrc_(consumes<reco::TrackCollection>(iConfig.getParameter<edm::InputTag>("trackSrc"))),
+  track2pcSrc_(consumes<std::vector<edm::Ptr<pat::PackedCandidate> > >(iConfig.getParameter<edm::InputTag>("trackSrc"))),
+  beamSpotProducer_(consumes<reco::BeamSpot>(
+      iConfig.getUntrackedParameter<edm::InputTag>("beamSpotSrc", edm::InputTag("offlineBeamSpot")))) {
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -45,34 +32,32 @@ void TrackAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 //--------------------------------------------------------------------------------------------------
 void TrackAnalyzer::fillVertices(const edm::Event& iEvent) {
   // Fill reconstructed vertices.
-  const reco::VertexCollection* recoVertices;
-  edm::Handle<reco::VertexCollection> vertexCollection;
-  iEvent.getByToken(vertexSrc_, vertexCollection);
-  recoVertices = vertexCollection.product();
+  const auto& recoVertices = iEvent.get(vertexSrc_);
 
   iMaxPtSumVtx = -1;
   float maxPtSum = -999;
-  nVtx = (int)recoVertices->size();
+  nVtx = (int)recoVertices.size();
   for (int i = 0; i < nVtx; ++i) {
-    xVtx.push_back(recoVertices->at(i).position().x());
-    yVtx.push_back(recoVertices->at(i).position().y());
-    zVtx.push_back(recoVertices->at(i).position().z());
-    xErrVtx.push_back(recoVertices->at(i).xError());
-    yErrVtx.push_back(recoVertices->at(i).yError());
-    zErrVtx.push_back(recoVertices->at(i).zError());
+    const auto& v = recoVertices[i];
+    xVtx.push_back(v.position().x());
+    yVtx.push_back(v.position().y());
+    zVtx.push_back(v.position().z());
+    xErrVtx.push_back(v.xError());
+    yErrVtx.push_back(v.yError());
+    zErrVtx.push_back(v.zError());
 
-    chi2Vtx.push_back(recoVertices->at(i).chi2());
-    ndofVtx.push_back(recoVertices->at(i).ndof());
+    chi2Vtx.push_back(v.chi2());
+    ndofVtx.push_back(v.ndof());
 
-    isFakeVtx.push_back(recoVertices->at(i).isFake());
+    isFakeVtx.push_back(v.isFake());
 
     //number of tracks having a weight in vtx fit above 0.5
-    nTracksVtx.push_back(recoVertices->at(i).nTracks());
+    nTracksVtx.push_back(v.nTracks());
 
     float ptSum = 0;
-    for (auto ref = recoVertices->at(i).tracks_begin(); ref != recoVertices->at(i).tracks_end(); ref++) {
-      ptSum += (*ref)->pt();
-    }
+    for (const auto& track : v.tracks())
+      ptSum += track->pt();
+
     ptSumVtx.push_back(ptSum);
     if (ptSum > maxPtSum) {
       iMaxPtSumVtx = i;
@@ -83,80 +68,62 @@ void TrackAnalyzer::fillVertices(const edm::Event& iEvent) {
 
 //--------------------------------------------------------------------------------------------------
 void TrackAnalyzer::fillTracks(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
-  edm::Handle<edm::View<pat::PackedCandidate>> cands;
-  edm::Handle<edm::ValueMap<float>> chi2Map;
+  const auto& tracks = iEvent.get(trackSrc_);
+  const auto& track2pc = iEvent.getHandle(track2pcSrc_);
 
-  //loop over packed cands, then loop over lost tracks
-  for (int i = 0; i < 2; i++) {
-    if (i == 0) {
-      iEvent.getByToken(packedCandSrc_, cands);
-      iEvent.getByToken(chi2Map_, chi2Map);
+  //loop over tracks
+  for (unsigned it = 0; it < tracks.size(); ++it) {
+    const auto& t = tracks[it];
+    const auto& c = track2pc.isValid() ? *track2pc->at(it) : pat::PackedCandidate();
+
+    if (t.pt() < trackPtMin_)
+      continue;
+
+    trkPt.push_back(t.pt());
+    trkPtError.push_back(t.ptError());
+    trkEta.push_back(t.eta());
+    trkPhi.push_back(t.phi());
+    trkCharge.push_back((char)t.charge());
+    trkPDGId.push_back(c.pdgId());
+    trkNHits.push_back((char)t.numberOfValidHits());
+    trkNPixHits.push_back((char)t.hitPattern().numberOfValidPixelHits());
+    trkNLayers.push_back((char)t.hitPattern().trackerLayersWithMeasurement());
+    highPurity.push_back(t.quality(reco::TrackBase::qualityByName("highPurity")));
+    trkNormChi2.push_back(t.normalizedChi2());
+
+    pfEnergy.push_back(c.energy());
+    pfEcal.push_back(c.energy() * (c.caloFraction() - c.hcalFraction()));
+    pfHcal.push_back(c.energy() * c.hcalFraction());
+
+    //DCA info for associated vtx
+    const auto& v = c.vertexRef();
+    if (v.isNonnull()) {
+      trkAssociatedVtxIndx.push_back(v.key());
+      trkAssociatedVtxQuality.push_back(c.fromPV(v.key()));
+      trkDzAssociatedVtx.push_back(c.dz(v->position()));
+      trkDzErrAssociatedVtx.push_back(sqrt(c.dzError() * c.dzError() + v->zError() * v->zError()));
+      trkDxyAssociatedVtx.push_back(c.dxy(v->position()));
+      trkDxyErrAssociatedVtx.push_back(sqrt(c.dxyError() * c.dxyError() + v->xError() * v->yError()));
     }
-    if (i == 1) {
-      iEvent.getByToken(lostTracksSrc_, cands);
-      iEvent.getByToken(chi2MapLost_, chi2Map);
+
+    //DCA info for first (highest pt) vtx
+    if (iMaxPtSumVtx >= 0) {
+      math::XYZPoint v(xVtx.at(iMaxPtSumVtx), yVtx.at(iMaxPtSumVtx), zVtx.at(iMaxPtSumVtx));
+      trkFirstVtxQuality.push_back(c.fromPV(iMaxPtSumVtx));
+      trkDzFirstVtx.push_back(t.dz(v));
+      // WARNING !! reco::Track::dzError() and pat::PackedCandidate::dzError() give different values. Former must be used for HIN track   ID.
+      trkDzErrFirstVtx.push_back(sqrt(t.dzError() * t.dzError() + zErrVtx.at(iMaxPtSumVtx) * zErrVtx.at(iMaxPtSumVtx)));
+      trkDxyFirstVtx.push_back(t.dxy(v));
+      trkDxyErrFirstVtx.push_back(sqrt(t.dxyError() * t.dxyError() + xErrVtx.at(iMaxPtSumVtx) * yErrVtx.at(iMaxPtSumVtx)));
+    } else {
+      trkFirstVtxQuality.push_back(-999999);
+      trkDzFirstVtx.push_back(-999999);
+      trkDzErrFirstVtx.push_back(-999999);
+      trkDxyFirstVtx.push_back(-999999);
+      trkDxyErrFirstVtx.push_back(-999999);
     }
 
-    for (unsigned it = 0; it < cands->size(); ++it) {
-      const pat::PackedCandidate& c = (*cands)[it];
-
-      if (!c.hasTrackDetails())
-        continue;
-
-      reco::Track const& t = c.pseudoTrack();
-
-      if (t.pt() < trackPtMin_)
-        continue;
-
-      trkPt.push_back(t.pt());
-      trkPtError.push_back(t.ptError());
-      trkEta.push_back(t.eta());
-      trkPhi.push_back(t.phi());
-      trkCharge.push_back((char)t.charge());
-      trkPDGId.push_back(c.pdgId());
-      trkNHits.push_back((char)t.numberOfValidHits());
-      trkNPixHits.push_back((char)t.hitPattern().numberOfValidPixelHits());
-      trkNLayers.push_back((char)t.hitPattern().trackerLayersWithMeasurement());
-      highPurity.push_back(t.quality(reco::TrackBase::qualityByName("highPurity")));
-      trkNormChi2.push_back((*chi2Map)[cands->ptrAt(it)]);
-
-      pfEnergy.push_back(c.energy());
-      pfEcal.push_back(c.energy() * (c.caloFraction() - c.hcalFraction()));
-      pfHcal.push_back(c.energy() * c.hcalFraction());
-
-      //DCA info for associated vtx
-      trkAssociatedVtxIndx.push_back(c.vertexRef().key());
-      trkAssociatedVtxQuality.push_back(c.fromPV(c.vertexRef().key()));
-      trkDzAssociatedVtx.push_back(c.dz(c.vertexRef()->position()));
-      trkDzErrAssociatedVtx.push_back(
-          sqrt(c.dzError() * c.dzError() + c.vertexRef()->zError() * c.vertexRef()->zError()));
-      trkDxyAssociatedVtx.push_back(c.dxy(c.vertexRef()->position()));
-      trkDxyErrAssociatedVtx.push_back(
-          sqrt(c.dxyError() * c.dxyError() + c.vertexRef()->xError() * c.vertexRef()->yError()));
-
-      //DCA info for first (highest pt) vtx
-      if (iMaxPtSumVtx >= 0) {
-        math::XYZPoint v(xVtx.at(iMaxPtSumVtx), yVtx.at(iMaxPtSumVtx), zVtx.at(iMaxPtSumVtx));
-        trkFirstVtxQuality.push_back(c.fromPV(iMaxPtSumVtx));
-        trkDzFirstVtx.push_back(t.dz(v));
-        trkDzErrFirstVtx.push_back(sqrt(
-            t.dzError() * t.dzError() +
-            zErrVtx.at(iMaxPtSumVtx) *
-                zErrVtx.at(
-                    iMaxPtSumVtx)));  // WARNING !! reco::Track::dzError() and pat::PackedCandidate::dzError() give different values. Former must be used for HIN track ID.
-        trkDxyFirstVtx.push_back(t.dxy(v));
-        trkDxyErrFirstVtx.push_back(
-            sqrt(t.dxyError() * t.dxyError() + xErrVtx.at(iMaxPtSumVtx) * yErrVtx.at(iMaxPtSumVtx)));
-      } else {
-        trkFirstVtxQuality.push_back(-999999);
-        trkDzFirstVtx.push_back(-999999);
-        trkDzErrFirstVtx.push_back(-999999);
-        trkDxyFirstVtx.push_back(-999999);
-        trkDxyErrFirstVtx.push_back(-999999);
-      }
-
-      nTrk++;
-    }
+    nTrk++;
   }
 }
 

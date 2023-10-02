@@ -34,24 +34,13 @@ private:
   void clearVectors();
 
   // ----------member data ---------------------------
-  bool doTrack_;
-  double trackPtMin_;
+  const bool doTrack_;
+  const double trackPtMin_;
 
-  edm::InputTag vertexSrcLabel_;
-  edm::EDGetTokenT<reco::VertexCollection> vertexSrc_;
-
-  edm::InputTag packedCandLabel_;
-  edm::EDGetTokenT<edm::View<pat::PackedCandidate>> packedCandSrc_;
-
-  edm::InputTag lostTracksLabel_;
-  edm::EDGetTokenT<edm::View<pat::PackedCandidate>> lostTracksSrc_;
-
-  edm::EDGetTokenT<reco::BeamSpot> beamSpotProducer_;
-
-  edm::InputTag chi2MapLabel_;
-  edm::EDGetTokenT<edm::ValueMap<float>> chi2Map_;
-  edm::InputTag chi2MapLostLabel_;
-  edm::EDGetTokenT<edm::ValueMap<float>> chi2MapLost_;
+  const edm::EDGetTokenT<reco::VertexCollection> vertexSrc_;
+  const edm::EDGetTokenT<reco::TrackCollection> trackSrc_;
+  const edm::EDGetTokenT<std::vector<edm::Ptr<pat::PackedCandidate> > > track2pcSrc_;
+  const edm::EDGetTokenT<reco::BeamSpot> beamSpotProducer_;
 
   edm::Service<TFileService> fs;
 
