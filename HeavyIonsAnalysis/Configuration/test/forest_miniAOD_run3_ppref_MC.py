@@ -101,8 +101,7 @@ process.load('HeavyIonsAnalysis.EventAnalysis.HiGenAnalyzer_cfi')
 #########################
 # Track Analyzer
 #########################
-# Tracks cause an error due to missing product: packedPFCandidateTrackChi2
-#process.load('HeavyIonsAnalysis.TrackAnalysis.TrackAnalyzers_cff')
+process.load('HeavyIonsAnalysis.TrackAnalysis.TrackAnalyzers_cff')
 
 #####################################################################################
 
@@ -128,8 +127,8 @@ process.forest = cms.Path(
     process.hltobject +
     process.l1object +
     process.HiGenParticleAna +
-    process.ggHiNtuplizer #+
-#    process.trackSequencePP
+    process.ggHiNtuplizer +
+    process.trackSequencePP
 )
 
 #####################################################################################

@@ -9,7 +9,10 @@ muonAnalyzer = cms.EDAnalyzer("MuonAnalyzer",
                            simtrack = cms.InputTag("mergedtruth","MergedTrackTruth"),
 )
 
+muonAnalyzerPP = muonAnalyzer.clone(muonSrc = cms.InputTag("slimmedMuons"))
+
 from HeavyIonsAnalysis.TrackAnalysis.unpackedTracksAndVertices_cfi import unpackedTracksAndVertices
 from HeavyIonsAnalysis.MuonAnalysis.unpackedMuons_cfi import unpackedMuons
 
-muonSequence = cms.Sequence(unpackedTracksAndVertices + unpackedMuons + muonAnalyzer)
+muonSequencePbPb = cms.Sequence(unpackedTracksAndVertices + unpackedMuons + muonAnalyzer)
+muonSequencePP = cms.Sequence(muonAnalyzerPP)

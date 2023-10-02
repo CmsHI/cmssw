@@ -26,7 +26,7 @@ process.source = cms.Source("PoolSource",
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
     fileNames = cms.untracked.vstring(
         'root://eoscms.cern.ch//store/group/phys_heavyions/wangj/RECO2023/miniaod_PhysicsHIForward0_374354/reco_run374354_ls0007_streamPhysicsHIForward0_StorageManager.root'
-    ), 
+    ),
 )
 
 # number of events to process, set to -1 to process all events
@@ -96,8 +96,7 @@ process.akPu4CaloJetAnalyzer.doHiJetID = True
 ################################
 # tracks
 process.load("HeavyIonsAnalysis.TrackAnalysis.TrackAnalyzers_cff")
-# muons (FTW)
-process.load("HeavyIonsAnalysis.MuonAnalysis.unpackedMuons_cfi")
+# muons
 process.load("HeavyIonsAnalysis.MuonAnalysis.muonAnalyzer_cfi")
 ###############################################################################
 
@@ -147,14 +146,13 @@ process.forest = cms.Path(
     process.hltanalysis +
     process.hltobject +
     process.l1object +
-    #process.trackSequencePbPb +
+    process.trackSequencePP +
     process.particleFlowAnalyser +
     process.ggHiNtuplizer +
     #process.zdcdigi +
     #process.QWzdcreco +
     process.zdcanalyzer +
-    #process.unpackedMuons +
-    #process.muonAnalyzer +
+    process.muonSequencePP +
     process.akPu4CaloJetAnalyzer
     )
 
@@ -261,7 +259,7 @@ process.pAna = cms.EndPath(process.skimanalysis)
 #from HLTrigger.HLTfilters.hltHighLevel_cfi import hltHighLevel
 #process.hltfilter = hltHighLevel.clone(
 #    HLTPaths = [
-#        #"HLT_HIZeroBias_v4",                                                     
+#        #"HLT_HIZeroBias_v4",
 #        "HLT_HIMinimumBias_v2",
 #    ]
 #)
