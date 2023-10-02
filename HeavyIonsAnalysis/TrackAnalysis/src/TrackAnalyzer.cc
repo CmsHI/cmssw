@@ -133,7 +133,7 @@ void TrackAnalyzer::beginJob() {
 
   // event
   trackTree_->Branch("nRun", &nRun, "nRun/I");
-  trackTree_->Branch("nEv", &nEv, "nRun/I");
+  trackTree_->Branch("nEv", &nEv, "nEv/I");
   trackTree_->Branch("nLumi", &nLumi, "nLumi/I");
 
   // vertex
