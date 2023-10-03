@@ -59,25 +59,28 @@
 #include "TNtuple.h"
 
 #define MAXHITS 100000
+#define MAXMOD 56
 
 struct MyZDCRecHit {
   int n;
-  float e[18];
-  int zside[18];
-  int section[18];
-  int channel[18];
-  int saturation[18];
+  float e[MAXMOD];
+  int zside[MAXMOD];
+  int section[MAXMOD];
+  int channel[MAXMOD];
+  int saturation[MAXMOD];
   float sumPlus;
   float sumMinus;
 };
 
 struct MyZDCDigi {
   int n;
-  float chargefC[10][18];
-  int adc[10][18];
-  int zside[18];
-  int section[18];
-  int channel[18];
+  float chargefC[6][MAXMOD];
+  int adc[6][MAXMOD];
+  int zside[MAXMOD];
+  int section[MAXMOD];
+  int channel[MAXMOD];
+  float sumPlus;
+  float sumMinus;
 };
 
 //
@@ -182,19 +185,19 @@ void ZDCTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetu
 
     for (auto const& rh : *zdcrechits) {
       HcalZDCDetId zdcid = rh.id();
-      if (nhits < 18) {
-        zdcRecHit.e[nhits] = rh.energy();
-        zdcRecHit.zside[nhits] = zdcid.zside();
-        zdcRecHit.section[nhits] = zdcid.section();
-        zdcRecHit.channel[nhits] = zdcid.channel();
-        zdcRecHit.saturation[nhits] = static_cast<int>(rh.flagField(HcalCaloFlagLabels::ADCSaturationBit));
-      }
+      // if (nhits < 18) {
+      zdcRecHit.e[nhits] = rh.energy();
+      zdcRecHit.zside[nhits] = zdcid.zside();
+      zdcRecHit.section[nhits] = zdcid.section();
+      zdcRecHit.channel[nhits] = zdcid.channel();
+      zdcRecHit.saturation[nhits] = static_cast<int>(rh.flagField(HcalCaloFlagLabels::ADCSaturationBit));
+      // }
 
       if (rh.id().zside() > 0) {
-          zdcRecHit.sumPlus += rh.energy();
+        zdcRecHit.sumPlus += rh.energy();
       }
       if (rh.id().zside() < 0) {
-          zdcRecHit.sumMinus += rh.energy();
+        zdcRecHit.sumMinus += rh.energy();
       }
 
       nhits++;
@@ -221,11 +224,13 @@ void ZDCTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetu
     }
 
     for (auto it = zdcdigis->begin(); it != zdcdigis->end(); it++) {
-      if(verbose_) std::cout << "--- nhits : " << nhits << std::endl;
+
 
       const QIE10DataFrame digi = static_cast<const QIE10DataFrame>(*it);
 
       HcalZDCDetId zdcid = digi.id();
+      std::string cc = zdcid.section() == 1?"\e[34m":(zdcid.section() == 2?"\e[32m":"\e[31m");
+      if(verbose_) std::cout << "--- nhits/DetId : " << std::left << std::setw(3) << nhits << cc.c_str() << "section | zside | channel : " << zdcid.section() <<" | " << std::setw(3) << zdcid.zside() << "| " << zdcid.channel() << "\e[0m" << std::endl;
 
       CaloSamples caldigi;
 
@@ -236,27 +241,46 @@ void ZDCTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetu
         const HcalQIECoder* qiecoder = conditions->getHcalCoder(zdcid);
         const HcalQIEShape* qieshape = conditions->getHcalShape(qiecoder);
         HcalCoderDb coder(*qiecoder, *qieshape);
-        //        coder.adc2fC(rh,caldigi);
         coder.adc2fC(digi, caldigi);
         if(verbose_) std::cout << "###--- END DIGI1?" << std::endl;
       }
 
-      if (nhits < 18) {
         zdcDigi.zside[nhits] = zdcid.zside();
         zdcDigi.section[nhits] = zdcid.section();
         zdcDigi.channel[nhits] = zdcid.channel();
 
         for (int ts = 0; ts < digi.samples(); ts++) {
-          if(verbose_) std::cout << "###DIGI2? --- ts : " << ts << std::endl;
+          if(verbose_) std::cout << "###DIGI2? --- ts : " << ts <<", "<<digi[ts].capid()<< std::endl;
 
-          zdcDigi.chargefC[ts][nhits] = calZDCDigi_ ? caldigi[ts] : QWAna::ZDC2018::QIE10_nominal_fC[digi[ts].adc()];
+          // zdcDigi.chargefC[ts][nhits] = calZDCDigi_ ? caldigi[ts] : QWAna::ZDC2018::QIE10_nominal_fC[digi[ts].adc()];
+          zdcDigi.chargefC[ts][nhits] = calZDCDigi_ ? caldigi[ts] : QWAna::ZDC2018::QIE10_regular_fC[digi[ts].adc()][digi[ts].capid()];
+          // zdcDigi.chargefC[ts][nhits] = calZDCDigi_ ? caldigi[ts] : (QWAna::ZDC2018::QIE10_regular_fC[digi[ts].adc()][digi[ts].capid()] - pedestal_[did()][digi[i].capid()]);
+          
           zdcDigi.adc[ts][nhits] = digi[ts].adc();
           if(verbose_) std::cout << "###--- END DIGI2?" << std::endl;
         }
-      }
+
       nhits++;
     }  // end loop zdc rechits
     if(verbose_) std::cout << "###DIGI END?" << std::endl;
+
+    // Very preliminary calibration
+    float sumcEMP = 0, sumcEMN = 0, sumcHDP = 0, sumcHDN = 0;
+    // 2023 EM: idet = 0-5 and 12-16
+    for (int idet = 0; idet < 5; idet++) {
+      auto idet_m = idet, idet_p = idet + 12;
+      sumcEMN += (zdcDigi.chargefC[2][idet_m] - zdcDigi.chargefC[1][idet_m]);
+      sumcEMP += (zdcDigi.chargefC[2][idet_p] - zdcDigi.chargefC[1][idet_p]);
+    }
+    // 2023 HAD: idet = 8-11 and 20-23
+    for (int idet = 8; idet < 12; idet++) {
+      auto idet_m = idet, idet_p = idet + 12;
+      sumcHDN += (zdcDigi.chargefC[2][idet_m] - zdcDigi.chargefC[1][idet_m]);
+      sumcHDP += (zdcDigi.chargefC[2][idet_p] - zdcDigi.chargefC[1][idet_p]);
+    }
+
+    zdcDigi.sumMinus = (sumcEMN * 0.1 + sumcHDN) * 0.5031;
+    zdcDigi.sumPlus= (sumcEMP * 0.1 + sumcHDP) * 0.9397;
 
     zdcDigi.n = nhits;
     zdcDigiTree->Fill();
@@ -283,7 +307,6 @@ void ZDCTreeProducer::beginJob() {
     zdcDigiTree->Branch("zside", zdcDigi.zside, "zside[n]/I");
     zdcDigiTree->Branch("section", zdcDigi.section, "section[n]/I");
     zdcDigiTree->Branch("channel", zdcDigi.channel, "channel[n]/I");
-
     for (int i = 0; i < nZdcTs_; i++) {
       TString adcTsSt("adcTs"), chargefCTsSt("chargefCTs");
       adcTsSt += i;
@@ -292,6 +315,8 @@ void ZDCTreeProducer::beginJob() {
       zdcDigiTree->Branch(adcTsSt, zdcDigi.adc[i], adcTsSt + "[n]/I");
       zdcDigiTree->Branch(chargefCTsSt, zdcDigi.chargefC[i], chargefCTsSt + "[n]/F");
     }
+    zdcDigiTree->Branch("sumPlus", &zdcDigi.sumPlus, "sumPlus/F");
+    zdcDigiTree->Branch("sumMinus", &zdcDigi.sumMinus, "sumMinus/F");
   }
 }
 

@@ -25,7 +25,7 @@ process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 132X, data")
 process.source = cms.Source("PoolSource",
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
     fileNames = cms.untracked.vstring(
-        'root://eoscms.cern.ch//store/group/phys_heavyions/wangj/RECO2023/miniaod_HIExpress_374354/reco_run374354_ls0050_streamHIExpress_StorageManager.root'
+        'root://eoscms.cern.ch//store/group/phys_heavyions/wangj/RECO2023/miniaod_PhysicsHIForward0_374596/reco_run374596_ls0274_streamPhysicsHIForward0_StorageManager.root'
     ), 
 )
 
@@ -105,12 +105,14 @@ process.load('HeavyIonsAnalysis.ZDCAnalysis.QWZDC2018Producer_cfi')
 process.load('HeavyIonsAnalysis.ZDCAnalysis.QWZDC2018RecHit_cfi')
 process.load('HeavyIonsAnalysis.ZDCAnalysis.zdcanalyzer_cfi')
 
+process.zdcdigi.SOI = cms.untracked.int32(2)
 process.zdcanalyzer.doZDCRecHit = False
 process.zdcanalyzer.doZDCDigi = True
 process.zdcanalyzer.zdcRecHitSrc = cms.InputTag("QWzdcreco")
 process.zdcanalyzer.zdcDigiSrc = cms.InputTag("hcalDigis", "ZDC")
 process.zdcanalyzer.calZDCDigi = False
 process.zdcanalyzer.verbose = False
+process.zdcanalyzer.nZdcTs = cms.int32(6)
 
 from CondCore.CondDB.CondDB_cfi import *
 process.es_pool = cms.ESSource("PoolDBESSource",
