@@ -195,35 +195,60 @@ if addR3Jets or addR4Jets :
         if useECS: 
             process.akCs0PFJets.src = 'EventConstSub'
 
-# this is only for non-reclustered jets
+# To apply PNET we have to remove the JEC first.  We could have just done this before the JEC is applied, but I copied this from the pp workflow                                 
+# Maybe something to clean up for the future                                                                                                                                     
+# Also note that it's only setup for R=0.4 for the moment.  
 addCandidateTagging = False
 
 if addCandidateTagging:
     process.load("HeavyIonsAnalysis.JetAnalysis.candidateBtaggingMiniAOD_cff")
-
     from PhysicsTools.PatAlgos.tools.jetTools import updateJetCollection
+
     updateJetCollection(
         process,
         jetSource = cms.InputTag('slimmedJets'),
-        jetCorrections = ('AK4PFchs', cms.vstring(['L1FastJet', 'L2Relative', 'L3Absolute']), 'None'),
+        jetCorrections = ('AK4PF', cms.vstring(['L1FastJet', 'L2Relative', 'L3Absolute']), 'None'),
         btagDiscriminators = ['pfCombinedSecondaryVertexV2BJetTags', 'pfDeepCSVDiscriminatorsJetTags:BvsAll', 'pfDeepCSVDiscriminatorsJetTags:CvsB', 'pfDeepCSVDiscriminatorsJetTags:CvsL'], ## to add discriminators,
         btagPrefix = 'TEST',
     )
-
-    process.updatedPatJets.addJetCorrFactors = False
-    process.updatedPatJets.discriminatorSources = cms.VInputTag(
-        cms.InputTag('pfDeepCSVJetTags:probb'),
-        cms.InputTag('pfDeepCSVJetTags:probc'),
-        cms.InputTag('pfDeepCSVJetTags:probudsg'),
-        cms.InputTag('pfDeepCSVJetTags:probbb'),
+    if addR4Jets : process.updatedPatJets.jetSource = 'akCs0PFpatJets'
+    process.updatedPatJets.addJetCorrFactors = True
+    process.undoPatJetCorrFactors = process.akCs0PFpatJetCorrFactors.clone(
+        levels = cms.vstring(),
+        src = cms.InputTag("akCs0PFpatJets"),
     )
+    process.updatedPatJets.jetCorrFactorsSource = cms.VInputTag(cms.InputTag("undoPatJetCorrFactors"))
 
-    process.akCs4PFJetAnalyzer.jetTag = "updatedPatJets"
-
-    process.forest.insert(1,process.candidateBtagging*process.updatedPatJets)
-
-
-
+    process.redoPatJetCorrFactors = process.akCs0PFpatJetCorrFactors.clone(
+        src = cms.InputTag("updatedPatJets"),
+    )
+    process.updatedCorrectedPatJets = process.updatedPatJets.clone(
+        jetSource = "updatedPatJets",
+        jetCorrFactorsSource = cms.VInputTag(cms.InputTag("redoPatJetCorrFactors")),
+        discriminatorSources = cms.VInputTag(
+            cms.InputTag('pfParticleNetAK4JetTags:probb'),
+            cms.InputTag('pfParticleNetAK4JetTags:probbb'),
+            cms.InputTag('pfParticleNetAK4JetTags:probc'),
+            cms.InputTag('pfParticleNetAK4JetTags:probcc'),
+            cms.InputTag('pfParticleNetAK4JetTags:probpu'),
+            cms.InputTag('pfParticleNetAK4JetTags:probg'),
+            cms.InputTag('pfParticleNetAK4JetTags:probuds'),
+            cms.InputTag('pfParticleNetAK4JetTags:probundef'),
+            cms.InputTag('pfParticleNetAK4DiscriminatorsJetTags:BvsAll'),
+            cms.InputTag('pfParticleNetAK4DiscriminatorsJetTags:CvsL'),
+            cms.InputTag('pfParticleNetAK4DiscriminatorsJetTags:QvsG'),
+            cms.InputTag('pfParticleNetAK4DiscriminatorsJetTags:CvsB'),
+        )
+    )
+    process.forest.insert(-1,
+                          process.undoPatJetCorrFactors*
+                          process.updatedPatJets*
+                          process.candidateBtagging*
+                          process.redoPatJetCorrFactors*
+                          process.updatedCorrectedPatJets
+    )
+    process.akCs4PFJetAnalyzer.jetTag = "updatedCorrectedPatJets"
+    process.akCs4PFJetAnalyzer.doCandidateBtagging = True
 
 
 #########################

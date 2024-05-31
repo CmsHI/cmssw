@@ -55,6 +55,7 @@ class HistogramProbabilityEstimator;
 #include "FWCore/Framework/interface/EventSetupRecord.h"
 #include "FWCore/Framework/interface/EventSetupRecordImplementation.h"
 #include "FWCore/Framework/interface/EventSetupRecordKey.h"
+#include "DataFormats/Common/interface/AssociationMap.h"
 
 class DeepFlavourTagInfoProducer : public edm::stream::EDProducer<> {
 public:
@@ -68,7 +69,8 @@ private:
   typedef reco::VertexCompositePtrCandidateCollection SVCollection;
   typedef reco::VertexCollection VertexCollection;
   typedef edm::View<reco::ShallowTagInfo> ShallowTagInfoCollection;
-
+  typedef edm::AssociationMap<edm::OneToOne<reco::JetView, reco::JetView>> JetMatchMap;
+  
   void beginStream(edm::StreamID) override {}
   void produce(edm::Event&, const edm::EventSetup&) override;
   void endStream() override {}
@@ -78,6 +80,7 @@ private:
   const bool flip_;
 
   edm::EDGetTokenT<edm::View<reco::Jet>> jet_token_;
+  edm::EDGetTokenT<JetMatchMap> unsubjet_map_token_;
   edm::EDGetTokenT<VertexCollection> vtx_token_;
   edm::EDGetTokenT<SVCollection> sv_token_;
   edm::EDGetTokenT<ShallowTagInfoCollection> shallow_tag_info_token_;
@@ -91,7 +94,8 @@ private:
 
   bool use_puppi_value_map_;
   bool use_pvasq_value_map_;
-
+  bool use_unsubjet_map_;
+  
   bool fallback_puppi_weight_;
   bool fallback_vertex_association_;
 
@@ -122,6 +126,7 @@ DeepFlavourTagInfoProducer::DeepFlavourTagInfoProducer(const edm::ParameterSet& 
           esConsumes<TransientTrackBuilder, TransientTrackRecord>(edm::ESInputTag("", "TransientTrackBuilder"))),
       use_puppi_value_map_(false),
       use_pvasq_value_map_(false),
+      use_unsubjet_map_(false),
       fallback_puppi_weight_(iConfig.getParameter<bool>("fallback_puppi_weight")),
       fallback_vertex_association_(iConfig.getParameter<bool>("fallback_vertex_association")),
       run_deepVertex_(iConfig.getParameter<bool>("run_deepVertex")),
@@ -146,6 +151,11 @@ DeepFlavourTagInfoProducer::DeepFlavourTagInfoProducer(const edm::ParameterSet& 
     calib2d_token_ = esConsumes<TrackProbabilityCalibration, BTagTrackProbability2DRcd>();
     calib3d_token_ = esConsumes<TrackProbabilityCalibration, BTagTrackProbability3DRcd>();
   }
+  const auto& unsubjet_map_tag = iConfig.getParameter<edm::InputTag>("unsubjet_map");
+  if (!unsubjet_map_tag.label().empty()) {
+    unsubjet_map_token_ = consumes<JetMatchMap>(unsubjet_map_tag);
+    use_unsubjet_map_ = true;
+  }
 }
 
 DeepFlavourTagInfoProducer::~DeepFlavourTagInfoProducer() {}
@@ -161,6 +171,7 @@ void DeepFlavourTagInfoProducer::fillDescriptions(edm::ConfigurationDescriptions
   desc.add<edm::InputTag>("puppi_value_map", edm::InputTag("puppi"));
   desc.add<edm::InputTag>("secondary_vertices", edm::InputTag("inclusiveCandidateSecondaryVertices"));
   desc.add<edm::InputTag>("jets", edm::InputTag("ak4PFJetsCHS"));
+  desc.add<edm::InputTag>("unsubjet_map", {});
   desc.add<edm::InputTag>("candidates", edm::InputTag("packedPFCandidates"));
   desc.add<edm::InputTag>("vertex_associator", edm::InputTag("primaryVertexAssociation", "original"));
   desc.add<bool>("fallback_puppi_weight", false);
@@ -180,6 +191,10 @@ void DeepFlavourTagInfoProducer::produce(edm::Event& iEvent, const edm::EventSet
   edm::Handle<edm::View<reco::Jet>> jets;
   iEvent.getByToken(jet_token_, jets);
 
+  edm::Handle<JetMatchMap> unsubjet_map;
+  if (use_unsubjet_map_)
+    iEvent.getByToken(unsubjet_map_token_, unsubjet_map);
+  
   edm::Handle<VertexCollection> vtxs;
   iEvent.getByToken(vtx_token_, vtxs);
   if (vtxs->empty()) {
@@ -247,6 +262,8 @@ void DeepFlavourTagInfoProducer::produce(edm::Event& iEvent, const edm::EventSet
     const auto* pf_jet = dynamic_cast<const reco::PFJet*>(&jet);
     const auto* pat_jet = dynamic_cast<const pat::Jet*>(&jet);
     edm::RefToBase<reco::Jet> jet_ref(jets, jet_n);
+    const auto& unsubJet =
+      (use_unsubjet_map_ && (*unsubjet_map)[jet_ref].isNonnull()) ? *(*unsubjet_map)[jet_ref] : jet;
     // TagInfoCollection not in an associative container so search for matchs
     const edm::View<reco::ShallowTagInfo>& taginfos = *shallow_tag_infos;
     edm::Ptr<reco::ShallowTagInfo> match;
@@ -266,15 +283,15 @@ void DeepFlavourTagInfoProducer::produce(edm::Event& iEvent, const edm::EventSet
     if (match.isNonnull()) {
       tag_info = *match;
     }  // will be default values otherwise
-
+    
     // fill basic jet features
     btagbtvdeep::JetConverter::jetToFeatures(jet, features.jet_features);
-
+    
     // fill number of pv
     features.npv = vtxs->size();
     math::XYZVector jet_dir = jet.momentum().Unit();
     GlobalVector jet_ref_track_dir(jet.px(), jet.py(), jet.pz());
-
+    
     // fill features from ShallowTagInfo
     const auto& tag_info_vars = tag_info.taggingVariables();
     btagbtvdeep::bTagToFeatures(tag_info_vars, features.tag_info_features);
@@ -307,8 +324,8 @@ void DeepFlavourTagInfoProducer::produce(edm::Event& iEvent, const edm::EventSet
     // unsorted reference to sv
     const auto& svs_unsorted = *svs;
     // fill collection, from DeepTNtuples plus some styling
-    for (unsigned int i = 0; i < jet.numberOfDaughters(); i++) {
-      auto cand = jet.daughter(i);
+   for (unsigned int i = 0; i < unsubJet.numberOfDaughters(); i++) {
+      auto cand = unsubJet.daughter(i);
       if (cand) {
         // candidates under 950MeV (configurable) are not considered
         // might change if we use also white-listing
@@ -433,14 +450,14 @@ void DeepFlavourTagInfoProducer::produce(edm::Event& iEvent, const edm::EventSet
         // fill feature structure
         if (packed_cand) {
           btagbtvdeep::packedCandidateToFeatures(
-              packed_cand, jet, drminpfcandsv, static_cast<float>(jet_radius_), n_pf_features);
+						 packed_cand, jet, drminpfcandsv, static_cast<float>(jet_radius_), n_pf_features);
         } else if (reco_cand) {
           btagbtvdeep::recoCandidateToFeatures(
-              reco_cand, jet, drminpfcandsv, static_cast<float>(jet_radius_), puppiw, n_pf_features);
+					       reco_cand, jet, drminpfcandsv, static_cast<float>(jet_radius_), puppiw, n_pf_features);
         }
       }
     }
-
+    
     if (run_deepVertex_) {
       if (jet.pt() > min_jet_pt_ && std::fabs(jet.eta()) < max_jet_eta_)  //jet thresholds
         btagbtvdeep::seedingTracksToFeatures(selectedTracks,
@@ -451,10 +468,10 @@ void DeepFlavourTagInfoProducer::produce(edm::Event& iEvent, const edm::EventSet
                                              compute_probabilities_,
                                              features.seed_features);
     }
-
+    
     output_tag_infos->emplace_back(features, jet_ref);
   }
-
+  
   iEvent.put(std::move(output_tag_infos));
 }
 

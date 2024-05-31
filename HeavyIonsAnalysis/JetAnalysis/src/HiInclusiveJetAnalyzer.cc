@@ -76,7 +76,7 @@ HiInclusiveJetAnalyzer::HiInclusiveJetAnalyzer(const edm::ParameterSet& iConfig)
   useRawPt_ = iConfig.getUntrackedParameter<bool>("useRawPt", true);
 
   doLegacyBtagging_ = iConfig.getUntrackedParameter<bool>("doLegacyBtagging", true);
-  doCandidateBtagging_ = iConfig.getUntrackedParameter<bool>("doCandidateBtagging", true);
+  doCandidateBtagging_ = iConfig.getUntrackedParameter<bool>("doCandidateBtagging", false);
 
   pfCandidateLabel_ =
       consumes<edm::View<pat::PackedCandidate>>(iConfig.getUntrackedParameter<edm::InputTag>("pfCandidateLabel"));
@@ -95,7 +95,15 @@ HiInclusiveJetAnalyzer::HiInclusiveJetAnalyzer(const edm::ParameterSet& iConfig)
     combinedSVV2BJetTags_ = "combinedSecondaryVertexV2BJetTags";
   }
   if (doCandidateBtagging_) {
-    deepCSVJetTags_ = jetName_ + "pfDeepCSVJetTags:probb";
+    pnetBvsAllJetTags_ = "pfParticleNetAK4DiscriminatorsJetTags:BvsAll";
+    pnetProbBJetTags_ = "pfParticleNetAK4JetTags:probb";
+    pnetProbBBJetTags_ = "pfParticleNetAK4JetTags:probbb";
+    pnetProbCJetTags_ = "pfParticleNetAK4JetTags:probc";
+    pnetProbCCJetTags_ = "pfParticleNetAK4JetTags:probcc";
+    pnetProbGJetTags_ = "pfParticleNetAK4JetTags:probg";
+    pnetProbUDSJetTags_ = "pfParticleNetAK4JetTags:probuds";
+    pnetProbPUJetTags_ = "pfParticleNetAK4JetTags:probpu";
+    pnetProbUNDEFJetTags_ = "pfParticleNetAK4JetTags:probundef";
     pfJPJetTags_ = jetName_ + "pfJetProbabilityBJetTags";
   }
   doSubEvent_ = false;
@@ -266,7 +274,15 @@ void HiInclusiveJetAnalyzer::beginJob() {
     t->Branch("muchg", jets_.muchg, "muchg[nref]/I");
   }
   if(doCandidateBtagging_){
-    t->Branch("discr_deepCSV", jets_.discr_deepCSV, "discr_deepCSV[nref]/F");
+    t->Branch("discr_pnetBvsAll", jets_.discr_pnetBvsAll, "discr_pnetBvsAll[nref]/F");
+    t->Branch("discr_pnetProbB", jets_.discr_pnetProbB, "discr_pnetProbB[nref]/F");
+    t->Branch("discr_pnetProbBB", jets_.discr_pnetProbBB, "discr_pnetProbBB[nref]/F");
+    t->Branch("discr_pnetProbC", jets_.discr_pnetProbC, "discr_pnetProbC[nref]/F");
+    t->Branch("discr_pnetProbCC", jets_.discr_pnetProbCC, "discr_pnetProbCC[nref]/F");
+    t->Branch("discr_pnetProbG", jets_.discr_pnetProbG, "discr_pnetProbG[nref]/F");
+    t->Branch("discr_pnetProbUDS", jets_.discr_pnetProbUDS, "discr_pnetProbUDS[nref]/F");
+    t->Branch("discr_pnetProbPU", jets_.discr_pnetProbPU, "discr_pnetProbPU[nref]/F");
+    t->Branch("discr_pnetProbUNDEF", jets_.discr_pnetProbUNDEF, "discr_pnetProbUNDEF[nref]/F");
     t->Branch("discr_pfJP", jets_.discr_pfJP, "discr_pfJP[nref]/F");
     }
   if (isMC_) {
@@ -404,7 +420,15 @@ void HiInclusiveJetAnalyzer::beginJob() {
     memset(jets_.discr_ssvHighPur, 0, MAXJETS * sizeof(float));
   }
   if (doCandidateBtagging_) {
-    memset(jets_.discr_deepCSV, 0, MAXJETS * sizeof(float));
+    memset(jets_.discr_pnetBvsAll, 0, MAXJETS * sizeof(float));
+    memset(jets_.discr_pnetProbB, 0, MAXJETS * sizeof(float));    
+    memset(jets_.discr_pnetProbBB, 0, MAXJETS * sizeof(float));    
+    memset(jets_.discr_pnetProbC, 0, MAXJETS * sizeof(float));    
+    memset(jets_.discr_pnetProbCC, 0, MAXJETS * sizeof(float));    
+    memset(jets_.discr_pnetProbG, 0, MAXJETS * sizeof(float));    
+    memset(jets_.discr_pnetProbUDS, 0, MAXJETS * sizeof(float));    
+    memset(jets_.discr_pnetProbPU, 0, MAXJETS * sizeof(float));    
+    memset(jets_.discr_pnetProbUNDEF, 0, MAXJETS * sizeof(float));    
     memset(jets_.discr_pfJP, 0, MAXJETS * sizeof(float));
   }
 }
@@ -492,7 +516,15 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
       continue;
 
     if (doCandidateBtagging_){
-      jets_.discr_deepCSV[jets_.nref]=jet.bDiscriminator(deepCSVJetTags_);
+      jets_.discr_pnetBvsAll[jets_.nref]=jet.bDiscriminator(pnetBvsAllJetTags_);
+      jets_.discr_pnetProbB[jets_.nref]=jet.bDiscriminator(pnetProbBJetTags_);
+      jets_.discr_pnetProbBB[jets_.nref]=jet.bDiscriminator(pnetProbBBJetTags_);
+      jets_.discr_pnetProbC[jets_.nref]=jet.bDiscriminator(pnetProbCJetTags_);
+      jets_.discr_pnetProbCC[jets_.nref]=jet.bDiscriminator(pnetProbCCJetTags_);
+      jets_.discr_pnetProbG[jets_.nref]=jet.bDiscriminator(pnetProbGJetTags_);
+      jets_.discr_pnetProbUDS[jets_.nref]=jet.bDiscriminator(pnetProbUDSJetTags_);
+      jets_.discr_pnetProbPU[jets_.nref]=jet.bDiscriminator(pnetProbPUJetTags_);
+      jets_.discr_pnetProbUNDEF[jets_.nref]=jet.bDiscriminator(pnetProbUNDEFJetTags_);
       jets_.discr_pfJP[jets_.nref]=jet.bDiscriminator(pfJPJetTags_);
     }
     if (doLegacyBtagging_) {

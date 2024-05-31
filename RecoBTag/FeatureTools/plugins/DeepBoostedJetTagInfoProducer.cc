@@ -22,6 +22,7 @@
 #include "DataFormats/VertexReco/interface/VertexFwd.h"
 
 #include "DataFormats/BTauReco/interface/DeepBoostedJetTagInfo.h"
+#include "DataFormats/Common/interface/AssociationMap.h"
 
 using namespace btagbtvdeep;
 
@@ -31,18 +32,19 @@ public:
   ~DeepBoostedJetTagInfoProducer() override;
 
   static void fillDescriptions(edm::ConfigurationDescriptions &descriptions);
-
+  
 private:
   typedef std::vector<reco::DeepBoostedJetTagInfo> DeepBoostedJetTagInfoCollection;
   typedef reco::VertexCompositePtrCandidateCollection SVCollection;
   typedef reco::VertexCollection VertexCollection;
   typedef edm::View<reco::Candidate> CandidateView;
-
+  typedef edm::AssociationMap<edm::OneToOne<reco::JetView, reco::JetView>> JetMatchMap;
+  
   void beginStream(edm::StreamID) override {}
   void produce(edm::Event &, const edm::EventSetup &) override;
   void endStream() override {}
 
-  void fillParticleFeatures(DeepBoostedJetFeatures &fts, const reco::Jet &jet);
+  void fillParticleFeatures(DeepBoostedJetFeatures &fts, const reco::Jet &unsubJet, const reco::Jet &jet);
   void fillSVFeatures(DeepBoostedJetFeatures &fts, const reco::Jet &jet);
 
   const double jet_radius_;
@@ -57,12 +59,14 @@ private:
   const double max_sip3dsig_;
 
   edm::EDGetTokenT<edm::View<reco::Jet>> jet_token_;
+  edm::EDGetTokenT<JetMatchMap> unsubjet_map_token_;
   edm::EDGetTokenT<VertexCollection> vtx_token_;
   edm::EDGetTokenT<SVCollection> sv_token_;
   edm::EDGetTokenT<CandidateView> pfcand_token_;
 
   bool use_puppi_value_map_;
   bool use_pvasq_value_map_;
+  bool use_unsubjet_map_;
 
   edm::EDGetTokenT<edm::ValueMap<float>> puppi_value_map_token_;
   edm::EDGetTokenT<edm::ValueMap<int>> pvasq_value_map_token_;
@@ -84,7 +88,7 @@ private:
 
 const std::vector<std::string> DeepBoostedJetTagInfoProducer::particle_features_{
     "pfcand_puppiw",        "pfcand_hcalFrac",       "pfcand_VTX_ass",      "pfcand_lostInnerHits",
-    "pfcand_quality",       "pfcand_charge",         "pfcand_isEl",         "pfcand_isMu",
+      "pfcand_quality",       "pfcand_charge",         "pfcand_isEl",         "pfcand_isMu",
     "pfcand_isChargedHad",  "pfcand_isGamma",        "pfcand_isNeutralHad", "pfcand_phirel",
     "pfcand_etarel",        "pfcand_deltaR",         "pfcand_abseta",       "pfcand_ptrel_log",
     "pfcand_erel_log",      "pfcand_pt_log",         "pfcand_drminsv",      "pfcand_drsubjet1",
@@ -119,19 +123,25 @@ DeepBoostedJetTagInfoProducer::DeepBoostedJetTagInfoProducer(const edm::Paramete
       pfcand_token_(consumes<CandidateView>(iConfig.getParameter<edm::InputTag>("pf_candidates"))),
       use_puppi_value_map_(false),
       use_pvasq_value_map_(false),
+      use_unsubjet_map_(false),
       track_builder_token_(
-          esConsumes<TransientTrackBuilder, TransientTrackRecord>(edm::ESInputTag("", "TransientTrackBuilder"))) {
+			   esConsumes<TransientTrackBuilder, TransientTrackRecord>(edm::ESInputTag("", "TransientTrackBuilder"))) {
   const auto &puppi_value_map_tag = iConfig.getParameter<edm::InputTag>("puppi_value_map");
   if (!puppi_value_map_tag.label().empty()) {
     puppi_value_map_token_ = consumes<edm::ValueMap<float>>(puppi_value_map_tag);
     use_puppi_value_map_ = true;
   }
-
+  
   const auto &pvas_tag = iConfig.getParameter<edm::InputTag>("vertex_associator");
   if (!pvas_tag.label().empty()) {
     pvasq_value_map_token_ = consumes<edm::ValueMap<int>>(pvas_tag);
     pvas_token_ = consumes<edm::Association<VertexCollection>>(pvas_tag);
     use_pvasq_value_map_ = true;
+  }
+  const auto &unsubjet_map_tag = iConfig.getParameter<edm::InputTag>("unsubjet_map");
+  if (!unsubjet_map_tag.label().empty()) {
+    unsubjet_map_token_ = consumes<JetMatchMap>(unsubjet_map_tag);
+    use_unsubjet_map_ = true;
   }
 
   produces<DeepBoostedJetTagInfoCollection>();
@@ -156,6 +166,7 @@ void DeepBoostedJetTagInfoProducer::fillDescriptions(edm::ConfigurationDescripti
   desc.add<edm::InputTag>("secondary_vertices", edm::InputTag("inclusiveCandidateSecondaryVertices"));
   desc.add<edm::InputTag>("pf_candidates", edm::InputTag("particleFlow"));
   desc.add<edm::InputTag>("jets", edm::InputTag("ak8PFJetsPuppi"));
+  desc.add<edm::InputTag>("unsubjet_map", {});
   desc.add<edm::InputTag>("puppi_value_map", edm::InputTag("puppi"));
   desc.add<edm::InputTag>("vertex_associator", edm::InputTag("primaryVertexAssociation", "original"));
   descriptions.add("pfDeepBoostedJetTagInfos", desc);
@@ -165,6 +176,7 @@ void DeepBoostedJetTagInfoProducer::produce(edm::Event &iEvent, const edm::Event
   auto output_tag_infos = std::make_unique<DeepBoostedJetTagInfoCollection>();
 
   auto jets = iEvent.getHandle(jet_token_);
+  auto unsubjet_map = use_unsubjet_map_ ? iEvent.getHandle(unsubjet_map_token_) : edm::Handle<JetMatchMap>();
 
   iEvent.getByToken(vtx_token_, vtxs_);
   if (vtxs_->empty()) {
@@ -193,6 +205,8 @@ void DeepBoostedJetTagInfoProducer::produce(edm::Event &iEvent, const edm::Event
   for (std::size_t jet_n = 0; jet_n < jets->size(); jet_n++) {
     const auto &jet = (*jets)[jet_n];
     edm::RefToBase<reco::Jet> jet_ref(jets, jet_n);
+    const auto &unsubJet =
+      (use_unsubjet_map_ && (*unsubjet_map)[jet_ref].isNonnull()) ? *(*unsubjet_map)[jet_ref] : jet;
 
     // create jet features
     DeepBoostedJetFeatures features;
@@ -203,31 +217,30 @@ void DeepBoostedJetTagInfoProducer::produce(edm::Event &iEvent, const edm::Event
     for (const auto &name : sv_features_) {
       features.add(name);
     }
-
+    
     // fill values only if above pt threshold and has daughters, otherwise left
     // empty
     bool fill_vars = true;
     if (jet.pt() < min_jet_pt_ || std::abs(jet.eta()) > max_jet_eta_)
       fill_vars = false;
-    if (jet.numberOfDaughters() == 0)
+    if (unsubJet.numberOfDaughters() == 0 ) {
       fill_vars = false;
-
+    }
     if (fill_vars) {
-      fillParticleFeatures(features, jet);
+      fillParticleFeatures(features, unsubJet, jet);
       fillSVFeatures(features, jet);
-
+      
       features.check_consistency(particle_features_);
       features.check_consistency(sv_features_);
     }
-
     // this should always be done even if features are not filled
     output_tag_infos->emplace_back(features, jet_ref);
   }
-
+  
   iEvent.put(std::move(output_tag_infos));
 }
 
-void DeepBoostedJetTagInfoProducer::fillParticleFeatures(DeepBoostedJetFeatures &fts, const reco::Jet &jet) {
+void DeepBoostedJetTagInfoProducer::fillParticleFeatures(DeepBoostedJetFeatures &fts, const reco::Jet &unsubJet, const reco::Jet &jet) {
   // require the input to be a pat::Jet
   const auto *patJet = dynamic_cast<const pat::Jet *>(&jet);
   if (!patJet) {
@@ -265,7 +278,7 @@ void DeepBoostedJetTagInfoProducer::fillParticleFeatures(DeepBoostedJetFeatures 
   };
 
   std::vector<reco::CandidatePtr> daughters;
-  for (const auto &dau : jet.daughterPtrVector()) {
+  for (const auto &dau : unsubJet.daughterPtrVector()) {
     // remove particles w/ extremely low puppi weights
     // [Note] use jet daughters here to get the puppiWgt correctly
     if ((puppiWgt(dau)) < min_puppi_wgt_)

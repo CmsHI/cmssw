@@ -118,7 +118,15 @@ private:
   std::string simpleSVHighEffBJetTags_;
   std::string simpleSVHighPurBJetTags_;
   std::string combinedSVV2BJetTags_;
-  std::string deepCSVJetTags_;
+  std::string pnetBvsAllJetTags_;
+  std::string pnetProbBJetTags_;
+  std::string pnetProbBBJetTags_;
+  std::string pnetProbCJetTags_;
+  std::string pnetProbCCJetTags_;
+  std::string pnetProbGJetTags_;
+  std::string pnetProbUDSJetTags_;
+  std::string pnetProbPUJetTags_;
+  std::string pnetProbUNDEFJetTags_;
   std::string pfJPJetTags_;
 
   static const int MAXJETS = 1000;
@@ -257,7 +265,15 @@ private:
     int matchedPartonFlavor[MAXJETS]={0};
 
     float discr_csvV2[MAXJETS]={0};
-    float discr_deepCSV[MAXJETS]={0};
+    float discr_pnetBvsAll[MAXJETS]={0};
+    float discr_pnetProbB[MAXJETS]={0};
+    float discr_pnetProbBB[MAXJETS]={0};
+    float discr_pnetProbC[MAXJETS]={0};
+    float discr_pnetProbCC[MAXJETS]={0};
+    float discr_pnetProbG[MAXJETS]={0};
+    float discr_pnetProbUDS[MAXJETS]={0};
+    float discr_pnetProbPU[MAXJETS]={0};
+    float discr_pnetProbUNDEF[MAXJETS]={0};
     float discr_pfJP[MAXJETS]={0};
     float discr_muByIp3[MAXJETS]={0};
     float discr_muByPt[MAXJETS]={0};
