@@ -128,6 +128,7 @@ private:
   ULong64_t event_;
   UInt_t lumis_;
 
+  float muonPtMin_;
   float rho_;
 
   // PileupSummaryInfo

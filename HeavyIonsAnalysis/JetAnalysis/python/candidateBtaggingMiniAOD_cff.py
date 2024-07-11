@@ -13,6 +13,8 @@ from RecoVertex.AdaptiveVertexFinder.inclusiveVertexing_cff import inclusiveCand
 from RecoBTag.SecondaryVertex.pfInclusiveSecondaryVertexFinderTagInfos_cfi import pfInclusiveSecondaryVertexFinderTagInfos
 inclusiveCandidateVertexFinder.primaryVertices  = "offlineSlimmedPrimaryVertices"
 inclusiveCandidateVertexFinder.tracks= "packedPFCandidates"
+inclusiveCandidateVertexFinder.minHits = 0
+inclusiveCandidateVertexFinder.minPt = 0.8
 candidateVertexArbitrator.tracks = "packedPFCandidates"
 candidateVertexArbitrator.primaryVertices = "offlineSlimmedPrimaryVertices"
 
@@ -28,7 +30,7 @@ pfDeepFlavourTagInfosSlimmedDeepFlavour = pfDeepFlavourTagInfos.clone(
     fallback_puppi_weight = True,
     fallback_vertex_association = True,
     jets = cms.InputTag("akCs0PFpatJets"),
-    unsubjet_map = cms.untracked.InputTag("ak4PFMatchedForakCs0PFpatJets"),
+    unsubjet_map = cms.InputTag("ak4PFMatchedForakCs0PFpatJets"),
     puppi_value_map = cms.InputTag(""),
     secondary_vertices = cms.InputTag("inclusiveCandidateSecondaryVertices"),
     shallow_tag_infos = cms.InputTag("pfDeepCSVTagInfos"),
@@ -52,7 +54,7 @@ pfParticleTransformerAK4TagInfosSlimmedDeepFlavour = pfParticleTransformerAK4Tag
     fallback_puppi_weight = True,
     fallback_vertex_association = True,
     jets = cms.InputTag("akCs0PFpatJets"),
-    unsubjet_map = cms.untracked.InputTag("ak4PFMatchedForakCs0PFpatJets"),
+    unsubjet_map = cms.InputTag("ak4PFMatchedForakCs0PFpatJets"),
     puppi_value_map = cms.InputTag(""),
     secondary_vertices = cms.InputTag("inclusiveCandidateSecondaryVertices"),
     vertex_associator = cms.InputTag(""),

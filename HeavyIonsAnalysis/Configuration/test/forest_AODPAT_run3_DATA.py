@@ -44,7 +44,7 @@ process.load('SimGeneral.HepPDTESSource.pythiapdt_cfi')
 process.load('Configuration.StandardSequences.PAT_cff')
 
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, '125X_dataRun3_relval_v4', '')
+process.GlobalTag = GlobalTag(process.GlobalTag, '132X_dataRun3_Prompt_v7', '')
 process.HiForestInfo.GlobalTagLabel = process.GlobalTag.globaltag
 
 
@@ -135,7 +135,7 @@ process.TFileService = cms.Service("TFileService",
 
 # Selection of at least a two-track fitted vertex                                                                                                                                                                     
 process.primaryVertexFilterHI = cms.EDFilter("VertexSelector",
-    src = cms.InputTag("offlineSlimmedPrimaryVerticesRecovery"),
+    src = cms.InputTag("offlineSlimmedPrimaryVertices"),
     cut = cms.string("!isFake && abs(z) <= 25 && position.Rho <= 2"), #in miniADO trackSize()==0, however there is no influence.                                                                                      
     filter = cms.bool(True), # otherwise it won't filter the events                                                                                                                                                   
 )

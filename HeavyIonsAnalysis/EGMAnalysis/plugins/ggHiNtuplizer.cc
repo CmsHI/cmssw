@@ -90,6 +90,7 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps)
 
   if (doMuons_) {
     muonsToken_ = consumes<edm::View<pat::Muon>>(ps.getParameter<edm::InputTag>("muonSrc"));
+    muonPtMin_ = ps.getParameter<double>("muonPtMin");
   }
 
   ttbESToken_ = esConsumes(edm::ESInputTag("", "TransientTrackBuilder"));
@@ -1897,7 +1898,7 @@ void ggHiNtuplizer::fillMuons(const edm::Event& e, const edm::EventSetup& es, re
   e.getByToken(muonsToken_, recoMuons);
 
   for (const auto& mu : *recoMuons) {
-    if (mu.pt() < 3.0)
+    if (mu.pt() < muonPtMin_)
       continue;
     if (!(mu.isPFMuon() || mu.isGlobalMuon() || mu.isTrackerMuon()))
       continue;
