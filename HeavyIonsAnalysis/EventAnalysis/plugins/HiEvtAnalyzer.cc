@@ -138,6 +138,7 @@ private:
   unsigned long long event;
   unsigned int run;
   unsigned int lumi;
+  unsigned int bx;
 };
 
 //
@@ -195,6 +196,7 @@ void HiEvtAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
   event = iEvent.id().event();
   run = iEvent.id().run();
   lumi = iEvent.id().luminosityBlock();
+  bx = iEvent.bunchCrossing();
 
   if (doHiMC_) {
     edm::Handle<edm::GenHIEvent> mchievt;
@@ -454,6 +456,7 @@ void HiEvtAnalyzer::beginJob() {
   thi_->Branch("run", &run, "run/i");
   thi_->Branch("evt", &event, "evt/l");
   thi_->Branch("lumi", &lumi, "lumi/i");
+  thi_->Branch("bx", &bx, "bx/i");
 
   // Vertex
   thi_->Branch("vx", &vx, "vx/F");
