@@ -126,13 +126,8 @@ private:
   std::string combinedSVV2BJetTags_;
   std::string deepCSVJetTags_;
   std::string pfJPJetTags_;
-  std::string deepFlavourJetTags_;
-  std::string particleTransformerJetTags_;
 
-  edm::EDGetTokenT<reco::JetTagCollection> deepCSVJetTagsTkn_,deepCSVJetTagsBBTkn_,
-    deepFlavourJetTagsTkn_,deepFlavourJetTagsBBTkn_,deepFlavourJetTagsLepBTkn_,
-    particleTransformerJetTagsTkn_,particleTransformerJetTagsBBTkn_,particleTransformerJetTagsLepBTkn_,
-    pfJPJetTagsTkn_;
+  std::map<std::string, std::map<std::string, edm::EDGetTokenT<reco::JetTagCollection>>> jetTaggers_;
 
   static const int MAXJETS = 1000;
   static const int MAXTRACKS = 5000;
@@ -273,8 +268,6 @@ private:
 
     float discr_csvV2[MAXJETS] = {0};
     float discr_deepCSV[MAXJETS] = {0};
-    float discr_deepFlavour[MAXJETS] = {0};
-    float discr_particleTransformer[MAXJETS] = {0};
     float discr_pX[MAXJETS] = {0};
     float discr_pfJP[MAXJETS] = {0};
     float discr_muByIp3[MAXJETS] = {0};
@@ -413,6 +406,7 @@ private:
   };
 
   JRA jets_;
+  std::map<std::string, std::map<std::string, std::array<float, MAXJETS>>> jets_discr_;
 };
 
 #endif

@@ -136,92 +136,35 @@ process.particleFlowAnalyser.ptMin = 0.0
 process.ggHiNtuplizer.muonPtMin = 0.0
 
 # Select the types of jets filled
-addR3Jets = False
-addR3FlowJets = False
-addR4Jets = True
-addR4FlowJets = False
 matchJets = True             # Enables q/g and heavy flavor jet identification in MC
+jetPtMin = 15
+jetAbsEtaMax = 2.5
 
 # Choose which additional information is added to jet trees
 doHIJetID = True             # Fill jet ID and composition information branches
 doWTARecluster = False        # Add jet phi and eta for WTA axis
 
-# this is only for non-reclustered jets
-addCandidateTagging = True
+# add candidate tagging
+from HeavyIonsAnalysis.JetAnalysis.deepNtupleSettings_cff import candidateBtaggingMiniAOD
+candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = jetPtMin, jetCorrLevels = ['L2Relative', 'L3Absolute'])
 
+# setup jet analyzer
+process.akCs4PFJetAnalyzer.jetTag = 'selectedUpdatedPatJetsDeepFlavour'
+process.akCs4PFJetAnalyzer.jetName = 'akCs0PF'
+process.akCs4PFJetAnalyzer.matchJets = matchJets
+process.akCs4PFJetAnalyzer.matchTag = 'patJetsAK4PFUnsubJets'
+process.akCs4PFJetAnalyzer.doHiJetID = doHIJetID
+process.akCs4PFJetAnalyzer.doWTARecluster = doWTARecluster
+process.akCs4PFJetAnalyzer.useNewBtaggers = True
+process.akCs4PFJetAnalyzer.jetPtMin = jetPtMin
+process.akCs4PFJetAnalyzer.jetAbsEtaMax = cms.untracked.double(jetAbsEtaMax)
+process.akCs4PFJetAnalyzer.pfJetProbabilityBJetTag = cms.untracked.string("pfJetProbabilityBJetTagsDeepFlavour")
+process.akCs4PFJetAnalyzer.pfDeepCSVJetTags = cms.untracked.string("pfDeepCSVJetTagsDeepFlavour")
+process.akCs4PFJetAnalyzer.pfDeepFlavourJetTags = cms.untracked.string("pfDeepFlavourJetTagsDeepFlavour")
+process.akCs4PFJetAnalyzer.pfParticleTransformerAK4JetTags = cms.untracked.string("pfParticleTransformerAK4JetTagsDeepFlavour")
+process.akCs4PFJetAnalyzer.pfUnifiedParticleTransformerAK4JetTags = cms.untracked.string("pfUnifiedParticleTransformerAK4JetTagsDeepFlavour")
+process.forest += process.akCs4PFJetAnalyzer
 
-if addR3Jets or addR3FlowJets or addR4Jets or addR4FlowJets :
-    process.load("HeavyIonsAnalysis.JetAnalysis.extraJets_cff")
-    from HeavyIonsAnalysis.JetAnalysis.clusterJetsFromMiniAOD_cff import setupHeavyIonJets
-    process.load("HeavyIonsAnalysis.JetAnalysis.candidateBtaggingMiniAOD_cff")
-
-    if addR3Jets :
-        process.jetsR3 = cms.Sequence()
-        setupHeavyIonJets('akCs3PF', process.jetsR3, process, isMC = 1, radius = 0.30, JECTag = 'AK3PF', doFlow = False, matchJets = matchJets)
-        process.akCs3PFpatJetCorrFactors.levels = ['L2Relative', 'L3Absolute']
-        process.akCs3PFJetAnalyzer = process.akCs4PFJetAnalyzer.clone(jetTag = "akCs3PFpatJets", jetName = 'akCs3PF', genjetTag = "ak3GenJetsNoNu", matchJets = matchJets, matchTag = "ak3PFMatchingForakCs3PFpatJets", doHiJetID = doHIJetID, doWTARecluster = doWTARecluster)
-        process.forest += process.extraJetsMC * process.jetsR3 * process.akCs3PFJetAnalyzer
-
-    if addR3FlowJets :
-        process.jetsR3flow = cms.Sequence()
-        setupHeavyIonJets('akCs3PFFlow', process.jetsR3flow, process, isMC = 1, radius = 0.30, JECTag = 'AK3PF', doFlow = True, matchJets = matchJets)
-        process.akCs3PFFlowpatJetCorrFactors.levels = ['L2Relative', 'L3Absolute']
-        process.akFlowPuCs3PFJetAnalyzer = process.akCs4PFJetAnalyzer.clone(jetTag = "akCs3PFFlowpatJets", jetName = 'akCs3PFFlow', genjetTag = "ak3GenJetsNoNu", matchJets = matchJets, matchTag = "ak3PFMatchingForakCs3PFFlowpatJets", doHiJetID = doHIJetID, doWTARecluster = doWTARecluster)
-        process.forest += process.extraFlowJetsMC * process.jetsR3flow * process.akFlowPuCs3PFJetAnalyzer
-
-    if addR4Jets :
-        # Recluster using an alias "0" in order not to get mixed up with the default AK4 collections
-        process.jetsR4 = cms.Sequence()
-        setupHeavyIonJets('akCs0PF', process.jetsR4, process, isMC = 1, radius = 0.40, JECTag = 'AK4PF', doFlow = False, matchJets = matchJets)
-        process.ak4PFMatchingForakCs0PFJets.jetPtMin = process.akCs0PFJets.jetPtMin
-        process.akCs0PFpatJetCorrFactors.levels = ['L2Relative', 'L3Absolute']
-        process.akCs4PFJetAnalyzer.jetTag = 'akCs0PFpatJets'
-        process.akCs4PFJetAnalyzer.jetName = 'akCs0PF'
-        process.akCs4PFJetAnalyzer.matchJets = matchJets
-        process.akCs4PFJetAnalyzer.matchTag = 'ak4PFMatchingForakCs0PFpatJets'
-        process.akCs4PFJetAnalyzer.doHiJetID = doHIJetID
-        process.akCs4PFJetAnalyzer.doWTARecluster = doWTARecluster
-        process.ak4PFMatchedForakCs0PFpatJets = cms.EDProducer("JetMatcherDR", source = cms.InputTag("akCs0PFpatJets"), matched = cms.InputTag("ak4PFMatchingForakCs0PFpatJets"))
-        process.forest += process.extraJetsMC * process.jetsR4 * process.ak4PFMatchedForakCs0PFpatJets
-        process.akCs0PFpatJets.embedPFCandidates = True
-
-    if addR4FlowJets :
-        process.jetsR4flow = cms.Sequence()
-        setupHeavyIonJets('akCs4PFFlow', process.jetsR4flow, process, isMC = 1, radius = 0.40, JECTag = 'AK4PF', doFlow = True, matchJets = matchJets)
-        process.akCs4PFFlowpatJetCorrFactors.levels = ['L2Relative', 'L3Absolute']
-        process.akFlowPuCs4PFJetAnalyzer.jetTag = 'akCs4PFFlowpatJets'
-        process.akFlowPuCs4PFJetAnalyzer.jetName = 'akCs4PFFlow'
-        process.akFlowPuCs4PFJetAnalyzer.matchJets = matchJets
-        process.akFlowPuCs4PFJetAnalyzer.matchTag = 'ak4PFMatchingForakCs4PFFlowpatJets'
-        process.akFlowPuCs4PFJetAnalyzer.doHiJetID = doHIJetID
-        process.akFlowPuCs4PFJetAnalyzer.doWTARecluster = doWTARecluster
-        process.forest += process.extraFlowJetsMC * process.jetsR4flow * process.akFlowPuCs4PFJetAnalyzer 
-
-
-if addCandidateTagging:
-    process.load("HeavyIonsAnalysis.JetAnalysis.candidateBtaggingMiniAOD_cff")
-
-    from PhysicsTools.PatAlgos.tools.jetTools import updateJetCollection
-    updateJetCollection(
-        process,
-        jetSource = cms.InputTag('akCs0PFpatJets'),
-        jetCorrections = ('AK4PFchs', cms.vstring(['L1FastJet', 'L2Relative', 'L3Absolute']), 'None'),
-        btagDiscriminators = ['pfCombinedSecondaryVertexV2BJetTags', 'pfDeepCSVDiscriminatorsJetTags:BvsAll', 'pfDeepCSVDiscriminatorsJetTags:CvsB', 'pfDeepCSVDiscriminatorsJetTags:CvsL'], ## to add discriminators,
-        btagPrefix = 'TEST',
-    )
-
-    process.updatedPatJets.addJetCorrFactors = False
-    process.updatedPatJets.discriminatorSources = cms.VInputTag(
-        cms.InputTag("pfDeepFlavourJetTagsSlimmedDeepFlavour","probb"),cms.InputTag("pfDeepFlavourJetTagsSlimmedDeepFlavour","probbb"), cms.InputTag("pfDeepFlavourJetTagsSlimmedDeepFlavour","probc"), cms.InputTag("pfDeepFlavourJetTagsSlimmedDeepFlavour","probg"), cms.InputTag("pfDeepFlavourJetTagsSlimmedDeepFlavour","problepb"),
-        cms.InputTag("pfDeepFlavourJetTagsSlimmedDeepFlavour","probuds"),
-        cms.InputTag("pfParticleTransformerAK4JetTagsSlimmedDeepFlavour","probb"), cms.InputTag("pfParticleTransformerAK4JetTagsSlimmedDeepFlavour","probbb"), cms.InputTag("pfParticleTransformerAK4JetTagsSlimmedDeepFlavour","probc"),
-        cms.InputTag("pfParticleTransformerAK4JetTagsSlimmedDeepFlavour","probg"), cms.InputTag("pfParticleTransformerAK4JetTagsSlimmedDeepFlavour","problepb"), cms.InputTag("pfParticleTransformerAK4JetTagsSlimmedDeepFlavour","probuds"),
-    )
-
-    process.akCs4PFJetAnalyzer.jetTag = "updatedPatJets"
-    process.akCs4PFJetAnalyzer.useNewBtaggers = True
-
-    process.forest += process.candidateBtagging * process.updatedPatJets * process.akCs4PFJetAnalyzer
 
 #########################
 # Event Selection -> add the needed filters here
