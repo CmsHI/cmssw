@@ -1,0 +1,11 @@
+<use name="CommonTools/UtilAlgos"/>
+<use name="DataFormats/PatCandidates"/>
+<use name="Geometry/CaloGeometry"/>
+<use name="Geometry/Records"/>
+<use name="HeavyIonsAnalysis/EGMAnalysis"/>
+<use name="RecoEgamma/EgammaTools"/>
+<use name="CommonTools/Egamma"/>
+<use name="TrackingTools/IPTools"/>
+<use name="rootcore"/>
+
+<flags EDM_PLUGIN="1"/>
