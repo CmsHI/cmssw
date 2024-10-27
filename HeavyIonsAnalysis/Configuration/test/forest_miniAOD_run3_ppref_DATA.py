@@ -4,8 +4,8 @@
 # Input: miniAOD
 
 import FWCore.ParameterSet.Config as cms
-from Configuration.Eras.Era_Run3_cff import Run3
-process = cms.Process('HiForest', Run3)
+from Configuration.Eras.Era_Run3_2024_ppRef_cff import Run3_2024_ppRef
+process = cms.Process('HiForest', Run3_2024_ppRef)
 process.options = cms.untracked.PSet()
 
 #####################################################################################
