@@ -13,7 +13,7 @@ process.options = cms.untracked.PSet()
 #####################################################################################
 
 process.load("HeavyIonsAnalysis.EventAnalysis.HiForestInfo_cfi")
-process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 140X, data")
+process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 141X, data")
 
 #####################################################################################
 # Input source
@@ -44,7 +44,7 @@ process.load('FWCore.MessageService.MessageLogger_cfi')
 #GlobalTag used in Prompt RECO
 #https://cms-conddb.cern.ch/cmsDbBrowser/list/Prod/gts/132X_dataRun3_Prompt_v3
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, '140X_dataRun3_Prompt_v2', '')
+process.GlobalTag = GlobalTag(process.GlobalTag, '141X_dataRun3_Prompt_v3', '')
 process.HiForestInfo.GlobalTagLabel = process.GlobalTag.globaltag
 
 # TODO: Old calibration here, might need to update
