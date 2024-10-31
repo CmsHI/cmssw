@@ -3,8 +3,8 @@
 # Type: data
 
 import FWCore.ParameterSet.Config as cms
-from Configuration.Eras.Era_Run3_pp_on_PbPb_2024_cff import Run3_pp_on_PbPb_2024
-process = cms.Process('HiForest',Run3_pp_on_PbPb_2024)
+from Configuration.Eras.Era_Run3_2024_UPC_cff import Run3_2024_UPC
+process = cms.Process('HiForest', Run3_2024_UPC)
 
 ###############################################################################
 
@@ -50,10 +50,11 @@ process.HiForestInfo.GlobalTagLabel = process.GlobalTag.globaltag
 
 ###############################################################################
 
-# Define centrality binning
-process.load("RecoHI.HiCentralityAlgos.CentralityBin_cfi")
-process.centralityBin.Centrality = cms.InputTag("hiCentrality")
-process.centralityBin.centralityVariable = cms.string("HFtowers")
+# No centrality binning for UPC
+## Define centrality binning
+#process.load("RecoHI.HiCentralityAlgos.CentralityBin_cfi")
+#process.centralityBin.Centrality = cms.InputTag("hiCentrality")
+#process.centralityBin.centralityVariable = cms.string("HFtowers")
 
 ###############################################################################
 
@@ -75,15 +76,15 @@ process.TFileService = cms.Service("TFileService",
 ###############################################################################
 
 # event analysis
-process.load('HeavyIonsAnalysis.EventAnalysis.hltanalysis_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.hievtanalyzer_data_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.hltanalysis_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.skimanalysis_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.hltobject_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.l1object_cfi')
 
-#process.hiEvtAnalyzer.doCentrality = cms.bool(False)
-#process.hiEvtAnalyzer.doHFfilters = cms.bool(False)
+# No centrality binning for UPC
+process.hiEvtAnalyzer.doCentrality = cms.bool(False)
+process.hiEvtAnalyzer.doHFfilters = cms.bool(False)
 
 # FIXME: Do we have an updated trigger list?
 #from HeavyIonsAnalysis.EventAnalysis.hltobject_cfi import trigger_list_data_2023_skimmed
@@ -97,9 +98,13 @@ process.ggHiNtuplizer.doMuons = cms.bool(False)
 process.load("TrackingTools.TransientTrack.TransientTrackBuilder_cfi")
 ################################
 # jet reco sequence
-process.load('HeavyIonsAnalysis.JetAnalysis.akCs4PFJetSequence_pponPbPb_data_cff')
-process.load('HeavyIonsAnalysis.JetAnalysis.akPu4CaloJetSequence_pponPbPb_data_cff')
-process.akPu4CaloJetAnalyzer.doHiJetID = True
+process.load(
+    'HeavyIonsAnalysis.JetAnalysis.ak2PFJetSequence_ppref_data_cff')
+process.load(
+    'HeavyIonsAnalysis.JetAnalysis.ak3PFJetSequence_ppref_data_cff')
+process.load(
+    'HeavyIonsAnalysis.JetAnalysis.ak4PFJetSequence_ppref_data_cff')
+process.load('HeavyIonsAnalysis.JetAnalysis.ak4CaloJetSequence_pp_data_cff')
 ################################
 # tracks
 process.load("HeavyIonsAnalysis.TrackAnalysis.TrackAnalyzers_cff")
@@ -109,8 +114,9 @@ process.load("HeavyIonsAnalysis.MuonAnalysis.muonAnalyzer_cfi")
 ###############################################################################
 
 # ZDC RecHit Producer
-process.load('HeavyIonsAnalysis.ZDCAnalysis.QWZDC2018Producer_cfi')
-process.load('HeavyIonsAnalysis.ZDCAnalysis.QWZDC2018RecHit_cfi')
+# FIXME: Removing old Producer and RecHit, need updated RecHit?
+#process.load('HeavyIonsAnalysis.ZDCAnalysis.QWZDC2018Producer_cfi')
+#process.load('HeavyIonsAnalysis.ZDCAnalysis.QWZDC2018RecHit_cfi')
 process.load('HeavyIonsAnalysis.ZDCAnalysis.zdcanalyzer_cfi')
 
 process.zdcdigi.SOI = cms.untracked.int32(2)
@@ -127,12 +133,13 @@ process.zdcanalyzer.nZdcTs = cms.int32(6)
 # main forest sequence
 process.forest = cms.Path(
     process.HiForestInfo +
-    process.centralityBin +
+    #process.centralityBin +
     process.hiEvtAnalyzer +
     process.hltanalysis +
     process.hltobject +
     process.l1object +
-    process.trackSequencePbPb +
+    process.trackSequencePP +
+    process.ak4CaloJetAnalyzer +
     process.particleFlowAnalyser +
     process.ggHiNtuplizer +
     #process.zdcdigi +
@@ -140,7 +147,7 @@ process.forest = cms.Path(
     process.zdcanalyzer +
     process.unpackedMuons +
     process.muonAnalyzer +
-    process.akPu4CaloJetAnalyzer
+    #process.akPu4CaloJetAnalyzer
     )
 
 #customisation
