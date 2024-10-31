@@ -109,18 +109,21 @@ process.load("HeavyIonsAnalysis.MuonAnalysis.muonAnalyzer_cfi")
 ###############################################################################
 
 # ZDC RecHit Producer
-process.load('HeavyIonsAnalysis.ZDCAnalysis.QWZDC2018Producer_cfi')
-process.load('HeavyIonsAnalysis.ZDCAnalysis.QWZDC2018RecHit_cfi')
-process.load('HeavyIonsAnalysis.ZDCAnalysis.zdcanalyzer_cfi')
 
-process.zdcdigi.SOI = cms.untracked.int32(2)
-process.zdcanalyzer.doZDCRecHit = False
-process.zdcanalyzer.doZDCDigi = True
-process.zdcanalyzer.zdcRecHitSrc = cms.InputTag("QWzdcreco")
-process.zdcanalyzer.zdcDigiSrc = cms.InputTag("hcalDigis", "ZDC")
-process.zdcanalyzer.calZDCDigi = False
-process.zdcanalyzer.verbose = False
-process.zdcanalyzer.nZdcTs = cms.int32(6)
+# to prevent crash related to HcalSeverityLevelComputerRcd record
+process.load("RecoLocalCalo.HcalRecAlgos.hcalRecAlgoESProd_cfi")
+
+
+process.load('HeavyIonsAnalysis.ZDCAnalysis.zdcrecoRun3_cfi')
+
+process.load('HeavyIonsAnalysis.ZDCAnalysis.ZDCRecHitAnalyzerHC_cfi')
+process.zdcanalyzer.ZDCRecHitSource = cms.InputTag("zdcrecoRun3")
+process.zdcanalyzer.ZDCDigiSource    = cms.InputTag('hcalDigis', 'ZDC')
+process.zdcanalyzer.doZdcRecHits = cms.bool(True)
+process.zdcanalyzer.doZdcDigis = cms.bool(True)
+process.zdcanalyzer.skipRPD = cms.bool(True)  # also skip RPD channels in the analyzer
+process.zdcanalyzer.doHardcodedRecHitsRPD = cms.bool(True) 
+process.zdcanalyzer.doHardcodedDigisRPD = cms.bool(True) 
 
 
 ###############################################################################
@@ -135,8 +138,7 @@ process.forest = cms.Path(
     process.trackSequencePbPb +
     process.particleFlowAnalyser +
     process.ggHiNtuplizer +
-    #process.zdcdigi +
-    #process.QWzdcreco +
+    process.zdcrecoRun3 +
     process.zdcanalyzer +
     process.unpackedMuons +
     process.muonAnalyzer +
