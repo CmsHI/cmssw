@@ -47,7 +47,7 @@ from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, '141X_dataRun3_Prompt_v3', '')
 process.HiForestInfo.GlobalTagLabel = process.GlobalTag.globaltag
 
-# TODO: Old calibration here, might need to update
+# FIXME: Old calibration here, might need to update
 # Commenting out until understood
 #process.GlobalTag.toGet.extend([
 #    cms.PSet(record = cms.string("BTagTrackProbability3DRcd"),
@@ -94,10 +94,11 @@ process.load('HeavyIonsAnalysis.EventAnalysis.l1object_cfi')
 
 process.load('HeavyIonsAnalysis.EventAnalysis.skimanalysis_cfi')
 
+process.load('HeavyIonsAnalysis.EventAnalysis.particleFlowAnalyser_cfi')
 
-#Dont know the triggerlist for the pp reference so comment out (for now)
-#from HeavyIonsAnalysis.EventAnalysis.hltobject_cfi import trigger_list_mc
-#process.hltobject.triggerNames = trigger_list_mc
+# FIXME: Do we have an updated trigger list?
+#from HeavyIonsAnalysis.EventAnalysis.hltobject_cfi import trigger_list_data_2023_skimmed
+#process.hltobject.triggerNames = trigger_list_data_2023_skimmed
 
 #####################################################################################
 
@@ -130,7 +131,8 @@ process.forest = cms.Path(
 #    process.hltobject +
     process.l1object +
     process.ggHiNtuplizer +
-    process.trackSequencePP
+    process.trackSequencePP +
+    process.particleFlowAnalyser
 )
 
 
