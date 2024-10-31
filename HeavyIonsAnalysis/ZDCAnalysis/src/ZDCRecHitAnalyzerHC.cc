@@ -283,14 +283,7 @@ void ZDCRecHitAnalyzerHC::analyze(const edm::Event& iEvent, const edm::EventSetu
       
       if(nhits > 50) break;
       
-      if(section !=4){
-         
-         // Do saturation offline since currently error with integer division in CMSSW - 10.15.24
-         zdc_TDCtime[nhits]  = HardCodeZDC.rechit_TDCtime(digi);
-         // Do saturation offline since currently error in CMSSW where saturation is always 1 - 10.15.24
-         zdc_Saturation[nhits] = HardCodeZDC.rechit_Saturation(digi);
-         nhits++;
-      }
+      if(section !=4)nhits++;
       else{
          if(doHardcodedDigisRPD_){
            zdcDigi.zside[nhits] = side;

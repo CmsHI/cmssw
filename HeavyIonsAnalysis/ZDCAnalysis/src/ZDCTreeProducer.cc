@@ -52,8 +52,8 @@
 #include "Geometry/Records/interface/IdealGeometryRecord.h"
 
 #include "DataFormats/HcalDigi/interface/HcalQIESample.h"
-//#include "QWAna/QWZDC2018RecHit/src/QWZDC2018Helper.h"
-#include "HeavyIonsAnalysis/ZDCAnalysis/src/QWZDC2018Helper.h"
+
+#include "HeavyIonsAnalysis/ZDCAnalysis/src/ZDCHardCodeHelper.h"
 
 #include "TTree.h"
 #include "TNtuple.h"
@@ -175,6 +175,7 @@ ZDCTreeProducer::~ZDCTreeProducer() {
 void ZDCTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup) {
   //iSetup.get<CaloGeometryRecord>().get(geo);
   geo = &iSetup.getData(geometryToken_);
+  ZDCHardCodeHelper HardCodeZDC;
   if (doZDCRecHit_) {
     edm::Handle<ZDCRecHitCollection> zdcrechits;
     ev.getByToken(zdcRecHitSrc_, zdcrechits);
@@ -252,9 +253,7 @@ void ZDCTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetu
         for (int ts = 0; ts < digi.samples(); ts++) {
           if(verbose_) std::cout << "###DIGI2? --- ts : " << ts <<", "<<digi[ts].capid()<< std::endl;
 
-          // zdcDigi.chargefC[ts][nhits] = calZDCDigi_ ? caldigi[ts] : QWAna::ZDC2018::QIE10_nominal_fC[digi[ts].adc()];
-          zdcDigi.chargefC[ts][nhits] = calZDCDigi_ ? caldigi[ts] : QWAna::ZDC2018::QIE10_regular_fC[digi[ts].adc()][digi[ts].capid()];
-          // zdcDigi.chargefC[ts][nhits] = calZDCDigi_ ? caldigi[ts] : (QWAna::ZDC2018::QIE10_regular_fC[digi[ts].adc()][digi[ts].capid()] - pedestal_[did()][digi[i].capid()]);
+          zdcDigi.chargefC[ts][nhits] = calZDCDigi_ ? caldigi[ts] : HardCodeZDC.charge(digi[ts].adc(),digi[ts].capid());
           
           zdcDigi.adc[ts][nhits] = digi[ts].adc();
           if(verbose_) std::cout << "###--- END DIGI2?" << std::endl;
