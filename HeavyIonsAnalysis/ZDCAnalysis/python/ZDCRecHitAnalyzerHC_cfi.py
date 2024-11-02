@@ -8,8 +8,7 @@ zdcanalyzer = cms.EDAnalyzer(
    doZdcRecHits = cms.bool(True),
    doZdcDigis = cms.bool(True),
    doAuxZdcRecHits = cms.bool(False),
-   skipRPD = cms.bool(True),
-   doHardcodedRecHitsRPD = cms.bool(True),
-   doHardcodedDigisRPD = cms.bool(True)
- )
+   skipRpdRecHits = cms.bool(False),
+   doHardcodedRPD = cms.bool(True)
+)
 
