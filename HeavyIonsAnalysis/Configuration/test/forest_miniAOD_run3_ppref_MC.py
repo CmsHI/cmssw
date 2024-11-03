@@ -22,13 +22,14 @@ process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 140X, mc")
 process.source = cms.Source("PoolSource",
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
     fileNames = cms.untracked.vstring(
-        '/store/user/bharikri/Run3MC_pp/MINIAOD/2024_Mar_21_Pythia8_ppRef_QCDPhoton30_PU10_TuneCP5_14_0_0_LLR/Pythia8_ppRef_QCDPhoton30_TuneCP5/2024_Mar_21_step3_RAW2DIGI_MINIAODSIM_Pythia8_ppRef_QCDPhoton30_PU10_TuneCP5_14_0_0/240326_082338/0000/step3_pp_673.root'
+        #'/store/user/bharikri/Run3MC_pp/MINIAOD/2024_Mar_21_Pythia8_ppRef_QCDPhoton30_PU10_TuneCP5_14_0_0_LLR/Pythia8_ppRef_QCDPhoton30_TuneCP5/2024_Mar_21_step3_RAW2DIGI_MINIAODSIM_Pythia8_ppRef_QCDPhoton30_PU10_TuneCP5_14_0_0/240326_082338/0000/step3_pp_673.root'
+        'file:./149.1_QCD_Pt_80_120_5362_PPREF_2024/step3.root'
     )
 )
 
 # Number of events we want to process, -1 = all events
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(10)
+    input = cms.untracked.int32(100)
 )
 
 #####################################################################################
@@ -134,7 +135,7 @@ process.forest = cms.Path(
 #####################################################################################
 
 addR3Jets = False
-addR4Jets = True
+addR4Jets = False
 
 if addR3Jets or addR4Jets :
     process.load("HeavyIonsAnalysis.JetAnalysis.extraJets_cff")
@@ -157,5 +158,7 @@ if addR3Jets or addR4Jets :
         process.load("HeavyIonsAnalysis.JetAnalysis.candidateBtaggingMiniAOD_cff")
         process.ak4PFJetAnalyzer.jetTag = 'ak04PFpatJets'
         process.ak4PFJetAnalyzer.jetName = 'ak04PF'
-        process.ak4PFJetAnalyzer.doSubEvent = False # Need to disable this, since there is some issue with the gen jet constituents. More debugging needed is want to use constituents.
         process.forest += process.extraPpJetsMC * process.jetsR4 * process.ak4PFJetAnalyzer
+        
+else:
+    process.forest+= process.ak4PFJetAnalyzer

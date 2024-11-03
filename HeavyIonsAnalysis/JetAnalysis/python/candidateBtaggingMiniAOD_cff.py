@@ -82,6 +82,8 @@ pfParticleNetFromMiniAODAK4CHSForwardJetTagsSlimmedDeepFlavour = boostedJetONNXJ
 from RecoBTag.ONNXRuntime.pfParticleTransformerAK4JetTags_cfi import pfParticleTransformerAK4JetTags
 pfParticleTransformerAK4JetTagsSlimmedDeepFlavour = pfParticleTransformerAK4JetTags.clone(src = cms.InputTag("pfParticleTransformerAK4TagInfosSlimmedDeepFlavour"))
 
+from RecoBTag.ONNXRuntime.pfParticleNetFromMiniAODAK4DiscriminatorsJetTags_cfi import pfParticleNetFromMiniAODAK4PuppiCentralDiscriminatorsJetTags
+
 candidateBtagging = cms.Sequence(
     pfImpactParameterTagInfos +
     pfSecondaryVertexTagInfos +
