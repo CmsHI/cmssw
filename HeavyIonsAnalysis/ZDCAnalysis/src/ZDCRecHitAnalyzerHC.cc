@@ -77,9 +77,10 @@ private:
   bool doZdcDigis_;
   bool doAuxZdcRecHits_;
   bool skipRpdRecHits_;
+  bool skipRpdDigis_;
   bool doHardcodedRPD_;
   edm::Service<TFileService> fs;
-  TTree *t1, *t2, *t3;   
+  TTree *t1, *t2;   
    
   MyZDCDigi zdcDigi;
   MyZDCRecHit zdcRechit;
@@ -109,6 +110,7 @@ ZDCRecHitAnalyzerHC::ZDCRecHitAnalyzerHC(const edm::ParameterSet& iConfig) :
   doZdcDigis_(iConfig.getParameter<bool>("doZdcDigis")),
   doAuxZdcRecHits_(iConfig.getParameter<bool>("doAuxZdcRecHits")),
   skipRpdRecHits_(iConfig.getParameter<bool>("skipRpdRecHits")),
+  skipRpdDigis_(iConfig.getParameter<bool>("skipRpdDigis")),
   doHardcodedRPD_(iConfig.getParameter<bool>("doHardcodedRPD"))
 {
 #ifdef THIS_IS_AN_EVENTSETUP_EXAMPLE
@@ -171,12 +173,14 @@ void ZDCRecHitAnalyzerHC::analyze(const edm::Event& iEvent, const edm::EventSetu
        
       if (nhits >= NMOD) break;
       if (section == 1 && channel > 5) continue; // ignore extra EM channels
-
+      if (skipRpdRecHits_ && section == 4) continue;
+      
       zdcRechit.zside[nhits] = zside;
       zdcRechit.section[nhits] = section;
       zdcRechit.channel[nhits] = channel;
 
-      if (!((doHardcodedRPD_ || skipRpdRecHits_) && section == 4)) { // !! Geometry updated for the RPD are not yet part of 14_1_X and the global tag used for 2024. Those won't be available this year but should be next year.
+      // !! Geometry updated for the RPD are not yet part of 14_1_X and the global tag used for 2024. Those won't be available this year but should be next year.
+      if (!(doHardcodedRPD_ && section == 4)) {
         zdcRechit.energy[nhits]  = energy;
         zdcRechit.time[nhits]  = rh.time();
         zdcRechit.chargeWeightedTime[nhits] = rh.chargeWeightedTime();
@@ -193,7 +197,7 @@ void ZDCRecHitAnalyzerHC::analyze(const edm::Event& iEvent, const edm::EventSetu
 
     // Fill out RPD module rechits by digi
     // ! Now rely on the same order to match digi and rechit. Ideally matching should be done by zside, section, channel.
-    if (zdcdigis.isValid()) {
+    if (zdcdigis.isValid() && !skipRpdRecHits_) {
       nhits = 0;
       for (auto it = zdcdigis->begin(); it != zdcdigis->end(); it++) {
         const QIE10DataFrame digi = static_cast<const QIE10DataFrame>(*it);
@@ -210,7 +214,7 @@ void ZDCRecHitAnalyzerHC::analyze(const edm::Event& iEvent, const edm::EventSetu
           zdcRechit.section[nhits] = section;
           zdcRechit.channel[nhits] = channel;
         
-          if (!skipRpdRecHits_ && doHardcodedRPD_) {
+          if (doHardcodedRPD_) {
             zdcRechit.energy[nhits]  = HardCodeZDC.rechit_Energy_RPD(digi);
             zdcRechit.time[nhits]  = HardCodeZDC.rechit_Time(digi);
             zdcRechit.chargeWeightedTime[nhits] = HardCodeZDC.rechit_ChargeWeightedTime(digi);
@@ -225,7 +229,6 @@ void ZDCRecHitAnalyzerHC::analyze(const edm::Event& iEvent, const edm::EventSetu
     } // if (zdcdigis.isValid()) {
 
     zdcRechit.n = nhits;
-    t1->Fill();
   } // if(doZdcRecHits_) {
 
   if (doAuxZdcRecHits_) {
@@ -249,8 +252,9 @@ void ZDCRecHitAnalyzerHC::analyze(const edm::Event& iEvent, const edm::EventSetu
       
     } // end loop Aux rechits 
 
-    t3->Fill();
   } // if (doAuxZdcRecHits_) {
+
+  if (t1) t1->Fill();
   
   if (doZdcDigis_) {
     zdcDigi.n = 0;
@@ -276,12 +280,13 @@ void ZDCRecHitAnalyzerHC::analyze(const edm::Event& iEvent, const edm::EventSetu
 
       if (nhits >= NMOD) break;
       if (section == 1 && channel > 5) continue; // ignore extra EM channels
+      if (skipRpdDigis_ && section == 4) continue;      
       
       CaloSamples caldigi;
       
       //const ZDCDataFrame & rh = (*zdcdigis)[it];
 
-      if (! (doHardcodedRPD_ && section == 4) ) {
+      if (!(doHardcodedRPD_ && section == 4)) {
         const HcalQIECoder* qiecoder = conditions->getHcalCoder(zdcid);
         const HcalQIEShape* qieshape = conditions->getHcalShape(qiecoder);
         HcalCoderDb coder(*qiecoder, *qieshape);
@@ -342,6 +347,13 @@ void ZDCRecHitAnalyzerHC::beginJob() {
     t1->Branch("ratioSOIp1", zdcRechit.ratioSOIp1, "ratioSOIp1[n]/F");    
     t1->Branch("saturation", zdcRechit.saturation, "saturation[n]/I");     
   }
+  if(doAuxZdcRecHits_) {
+    if (!t1)
+      t1 = fs->make<TTree>("zdcrechit", "zdcrechit");
+    
+    t1->Branch("sumPlus_Aux",&zdcRechit.sumPlus_Aux); 
+    t1->Branch("sumMinus_Aux",&zdcRechit.sumMinus_Aux);     
+  }
   
   if(doZdcDigis_) {
     t2 = fs->make<TTree>("zdcdigi", "zdcdigi");
@@ -351,7 +363,7 @@ void ZDCRecHitAnalyzerHC::beginJob() {
     t2->Branch("section", zdcDigi.section, "section[n]/I");
     t2->Branch("channel", zdcDigi.channel, "channel[n]/I");
 
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < NTS; i++) {
       TString adcTsSt("adcTs"), chargefCTsSt("chargefCTs"), tdcTsSt("tdcTs");
       adcTsSt += i;
       chargefCTsSt += i;
@@ -363,12 +375,6 @@ void ZDCRecHitAnalyzerHC::beginJob() {
     }
   }
     
-  if(doAuxZdcRecHits_) {
-    t3 = fs->make<TTree>("zdcrechitAux", "zdcrechitAux");
-     
-    t3->Branch("sumPlus_Aux",&zdcRechit.sumPlus_Aux); 
-    t3->Branch("sumMinus_Aux",&zdcRechit.sumMinus_Aux);     
-  }
 }
 
 // ------------ method called once each job just after ending the event loop  ------------
