@@ -158,3 +158,14 @@ Energy sum is `sumPlus` and `sumMinus` in `zdcanalyzer/zdcrechit`.
 int zside[MAXMOD];
 ```
 
+## Options and parameters
+### ZDC analyzer
+- Hard coded RPD `doHardcodedRPD`: Geometry updated for the RPD are not part of 14_1_X and the GT used for 2024. Always do hard coded RPD for 2024.
+- Remove digi tree: `process.zdcanalyzer.doZdcDigis = cms.bool(False)`
+- Save RPD rechit: `process.zdcanalyzer.skipRpdRecHits = cms.bool(False)`
+- Save RPD digi: `process.zdcanalyzer.skipRpdDigis = cms.bool(True)`
+- Add Aux
+```
+process.zdcanalyzer.doAuxZdcRecHits = cms.bool(True)
+process.zdcanalyzer.AuxZDCRecHitSource = cms.InputTag('your zdc rechit label')
+```
