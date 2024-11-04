@@ -4,8 +4,8 @@
 # Input: miniAOD
 
 import FWCore.ParameterSet.Config as cms
-from Configuration.Eras.Era_Run3_cff import Run3
-process = cms.Process('HiForest', Run3)
+from Configuration.Eras.Era_Run3_2024_ppRef_cff import Run3_2024_ppRef
+process = cms.Process('HiForest', Run3_2024_ppRef)
 process.options = cms.untracked.PSet()
 
 #####################################################################################
@@ -13,7 +13,7 @@ process.options = cms.untracked.PSet()
 #####################################################################################
 
 process.load("HeavyIonsAnalysis.EventAnalysis.HiForestInfo_cfi")
-process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 140X, mc")
+process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 141X, mc")
 
 #####################################################################################
 # Input source
@@ -28,7 +28,7 @@ process.source = cms.Source("PoolSource",
 
 # Number of events we want to process, -1 = all events
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(10)
+    input = cms.untracked.int32(100)
 )
 
 #####################################################################################
@@ -134,7 +134,7 @@ process.forest = cms.Path(
 #####################################################################################
 
 addR3Jets = False
-addR4Jets = True
+addR4Jets = False
 
 if addR3Jets or addR4Jets :
     process.load("HeavyIonsAnalysis.JetAnalysis.extraJets_cff")
@@ -157,5 +157,7 @@ if addR3Jets or addR4Jets :
         process.load("HeavyIonsAnalysis.JetAnalysis.candidateBtaggingMiniAOD_cff")
         process.ak4PFJetAnalyzer.jetTag = 'ak04PFpatJets'
         process.ak4PFJetAnalyzer.jetName = 'ak04PF'
-        process.ak4PFJetAnalyzer.doSubEvent = False # Need to disable this, since there is some issue with the gen jet constituents. More debugging needed is want to use constituents.
         process.forest += process.extraPpJetsMC * process.jetsR4 * process.ak4PFJetAnalyzer
+        
+else:
+    process.forest+= process.ak4PFJetAnalyzer
