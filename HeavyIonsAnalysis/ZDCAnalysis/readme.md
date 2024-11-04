@@ -201,3 +201,11 @@ int zside[MAXMOD];
 process.zdcanalyzer.doAuxZdcRecHits = cms.bool(True)
 process.zdcanalyzer.AuxZDCRecHitSource = cms.InputTag('your zdc rechit label')
 ```
+
+# ZDC rechit producer
+## Options and parameters
+| | correctionMethodHAD | correctionMethodEM | ootpuRatioHAD | ootpuRatioEM | ootpuFracHAD | ootpuFracEM |
+| :-- | :--: | :--: | :--: | :--: | :--: | :--: |
+| Default in `zdcrecoRun3_cfi` (Template fit) | 1 | 1 | 3.0 | 3.0 | 0.4 | 0.4 |
+| Trigger (`Ts2-0.4*Ts1`) | 0 | 0 | -1 | -1 | 97.0/256.0 | 97.0/256.0 |
+| 2023 offline (`Ts2-Ts1`), default in forest | 0 | 0 | -1 | -1 | 1.0 | 1.0 |
