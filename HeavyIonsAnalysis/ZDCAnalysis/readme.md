@@ -1,6 +1,6 @@
 # ZDC analyzer
 ## Minimum usage
-Energy sum is `sumPlus` and `sumMinus` in `zdcanalyzer/zdcrechit`.
+Energy sum is `(float) sumPlus` and `(float) sumMinus` in `zdcanalyzer/zdcrechit`.
 ```
    (HiForestMiniAOD.root)
    ./
@@ -99,7 +99,7 @@ Energy sum is `sumPlus` and `sumMinus` in `zdcanalyzer/zdcrechit`.
 ```
 
 ## Indices and dimensions
-- By default, only the 18 channels of ZDC are saved, while RPD channels are skipped in both rechit and digi trees.
+- By default, the 18 channels of ZDC are saved in rechit tree, while additional 32 RPD channels are saved in digi tree.
 ```
    (HiForestMiniAOD.root)
    ./
@@ -132,24 +132,56 @@ Energy sum is `sumPlus` and `sumMinus` in `zdcanalyzer/zdcrechit`.
 ***********************************************************************
 *    Row   * Instance *         n *     zside *   section *   channel *
 ***********************************************************************
-*        0 *        0 *        18 *        -1 *         1 *         1 *
-*        0 *        1 *        18 *        -1 *         1 *         2 *
-*        0 *        2 *        18 *        -1 *         1 *         3 *
-*        0 *        3 *        18 *        -1 *         1 *         4 *
-*        0 *        4 *        18 *        -1 *         1 *         5 *
-*        0 *        5 *        18 *        -1 *         2 *         1 *
-*        0 *        6 *        18 *        -1 *         2 *         2 *
-*        0 *        7 *        18 *        -1 *         2 *         3 *
-*        0 *        8 *        18 *        -1 *         2 *         4 *
-*        0 *        9 *        18 *         1 *         1 *         1 *
-*        0 *       10 *        18 *         1 *         1 *         2 *
-*        0 *       11 *        18 *         1 *         1 *         3 *
-*        0 *       12 *        18 *         1 *         1 *         4 *
-*        0 *       13 *        18 *         1 *         1 *         5 *
-*        0 *       14 *        18 *         1 *         2 *         1 *
-*        0 *       15 *        18 *         1 *         2 *         2 *
-*        0 *       16 *        18 *         1 *         2 *         3 *
-*        0 *       17 *        18 *         1 *         2 *         4 *
+*        0 *        0 *        50 *        -1 *         1 *         1 *
+*        0 *        1 *        50 *        -1 *         1 *         2 *
+*        0 *        2 *        50 *        -1 *         1 *         3 *
+*        0 *        3 *        50 *        -1 *         1 *         4 *
+*        0 *        4 *        50 *        -1 *         1 *         5 *
+*        0 *        5 *        50 *        -1 *         2 *         1 *
+*        0 *        6 *        50 *        -1 *         2 *         2 *
+*        0 *        7 *        50 *        -1 *         2 *         3 *
+*        0 *        8 *        50 *        -1 *         2 *         4 *
+*        0 *        9 *        50 *         1 *         1 *         1 *
+*        0 *       10 *        50 *         1 *         1 *         2 *
+*        0 *       11 *        50 *         1 *         1 *         3 *
+*        0 *       12 *        50 *         1 *         1 *         4 *
+*        0 *       13 *        50 *         1 *         1 *         5 *
+*        0 *       14 *        50 *         1 *         2 *         1 *
+*        0 *       15 *        50 *         1 *         2 *         2 *
+*        0 *       16 *        50 *         1 *         2 *         3 *
+*        0 *       17 *        50 *         1 *         2 *         4 *
+*        0 *       18 *        50 *        -1 *         4 *         1 *
+*        0 *       19 *        50 *        -1 *         4 *         2 *
+*        0 *       20 *        50 *        -1 *         4 *         3 *
+*        0 *       21 *        50 *        -1 *         4 *         4 *
+*        0 *       22 *        50 *        -1 *         4 *         5 *
+*        0 *       23 *        50 *        -1 *         4 *         6 *
+*        0 *       24 *        50 *        -1 *         4 *         7 *
+*        0 *       25 *        50 *        -1 *         4 *         8 *
+*        0 *       26 *        50 *        -1 *         4 *         9 *
+*        0 *       27 *        50 *        -1 *         4 *        10 *
+*        0 *       28 *        50 *        -1 *         4 *        11 *
+*        0 *       29 *        50 *        -1 *         4 *        12 *
+*        0 *       30 *        50 *        -1 *         4 *        13 *
+*        0 *       31 *        50 *        -1 *         4 *        14 *
+*        0 *       32 *        50 *        -1 *         4 *        15 *
+*        0 *       33 *        50 *        -1 *         4 *        16 *
+*        0 *       34 *        50 *         1 *         4 *         1 *
+*        0 *       35 *        50 *         1 *         4 *         2 *
+*        0 *       36 *        50 *         1 *         4 *         3 *
+*        0 *       37 *        50 *         1 *         4 *         4 *
+*        0 *       38 *        50 *         1 *         4 *         5 *
+*        0 *       39 *        50 *         1 *         4 *         6 *
+*        0 *       40 *        50 *         1 *         4 *         7 *
+*        0 *       41 *        50 *         1 *         4 *         8 *
+*        0 *       42 *        50 *         1 *         4 *         9 *
+*        0 *       43 *        50 *         1 *         4 *        10 *
+*        0 *       44 *        50 *         1 *         4 *        11 *
+*        0 *       45 *        50 *         1 *         4 *        12 *
+*        0 *       46 *        50 *         1 *         4 *        13 *
+*        0 *       47 *        50 *         1 *         4 *        14 *
+*        0 *       48 *        50 *         1 *         4 *        15 *
+*        0 *       49 *        50 *         1 *         4 *        16 *
 ***********************************************************************
 ```
 - The safe length of the arrays is 56 = (9 ZDC + 16 RPD + 3 dump) &times; 2 sides, no matter if RPD is skipped, e.g.
@@ -163,7 +195,7 @@ int zside[MAXMOD];
 - Hard coded RPD `doHardcodedRPD`: Geometry updated for the RPD are not part of 14_1_X and the GT used for 2024. Always do hard coded RPD for 2024.
 - Remove digi tree: `process.zdcanalyzer.doZdcDigis = cms.bool(False)`
 - Save RPD rechit: `process.zdcanalyzer.skipRpdRecHits = cms.bool(False)`
-- Save RPD digi: `process.zdcanalyzer.skipRpdDigis = cms.bool(False)`
+- Remove RPD digi: `process.zdcanalyzer.skipRpdDigis = cms.bool(True)`
 - Add Aux
 ```
 process.zdcanalyzer.doAuxZdcRecHits = cms.bool(True)
