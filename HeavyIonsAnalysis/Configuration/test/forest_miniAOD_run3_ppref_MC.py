@@ -4,8 +4,8 @@
 # Input: miniAOD
 
 import FWCore.ParameterSet.Config as cms
-from Configuration.Eras.Era_Run3_cff import Run3
-process = cms.Process('HiForest', Run3)
+from Configuration.Eras.Era_Run3_2024_ppRef_cff import Run3_2024_ppRef
+process = cms.Process('HiForest', Run3_2024_ppRef)
 process.options = cms.untracked.PSet()
 
 #####################################################################################
@@ -13,7 +13,7 @@ process.options = cms.untracked.PSet()
 #####################################################################################
 
 process.load("HeavyIonsAnalysis.EventAnalysis.HiForestInfo_cfi")
-process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 140X, mc")
+process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 141X, mc")
 
 #####################################################################################
 # Input source
@@ -22,8 +22,7 @@ process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 140X, mc")
 process.source = cms.Source("PoolSource",
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
     fileNames = cms.untracked.vstring(
-        #'/store/user/bharikri/Run3MC_pp/MINIAOD/2024_Mar_21_Pythia8_ppRef_QCDPhoton30_PU10_TuneCP5_14_0_0_LLR/Pythia8_ppRef_QCDPhoton30_TuneCP5/2024_Mar_21_step3_RAW2DIGI_MINIAODSIM_Pythia8_ppRef_QCDPhoton30_PU10_TuneCP5_14_0_0/240326_082338/0000/step3_pp_673.root'
-        'file:./149.1_QCD_Pt_80_120_5362_PPREF_2024/step3.root'
+        '/store/user/bharikri/Run3MC_pp/MINIAOD/2024_Mar_21_Pythia8_ppRef_QCDPhoton30_PU10_TuneCP5_14_0_0_LLR/Pythia8_ppRef_QCDPhoton30_TuneCP5/2024_Mar_21_step3_RAW2DIGI_MINIAODSIM_Pythia8_ppRef_QCDPhoton30_PU10_TuneCP5_14_0_0/240326_082338/0000/step3_pp_673.root'
     )
 )
 
