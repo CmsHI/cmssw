@@ -108,23 +108,12 @@ process.load("HeavyIonsAnalysis.MuonAnalysis.unpackedMuons_cfi")
 process.load("HeavyIonsAnalysis.MuonAnalysis.muonAnalyzer_cfi")
 ###############################################################################
 
-# ZDC RecHit Producer
-
+#########################
+# ZDC RecHit Producer && Analyzer
+#########################
 # to prevent crash related to HcalSeverityLevelComputerRcd record
 process.load("RecoLocalCalo.HcalRecAlgos.hcalRecAlgoESProd_cfi")
-
-
-process.load('HeavyIonsAnalysis.ZDCAnalysis.zdcrecoRun3_cfi')
-
-process.load('HeavyIonsAnalysis.ZDCAnalysis.ZDCRecHitAnalyzerHC_cfi')
-process.zdcanalyzer.ZDCRecHitSource = cms.InputTag("zdcrecoRun3")
-process.zdcanalyzer.ZDCDigiSource    = cms.InputTag('hcalDigis', 'ZDC')
-process.zdcanalyzer.doZdcRecHits = cms.bool(True)
-process.zdcanalyzer.doZdcDigis = cms.bool(True)
-process.zdcanalyzer.skipRPD = cms.bool(True)  # also skip RPD channels in the analyzer
-process.zdcanalyzer.doHardcodedRecHitsRPD = cms.bool(True) 
-process.zdcanalyzer.doHardcodedDigisRPD = cms.bool(True) 
-
+process.load('HeavyIonsAnalysis.ZDCAnalysis.ZDCAnalyzersPbPb_cff')
 
 ###############################################################################
 # main forest sequence
@@ -138,8 +127,7 @@ process.forest = cms.Path(
     process.trackSequencePbPb +
     process.particleFlowAnalyser +
     process.ggHiNtuplizer +
-    process.zdcrecoRun3 +
-    process.zdcanalyzer +
+    process.zdcSequencePbPb +
     process.unpackedMuons +
     process.muonAnalyzer +
     process.akPu4CaloJetAnalyzer

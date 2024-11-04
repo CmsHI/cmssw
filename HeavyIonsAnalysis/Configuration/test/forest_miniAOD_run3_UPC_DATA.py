@@ -113,21 +113,12 @@ process.load("HeavyIonsAnalysis.MuonAnalysis.unpackedMuons_cfi")
 process.load("HeavyIonsAnalysis.MuonAnalysis.muonAnalyzer_cfi")
 ###############################################################################
 
-# ZDC RecHit Producer
-# FIXME: Removing old Producer and RecHit, need updated RecHit?
-#process.load('HeavyIonsAnalysis.ZDCAnalysis.QWZDC2018Producer_cfi')
-#process.load('HeavyIonsAnalysis.ZDCAnalysis.QWZDC2018RecHit_cfi')
-process.load('HeavyIonsAnalysis.ZDCAnalysis.zdcanalyzer_cfi')
-
-process.zdcdigi.SOI = cms.untracked.int32(2)
-process.zdcanalyzer.doZDCRecHit = False
-process.zdcanalyzer.doZDCDigi = True
-process.zdcanalyzer.zdcRecHitSrc = cms.InputTag("QWzdcreco")
-process.zdcanalyzer.zdcDigiSrc = cms.InputTag("hcalDigis", "ZDC")
-process.zdcanalyzer.calZDCDigi = False
-process.zdcanalyzer.verbose = False
-process.zdcanalyzer.nZdcTs = cms.int32(6)
-
+#########################
+# ZDC RecHit Producer && Analyzer
+#########################
+# to prevent crash related to HcalSeverityLevelComputerRcd record
+process.load("RecoLocalCalo.HcalRecAlgos.hcalRecAlgoESProd_cfi")
+process.load('HeavyIonsAnalysis.ZDCAnalysis.ZDCAnalyzersPbPb_cff')
 
 ###############################################################################
 # main forest sequence
@@ -142,9 +133,7 @@ process.forest = cms.Path(
     process.ak4CaloJetAnalyzer +
     process.particleFlowAnalyser +
     process.ggHiNtuplizer +
-    #process.zdcdigi +
-    #process.QWzdcreco +
-    process.zdcanalyzer +
+    process.zdcSequencePbPb +
     process.unpackedMuons +
     process.muonAnalyzer +
     #process.akPu4CaloJetAnalyzer
