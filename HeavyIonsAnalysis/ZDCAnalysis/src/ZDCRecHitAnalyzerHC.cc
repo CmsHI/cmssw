@@ -5,7 +5,7 @@
 //
 /**\class ZDCRecHitAnalyzerHC ZDCRecHitAnalyzerHC.cc HeavyIonAnalyzer/ZDCAnalysis/plugins/ZDCRecHitAnalyzerHC
 
- Description: Produced Tree with ZDC RecHit and zdcdigi information 
+   Description: Produced Tree with ZDC RecHit and zdcdigi information 
 */
 //
 // Original Author:  Matthew Nickel, University of Kansas
@@ -42,6 +42,7 @@
 #include "CalibFormats/HcalObjects/interface/HcalDbRecord.h"
 #include "CalibFormats/HcalObjects/interface/HcalDbService.h"
 
+#include "ZDCstruct.h"
 #include "ZDCHardCodeHelper.h"
 
 //
@@ -53,19 +54,7 @@
 // from  edm::one::EDAnalyzer<>
 // This will improve performance in multithreaded jobs.
 
-struct MyZDCDigi {
-  int n;
-  float chargefC[10][50];
-  int adc[10][50];
-  int tdc[10][50];
-  int zside[50];
-  int section[50];
-  int channel[50];
-};
-
 using reco::TrackCollection;
-
-
 
 class ZDCRecHitAnalyzerHC : public edm::one::EDAnalyzer<edm::one::SharedResources> {
 public:
@@ -80,43 +69,21 @@ private:
   void endJob() override;
 
   // ----------member data ---------------------------
-   const edm::EDGetTokenT<QIE10DigiCollection> ZDCDigiToken_;  
-   const edm::EDGetTokenT<edm::SortedCollection<ZDCRecHit>> ZDCRecHitToken_;
-   const edm::EDGetTokenT<edm::SortedCollection<ZDCRecHit>> AuxZDCRecHitToken_; 
-   edm::ESGetToken<HcalDbService, HcalDbRecord> hcalDatabaseToken_;
+  const edm::EDGetTokenT<QIE10DigiCollection> ZDCDigiToken_;  
+  const edm::EDGetTokenT<edm::SortedCollection<ZDCRecHit>> ZDCRecHitToken_;
+  const edm::EDGetTokenT<edm::SortedCollection<ZDCRecHit>> AuxZDCRecHitToken_; 
+  edm::ESGetToken<HcalDbService, HcalDbRecord> hcalDatabaseToken_;
   bool doZdcRecHits_;
   bool doZdcDigis_;
   bool doAuxZdcRecHits_;
-  bool skipRPD_;
-  bool doHardcodedRecHitsRPD_;
-  bool doHardcodedDigisRPD_;
-   edm::Service<TFileService> fs;
-   TTree* t1;
+  bool skipRpdRecHits_;
+  bool skipRpdDigis_;
+  bool doHardcodedRPD_;
+  edm::Service<TFileService> fs;
+  TTree *t1, *t2;   
    
-   
-     MyZDCDigi zdcDigi;
-   
-   // tree branch variables
-   int zdc_n;
-   int zdc_side[50];
-   int zdc_section[50];
-   int zdc_channel[50];
-   float zdc_Energy[50];
-   float zdc_Time[50];
-   float zdc_TDCtime[50];
-   float zdc_ChargeWeightedTime[50];
-   float zdc_EnergySOIp1[50];
-   float zdc_RatioSOIp1[50];
-   int zdc_Saturation[50];
-
-   
-   
-   float ZDCp_Energy;
-   float ZDCm_Energy;
-   
-   float ZDCp_Aux_Energy;
-   float ZDCm_Aux_Energy;
-   
+  MyZDCDigi zdcDigi;
+  MyZDCRecHit zdcRechit;
 
 #ifdef THIS_IS_AN_EVENTSETUP_EXAMPLE
   edm::ESGetToken<SetupData, SetupRecord> setupToken_;
@@ -135,17 +102,17 @@ private:
 // constructors and destructor
 //
 ZDCRecHitAnalyzerHC::ZDCRecHitAnalyzerHC(const edm::ParameterSet& iConfig) :
-      ZDCDigiToken_(consumes<QIE10DigiCollection>(iConfig.getParameter<edm::InputTag>("ZDCDigiSource"))), 
-      ZDCRecHitToken_(consumes<edm::SortedCollection<ZDCRecHit>>(iConfig.getParameter<edm::InputTag>("ZDCRecHitSource"))), 
-      AuxZDCRecHitToken_(consumes<edm::SortedCollection<ZDCRecHit>>(iConfig.getParameter<edm::InputTag>("AuxZDCRecHitSource"))), 
-      hcalDatabaseToken_(esConsumes<HcalDbService, HcalDbRecord>()),
-      doZdcRecHits_(iConfig.getParameter<bool>("doZdcRecHits")),
-      doZdcDigis_(iConfig.getParameter<bool>("doZdcDigis")),
-      doAuxZdcRecHits_(iConfig.getParameter<bool>("doAuxZdcRecHits")),
-      skipRPD_(iConfig.getParameter<bool>("skipRPD")),
-      doHardcodedRecHitsRPD_(iConfig.getParameter<bool>("doHardcodedRecHitsRPD")),
-      doHardcodedDigisRPD_(iConfig.getParameter<bool>("doHardcodedDigisRPD"))
-      {
+  ZDCDigiToken_(consumes<QIE10DigiCollection>(iConfig.getParameter<edm::InputTag>("ZDCDigiSource"))), 
+  ZDCRecHitToken_(consumes<edm::SortedCollection<ZDCRecHit>>(iConfig.getParameter<edm::InputTag>("ZDCRecHitSource"))), 
+  AuxZDCRecHitToken_(consumes<edm::SortedCollection<ZDCRecHit>>(iConfig.getParameter<edm::InputTag>("AuxZDCRecHitSource"))), 
+  hcalDatabaseToken_(esConsumes<HcalDbService, HcalDbRecord>()),
+  doZdcRecHits_(iConfig.getParameter<bool>("doZdcRecHits")),
+  doZdcDigis_(iConfig.getParameter<bool>("doZdcDigis")),
+  doAuxZdcRecHits_(iConfig.getParameter<bool>("doAuxZdcRecHits")),
+  skipRpdRecHits_(iConfig.getParameter<bool>("skipRpdRecHits")),
+  skipRpdDigis_(iConfig.getParameter<bool>("skipRpdDigis")),
+  doHardcodedRPD_(iConfig.getParameter<bool>("doHardcodedRPD"))
+{
 #ifdef THIS_IS_AN_EVENTSETUP_EXAMPLE
   setupDataToken_ = esConsumes<SetupData, SetupRecord>();
 #endif
@@ -168,244 +135,246 @@ void ZDCRecHitAnalyzerHC::analyze(const edm::Event& iEvent, const edm::EventSetu
   using namespace edm;
   using namespace std;
   ZDCHardCodeHelper HardCodeZDC;
-  if(doZdcRecHits_){
-     zdc_n = 0;
-     ZDCp_Energy = 0;
-     ZDCm_Energy = 0;
-     for (unsigned int i = 0; i < 50; i++) {
-     zdc_side[i] = -99;
-     zdc_section [i]= -99;
-     zdc_channel[i] = -99;
-
-     zdc_Energy[i] = -99;
-     zdc_Time[i] = -99;
-     zdc_TDCtime[i] = -99;
-     zdc_ChargeWeightedTime[i] = -99;
-     zdc_EnergySOIp1[i] = -99;
-     zdc_RatioSOIp1[i] = -99;
-     zdc_Saturation[i] = -99;
-       
-     }
-     
-       edm::Handle<ZDCRecHitCollection> zdcrechits;
-      iEvent.getByToken(ZDCRecHitToken_, zdcrechits);
-       // zdc_n = zdcrechits->size();   
-       int nhits = 0;
-       for (auto const& rh : *zdcrechits) {
-          
-         if (nhits  >= 50) break;          
-         HcalZDCDetId zdcid = rh.id();
-          int side = zdcid.zside();
-          int section = zdcid.section();
-          int channel =zdcid.channel(); 
-          float energy = rh.energy();
-          
-          if(section ==4 && skipRPD_ ) continue;
-          
-          zdc_side[nhits] = side;
-          zdc_section[nhits] = section;
-          zdc_channel[nhits] = channel;
-          
-          zdc_Energy[nhits]  = energy;
-          zdc_Time[nhits]  = rh.time();
-          zdc_TDCtime[nhits]  = rh.TDCtime();
-          zdc_ChargeWeightedTime[nhits] = rh.chargeWeightedTime();
-          zdc_EnergySOIp1[nhits]  = rh.energySOIp1();
-          zdc_RatioSOIp1[nhits]  = rh.ratioSOIp1();
-          zdc_Saturation[nhits] = static_cast<int>( rh.flagField(HcalCaloFlagLabels::ADCSaturationBit) );
-          
-          if(side <0 && (section ==1 || section ==2)) ZDCm_Energy += energy;
-          if(side >0 && (section ==1 || section ==2)) ZDCp_Energy += energy;
-
-         nhits++;
-       } // end loop zdc rechits 
-       
-       zdc_n = nhits;  
-  }
-  
-  if(doZdcDigis_){
-    edm::Handle<QIE10DigiCollection> zdcdigis;
+  edm::Handle<QIE10DigiCollection> zdcdigis;
+  if (doZdcDigis_ || doHardcodedRPD_) {
     iEvent.getByToken(ZDCDigiToken_, zdcdigis);
-    
-    edm::ESHandle<HcalDbService> conditions = iSetup.getHandle(hcalDatabaseToken_);
+  }
+  edm::ESHandle<HcalDbService> conditions = iSetup.getHandle(hcalDatabaseToken_);  
+
+  if (doZdcRecHits_) {
+    zdcRechit.n = 0;
+    zdcRechit.sumPlus = 0;
+    zdcRechit.sumMinus = 0;
+    for (unsigned int i = 0; i < NMOD; i++) {
+      zdcRechit.zside[i] = -99;
+      zdcRechit.section [i]= -99;
+      zdcRechit.channel[i] = -99;
+       
+      zdcRechit.energy[i] = -99;
+      zdcRechit.time[i] = -99;
+      zdcRechit.TDCtime[i] = -99;
+      zdcRechit.chargeWeightedTime[i] = -99;
+      zdcRechit.energySOIp1[i] = -99;
+      zdcRechit.ratioSOIp1[i] = -99;
+      zdcRechit.saturation[i] = -99;
+    }
+     
+    edm::Handle<ZDCRecHitCollection> zdcrechits;
+    iEvent.getByToken(ZDCRecHitToken_, zdcrechits);
+
+    int nhits = 0;
+    for (auto const& rh : *zdcrechits) { // does not have RPD if it was skipped in reco
+       
+      HcalZDCDetId zdcid = rh.id();
+      int zside = zdcid.zside();
+      int section = zdcid.section();
+      int channel = zdcid.channel(); 
+      float energy = rh.energy();
+       
+      if (nhits >= NMOD) break;
+      if (section == 1 && channel > 5) continue; // ignore extra EM channels
+      if (skipRpdRecHits_ && section == 4) continue;
+      
+      zdcRechit.zside[nhits] = zside;
+      zdcRechit.section[nhits] = section;
+      zdcRechit.channel[nhits] = channel;
+
+      // !! Geometry updated for the RPD are not yet part of 14_1_X and the global tag used for 2024. Those won't be available this year but should be next year.
+      if (!(doHardcodedRPD_ && section == 4)) {
+        zdcRechit.energy[nhits]  = energy;
+        zdcRechit.time[nhits]  = rh.time();
+        zdcRechit.chargeWeightedTime[nhits] = rh.chargeWeightedTime();
+        zdcRechit.energySOIp1[nhits]  = rh.energySOIp1();
+        zdcRechit.ratioSOIp1[nhits]  = rh.ratioSOIp1();
+        zdcRechit.TDCtime[nhits]  = rh.TDCtime();
+        zdcRechit.saturation[nhits] = static_cast<int>( rh.flagField(HcalCaloFlagLabels::ADCSaturationBit) );
+      }
+      if(zside < 0 && (section == 1 || section == 2)) zdcRechit.sumMinus += energy;
+      if(zside > 0 && (section == 1 || section == 2)) zdcRechit.sumPlus += energy;
+      
+      nhits++;
+    } // end loop zdc rechits
+
+    // Fill out RPD module rechits by digi
+    // ! Now rely on the same order to match digi and rechit. Ideally matching should be done by zside, section, channel.
+    if (zdcdigis.isValid() && !skipRpdRecHits_) {
+      nhits = 0;
+      for (auto it = zdcdigis->begin(); it != zdcdigis->end(); it++) {
+        const QIE10DataFrame digi = static_cast<const QIE10DataFrame>(*it);
+        HcalZDCDetId zdcid = digi.id();
+        int zside = zdcid.zside();
+        int section = zdcid.section();
+        int channel = zdcid.channel(); 
+      
+        if (nhits >= NMOD) break;
+        if (section == 1 && channel > 5) continue; // ignore extra EM channels
+      
+        if (section == 4) { // if RPD was skipped in reco, it wouldn't appear in the previous loop
+          zdcRechit.zside[nhits] = zside;
+          zdcRechit.section[nhits] = section;
+          zdcRechit.channel[nhits] = channel;
+        
+          if (doHardcodedRPD_) {
+            zdcRechit.energy[nhits]  = HardCodeZDC.rechit_Energy_RPD(digi);
+            zdcRechit.time[nhits]  = HardCodeZDC.rechit_Time(digi);
+            zdcRechit.chargeWeightedTime[nhits] = HardCodeZDC.rechit_ChargeWeightedTime(digi);
+            zdcRechit.energySOIp1[nhits]  = HardCodeZDC.rechit_EnergySOIp1(digi);
+            zdcRechit.ratioSOIp1[nhits]  = HardCodeZDC.rechit_RatioSOIp1(digi);
+            zdcRechit.TDCtime[nhits]  = HardCodeZDC.rechit_TDCtime(digi);
+            zdcRechit.saturation[nhits] = HardCodeZDC.rechit_Saturation(digi);
+          } // if (!skipRpdRecHits_ && doHardcodedRPD_) {
+        } // if (section == 4) {
+        nhits++;
+      } // for (auto it = zdcdigis->begin(); it != zdcdigis->end(); it++) {
+    } // if (zdcdigis.isValid()) {
+
+    zdcRechit.n = nhits;
+  } // if(doZdcRecHits_) {
+
+  if (doAuxZdcRecHits_) {
+    zdcRechit.sumPlus_Aux = 0;
+    zdcRechit.sumMinus_Aux = 0;
+     
+    edm::Handle<ZDCRecHitCollection> auxrechits;
+    iEvent.getByToken(AuxZDCRecHitToken_, auxrechits);
+    for (auto const& rh : *auxrechits) {
+
+      HcalZDCDetId zdcid = rh.id();
+      int zside = zdcid.zside();
+      int section = zdcid.section();
+      int channel = zdcid.channel(); 
+      float energy = rh.energy();      
+
+      if (section == 1 && channel > 5) continue; // ignore extra EM channels
+      
+      if (zside <0 && (section ==1 || section ==2)) zdcRechit.sumMinus_Aux += energy;
+      if (zside >0 && (section ==1 || section ==2)) zdcRechit.sumPlus_Aux += energy;
+      
+    } // end loop Aux rechits 
+
+  } // if (doAuxZdcRecHits_) {
+
+  if (t1) t1->Fill();
+  
+  if (doZdcDigis_) {
+    zdcDigi.n = 0;
+    for (unsigned int i = 0; i < NMOD; i++) {
+      zdcDigi.zside[i] = -99;
+      zdcDigi.section[i]= -99;
+      zdcDigi.channel[i] = -99;
+      for (int ts = 0; ts < NTS; ts++) {
+        zdcDigi.chargefC[ts][i] = -99;
+        zdcDigi.adc[ts][i] = -99;
+        zdcDigi.tdc[ts][i] = -99;
+      }
+    }
     
     int nhits = 0;
-
-
     for (auto it = zdcdigis->begin(); it != zdcdigis->end(); it++) {      
       const QIE10DataFrame digi = static_cast<const QIE10DataFrame>(*it);
-
-      HcalZDCDetId zdcid = digi.id();
-       int side = zdcid.zside();
-       int section = zdcid.section();
-       int channel = zdcid.channel();
-      if(section== 1 && channel> 5) continue; // ignore extra EM channels 
-      if(section ==4 && skipRPD_ ) continue;
       
-      if (nhits  >= 50) break;       
+      HcalZDCDetId zdcid = digi.id();
+      int zside = zdcid.zside();
+      int section = zdcid.section();
+      int channel = zdcid.channel();
 
+      if (nhits >= NMOD) break;
+      if (section == 1 && channel > 5) continue; // ignore extra EM channels
+      if (skipRpdDigis_ && section == 4) continue;      
+      
       CaloSamples caldigi;
-
+      
       //const ZDCDataFrame & rh = (*zdcdigis)[it];
 
+      if (!(doHardcodedRPD_ && section == 4)) {
         const HcalQIECoder* qiecoder = conditions->getHcalCoder(zdcid);
         const HcalQIEShape* qieshape = conditions->getHcalShape(qiecoder);
         HcalCoderDb coder(*qiecoder, *qieshape);
-        //        coder.adc2fC(rh,caldigi);
+        // coder.adc2fC(rh,caldigi);
         coder.adc2fC(digi, caldigi);
-
-
-        zdcDigi.zside[nhits] = side;
-        zdcDigi.section[nhits] = section;
-        zdcDigi.channel[nhits] = channel;
-
-        for (int ts = 0; ts < digi.samples(); ts++) {
-
+      }
+      
+      zdcDigi.zside[nhits] = zside;
+      zdcDigi.section[nhits] = section;
+      zdcDigi.channel[nhits] = channel;
+      
+      for (int ts = 0; ts < digi.samples(); ts++) {
+        zdcDigi.adc[ts][nhits] = digi[ts].adc();
+        zdcDigi.tdc[ts][nhits] = digi[ts].le_tdc();
+        if (doHardcodedRPD_ && section == 4) {
+          zdcDigi.chargefC[ts][nhits] = HardCodeZDC.charge(digi[ts].adc(),digi[ts].capid());
+        } else {
           zdcDigi.chargefC[ts][nhits] = caldigi[ts];
-          zdcDigi.adc[ts][nhits] = digi[ts].adc();
-          zdcDigi.tdc[ts][nhits] = digi[ts].le_tdc();
         }
+      }
+      
       nhits++;
     }  // end loop zdc digis
 
     zdcDigi.n = nhits;
-    
-   if((doHardcodedDigisRPD_ || doHardcodedRecHitsRPD_) && skipRPD_){
-    nhits = 0;      
-    for (auto it = zdcdigis->begin(); it != zdcdigis->end(); it++) {
-      const QIE10DataFrame digi = static_cast<const QIE10DataFrame>(*it);
 
-      HcalZDCDetId zdcid = digi.id();
-       int side = zdcid.zside();
-       int section = zdcid.section();
-       int channel = zdcid.channel();
-      if(section== 1 && channel> 5) continue; // ignore extra EM channels 
-      
-      if(nhits > 50) break;
-      
-      if(section !=4)nhits++;
-      else{
-         if(doHardcodedDigisRPD_){
-           zdcDigi.zside[nhits] = side;
-           zdcDigi.section[nhits] = section;
-           zdcDigi.channel[nhits] = channel;
+    t2->Fill();
+  } // if(doZdcDigis_)
+  
 
-           for (int ts = 0; ts < digi.samples(); ts++) {
-
-             zdcDigi.chargefC[ts][nhits] = HardCodeZDC.charge(digi[ts].adc(),digi[ts].capid());
-             zdcDigi.adc[ts][nhits] = digi[ts].adc();
-             zdcDigi.tdc[ts][nhits] = digi[ts].le_tdc();
-           }
-         }
-         if(doHardcodedRecHitsRPD_){
-
-             zdc_side[nhits] = side;
-             zdc_section[nhits] = section;
-             zdc_channel[nhits] = channel;
-             
-             zdc_Energy[nhits]  = HardCodeZDC.rechit_Energy_RPD(digi);
-             zdc_Time[nhits]  = HardCodeZDC.rechit_Time(digi);
-             zdc_TDCtime[nhits]  = HardCodeZDC.rechit_TDCtime(digi);
-             zdc_ChargeWeightedTime[nhits] = HardCodeZDC.rechit_ChargeWeightedTime(digi);
-             zdc_EnergySOIp1[nhits]  = HardCodeZDC.rechit_EnergySOIp1(digi);
-             zdc_RatioSOIp1[nhits]  = HardCodeZDC.rechit_RatioSOIp1(digi);
-             zdc_Saturation[nhits] = HardCodeZDC.rechit_Saturation(digi);
-             
-             
-         }
-            nhits++;
-      }
-         
-    }
-    zdcDigi.n = nhits;
-    zdc_n = nhits;
-   }
-  }
-
-
-  if(doAuxZdcRecHits_){
-     ZDCp_Aux_Energy = 0;
-     ZDCm_Aux_Energy = 0;
-     
-       edm::Handle<ZDCRecHitCollection> auxrechits;
-       iEvent.getByToken(AuxZDCRecHitToken_, auxrechits);
-       int nhits = 0;
-       for (auto const& rh : *auxrechits) {
-          
-         if (nhits  >= 50) break;          
-         HcalZDCDetId zdcid = rh.id();
-          int side = zdcid.zside();
-          int section = zdcid.section();
-          float energy = rh.energy();
-          
-          if(section ==4) continue;
-          
-          if(side <0 && (section ==1 || section ==2)) ZDCm_Aux_Energy += energy;
-          if(side >0 && (section ==1 || section ==2)) ZDCp_Aux_Energy += energy;
-
-         nhits++;
-       } // end loop Aux rechits 
-       
-  }  
-    t1->Fill();
-
-// #ifdef THIS_IS_AN_EVENTSETUP_EXAMPLE
+  // #ifdef THIS_IS_AN_EVENTSETUP_EXAMPLE
   // // if the SetupData is always needed
   // auto setup = iSetup.getData(setupToken_);
   // // if need the ESHandle to check if the SetupData was there or not
   // auto pSetup = iSetup.getHandle(setupToken_);
-// #endif                                       
+  // #endif                                       
 }
 
 // ------------ method called once each job just before starting event loop  ------------
 void ZDCRecHitAnalyzerHC::beginJob() {
   // please remove this method if not needed
-  t1 = fs->make<TTree>("zdcrechit", "zdcrechit");
   
-  if(doZdcRecHits_){
+  if(doZdcRecHits_) {
+    t1 = fs->make<TTree>("zdcrechit", "zdcrechit");
      
-     t1->Branch("ZDCp_Energy",&ZDCp_Energy); 
-     t1->Branch("ZDCm_Energy",&ZDCm_Energy);
+    t1->Branch("sumPlus", &zdcRechit.sumPlus); 
+    t1->Branch("sumMinus", &zdcRechit.sumMinus);
      
-     t1->Branch("zdcrechit_n",&zdc_n);
-     t1->Branch("zdcrechit_side",zdc_side,"zdcrechit_side[zdcrechit_n]/I");
-     t1->Branch("zdcrechit_section",zdc_section,"zdcrechit_section[zdcrechit_n]/I");
-     t1->Branch("zdcrechit_channel",zdc_channel,"zdcrechit_channel[zdcrechit_n]/I");
-     t1->Branch("zdcrechit_Energy",zdc_Energy,"zdcrechit_Energy[zdcrechit_n]/F");    
-     t1->Branch("zdcrechit_Time",zdc_Time,"zdcrechit_Time[zdcrechit_n]/F");    
-     t1->Branch("zdcrechit_TDCtime",zdc_TDCtime,"zdcrechit_TDCtime[zdcrechit_n]/F");    
-     t1->Branch("zdcrechit_ChargeWeightedTime",zdc_ChargeWeightedTime,"zdcrechit_ChargeWeightedTime[zdcrechit_n]/F");    
-     t1->Branch("zdcrechit_EnergySOIp1",zdc_EnergySOIp1,"zdcrechit_EnergySOIp1[zdcrechit_n]/F");    
-     t1->Branch("zdcrechit_RatioSOIp1",zdc_RatioSOIp1,"zdcrechit_RatioSOIp1[zdcrechit_n]/F");    
-     t1->Branch("zdcrechit_Saturation",zdc_Saturation,"zdcrechit_Saturation[zdcrechit_n]/I");    
-     
-
-     
+    t1->Branch("n", &zdcRechit.n);
+    t1->Branch("zside", zdcRechit.zside, "zside[n]/I");
+    t1->Branch("section", zdcRechit.section, "section[n]/I");
+    t1->Branch("channel", zdcRechit.channel, "channel[n]/I");
+    t1->Branch("energy", zdcRechit.energy, "energy[n]/F");    
+    t1->Branch("time", zdcRechit.time, "time[n]/F");    
+    t1->Branch("TDCtime", zdcRechit.TDCtime, "TDCtime[n]/F");    
+    t1->Branch("chargeWeightedTime", zdcRechit.chargeWeightedTime, "chargeWeightedTime[n]/F");    
+    t1->Branch("energySOIp1", zdcRechit.energySOIp1, "energySOIp1[n]/F");    
+    t1->Branch("ratioSOIp1", zdcRechit.ratioSOIp1, "ratioSOIp1[n]/F");    
+    t1->Branch("saturation", zdcRechit.saturation, "saturation[n]/I");     
+  }
+  if(doAuxZdcRecHits_) {
+    if (!t1)
+      t1 = fs->make<TTree>("zdcrechit", "zdcrechit");
+    
+    t1->Branch("sumPlus_Aux",&zdcRechit.sumPlus_Aux); 
+    t1->Branch("sumMinus_Aux",&zdcRechit.sumMinus_Aux);     
   }
   
-  if(doZdcDigis_){
-    t1->Branch("zdcdigi_n", &zdcDigi.n, "zdcdigi_n/I");
-    t1->Branch("zdcdigi_zside", zdcDigi.zside, "zdcdigi_zside[zdcdigi_n]/I");
-    t1->Branch("zdcdigi_section", zdcDigi.section, "zdcdigi_section[zdcdigi_n]/I");
-    t1->Branch("zdcdigi_channel", zdcDigi.channel, "zdcdigi_channel[zdcdigi_n]/I");
-    for (int i = 0; i < 6; i++) {
-      TString adcTsSt("zdcdigi_adcTs"), chargefCTsSt("zdcdigi_chargefCTs"), tdcTsSt("zdcdigi_tdcTs");
+  if(doZdcDigis_) {
+    t2 = fs->make<TTree>("zdcdigi", "zdcdigi");
+    
+    t2->Branch("n", &zdcDigi.n, "n/I");
+    t2->Branch("zside", zdcDigi.zside, "zside[n]/I");
+    t2->Branch("section", zdcDigi.section, "section[n]/I");
+    t2->Branch("channel", zdcDigi.channel, "channel[n]/I");
+
+    for (int i = 0; i < NTS; i++) {
+      TString adcTsSt("adcTs"), chargefCTsSt("chargefCTs"), tdcTsSt("tdcTs");
       adcTsSt += i;
       chargefCTsSt += i;
       tdcTsSt += i;
 
-      t1->Branch(adcTsSt, zdcDigi.adc[i], adcTsSt + "[zdcdigi_n]/I");
-      t1->Branch(chargefCTsSt, zdcDigi.chargefC[i], chargefCTsSt + "[zdcdigi_n]/F");
-      t1->Branch(tdcTsSt, zdcDigi.tdc[i], tdcTsSt + "[zdcdigi_n]/I");
+      t2->Branch(adcTsSt, zdcDigi.adc[i], adcTsSt + "[n]/I");
+      t2->Branch(chargefCTsSt, zdcDigi.chargefC[i], chargefCTsSt + "[n]/F");
+      t2->Branch(tdcTsSt, zdcDigi.tdc[i], tdcTsSt + "[n]/I");
     }
   }
-  
-  
-  if(doAuxZdcRecHits_){
-     t1->Branch("ZDCp_Aux_Energy",&ZDCp_Aux_Energy); 
-     t1->Branch("ZDCm_Aux_Energy",&ZDCm_Aux_Energy);
-     
-  }
+    
 }
 
 // ------------ method called once each job just after ending the event loop  ------------

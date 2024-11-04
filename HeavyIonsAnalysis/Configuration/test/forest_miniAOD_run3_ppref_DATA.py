@@ -121,22 +121,11 @@ process.load("TrackingTools.TransientTrack.TransientTrackBuilder_cfi")
 ####################################################################################
 
 #########################
-# ZDC RecHit Producer
+# ZDC RecHit Producer && Analyzer
 #########################
 # to prevent crash related to HcalSeverityLevelComputerRcd record
 process.load("RecoLocalCalo.HcalRecAlgos.hcalRecAlgoESProd_cfi")
-
-process.load('HeavyIonsAnalysis.ZDCAnalysis.zdcrecoRun3_cfi')
-
-process.load('HeavyIonsAnalysis.ZDCAnalysis.ZDCRecHitAnalyzerHC_cfi')
-process.zdcanalyzer.ZDCRecHitSource = cms.InputTag("zdcrecoPPRefRun3")
-process.zdcanalyzer.ZDCDigiSource    = cms.InputTag('hcalDigis', 'ZDC')
-process.zdcanalyzer.doZdcRecHits = cms.bool(True)
-process.zdcanalyzer.doZdcDigis = cms.bool(True)
-process.zdcanalyzer.skipRPD = cms.bool(True)  # also skip RPD channels in the analyzer
-process.zdcanalyzer.doHardcodedRecHitsRPD = cms.bool(True) 
-process.zdcanalyzer.doHardcodedDigisRPD = cms.bool(True) 
-
+process.load('HeavyIonsAnalysis.ZDCAnalysis.ZDCAnalyzersPP_cff')
 
 ###############################################################################
 
@@ -151,8 +140,7 @@ process.forest = cms.Path(
 #    process.hltobject +
     process.l1object +
     process.ggHiNtuplizer +
-    process.zdcrecoPPRefRun3 +
-    process.zdcanalyzer +
+    process.zdcSequencePP +
     process.trackSequencePP +
     process.particleFlowAnalyser
 )
