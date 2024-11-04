@@ -22,7 +22,7 @@ process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 141X, data")
 process.source = cms.Source("PoolSource",
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
     fileNames = cms.untracked.vstring(
-        'root://xrootd-cms.infn.it//store/data/Run2023F/PPRefHardProbes0/MINIAOD/PromptReco-v1/000/373/710/00000/66888766-f4a9-4d70-bcdf-7bcda26902d7.root'
+        '/store/data/Run2024J/PPRefHardProbes4/MINIAOD/PromptReco-v1/000/387/570/00000/c855cc0a-2470-4978-acbb-e4618979cf0e.root'
     )
 )
 
@@ -171,10 +171,10 @@ process.pprimaryVertexFilter = cms.Path(process.primaryVertexFilter)
 
 #####################################################################################
 
-addR2Jets = True
-addR3Jets = True
-addR4Jets = True
-addR8Jets = True
+addR2Jets = False
+addR3Jets = False
+addR4Jets = False
+addR8Jets = False
 
 if addR2Jets or addR3Jets or addR4Jets or addR8Jets:
     process.load("HeavyIonsAnalysis.JetAnalysis.extraJets_cff")
@@ -218,3 +218,6 @@ if addR2Jets or addR3Jets or addR4Jets or addR8Jets:
         process.load("HeavyIonsAnalysis.JetAnalysis.candidateBtaggingMiniAOD_cff")
         process.ak8PFJetAnalyzer = process.ak4PFJetAnalyzer.clone(jetTag = "ak8PFpatJets", jetName = 'ak8PF', genjetTag = "ak8GenJetsNoNu")
         process.forest += process.jetsR8 * process.ak8PFJetAnalyzer
+
+else:
+    process.forest+= process.ak4PFJetAnalyzer
