@@ -28,7 +28,5 @@ inclusiveJetAnalyzer = cms.EDAnalyzer(
     doHiJetID = cms.untracked.bool(False),
     doStandardJetID = cms.untracked.bool(False),
     doSubEvent = cms.untracked.bool(False),
-    doLegacyBtagging = cms.untracked.bool(False),
-    doCandidateBtagging = cms.untracked.bool(True),
-    useNewBtaggers = cms.untracked.bool(False),
+    doBtagging = cms.untracked.bool(True),
     )
