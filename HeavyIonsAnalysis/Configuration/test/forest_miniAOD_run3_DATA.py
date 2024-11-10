@@ -25,7 +25,7 @@ process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 141X, data")
 process.source = cms.Source("PoolSource",
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
     fileNames = cms.untracked.vstring(
-        'root://xrootd-cms.infn.it//store/hidata/HIRun2023A/HIPhysicsRawPrime25/MINIAOD/PromptReco-v2/000/375/259/00000/842ae3e0-1bfa-46d9-92d6-a3e8566638d8.root'
+        '/store/hidata/HIRun2024A/HIPhysicsRawPrime2/MINIAOD/PromptReco-v1/000/387/908/00000/93a76f4f-4e90-4357-9a7f-3c64a1be8e29.root'
     ), 
 )
 
@@ -233,27 +233,7 @@ process.load('HeavyIonsAnalysis.EventAnalysis.collisionEventSelection_cff')
 process.pclusterCompatibilityFilter = cms.Path(process.clusterCompatibilityFilter)
 process.pprimaryVertexFilter = cms.Path(process.primaryVertexFilter)
 process.load('HeavyIonsAnalysis.EventAnalysis.hffilter_cfi')
-process.pphfCoincFilter4Th2 = cms.Path(process.phfCoincFilter4Th2)
-process.pphfCoincFilter1Th3 = cms.Path(process.phfCoincFilter1Th3)
-process.pphfCoincFilter2Th3 = cms.Path(process.phfCoincFilter2Th3)
-process.pphfCoincFilter3Th3 = cms.Path(process.phfCoincFilter3Th3)
-process.pphfCoincFilter4Th3 = cms.Path(process.phfCoincFilter4Th3)
-process.pphfCoincFilter5Th3 = cms.Path(process.phfCoincFilter5Th3)
-process.pphfCoincFilter1Th4 = cms.Path(process.phfCoincFilter1Th4)
-process.pphfCoincFilter2Th4 = cms.Path(process.phfCoincFilter2Th4)
-process.pphfCoincFilter3Th4 = cms.Path(process.phfCoincFilter3Th4)
-process.pphfCoincFilter4Th4 = cms.Path(process.phfCoincFilter4Th4)
-process.pphfCoincFilter5Th4 = cms.Path(process.phfCoincFilter5Th4)
-process.pphfCoincFilter1Th5 = cms.Path(process.phfCoincFilter1Th5)
-process.pphfCoincFilter2Th5 = cms.Path(process.phfCoincFilter2Th5)
-process.pphfCoincFilter3Th5 = cms.Path(process.phfCoincFilter3Th5)
-process.pphfCoincFilter4Th5 = cms.Path(process.phfCoincFilter4Th5)
-process.pphfCoincFilter5Th5 = cms.Path(process.phfCoincFilter5Th5)
-process.pphfCoincFilter1Th6 = cms.Path(process.phfCoincFilter1Th6)
-process.pphfCoincFilter2Th6 = cms.Path(process.phfCoincFilter2Th6)
-process.pphfCoincFilter3Th6 = cms.Path(process.phfCoincFilter3Th6)
-process.pphfCoincFilter4Th6 = cms.Path(process.phfCoincFilter4Th6)
-process.pphfCoincFilter5Th6 = cms.Path(process.phfCoincFilter5Th6)
+process.load('HeavyIonsAnalysis.EventAnalysis.hffilterPF_cfi')
 process.pAna = cms.EndPath(process.skimanalysis)
 
 #from HLTrigger.HLTfilters.hltHighLevel_cfi import hltHighLevel
