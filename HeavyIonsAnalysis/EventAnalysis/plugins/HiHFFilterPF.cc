@@ -24,7 +24,7 @@ public:
 private:
   bool filter(edm::Event&, const edm::EventSetup&) override;
 
-  edm::EDGetTokenT<pat::PackedCandidateCollection> pfCandidateTag_;
+  const edm::EDGetTokenT<pat::PackedCandidateCollection> pfCandidateTag_;
   const double threshold_;
   const int minnumtowers_;
   int numMinHFTowersP, numMinHFTowersM;
