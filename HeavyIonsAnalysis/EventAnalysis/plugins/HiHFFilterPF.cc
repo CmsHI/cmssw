@@ -22,16 +22,13 @@ public:
   ~HiHFFilterPF() override;
 
 private:
-  void beginJob() override;
   bool filter(edm::Event&, const edm::EventSetup&) override;
 
-  // edm::EDGetTokenT<reco::HFFilterInfo> HFfilters_;
   edm::EDGetTokenT<pat::PackedCandidateCollection> pfCandidateTag_;
-  double threshold_;
-  int minnumtowers_;
+  const double threshold_;
+  const int minnumtowers_;
   int numMinHFTowersP, numMinHFTowersM;
 
-  reco::PFCandidate converter_;
 };
 
 using namespace edm;
@@ -50,20 +47,16 @@ bool HiHFFilterPF::filter(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   numMinHFTowersP = 0;
   numMinHFTowersM = 0;
 
-  edm::Handle<pat::PackedCandidateCollection> pfCandidates;
-  iEvent.getByToken(pfCandidateTag_, pfCandidates);
+  const auto& pfCandidates = iEvent.get(pfCandidateTag_);
 
-  for (const auto& pfcand : *pfCandidates) {
+  for (const auto& pfcand : pfCandidates) {
 
-    /* dummy reco::PFCandidate used to convert pdgId */
-    auto id = converter_.translatePdgIdToType(pfcand.pdgId());
-    if (!(id == 6 || id == 7)) continue;
-        
-    // float pt = pfcand.pt();
-    float eta = pfcand.eta();
-    if (std::abs(eta) > 6 || std::abs(eta) < 3) {
+    if (pfcand.pdgId() != 1 && pfcand.pdgId() != 2) continue;
+
+    const auto eta = pfcand.eta();
+    const auto abseta = std::abs(eta);
+    if (abseta > 6 || abseta < 3)
       continue;
-    }
 
     if (pfcand.energy() >= threshold_) {
       if (eta > 0) { numMinHFTowersP++; }
@@ -71,14 +64,10 @@ bool HiHFFilterPF::filter(edm::Event& iEvent, const edm::EventSetup& iSetup) {
     }
     
   } // for (const auto& pfcand : *pfCandidates)
-  if (std::min(numMinHFTowersP, numMinHFTowersM) >= minnumtowers_)
+  if (numMinHFTowersP >= minnumtowers_ && numMinHFTowersM >= minnumtowers_)
     accepted = true;
 
   return accepted;
-}
-
-void HiHFFilterPF::beginJob() {
-  converter_ = reco::PFCandidate();
 }
 
 //define this as a plug-in
