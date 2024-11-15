@@ -115,6 +115,20 @@ process.load("HeavyIonsAnalysis.MuonAnalysis.muonAnalyzer_cfi")
 process.load("RecoLocalCalo.HcalRecAlgos.hcalRecAlgoESProd_cfi")
 process.load('HeavyIonsAnalysis.ZDCAnalysis.ZDCAnalyzersPbPb_cff')
 
+process.es_prefer = cms.ESPrefer('HcalTextCalibrations','es_ascii')
+process.es_ascii = cms.ESSource('HcalTextCalibrations',
+   input = cms.VPSet(
+      cms.PSet(
+         object = cms.string('Gains'),
+         file   = cms.FileInPath('ZDCConditions_1400V/DumpGainsForUpload_AllChannels.txt')
+      ),
+      cms.PSet(
+        object = cms.string('TPChannelParameters'),
+        file   = cms.FileInPath('ZDCConditions_1400V/DumpTPChannelParameters_Run387473.txt')
+      ),
+   )
+)
+
 ###############################################################################
 # main forest sequence
 process.forest = cms.Path(
