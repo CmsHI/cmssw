@@ -22,6 +22,9 @@
 #include "SimDataFormats/GeneratorProducts/interface/HepMCProduct.h"
 #include "DataFormats/PatCandidates/interface/PackedCandidate.h"
 #include "fastjet/contrib/Njettiness.hh"
+#include "DataFormats/JetMatching/interface/JetFlavourInfo.h"
+#include "DataFormats/JetMatching/interface/JetFlavourInfoMatching.h"
+
 //
 
 /**\class HiInclusiveJetAnalyzer
@@ -72,6 +75,8 @@ private:
   edm::EDGetTokenT<edm::View<reco::GenJet>> genjetTag_;
   edm::EDGetTokenT<edm::HepMCProduct> eventInfoTag_;
   edm::EDGetTokenT<GenEventInfoProduct> eventGenInfoTag_;
+  // b and c hadrons
+  edm::EDGetTokenT<reco::JetFlavourInfoMatchingCollection> jetFlavourInfosToken_;
 
   std::string jetName_;  //used as prefix for jet structures
   edm::EDGetTokenT<edm::View<reco::Jet>> subjetGenTag_;
@@ -259,12 +264,16 @@ private:
 
     int subid[MAXJETS] = {0};
 
-    float matchedPt[MAXJETS] = {0};
-    float matchedRawPt[MAXJETS] = {0};
-    float matchedR[MAXJETS] = {0};
-    float matchedPu[MAXJETS] = {0};
-    int matchedHadronFlavor[MAXJETS] = {0};
-    int matchedPartonFlavor[MAXJETS] = {0};
+    float mjtPt[MAXJETS] = {0};
+    float mjtRawPt[MAXJETS] = {0};
+    float mjtR[MAXJETS] = {0};
+    float mjtPu[MAXJETS] = {0};
+    int mjtHadronFlavor[MAXJETS] = {0};
+    int mjtPartonFlavor[MAXJETS] = {0};
+    int mjtNbHad[MAXJETS]={0};
+    int mjtNcHad[MAXJETS]={0};
+    int mjtNbPar[MAXJETS]={0};
+    int mjtNcPar[MAXJETS]={0};
 
     float discr_csvV2[MAXJETS] = {0};
     float discr_deepCSV[MAXJETS] = {0};

@@ -76,7 +76,7 @@ HiInclusiveJetAnalyzer::HiInclusiveJetAnalyzer(const edm::ParameterSet& iConfig)
     eventGenInfoTag_ = consumes<GenEventInfoProduct>(iConfig.getParameter<InputTag>("eventInfoTag"));
   }
   useRawPt_ = iConfig.getUntrackedParameter<bool>("useRawPt", true);
-
+  jetFlavourInfosToken_ = consumes<reco::JetFlavourInfoMatchingCollection>( iConfig.getParameter<edm::InputTag>("jetFlavourInfos") );
   doLegacyBtagging_ = iConfig.getUntrackedParameter<bool>("doLegacyBtagging", true);
   doCandidateBtagging_ = iConfig.getUntrackedParameter<bool>("doCandidateBtagging", true);
   useNewBtaggers_ = iConfig.getUntrackedParameter<bool>("useNewBtaggers", false);
@@ -270,13 +270,17 @@ void HiInclusiveJetAnalyzer::beginJob() {
 
   // Jet ID
   if (doMatch_) {
-    t->Branch("matchedPt", jets_.matchedPt, "matchedPt[nref]/F");
-    t->Branch("matchedRawPt", jets_.matchedRawPt, "matchedRawPt[nref]/F");
-    t->Branch("matchedPu", jets_.matchedPu, "matchedPu[nref]/F");
-    t->Branch("matchedR", jets_.matchedR, "matchedR[nref]/F");
+    t->Branch("mjtPt", jets_.mjtPt, "mjtPt[nref]/F");
+    t->Branch("mjtRawPt", jets_.mjtRawPt, "mjtRawPt[nref]/F");
+    t->Branch("mjtPu", jets_.mjtPu, "mjtPu[nref]/F");
+    t->Branch("mjtR", jets_.mjtR, "mjtR[nref]/F");
     if (isMC_) {
-      t->Branch("matchedHadronFlavor", jets_.matchedHadronFlavor, "matchedHadronFlavor[nref]/I");
-      t->Branch("matchedPartonFlavor", jets_.matchedPartonFlavor, "matchedPartonFlavor[nref]/I");
+      t->Branch("mjtHadronFlavor", jets_.mjtHadronFlavor, "mjtHadronFlavor[nref]/I");
+      t->Branch("mjtPartonFlavor", jets_.mjtPartonFlavor, "mjtPartonFlavor[nref]/I");
+      t->Branch("mjtNbHad", jets_.mjtNbHad, "mjtNbHad[nref]/I");
+      t->Branch("mjtNcHad", jets_.mjtNcHad, "mjtNcHad[nref]/I");
+      t->Branch("mjtNbPar", jets_.mjtNbPar, "mjtNbPar[nref]/I");
+      t->Branch("mjtNcPar", jets_.mjtNcPar, "mjtNcPar[nref]/I");
     }
   }
 
@@ -491,9 +495,12 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
 
   edm::Handle<edm::View<pat::PackedCandidate>> pfCandidates;
   iEvent.getByToken(pfCandidateLabel_, pfCandidates);
+  edm::Handle<reco::JetFlavourInfoMatchingCollection> jetFlavourInfos;
+
   if (isMC_) {
     edm::Handle<reco::GenParticleCollection> genparts;
     iEvent.getByToken(genParticleSrc_, genparts);
+    iEvent.getByToken(jetFlavourInfosToken_, jetFlavourInfos );
   }
 
   std::map<std::string, std::map<std::string, edm::Handle<JetTagCollection>>> jetTaggers;
@@ -760,16 +767,42 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
 
         double dr = deltaR(jet, mjet);
         if (dr < drMin) {
-          jets_.matchedPt[jets_.nref] = mjet.pt();
+          jets_.mjtPt[jets_.nref] = mjet.pt();
 
-          jets_.matchedRawPt[jets_.nref] = mjet.correctedJet("Uncorrected").pt();
-          jets_.matchedPu[jets_.nref] = mjet.pileup();
+          jets_.mjtRawPt[jets_.nref] = mjet.correctedJet("Uncorrected").pt();
+          jets_.mjtPu[jets_.nref] = mjet.pileup();
           if (isMC_) {
-            jets_.matchedHadronFlavor[jets_.nref] = mjet.hadronFlavour();
-            jets_.matchedPartonFlavor[jets_.nref] = mjet.partonFlavour();
+            jets_.mjtHadronFlavor[jets_.nref] = mjet.hadronFlavour();
+            jets_.mjtPartonFlavor[jets_.nref] = mjet.partonFlavour();
+
+	    for (const JetFlavourInfoMatching& jetFlavourInfoMatching : *jetFlavourInfos) {
+	      if (deltaR(mjet.p4(), jetFlavourInfoMatching.first->p4()) < 1e-6) {
+		JetFlavourInfo jetInfo = jetFlavourInfoMatching.second;
+		const GenParticleRefVector &bHadronsInJet = jetInfo.getbHadrons();
+		const GenParticleRefVector &cHadronsInJet = jetInfo.getcHadrons();
+
+		jets_.mjtNbHad[jets_.nref] = bHadronsInJet.size();
+		jets_.mjtNcHad[jets_.nref] = cHadronsInJet.size();
+
+		const GenParticleRefVector &partonsInJet = jetInfo.getPartons();
+
+		int nb=0;
+		int nc=0;
+
+		for (GenParticleRefVector::const_iterator it = partonsInJet.begin(); it != partonsInJet.end(); ++it) {
+		  int parFlav = (*it)->pdgId();
+		  if(abs(parFlav)==5) nb++;
+		  else if(abs(parFlav)==4) nc++;		  
+		}
+		
+		jets_.mjtNbPar[jets_.nref] = nb;
+		jets_.mjtNcPar[jets_.nref] = nc;
+		break;
+	      }
+	    } // end loop over flavour info
           }
 
-          jets_.matchedR[jets_.nref] = dr;
+          jets_.mjtR[jets_.nref] = dr;
           drMin = dr;
         }
       }

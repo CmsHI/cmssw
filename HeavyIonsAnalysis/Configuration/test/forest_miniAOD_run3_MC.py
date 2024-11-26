@@ -129,6 +129,7 @@ process.forest = cms.Path(
     process.ggHiNtuplizer +
 #    process.zdcdigi +
 #    process.QWzdcreco +
+    #process.akCs4PFJetAnalyzer +
     process.zdcanalyzer #+
 #    process.unpackedMuons +
 #    process.muonAnalyzer
@@ -138,8 +139,8 @@ process.forest = cms.Path(
 
 addR3Jets = False
 addR3FlowJets = False
-addR4Jets = False
-addR4FlowJets = True
+addR4Jets = True
+addR4FlowJets = False
 matchJets = True             # Enables q/g and heavy flavor jet identification in MC
 addCandidateTagging = False
 doHIJetID = True             # Fill jet ID and composition information branches
@@ -169,16 +170,18 @@ if addR3Jets or addR3FlowJets or addR4Jets or addR4FlowJets :
     if addR4Jets :
         # Recluster using an alias "0" in order not to get mixed up with the default AK4 collections
         process.jetsR4 = cms.Sequence()
-        jetName = 'akCs0PF'
-        setupHeavyIonJets(jetName, process.jetsR4, process, isMC = 1, radius = 0.40, JECTag = 'AK4PF', doFlow = False, matchJets = matchJets)
-        process.akCs0PFpatJetCorrFactors.levels = ['L2Relative', 'L3Absolute']
-        process.akCs4PFJetAnalyzer.jetTag = jetName + 'patJets'
+        #jetName = 'akCs0PF'
+        jetName = 'akCs4PF'
+        setupHeavyIonJets(jetName, process.jetsR4, process, isMC = 1, radius = 0.40, JECTag = 'AK4PF', doFlow = False, matchJets = matchJets, noReclustering = True)
+        #process.akCs0PFpatJetCorrFactors.levels = ['L2Relative', 'L3Absolute']
+        #process.akCs4PFJetAnalyzer.jetTag = jetName + 'patJets'
         process.akCs4PFJetAnalyzer.jetName = jetName
         process.akCs4PFJetAnalyzer.matchJets = matchJets
         process.akCs4PFJetAnalyzer.matchTag = 'ak4PFMatchingFor' + jetName + 'patJets'
         process.akCs4PFJetAnalyzer.doHiJetID = doHIJetID
         process.akCs4PFJetAnalyzer.doWTARecluster = doWTARecluster
-        process.forest += process.extraJetsMC * process.jetsR4 * process.akCs4PFJetAnalyzer
+        #process.forest += process.extraJetsMC * process.jetsR4 * process.akCs4PFJetAnalyzer        
+        process.forest += process.extraPpJetsMC * process.jetsR4 * process.akCs4PFJetAnalyzer
 
     if addR4FlowJets :
         process.jetsR4flow = cms.Sequence()
