@@ -74,9 +74,9 @@ HiInclusiveJetAnalyzer::HiInclusiveJetAnalyzer(const edm::ParameterSet& iConfig)
     if (useHepMC_)
       eventInfoTag_ = consumes<HepMCProduct>(iConfig.getParameter<InputTag>("eventInfoTag"));
     eventGenInfoTag_ = consumes<GenEventInfoProduct>(iConfig.getParameter<InputTag>("eventInfoTag"));
+    jetFlavourInfosToken_ = consumes<reco::JetFlavourInfoMatchingCollection>( iConfig.getParameter<edm::InputTag>("jetFlavourInfos") );
   }
   useRawPt_ = iConfig.getUntrackedParameter<bool>("useRawPt", true);
-  jetFlavourInfosToken_ = consumes<reco::JetFlavourInfoMatchingCollection>( iConfig.getParameter<edm::InputTag>("jetFlavourInfos") );
   doLegacyBtagging_ = iConfig.getUntrackedParameter<bool>("doLegacyBtagging", true);
   doCandidateBtagging_ = iConfig.getUntrackedParameter<bool>("doCandidateBtagging", true);
   useNewBtaggers_ = iConfig.getUntrackedParameter<bool>("useNewBtaggers", false);
@@ -279,8 +279,6 @@ void HiInclusiveJetAnalyzer::beginJob() {
       t->Branch("mjtPartonFlavor", jets_.mjtPartonFlavor, "mjtPartonFlavor[nref]/I");
       t->Branch("mjtNbHad", jets_.mjtNbHad, "mjtNbHad[nref]/I");
       t->Branch("mjtNcHad", jets_.mjtNcHad, "mjtNcHad[nref]/I");
-      t->Branch("mjtNbPar", jets_.mjtNbPar, "mjtNbPar[nref]/I");
-      t->Branch("mjtNcPar", jets_.mjtNcPar, "mjtNcPar[nref]/I");
     }
   }
 
@@ -784,19 +782,6 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
 		jets_.mjtNbHad[jets_.nref] = bHadronsInJet.size();
 		jets_.mjtNcHad[jets_.nref] = cHadronsInJet.size();
 
-		const GenParticleRefVector &partonsInJet = jetInfo.getPartons();
-
-		int nb=0;
-		int nc=0;
-
-		for (GenParticleRefVector::const_iterator it = partonsInJet.begin(); it != partonsInJet.end(); ++it) {
-		  int parFlav = (*it)->pdgId();
-		  if(abs(parFlav)==5) nb++;
-		  else if(abs(parFlav)==4) nc++;		  
-		}
-		
-		jets_.mjtNbPar[jets_.nref] = nb;
-		jets_.mjtNcPar[jets_.nref] = nc;
 		break;
 	      }
 	    } // end loop over flavour info
@@ -822,11 +807,13 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
       std::vector<fastjet::PseudoJet> candidates;
       auto daughters = jet.getJetConstituents();
       for (auto it = daughters.begin(); it != daughters.end(); ++it) {
-        candidates.push_back(fastjet::PseudoJet((**it).px(), (**it).py(), (**it).pz(), (**it).energy()));
+	if (!it->isAvailable()) continue;
+	const reco::CandidatePtr &constit = *it;
+	if (constit.isNull() || constit->pt() <= std::numeric_limits<double>::epsilon()) continue;
+	candidates.push_back(fastjet::PseudoJet(constit->px(), constit->py(), constit->pz(), constit->energy()));
       }
       auto cs = new fastjet::ClusterSequence(candidates, WTAjtDef);
       std::vector<fastjet::PseudoJet> wtajt = fastjet::sorted_by_pt(cs->inclusive_jets(0));
-
       jets_.WTAeta[jets_.nref] = (!wtajt.empty()) ? wtajt[0].eta() : -999;
       jets_.WTAphi[jets_.nref] = (!wtajt.empty()) ? wtajt[0].phi_std() : -999;
       delete cs;
@@ -1066,7 +1053,9 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
           std::vector<fastjet::PseudoJet> candidates;
           auto daughters = genjet.getJetConstituents();
           for (auto it = daughters.begin(); it != daughters.end(); ++it) {
-            candidates.push_back(fastjet::PseudoJet((**it).px(), (**it).py(), (**it).pz(), (**it).energy()));
+	    if (!it->isAvailable()) continue;  
+	    const reco::CandidatePtr &constit = *it;
+	    candidates.push_back(fastjet::PseudoJet(constit->px(), constit->py(), constit->pz(), constit->energy()));
           }
           auto cs = new fastjet::ClusterSequence(candidates, WTAjtDef);
           std::vector<fastjet::PseudoJet> wtajt = fastjet::sorted_by_pt(cs->inclusive_jets(0));

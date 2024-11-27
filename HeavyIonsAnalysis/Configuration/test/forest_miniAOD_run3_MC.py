@@ -168,7 +168,7 @@ if addR3Jets or addR3FlowJets or addR4Jets or addR4FlowJets :
         process.forest += process.extraFlowJetsMC * process.jetsR3flow * process.akFlowPuCs3PFJetAnalyzer
 
     if addR4Jets :
-        # Recluster using an alias "0" in order not to get mixed up with the default AK4 collections
+        # If reclustering, use an alias "0" in order not to get mixed up with the default AK4 collections
         process.jetsR4 = cms.Sequence()
         #jetName = 'akCs0PF'
         jetName = 'akCs4PF'

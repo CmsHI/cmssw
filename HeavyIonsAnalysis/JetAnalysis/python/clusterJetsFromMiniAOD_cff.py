@@ -42,7 +42,6 @@ def setupHeavyIonJets(tag, sequence, process, isMC, radius = -1, JECTag = 'None'
         else:
             genjetcollection = 'ak'+str(radiustag)+'GenJetsNoNu'
 
-        if noReclustering == False:
             addToSequence( genjetcollection,
                            ak4GenJetsNoNu.clone(src = 'packedGenParticlesSignal', rParam = radius),
                            process, sequence)
