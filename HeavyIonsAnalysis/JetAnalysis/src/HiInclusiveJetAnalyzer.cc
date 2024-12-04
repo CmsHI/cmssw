@@ -74,6 +74,7 @@ HiInclusiveJetAnalyzer::HiInclusiveJetAnalyzer(const edm::ParameterSet& iConfig)
     if (useHepMC_)
       eventInfoTag_ = consumes<HepMCProduct>(iConfig.getParameter<InputTag>("eventInfoTag"));
     eventGenInfoTag_ = consumes<GenEventInfoProduct>(iConfig.getParameter<InputTag>("eventInfoTag"));
+    jetFlavourInfosToken_ = consumes<reco::JetFlavourInfoMatchingCollection>( iConfig.getParameter<edm::InputTag>("jetFlavourInfos") );
   }
   useRawPt_ = iConfig.getUntrackedParameter<bool>("useRawPt", true);
 
@@ -411,9 +412,12 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
 
   edm::Handle<edm::View<pat::PackedCandidate>> pfCandidates;
   iEvent.getByToken(pfCandidateLabel_, pfCandidates);
+  edm::Handle<reco::JetFlavourInfoMatchingCollection> jetFlavourInfos;
+
   if (isMC_) {
     edm::Handle<reco::GenParticleCollection> genparts;
     iEvent.getByToken(genParticleSrc_, genparts);
+    iEvent.getByToken(jetFlavourInfosToken_, jetFlavourInfos );
   }
 
   edm::Handle<JetTagCollection> bTags_partTransf, bTags_partTransfBB, bTags_partTransfLepB;

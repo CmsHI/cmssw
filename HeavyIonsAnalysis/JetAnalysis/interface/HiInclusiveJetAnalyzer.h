@@ -22,6 +22,8 @@
 #include "SimDataFormats/GeneratorProducts/interface/HepMCProduct.h"
 #include "DataFormats/PatCandidates/interface/PackedCandidate.h"
 #include "fastjet/contrib/Njettiness.hh"
+#include "DataFormats/JetMatching/interface/JetFlavourInfo.h"
+#include "DataFormats/JetMatching/interface/JetFlavourInfoMatching.h"
 //
 
 /**\class HiInclusiveJetAnalyzer
@@ -72,6 +74,8 @@ private:
   edm::EDGetTokenT<edm::View<reco::GenJet>> genjetTag_;
   edm::EDGetTokenT<edm::HepMCProduct> eventInfoTag_;
   edm::EDGetTokenT<GenEventInfoProduct> eventGenInfoTag_;
+  // b and c hadrons                                                                                                                                                     
+  edm::EDGetTokenT<reco::JetFlavourInfoMatchingCollection> jetFlavourInfosToken_;
 
   std::string jetName_;  //used as prefix for jet structures
   edm::EDGetTokenT<edm::View<reco::Jet>> subjetGenTag_;
