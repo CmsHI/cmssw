@@ -43,7 +43,7 @@ process.load('FWCore.MessageService.MessageLogger_cfi')
 
 # TODO: Global tag complete guess from the list. Probably wrong. But does not crash
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, '140X_mcRun3_2024_realistic_v7', '')
+process.GlobalTag = GlobalTag(process.GlobalTag, '141X_mcRun3_2024_realistic_ppRef5TeV_v7', '')
 process.HiForestInfo.GlobalTagLabel = process.GlobalTag.globaltag
 
 # TODO: Old calibration here, might need to update
