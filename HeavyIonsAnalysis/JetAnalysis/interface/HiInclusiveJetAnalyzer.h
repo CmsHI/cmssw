@@ -122,6 +122,7 @@ private:
   std::string particleTransformerJetTags_;
 
   edm::EDGetTokenT<reco::JetTagCollection> particleTransformerJetTagsTkn_,particleTransformerJetTagsBBTkn_,particleTransformerJetTagsLepBTkn_;
+  std::map<std::string, std::map<std::string, edm::EDGetTokenT<reco::JetTagCollection>>> jetTaggers_;
 
   static const int MAXJETS = 1000;
   static const int MAXTRACKS = 5000;
@@ -382,6 +383,7 @@ private:
   };
 
   JRA jets_;
+  std::map<std::string, std::map<std::string, std::array<float, MAXJETS>>> jets_discr_;
 };
 
 #endif
