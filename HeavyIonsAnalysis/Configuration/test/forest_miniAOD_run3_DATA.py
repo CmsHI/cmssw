@@ -163,7 +163,7 @@ doBtagging  =  False         # Note that setting to True increases computing tim
 jetLabel = "0"
 
 # add candidate tagging, copy/paste to add other jet radii
-from HeavyIonsAnalysis.JetAnalysis.deepNtupleSettings_cff import candidateBtaggingMiniAOD
+from HeavyIonsAnalysis.JetAnalysis.setupJets_PbPb_cff import candidateBtaggingMiniAOD
 candidateBtaggingMiniAOD(process, isMC = False, jetPtMin = jetPtMin, jetCorrLevels = ['L2Relative', 'L2L3Residual'], doBtagging = doBtagging, labelR = jetLabel)
 
 # setup jet analyzer
