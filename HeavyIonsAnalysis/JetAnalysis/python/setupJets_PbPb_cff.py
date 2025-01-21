@@ -201,7 +201,7 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
     from PhysicsTools.PatAlgos.tools.jetTools import updateJetCollection
     updateJetCollection(
         process,
-        labelName = "DeepFlavour",
+        labelName = "AK"+labelR+"PFBtag",
         jetSource = cms.InputTag("slimmedJets" if labelR == "0" else "patJetsAKCs"+labelR+"PF"), 
         jetCorrections = jetCorrectionsAK4,
         pfCandidates = cms.InputTag('packedPFCandidates'),
@@ -214,44 +214,53 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
         explicitJTA = False
     )
 
-    process.unsubUpdatedPatJetsDeepFlavour = cms.EDProducer("JetMatcherDR",
-                                                            source = cms.InputTag("updatedPatJetsDeepFlavour"),
-                                                            matched = cms.InputTag("patJetsAK"+labelR+"PFUnsubJets")
-    )
-    process.patAlgosToolsTask.add(process.unsubUpdatedPatJetsDeepFlavour)
+    setattr(process,"unsubUpdatedPatJetsAK"+labelR+"PF",
+            cms.EDProducer("JetMatcherDR",
+            source = cms.InputTag("updatedPatJetsAK"+labelR+"PFBtag"),                                                     
+            matched = cms.InputTag("patJetsAK"+labelR+"PFUnsubJets")
+                       )
+        )
+    process.patAlgosToolsTask.add(getattr(process,"unsubUpdatedPatJetsAK"+labelR+"PF"))
 
     if doBtagging:
 
-        process.pfUnifiedParticleTransformerAK4JetTagsDeepFlavour.model_path = 'RecoBTag/Combined/data/UParTAK4/HIN/V00/UParTAK4_PbPb_2023.onnx'
-        process.pfUnifiedParticleTransformerAK4TagInfosDeepFlavour.sort_cand_by_pt = True
+        getattr(process,"pfUnifiedParticleTransformerAK4JetTagsAK"+labelR+"PFBtag").model_path = 'RecoBTag/Combined/data/UParTAK4/HIN/V00/UParTAK4_PbPb_2023.onnx'
+        getattr(process,"pfUnifiedParticleTransformerAK4TagInfosAK"+labelR+"PFBtag").sort_cand_by_pt = True
+        getattr(process,"pfUnifiedParticleTransformerAK4TagInfosAK"+labelR+"PFBtag").fix_lt_sorting = True
 
-        if hasattr(process,'updatedPatJetsTransientCorrectedDeepFlavour'):
-            process.updatedPatJetsTransientCorrectedDeepFlavour.addTagInfos = True
-            process.updatedPatJetsTransientCorrectedDeepFlavour.addBTagInfo = True
+        if hasattr(process,'updatedPatJetsTransientCorrectedAK'+labelR+'PFBtag'):
+            getattr(process,'updatedPatJetsTransientCorrectedAK'+labelR+'PFBtag').addTagInfos = True
+            getattr(process,'updatedPatJetsTransientCorrectedAK'+labelR+'PFBtag').addBTagInfo = True
         else:
-            raise ValueError('I could not find updatedPatJetsTransientCorrectedDeepFlavour to embed the tagInfos, please check the cfg')
+            raise ValueError('I could not find updatedPatJetsTransientCorrected to embed the tagInfos, please check the cfg')
 
             # Remove PUPPI
         process.patAlgosToolsTask.remove(process.packedpuppi)
         process.patAlgosToolsTask.remove(process.packedpuppiNoLep)
-        process.pfInclusiveSecondaryVertexFinderTagInfosDeepFlavour.weights = ""
-        for taginfo in ["pfDeepFlavourTagInfosDeepFlavour", "pfParticleTransformerAK4TagInfosDeepFlavour", "pfUnifiedParticleTransformerAK4TagInfosDeepFlavour"]:
+        getattr(process,"pfInclusiveSecondaryVertexFinderTagInfosAK"+labelR+"PFBtag").weights = ""
+        for taginfo in [ "pfDeepFlavourTagInfosAK"+labelR+"PFBtag", "pfParticleTransformerAK4TagInfosAK"+labelR+"PFBtag", "pfUnifiedParticleTransformerAK4TagInfosAK"+labelR+"PFBtag"]:
             getattr(process, taginfo).fallback_puppi_weight = True
             getattr(process, taginfo).fallback_vertex_association = True
-            getattr(process, taginfo).unsubjet_map = "unsubUpdatedPatJetsDeepFlavour"
+            getattr(process, taginfo).unsubjet_map = "unsubUpdatedPatJetsAK"+labelR+"PF"
             getattr(process, taginfo).puppi_value_map = ""
+            
+    # Match with unsubtracted jets                                                                                                                             
+    setattr(process,"unsubAK"+labelR+"JetMap",
+            getattr(process,"unsubUpdatedPatJetsAK"+labelR+"PF").clone(
+                source = "selectedUpdatedPatJetsAK"+labelR+"PF"
+            )
+        )
 
-    # Match with unsubtracted jets
-    process.unsubJetMap = process.unsubUpdatedPatJetsDeepFlavour.clone(
-        source = "selectedUpdatedPatJetsDeepFlavour"
-    )
-    process.patAlgosToolsTask.add(process.unsubJetMap)
+    process.patAlgosToolsTask.add(getattr(process,"unsubAK"+labelR+"JetMap"))
 
     # Add extra b tagging algos
     from RecoBTag.ImpactParameter.pfJetProbabilityBJetTags_cfi import pfJetProbabilityBJetTags
-    process.pfJetProbabilityBJetTagsDeepFlavour = pfJetProbabilityBJetTags.clone(tagInfos = ["pfImpactParameterTagInfosDeepFlavour"])
+    setattr(process,"pfJetProbabilityBJetTagsAK"+labelR+"PFBtag",
+            pfJetProbabilityBJetTags.clone(tagInfos = ["pfImpactParameterTagInfosAK"+labelR+"PFBtag"])
+        )
+
     if doBtagging:
-        process.patAlgosToolsTask.add(process.pfJetProbabilityBJetTagsDeepFlavour)
+        process.patAlgosToolsTask.add(getattr(process,"pfJetProbabilityBJetTagsAK"+labelR+"PFBtag"))
 
     # Associate to forest sequence
     if isMC:
