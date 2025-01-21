@@ -158,7 +158,7 @@ candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = jetPtMin, jetCorrLevel
 
 # setup jet analyzer
 setattr(process,"akCs"+jetLabel+"PFJetAnalyzer",process.akCs4PFJetAnalyzer.clone())
-getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").jetTag = 'selectedUpdatedPatJetsDeepFlavour'
+getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").jetTag =  "selectedUpdatedPatJetsAK"+jetLabel+"PFBtag"
 getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").jetName = 'akCs'+jetLabel+'PF'
 getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").matchJets = matchJets
 getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").matchTag = 'patJetsAK'+jetLabel+'PFUnsubJets'
@@ -171,17 +171,15 @@ getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").jetFlavourInfos = "ak"+jetLabel
 if jetLabel!="0": getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").genjetTag = "ak"+jetLabel+"GenJetsWithNu"
 if doBtagging:
     getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").useNewBtaggers = True
-    getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").pfJetProbabilityBJetTag = cms.untracked.string("pfJetProbabilityBJetTagsDeepFlavour") 
-    getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").pfUnifiedParticleTransformerAK4JetTags = cms.untracked.string("pfUnifiedParticleTransformerAK4JetTagsDeepFlavour")
+    getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").pfJetProbabilityBJetTag = cms.untracked.string("pfJetProbabilityBJetTagsAK"+jetLabel+"PFBtag")
+    getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").pfUnifiedParticleTransformerAK4JetTags = cms.untracked.string("pfUnifiedParticleTransformerAK4JetTagsAK"+jetLabel+"PFBtag")
 process.forest += getattr(process,"akCs"+jetLabel+"PFJetAnalyzer")
 
 # Options for reclustering jets with different parameters.                                                                                                                                                                                                                               
 # TODO:  Integrate with CS flow jets with deepNtupleSettings script above -Matt   
 addR3FlowJets = False
 addR4FlowJets = False
-matchJets = True             # Enables q/g and heavy flavor jet identification in MC
-doHIJetID = True             # Fill jet ID and composition information branches
-doWTARecluster = False        # Add jet phi and eta for WTA axis
+
 
 if addR3FlowJets or addR4FlowJets :
     process.load("HeavyIonsAnalysis.JetAnalysis.extraJets_cff")
