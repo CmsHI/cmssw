@@ -1,14 +1,19 @@
 import FWCore.ParameterSet.Config as cms
 
 def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels = ['L2Relative', 'L3Absolute'], doBtagging = False, labelR = "0"):
-    # DeepNtuple settings
-    jetR = 0.1*int(labelR)
+
+    # First, check if the label contains the string "Flow" to mark the use of flow subtraction
+    doFlow = "Flow" in labelR
+
+    # Determine the jet radius from the label
+    jetR = 0.1*float(labelR.replace("Flow",""))
     if labelR == "0": jetR = 0.4
 
     #jetCorrectionsAK4 = ('AK4PF' if labelR == "0" else 'AK'+labelR+'PF', jetCorrLevels, 'None')
     jetCorrectionsAK4 = ('AK4PF', jetCorrLevels, 'None')  # temporary while we wait for updated JECs
 
 
+    # DeepNtuple settings
     if doBtagging:
         bTagInfos = [
             'pfDeepCSVTagInfos',
@@ -73,7 +78,12 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
                     src = 'packedGenParticlesForJetsNoNu'
                 )
         )
-        process.genTask = cms.Task(process.hiSignalGenParticles, process.allPartons, getattr(process,"ak"+labelR+"GenJetsWithNu"), process.packedGenParticlesForJetsNoNu, getattr(process,"ak"+labelR+"GenJetsRecluster"))
+ 
+        # We need to be careful not to override the previous genTask in case several different jet radii are defined in the forest configuration file
+        if hasattr(process, "genTask"):
+            process.genTask.add(getattr(process,"ak"+labelR+"GenJetsWithNu"),  getattr(process,"ak"+labelR+"GenJetsRecluster")) 
+        else:
+            process.genTask = cms.Task(process.hiSignalGenParticles, process.allPartons, getattr(process,"ak"+labelR+"GenJetsWithNu"), process.packedGenParticlesForJetsNoNu, getattr(process,"ak"+labelR+"GenJetsRecluster"))
 
     # Remake secondary vertices
     from RecoVertex.AdaptiveVertexFinder.inclusiveVertexing_cff import inclusiveCandidateVertexFinder, candidateVertexMerger, candidateVertexArbitrator, inclusiveCandidateSecondaryVertices
@@ -125,7 +135,6 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
         else: matchedGenJets  = "ak"+labelR+"GenJetsWithNu"
 
 
-
     from PhysicsTools.PatAlgos.tools.jetTools import addJetCollection
     addJetCollection(
         process,
@@ -151,7 +160,6 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
     process.patAlgosToolsTask.add(getattr(process,"ak"+labelR+"PFUnsubJets"))
 
     # Create HIN subtracted reco jets
-    from PhysicsTools.PatAlgos.tools.jetTools import addJetCollection
     addJetCollection(
         process,
         postfix            = "",
@@ -186,15 +194,44 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
     process.hiPuRho = hiPuRho.clone(
         src = 'PackedPFTowers'
     )
+
+    # Define a list of modules that will need to be added to the process to cluster the jets
+    processAdditives = ["PackedPFTowers", "hiPuRho"]
+
+    # If we do flow subtraction, we need to setup the producers for flow modulation
+    if doFlow:
+        from PhysicsTools.PatAlgos.producersLayer1.jetProducer_cff import ak4PFJetsForFlow, hiFJRhoFlowModulation
+        setattr(process, "ak4PFJetsFor"+labelR,
+                ak4PFJetsForFlow.clone(
+                    src = "PackedPFTowers"
+                )
+        )
+
+        setattr(process, "rhoModulationAkCs"+labelR+"PFJets",
+                hiFJRhoFlowModulation.clone(
+                    jetTag = "ak4PFJetsFor"+labelR
+                )
+        )
+
+        # Both of these processes are needed for flow subtracted jets
+        processAdditives.append("ak4PFJetsFor"+labelR)
+        processAdditives.append("rhoModulationAkCs"+labelR+"PFJets")
+
     from PhysicsTools.PatAlgos.producersLayer1.jetProducer_cff import akCs4PFJets
     setattr(process,"akCs"+labelR+"PFJets",
             akCs4PFJets.clone(
                 src = 'packedPFCandidates',
                 jetPtMin = jetPtMin,
-                rParam = jetR
+                rParam = jetR,
+                useModulatedRho = doFlow,
+                rhoFlowFitParams = cms.InputTag("rhoModulationAkCs"+labelR+"PFJets","rhoFlowFitParams")
             )
     )
-    for mod in ["PackedPFTowers", "hiPuRho", "akCs"+labelR+"PFJets"]:
+
+    # Also the jet collection needs to be added to the process
+    processAdditives.append("akCs"+labelR+"PFJets")
+
+    for mod in processAdditives:
         process.patAlgosToolsTask.add(getattr(process, mod))
 
     # Create b-tagging sequence ----------------

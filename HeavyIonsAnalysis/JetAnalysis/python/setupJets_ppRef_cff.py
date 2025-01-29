@@ -2,7 +2,7 @@ import FWCore.ParameterSet.Config as cms
 
 def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels = ['L2Relative', 'L3Absolute'], doBtagging = False, labelR = "0"):
     # DeepNtuple settings
-    jetR = 0.1*int(labelR)
+    jetR = 0.1*float(labelR)
     if labelR == "0": jetR = 0.4
 
     jetCorrectionsAK4 = ('AK4PFchs' if labelR == "0" else 'AK'+labelR+'PFchs', jetCorrLevels, 'None')
@@ -72,7 +72,11 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
                     src = 'packedGenParticlesForJetsNoNu'
                 )
         )
-        process.genTask = cms.Task(process.hiSignalGenParticles, process.allPartons, getattr(process,"ak"+labelR+"GenJetsWithNu"), process.packedGenParticlesForJetsNoNu, getattr(process,"ak"+labelR+"GenJetsRecluster"))
+         # We need to be careful not to override the previous genTask in case several different jet radii are defined in the forest configuration file
+        if hasattr(process, "genTask"):
+            process.genTask.add(getattr(process,"ak"+labelR+"GenJetsWithNu"),  getattr(process,"ak"+labelR+"GenJetsRecluster"))
+        else:
+            process.genTask = cms.Task(process.hiSignalGenParticles, process.allPartons, getattr(process,"ak"+labelR+"GenJetsWithNu"), process.packedGenParticlesForJetsNoNu, getattr(process,"ak"+labelR+"GenJetsRecluster"))
 
 
     # Create unsubtracted reco jets
