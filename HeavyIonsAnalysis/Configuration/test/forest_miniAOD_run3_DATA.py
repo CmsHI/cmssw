@@ -162,69 +162,39 @@ doWTARecluster = True        # Add jet phi and eta for WTA axis
 doBtagging  =  False         # Note that setting to True increases computing time a lot
 
 # 0 means use original mini-AOD jets, otherwise use R value, e.g., 3,4,8
-jetLabel = "0"
+# Add all the values you want to process to the list
+# These will create collections of CS subtracted jets (only eta dependent background)
+jetLabelsCS = ["4"]
 
-# add candidate tagging, copy/paste to add other jet radii
+# For this list, give the R-values for flow subtracted CS jets (eta and phi dependent background)
+jetLabelsFlowCS = ["4"]
+
+# Combine the two lists such that all selected jets can be easily looped over
+# Also add "Flow" tag for the flow jets to distinguish them from non-flow jets
+allJetLabels = jetLabelsCS + [flowR + "Flow" for flowR in jetLabelsFlowCS]
+
+# add candidate tagging
 from HeavyIonsAnalysis.JetAnalysis.setupJets_PbPb_cff import candidateBtaggingMiniAOD
-candidateBtaggingMiniAOD(process, isMC = False, jetPtMin = jetPtMin, jetCorrLevels = ['L2Relative', 'L2L3Residual'], doBtagging = doBtagging, labelR = jetLabel)
 
-# setup jet analyzer
-setattr(process,"akCs"+jetLabel+"PFJetAnalyzer",process.akCs4PFJetAnalyzer.clone())
-getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").jetTag = "selectedUpdatedPatJetsAK"+jetLabel+"PFBtag"
-getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").jetName = 'akCs'+jetLabel+'PF'
-getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").matchJets = matchJets
-getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").matchTag = 'patJetsAK'+jetLabel+'PFUnsubJets'
-getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").doHiJetID = doHIJetID
-getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").doWTARecluster = doWTARecluster
-getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").jetPtMin = jetPtMin
-getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").jetAbsEtaMax = cms.untracked.double(jetAbsEtaMax)
-getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").rParam = int(jetLabel)*0.1
-if doBtagging:
-    getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").pfJetProbabilityBJetTag = cms.untracked.string("pfJetProbabilityBJetTagsAK"+jetLabel+"PFBtag")
-    getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").pfUnifiedParticleTransformerAK4JetTags = cms.untracked.string("pfUnifiedParticleTransformerAK4JetTagsAK"+jetLabel+"PFBtag")
-process.forest += getattr(process,"akCs"+jetLabel+"PFJetAnalyzer")
+for jetLabel in allJetLabels:
+    candidateBtaggingMiniAOD(process, isMC = False, jetPtMin = jetPtMin, jetCorrLevels = ['L2Relative', 'L2L3Residual'], doBtagging = doBtagging, labelR = jetLabel)
 
-
-# Options for reclustering jets with different parameters. 
-# TODO:  Integrate with deepNtupleSettings script above -Matt
-addR3FlowJets = False
-addR4FlowJets = False
-addUnsubtractedR4Jets = False
-
-
-
-if addR3FlowJets or addR4FlowJets or addUnsubtractedR4Jets :
-    process.load("HeavyIonsAnalysis.JetAnalysis.extraJets_cff")
-    from HeavyIonsAnalysis.JetAnalysis.clusterJetsFromMiniAOD_cff import setupHeavyIonJets
-
-    if addR3FlowJets :
-        process.jetsR3flow = cms.Sequence()
-        setupHeavyIonJets('akCs3PFFlow', process.jetsR3flow, process, isMC = 0, radius = 0.30, JECTag = 'AK3PF', doFlow = True)
-        process.akCs3PFFlowpatJetCorrFactors.levels = ['L2Relative', 'L2L3Residual']
-        process.akFlowPuCs3PFJetAnalyzer = process.akCs4PFJetAnalyzer.clone(jetTag = "akCs3PFFlowpatJets", jetName = 'akCs3PFFlow', doHiJetID = doHIJetID, doWTARecluster = doWTARecluster)
-        process.forest += process.extraFlowJets * process.jetsR3flow * process.akFlowPuCs3PFJetAnalyzer
-
-
-    if addR4FlowJets :
-        process.jetsR4flow = cms.Sequence()
-        setupHeavyIonJets('akCs4PFFlow', process.jetsR4flow, process, isMC = 0, radius = 0.40, JECTag = 'AK4PF', doFlow = True)
-        process.akCs4PFFlowpatJetCorrFactors.levels = ['L2Relative', 'L2L3Residual']
-        process.akFlowPuCs4PFJetAnalyzer.jetTag = 'akCs4PFFlowpatJets'
-        process.akFlowPuCs4PFJetAnalyzer.jetName = 'akCs4PFFlow'
-        process.akFlowPuCs4PFJetAnalyzer.doHiJetID = doHIJetID
-        process.akFlowPuCs4PFJetAnalyzer.doWTARecluster = doWTARecluster
-        process.forest += process.extraFlowJets * process.jetsR4flow * process.akFlowPuCs4PFJetAnalyzer
-
-    if addUnsubtractedR4Jets:
-        process.load('HeavyIonsAnalysis.JetAnalysis.ak4PFJetSequence_ppref_data_cff')
-        from HeavyIonsAnalysis.JetAnalysis.clusterJetsFromMiniAOD_cff import setupPprefJets
-        process.unsubtractedJetR4 = cms.Sequence()
-        setupPprefJets('ak04PF', process.unsubtractedJetR4, process, isMC = 0, radius = 0.40, JECTag = 'AK4PF')
-        process.ak04PFpatJetCorrFactors.levels = ['L2Relative', 'L2L3Residual']
-        process.ak4PFJetAnalyzer.jetTag = "ak04PFpatJets"
-        process.ak4PFJetAnalyzer.jetName = "ak04PF"
-        process.forest += process.unsubtractedJetR4 * process.ak4PFJetAnalyzer
-
+    # setup jet analyzer
+    setattr(process,"akCs"+jetLabel+"PFJetAnalyzer",process.akCs4PFJetAnalyzer.clone())
+    getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").jetTag = "selectedUpdatedPatJetsAK"+jetLabel+"PFBtag"
+    getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").jetName = 'akCs'+jetLabel+'PF'
+    getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").matchJets = matchJets
+    getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").matchTag = 'patJetsAK'+jetLabel+'PFUnsubJets'
+    getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").doBtagging = doBtagging
+    getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").doHiJetID = doHIJetID
+    getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").doWTARecluster = doWTARecluster
+    getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").jetPtMin = jetPtMin
+    getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").jetAbsEtaMax = cms.untracked.double(jetAbsEtaMax)
+    getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").rParam = 0.4 if jetLabel=="0" else float(jetLabel.replace("Flow",""))*0.1
+    if doBtagging:
+        getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").pfJetProbabilityBJetTag = cms.untracked.string("pfJetProbabilityBJetTagsAK"+jetLabel+"PFBtag")
+        getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").pfUnifiedParticleTransformerAK4JetTags = cms.untracked.string("pfUnifiedParticleTransformerAK4JetTagsAK"+jetLabel+"PFBtag")
+    process.forest += getattr(process,"akCs"+jetLabel+"PFJetAnalyzer")
 
 
 #########################
