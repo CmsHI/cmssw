@@ -56,27 +56,26 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
         process.allPartons = allPartons.clone(
             src = 'hiSignalGenParticles'
         )
+
+        # Define generator level jets without neutrinos
         from RecoJets.JetProducers.ak4GenJets_cfi import ak4GenJets
-        setattr(process,"ak"+labelR+"GenJetsWithNu",
-                ak4GenJets.clone(
-                    src = 'packedGenParticles',
-                    rParam = jetR
-                )
-        )
+
         process.packedGenParticlesForJetsNoNu = cms.EDFilter("CandPtrSelector",
             src = cms.InputTag("packedGenParticles"),
             cut = cms.string("abs(pdgId) != 12 && abs(pdgId) != 14 && abs(pdgId) != 16")
         )
-        setattr(process,"ak"+labelR+"GenJetsRecluster",
+
+        setattr(process,"ak"+labelR+"GenJetsReclusterNoNu",
                 ak4GenJets.clone(
-                    src = 'packedGenParticlesForJetsNoNu'
+                    src = 'packedGenParticlesForJetsNoNu',
+                    rParam = jetR
                 )
         )
          # We need to be careful not to override the previous genTask in case several different jet radii are defined in the forest configuration file
         if hasattr(process, "genTask"):
-            process.genTask.add(getattr(process,"ak"+labelR+"GenJetsWithNu"),  getattr(process,"ak"+labelR+"GenJetsRecluster"))
+            process.genTask.add( getattr(process,"ak"+labelR+"GenJetsReclusterNoNu"))
         else:
-            process.genTask = cms.Task(process.hiSignalGenParticles, process.allPartons, getattr(process,"ak"+labelR+"GenJetsWithNu"), process.packedGenParticlesForJetsNoNu, getattr(process,"ak"+labelR+"GenJetsRecluster"))
+            process.genTask = cms.Task(process.hiSignalGenParticles, process.allPartons, process.packedGenParticlesForJetsNoNu, getattr(process,"ak"+labelR+"GenJetsReclusterNoNu"))
 
 
     # Create unsubtracted reco jets
@@ -109,7 +108,7 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
     matchedGenJets = ""
     if isMC:
         if labelR == "0": matchedGenJets = "slimmedGenJets"
-        else: matchedGenJets  = "ak"+labelR+"GenJetsWithNu"
+        else: matchedGenJets = "ak"+labelR+"GenJetsReclusterNoNu"
 
 
     svSource = cms.InputTag("slimmedSecondaryVertices")
