@@ -491,6 +491,7 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps)
     tree_->Branch("muPhi", &muPhi_);
     tree_->Branch("muL1Eta", &muL1Eta_);
     tree_->Branch("muL1Phi", &muL1Phi_);
+    tree_->Branch("muIso", &muIso_);
     tree_->Branch("muCharge", &muCharge_);
     tree_->Branch("muType", &muType_);
     tree_->Branch("muIsGood", &muIsGood_);
@@ -916,6 +917,7 @@ void ggHiNtuplizer::analyze(const edm::Event& e, const edm::EventSetup& es) {
     muPhi_.clear();
     muL1Eta_.clear();
     muL1Phi_.clear();
+    muIso_.clear();
     muCharge_.clear();
     muType_.clear();
     muIsGood_.clear();
@@ -1908,6 +1910,7 @@ void ggHiNtuplizer::fillMuons(const edm::Event& e, const edm::EventSetup& es, re
     muPhi_.push_back(mu.phi());
     muL1Eta_.push_back(mu.hasUserFloat("l1Eta") ? mu.userFloat("l1Eta") : -99);
     muL1Phi_.push_back(mu.hasUserFloat("l1Phi") ? mu.userFloat("l1Phi") : -99);
+    muIso_.push_back(mu.hasUserFloat("hiIso") ? mu.userFloat("hiIso") : -99);
     muCharge_.push_back(mu.charge());
     muType_.push_back(mu.type());
     muIsGood_.push_back(muon::isGoodMuon(mu, muon::selectionTypeFromString("TMOneStationTight")));

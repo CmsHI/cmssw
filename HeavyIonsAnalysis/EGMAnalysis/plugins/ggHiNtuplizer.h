@@ -151,6 +151,7 @@ private:
   std::vector<float> mcPhi_;
   std::vector<float> muL1Eta_;
   std::vector<float> muL1Phi_;
+  std::vector<float> muIso_;
   std::vector<float> mcE_;
   std::vector<float> mcEt_;
   std::vector<float> mcMass_;

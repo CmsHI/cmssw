@@ -88,7 +88,7 @@ process.load('HeavyIonsAnalysis.EventAnalysis.l1object_cfi')
 # electrons, photons, muons
 process.load('HeavyIonsAnalysis.EGMAnalysis.ggHiNtuplizer_cfi')
 process.ggHiNtuplizer.doGenParticles = cms.bool(True)
-process.ggHiNtuplizer.doMuons = cms.bool(False)
+process.ggHiNtuplizer.doMuons = cms.bool(True)
 process.load("TrackingTools.TransientTrack.TransientTrackBuilder_cfi")
 ################################
 # jet reco sequence
@@ -97,7 +97,11 @@ process.load('HeavyIonsAnalysis.JetAnalysis.akCs4PFJetSequence_pponPbPb_mc_cff')
 # tracks
 process.load("HeavyIonsAnalysis.TrackAnalysis.TrackAnalyzers_cff")
 #muons
+process.load('HeavyIonsAnalysis.JetAnalysis.hiFJRhoAnalyzer_cff')
+process.load('HeavyIonsAnalysis.MuonAnalysis.hiIsoMuons_cfi')
 process.load("HeavyIonsAnalysis.MuonAnalysis.unpackedMuons_cfi")
+process.unpackedMuons.muons = "hiIsoMuons"
+process.muonSequence = cms.Sequence(process.rhoSequence * process.hiIsoMuons * process.unpackedMuons)
 process.load("HeavyIonsAnalysis.MuonAnalysis.muonAnalyzer_cfi")
 process.muonAnalyzer.doGen = cms.bool(True)
 
@@ -126,6 +130,7 @@ process.forest = cms.Path(
 #    process.particleFlowAnalyser +
     process.hiEvtAnalyzer +
     process.HiGenParticleAna +
+    process.muonSequence +
     process.ggHiNtuplizer +
 #    process.zdcdigi +
 #    process.QWzdcreco +
