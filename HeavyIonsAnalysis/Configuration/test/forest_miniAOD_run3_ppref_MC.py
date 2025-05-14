@@ -115,6 +115,10 @@ process.ggHiNtuplizer.useValMapIso = cms.bool(False) # True here causes seg faul
 process.load("TrackingTools.TransientTrack.TransientTrackBuilder_cfi")
 
 ####################################################################################
+# muons
+process.load("HeavyIonsAnalysis.MuonAnalysis.unpackedMuons_cfi")
+process.unpackedMuons.muonSelectors = cms.vstring()
+process.load("HeavyIonsAnalysis.MuonAnalysis.muonAnalyzer_cfi")
 
 #########################
 # Main analysis list
@@ -128,7 +132,9 @@ process.forest = cms.Path(
     process.l1object +
     process.HiGenParticleAna +
     process.ggHiNtuplizer +
-    process.trackSequencePP
+    process.trackSequencePP +
+    process.unpackedMuons +
+    process.muonAnalyzer
 )
 
 #####################################################################################
