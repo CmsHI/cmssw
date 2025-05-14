@@ -337,14 +337,19 @@ void HLTMuTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
       edm::RefToBase<reco::Muon> muCand(muons, i);
       if (muCand.isNull())
         continue;
+      if (fabs(muCand->combinedMuon()->eta()) > 2.4)
+	continue;
       if (muCand->globalTrack().isNonnull() && muCand->innerTrack().isNonnull()) {
-        if (muCand->isGlobalMuon() && muCand->isTrackerMuon() && fabs(muCand->combinedMuon()->eta()) < 2.4) {
+        if (muCand->isGlobalMuon() && muCand->isTrackerMuon()) {
+
           for (unsigned int j = i + 1; j < muons->size(); j++) {
             edm::RefToBase<reco::Muon> muCand2(muons, j);
             if (muCand2.isNull())
               continue;
+	    if (fabs(muCand2->combinedMuon()->eta()) > 2.4)
+	      continue;
             if (muCand2->globalTrack().isNonnull() && muCand2->innerTrack().isNonnull()) {
-              if (muCand2->isGlobalMuon() && muCand2->isTrackerMuon() && fabs(muCand2->combinedMuon()->eta()) < 2.4) {
+              if (muCand2->isGlobalMuon() && muCand2->isTrackerMuon()) {
                 vector<TransientTrack> t_tks;
                 t_tks.push_back(theTTBuilder->build(
                     *muCand->track()));  // pass the reco::Track, not  the reco::TrackRef (which can be transient)
@@ -368,7 +373,7 @@ void HLTMuTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
                   const math::XYZTLorentzVector ZRecoGlb(muCand->px() + muCand2->px(),
                                                          muCand->py() + muCand2->py(),
                                                          muCand->pz() + muCand2->pz(),
-                                                         muCand->p() + muCand2->p());
+                                                         muCand->energy() + muCand2->energy());
                   DiMu.mass[nDiMu] = ZRecoGlb.mass();
                   DiMu.e[nDiMu] = ZRecoGlb.e();
                   DiMu.pt[nDiMu] = ZRecoGlb.pt();
