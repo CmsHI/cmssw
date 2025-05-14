@@ -22,13 +22,13 @@ process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 141X, data")
 process.source = cms.Source("PoolSource",
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
     fileNames = cms.untracked.vstring(
-        '/store/data/Run2024J/PPRefHardProbes4/MINIAOD/PromptReco-v1/000/387/570/00000/c855cc0a-2470-4978-acbb-e4618979cf0e.root'
+        '/store/data/Run2024J/PPRefSingleMuon3/MINIAOD/PromptReco-v1/000/387/506/00000/f5965c7b-0a25-4d33-b44f-85a4336bb9cd.root'
     )
 )
 
 # Number of events we want to process, -1 = all events
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(20)
+    input = cms.untracked.int32(200)
 )
 
 #####################################################################################
@@ -120,6 +120,11 @@ process.load("TrackingTools.TransientTrack.TransientTrackBuilder_cfi")
 
 ####################################################################################
 
+# muons
+process.load("HeavyIonsAnalysis.MuonAnalysis.unpackedMuons_cfi")
+process.unpackedMuons.muonSelectors = cms.vstring()
+process.load("HeavyIonsAnalysis.MuonAnalysis.muonAnalyzer_cfi")
+
 #########################
 # ZDC RecHit Producer && Analyzer
 #########################
@@ -142,7 +147,9 @@ process.forest = cms.Path(
     process.ggHiNtuplizer +
     process.zdcSequencePP +
     process.trackSequencePP +
-    process.particleFlowAnalyser
+    process.particleFlowAnalyser +
+    process.unpackedMuons +
+    process.muonAnalyzer
 )
 
 
