@@ -3,14 +3,14 @@
 # Type: data
 
 import FWCore.ParameterSet.Config as cms
-from Configuration.Eras.Era_Run3_2024_UPC_cff import Run3_2024_UPC
-process = cms.Process('HiForest', Run3_2024_UPC)
+from Configuration.Eras.Era_Run3_2025_OXY_cff import Run3_2025_OXY
+process = cms.Process('HiForest', Run3_2025_OXY)
 
 ###############################################################################
 
 # HiForest info
 process.load("HeavyIonsAnalysis.EventAnalysis.HiForestInfo_cfi")
-process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 141X, data")
+process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 150X, data")
 
 # import subprocess, os
 # version = subprocess.check_output(
@@ -25,7 +25,7 @@ process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 141X, data")
 process.source = cms.Source("PoolSource",
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
     fileNames = cms.untracked.vstring(
-        'root://xrootd-cms.infn.it//store/hidata/HIRun2023A/HIPhysicsRawPrime25/MINIAOD/PromptReco-v2/000/375/259/00000/842ae3e0-1bfa-46d9-92d6-a3e8566638d8.root'
+        'root://xrootd-cms.infn.it//store/hidata/HIRun2024A/HIForward0/MINIAOD/PromptReco-v1/000/387/878/00000/b7894635-d50c-454f-a11b-f072514f8dfc.root'
     ), 
 )
 
@@ -45,7 +45,7 @@ process.load('FWCore.MessageService.MessageLogger_cfi')
 
 
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, '141X_dataRun3_Prompt_v3', '')
+process.GlobalTag = GlobalTag(process.GlobalTag, '150X_dataRun3_Prompt_v1', '')
 process.HiForestInfo.GlobalTagLabel = process.GlobalTag.globaltag
 
 ## --> only use this starting from 388000
@@ -62,15 +62,6 @@ process.es_ascii = cms.ESSource('HcalTextCalibrations',
       ),
    )
 )
-## <--
-###############################################################################
-
-# No centrality binning for UPC
-## Define centrality binning
-#process.load("RecoHI.HiCentralityAlgos.CentralityBin_cfi")
-#process.centralityBin.Centrality = cms.InputTag("hiCentrality")
-#process.centralityBin.centralityVariable = cms.string("HFtowers")
-
 ###############################################################################
 
 # root output
@@ -104,6 +95,7 @@ process.hiEvtAnalyzer.doHFfilters = cms.bool(False)
 # FIXME: Do we have an updated trigger list?
 #from HeavyIonsAnalysis.EventAnalysis.hltobject_cfi import trigger_list_data_2023_skimmed
 #process.hltobject.triggerNames = trigger_list_data_2023_skimmed
+process.hltobject.triggerNames = cms.vstring()
 
 process.load('HeavyIonsAnalysis.EventAnalysis.particleFlowAnalyser_cfi')
 ################################
@@ -113,19 +105,15 @@ process.ggHiNtuplizer.doMuons = cms.bool(False)
 process.load("TrackingTools.TransientTrack.TransientTrackBuilder_cfi")
 ################################
 # jet reco sequence
-process.load(
-    'HeavyIonsAnalysis.JetAnalysis.ak2PFJetSequence_ppref_data_cff')
-process.load(
-    'HeavyIonsAnalysis.JetAnalysis.ak3PFJetSequence_ppref_data_cff')
-process.load(
-    'HeavyIonsAnalysis.JetAnalysis.ak4PFJetSequence_ppref_data_cff')
-process.load('HeavyIonsAnalysis.JetAnalysis.ak4CaloJetSequence_pp_data_cff')
+process.load('HeavyIonsAnalysis.JetAnalysis.ak4PFJetSequence_ppref_data_cff')
 ################################
 # tracks
 process.load("HeavyIonsAnalysis.TrackAnalysis.TrackAnalyzers_cff")
+process.ppTracks.dedxEstimators = cms.VInputTag(["dedxEstimator:dedxAllLikelihood", "dedxEstimator:dedxHarmonic2"])
 # muons (FTW)
 process.load("HeavyIonsAnalysis.MuonAnalysis.unpackedMuons_cfi")
 process.load("HeavyIonsAnalysis.MuonAnalysis.muonAnalyzer_cfi")
+process.unpackedMuons.muonSelectors = cms.vstring()
 ###############################################################################
 
 #########################
@@ -145,13 +133,11 @@ process.forest = cms.Path(
     process.hltobject +
     process.l1object +
     process.trackSequencePP +
-    process.ak4CaloJetAnalyzer +
     process.particleFlowAnalyser +
     process.ggHiNtuplizer +
     process.zdcSequencePbPb +
     process.unpackedMuons +
-    process.muonAnalyzer +
-    #process.akPu4CaloJetAnalyzer
+    process.muonAnalyzer
     )
 
 #customisation
@@ -159,9 +145,9 @@ process.forest = cms.Path(
 # Select the types of jets filled
 addR3Jets = False
 addR3FlowJets = False
-addR4Jets = True
-addR4FlowJets = True
-addUnsubtractedR4Jets = True
+addR4Jets = False
+addR4FlowJets = False
+addUnsubtractedR4Jets = False
 
 # Choose which additional information is added to jet trees
 doHIJetID = True             # Fill jet ID and composition information branches
@@ -253,7 +239,6 @@ if addCandidateTagging:
 process.load('HeavyIonsAnalysis.EventAnalysis.collisionEventSelection_cff')
 process.pclusterCompatibilityFilter = cms.Path(process.clusterCompatibilityFilter)
 process.pprimaryVertexFilter = cms.Path(process.primaryVertexFilter)
-process.load('HeavyIonsAnalysis.EventAnalysis.hffilter_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.hffilterPF_cfi')
 process.pAna = cms.EndPath(process.skimanalysis)
 

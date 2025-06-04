@@ -8,6 +8,8 @@ TrackAnalyzer::TrackAnalyzer(const edm::ParameterSet& iConfig) :
   track2pcSrc_(consumes<std::vector<edm::Ptr<pat::PackedCandidate> > >(iConfig.getParameter<edm::InputTag>("trackSrc"))),
   beamSpotProducer_(consumes<reco::BeamSpot>(
       iConfig.getUntrackedParameter<edm::InputTag>("beamSpotSrc", edm::InputTag("offlineBeamSpot")))) {
+  for (const auto& tag : iConfig.getParameter<std::vector<edm::InputTag>>("dedxEstimators"))
+    dedxEstimatorsSrc_.emplace(tag.instance(), consumes<edm::ValueMap<reco::DeDxData> >(tag));
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -70,6 +72,9 @@ void TrackAnalyzer::fillVertices(const edm::Event& iEvent) {
 void TrackAnalyzer::fillTracks(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
   const auto& tracks = iEvent.get(trackSrc_);
   const auto& track2pc = iEvent.getHandle(track2pcSrc_);
+  std::map<std::string, edm::ValueMap<reco::DeDxData> > dedxMaps;
+  for (const auto& d : dedxEstimatorsSrc_)
+    dedxMaps.emplace(d.first, iEvent.get(d.second));
 
   //loop over tracks
   for (unsigned it = 0; it < tracks.size(); ++it) {
@@ -129,6 +134,8 @@ void TrackAnalyzer::fillTracks(const edm::Event& iEvent, const edm::EventSetup& 
       trkDxyFirstVtx.push_back(-999999);
       trkDxyErrFirstVtx.push_back(-999999);
     }
+    for (auto& d : trkDeDx)
+      d.second.push_back(dedxMaps.at(d.first)[track2pc->at(it)].dEdx());
 
     nTrk++;
   }
@@ -186,6 +193,8 @@ void TrackAnalyzer::beginJob() {
   trackTree_->Branch("trkDzErrFirstVtx", &trkDzErrFirstVtx);
   trackTree_->Branch("trkDxyFirstVtx", &trkDxyFirstVtx);
   trackTree_->Branch("trkDxyErrFirstVtx", &trkDxyErrFirstVtx);
+  for (const auto& d : dedxEstimatorsSrc_)
+    trackTree_->Branch(d.first.c_str(), &(trkDeDx[d.first]));
 }
 
 // ------------ method called once each job just after ending the event loop  ------------

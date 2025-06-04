@@ -15,6 +15,7 @@
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
 #include "DataFormats/PatCandidates/interface/PackedCandidate.h"
+#include "DataFormats/TrackReco/interface/DeDxData.h"
 
 // Root include files
 #include "TTree.h"
@@ -41,6 +42,7 @@ private:
   const edm::EDGetTokenT<reco::TrackCollection> trackSrc_;
   const edm::EDGetTokenT<std::vector<edm::Ptr<pat::PackedCandidate> > > track2pcSrc_;
   const edm::EDGetTokenT<reco::BeamSpot> beamSpotProducer_;
+  std::map<std::string, edm::EDGetTokenT<edm::ValueMap<reco::DeDxData>>> dedxEstimatorsSrc_;
 
   edm::Service<TFileService> fs;
 
@@ -97,6 +99,7 @@ private:
   std::vector<float> trkDzErrFirstVtx;
   std::vector<float> trkDxyFirstVtx;
   std::vector<float> trkDxyErrFirstVtx;
+  std::map<std::string, std::vector<float>> trkDeDx;
 };
 
 inline void TrackAnalyzer::clearVectors() {
@@ -142,6 +145,8 @@ inline void TrackAnalyzer::clearVectors() {
   trkDzErrFirstVtx.clear();
   trkDxyFirstVtx.clear();
   trkDxyErrFirstVtx.clear();
+  for (auto& d : trkDeDx)
+    d.second.clear();
 }
 
 #endif
