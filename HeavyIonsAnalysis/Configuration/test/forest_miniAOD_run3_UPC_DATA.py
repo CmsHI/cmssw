@@ -3,8 +3,8 @@
 # Type: data
 
 import FWCore.ParameterSet.Config as cms
-from Configuration.Eras.Era_Run3_2024_UPC_cff import Run3_2024_UPC
-process = cms.Process('HiForest', Run3_2024_UPC)
+from Configuration.Eras.Era_Run3_2025_OXY_cff import Run3_2025_OXY
+process = cms.Process('HiForest', Run3_2025_OXY)
 
 ###############################################################################
 
@@ -25,7 +25,7 @@ process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 150X, data")
 process.source = cms.Source("PoolSource",
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
     fileNames = cms.untracked.vstring(
-        '/store/hidata/HIRun2023A/HIForward0/MINIAOD/14Feb2025-v1/2530000/bc64b56f-9175-43e4-94b0-7a075787bf65.root'
+        'root://xrootd-cms.infn.it//store/hidata/HIRun2024A/HIForward0/MINIAOD/PromptReco-v1/000/387/878/00000/b7894635-d50c-454f-a11b-f072514f8dfc.root'
     ), 
 )
 
@@ -45,16 +45,9 @@ process.load('FWCore.MessageService.MessageLogger_cfi')
 
 
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, '141X_dataRun3_v6', '')
+
+process.GlobalTag = GlobalTag(process.GlobalTag, '150X_dataRun3_Prompt_v3', '')
 process.HiForestInfo.GlobalTagLabel = process.GlobalTag.globaltag
-
-###############################################################################
-
-# No centrality binning for UPC
-## Define centrality binning
-#process.load("RecoHI.HiCentralityAlgos.CentralityBin_cfi")
-#process.centralityBin.Centrality = cms.InputTag("hiCentrality")
-#process.centralityBin.centralityVariable = cms.string("HFtowers")
 
 ###############################################################################
 
@@ -89,6 +82,7 @@ process.hiEvtAnalyzer.doHFfilters = cms.bool(False)
 # FIXME: Do we have an updated trigger list?
 #from HeavyIonsAnalysis.EventAnalysis.hltobject_cfi import trigger_list_data_2023_skimmed
 #process.hltobject.triggerNames = trigger_list_data_2023_skimmed
+process.hltobject.triggerNames = cms.vstring()
 
 process.load('HeavyIonsAnalysis.EventAnalysis.particleFlowAnalyser_cfi')
 ################################
@@ -104,10 +98,12 @@ process.load('HeavyIonsAnalysis.JetAnalysis.ak4PFJetSequence_ppref_data_cff')
 ################################
 # tracks
 process.load("HeavyIonsAnalysis.TrackAnalysis.TrackAnalyzers_cff")
+process.ppTracks.dedxEstimators = cms.VInputTag(["dedxEstimator:dedxAllLikelihood", "dedxEstimator:dedxHarmonic2"])
 # muons (FTW)
 process.load("HeavyIonsAnalysis.MuonAnalysis.unpackedMuons_cfi")
 process.unpackedMuons.muonSelectors = cms.vstring()
 process.load("HeavyIonsAnalysis.MuonAnalysis.muonAnalyzer_cfi")
+process.unpackedMuons.muonSelectors = cms.vstring()
 ###############################################################################
 
 #########################
