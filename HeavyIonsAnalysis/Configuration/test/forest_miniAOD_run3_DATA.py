@@ -10,7 +10,7 @@ process = cms.Process('HiForest',Run3_pp_on_PbPb_2024)
 
 # HiForest info
 process.load("HeavyIonsAnalysis.EventAnalysis.HiForestInfo_cfi")
-process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 141X, data")
+process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 150X, data")
 
 # import subprocess, os
 # version = subprocess.check_output(
