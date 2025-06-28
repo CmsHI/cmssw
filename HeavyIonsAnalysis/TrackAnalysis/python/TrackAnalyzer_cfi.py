@@ -5,5 +5,6 @@ trackAnalyzer = cms.EDAnalyzer('TrackAnalyzer',
     trackPtMin = cms.untracked.double(0.01),
     vertexSrc = cms.InputTag("unpackedTracksAndVertices"),
     trackSrc = cms.InputTag("unpackedTracksAndVertices"),
-    beamSpotSrc = cms.untracked.InputTag('offlineBeamSpot')
+    beamSpotSrc = cms.untracked.InputTag('offlineBeamSpot'),
+    dedxEstimators = cms.VInputTag(),
 )

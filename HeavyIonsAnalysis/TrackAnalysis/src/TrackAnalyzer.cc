@@ -8,6 +8,10 @@ TrackAnalyzer::TrackAnalyzer(const edm::ParameterSet& iConfig) :
   track2pcSrc_(consumes<std::vector<edm::Ptr<pat::PackedCandidate> > >(iConfig.getParameter<edm::InputTag>("trackSrc"))),
   beamSpotProducer_(consumes<reco::BeamSpot>(
       iConfig.getUntrackedParameter<edm::InputTag>("beamSpotSrc", edm::InputTag("offlineBeamSpot")))) {
+  for (const auto& tag : iConfig.getParameter<std::vector<edm::InputTag>>("dedxEstimators")) {
+    const auto label = tag.instance()!="" ? tag.instance() : tag.label();
+    dedxEstimatorsSrc_.emplace(label, consumes<edm::ValueMap<reco::DeDxData> >(tag));
+  }
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -68,13 +72,17 @@ void TrackAnalyzer::fillVertices(const edm::Event& iEvent) {
 
 //--------------------------------------------------------------------------------------------------
 void TrackAnalyzer::fillTracks(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
-  const auto& tracks = iEvent.get(trackSrc_);
+  const auto& tracks = iEvent.getHandle(trackSrc_);
   const auto& track2pc = iEvent.getHandle(track2pcSrc_);
+  std::map<std::string, edm::ValueMap<reco::DeDxData> > dedxMaps;
+  for (const auto& d : dedxEstimatorsSrc_)
+    dedxMaps.emplace(d.first, iEvent.get(d.second));
 
   //loop over tracks
-  for (unsigned it = 0; it < tracks.size(); ++it) {
-    const auto& t = tracks[it];
-    const auto& c = track2pc.isValid() ? *track2pc->at(it) : pat::PackedCandidate();
+  for (unsigned it = 0; it < tracks->size(); ++it) {
+    const auto& t = tracks->at(it);
+    const auto& k = track2pc.isValid() ? track2pc->at(it) : edm::Ptr<pat::PackedCandidate>();
+    const auto& c = k.isNonnull() ? *k : pat::PackedCandidate();
 
     if (t.pt() < trackPtMin_)
       continue;
@@ -128,6 +136,14 @@ void TrackAnalyzer::fillTracks(const edm::Event& iEvent, const edm::EventSetup& 
       trkDzErrFirstVtx.push_back(-999999);
       trkDxyFirstVtx.push_back(-999999);
       trkDxyErrFirstVtx.push_back(-999999);
+    }
+    for (auto& d : trkDeDx) {
+      double dEdx(-99.9);
+      if (track2pc.isValid() && dedxMaps.at(d.first).contains(k.id()))
+        dEdx = dedxMaps.at(d.first)[k].dEdx();
+      else if (dedxMaps.at(d.first).contains(tracks.id()))
+        dEdx = dedxMaps.at(d.first)[reco::TrackRef(tracks, it)].dEdx();
+      d.second.push_back(dEdx);
     }
 
     nTrk++;
@@ -186,6 +202,8 @@ void TrackAnalyzer::beginJob() {
   trackTree_->Branch("trkDzErrFirstVtx", &trkDzErrFirstVtx);
   trackTree_->Branch("trkDxyFirstVtx", &trkDxyFirstVtx);
   trackTree_->Branch("trkDxyErrFirstVtx", &trkDxyErrFirstVtx);
+  for (const auto& d : dedxEstimatorsSrc_)
+    trackTree_->Branch(d.first.c_str(), &(trkDeDx[d.first]));
 }
 
 // ------------ method called once each job just after ending the event loop  ------------
