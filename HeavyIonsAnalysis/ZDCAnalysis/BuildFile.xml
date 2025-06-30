@@ -6,6 +6,7 @@
 <use name="DataFormats/Candidate"/>
 <use name="DataFormats/CaloTowers"/>
 <use name="DataFormats/HcalDigi"/>
+<use name="DataFormats/CTPPSDetId"/>
 <use name="CommonTools/UtilAlgos"/>
 <use name="CommonTools/CandUtils"/>
 <use name="TrackingTools/TransientTrack"/>
