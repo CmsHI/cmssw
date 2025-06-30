@@ -130,6 +130,7 @@ process.load("HeavyIonsAnalysis.MuonAnalysis.muonAnalyzer_cfi")
 # to prevent crash related to HcalSeverityLevelComputerRcd record
 process.load("RecoLocalCalo.HcalRecAlgos.hcalRecAlgoESProd_cfi")
 process.load('HeavyIonsAnalysis.ZDCAnalysis.ZDCAnalyzersPbPb_cff')
+process.load('HeavyIonsAnalysis.ZDCAnalysis.FSCAnalyzers_cff')
 
 ###############################################################################
 # main forest sequence
@@ -144,6 +145,7 @@ process.forest = cms.Path(
     process.particleFlowAnalyser +
     process.ggHiNtuplizer +
     process.zdcSequencePbPb +
+    process.fscSequence +
     process.unpackedMuons +
     process.muonAnalyzer +
     process.akPu4CaloJetAnalyzer
