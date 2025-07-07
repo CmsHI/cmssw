@@ -2,7 +2,7 @@
 ZDC and FSC channel map and by default if they are saved in the 3 trees in the forest.
 
 | idet | zside | section | channel | Detector | ZDCrechit | ZDCdigi | FSCdigi |
-| -----: | -----: | :-----: | -----: | :----- | ----- | ----- | ----- |
+| -----: | -----: | -----: | -----: | :----- | :-----: | :-----: | :-----: |
 |  0 | -1 |  1 |  1 | ZDCm EM 1 | :heavy_check_mark: | :heavy_check_mark: | |
 |  1 | -1 |  1 |  2 | ZDCm EM 2 | :heavy_check_mark: | :heavy_check_mark: | |
 |  2 | -1 |  1 |  3 | ZDCm EM 3 | :heavy_check_mark: | :heavy_check_mark: | |
