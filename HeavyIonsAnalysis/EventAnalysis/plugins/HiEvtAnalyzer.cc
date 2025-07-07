@@ -2,7 +2,7 @@
 // system include files
 #include <memory>
 #include <vector>
-
+#include <algorithm>
 // user include files
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/Framework/interface/one/EDAnalyzer.h"
@@ -37,6 +37,7 @@
 //
 // class declaration
 //
+#define NHFLEAD 3
 
 class HiEvtAnalyzer : public edm::one::EDAnalyzer<> {
 public:
@@ -95,9 +96,10 @@ private:
   float hiEB, hiET, hiEE, hiEEplus, hiEEminus;
   float hiZDC, hiZDCplus, hiZDCminus;
 
-  float hiHF_pf, hiHFE_pf, hiHF_pfle, hiHF_pfha, hiHF_pfem;
-  float hiHFPlus_pf, hiHFEPlus_pf, hiHFPlus_pfle, hiHFPlus_pfha, hiHFPlus_pfem;
-  float hiHFMinus_pf, hiHFEMinus_pf, hiHFMinus_pfle, hiHFMinus_pfha, hiHFMinus_pfem;
+  float hiHF_pf, hiHFE_pf, hiHF_pfha, hiHF_pfem;
+  float hiHFPlus_pf, hiHFEPlus_pf, hiHFPlus_pfha, hiHFPlus_pfem;
+  float hiHFMinus_pf, hiHFEMinus_pf, hiHFMinus_pfha, hiHFMinus_pfem;
+  float hiHF_pfle[NHFLEAD], hiHFPlus_pfle[NHFLEAD], hiHFMinus_pfle[NHFLEAD];
   int nCountsHF_pf, nCountsHFPlus_pf, nCountsHFMinus_pf;
 
   float fNpart;
@@ -138,6 +140,16 @@ private:
   unsigned long long event;
   unsigned int run;
   unsigned int lumi;
+
+  void inspfle(float hfe, float pfle[NHFLEAD]) {
+    if (hfe <= pfle[NHFLEAD-1]) { return; }
+    auto* end = pfle + NHFLEAD;
+    auto* insert_pos = std::lower_bound(pfle, end, hfe, std::greater<float>{});
+    if (insert_pos != end) {
+        std::move_backward(insert_pos, end - 1, end);
+        *insert_pos = hfe;
+    }
+  }
 };
 
 //
@@ -317,45 +329,48 @@ void HiEvtAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
     edm::Handle<pat::PackedCandidateCollection> pfCandidates;
     iEvent.getByToken(pfCandidateTag_, pfCandidates);
 
-    hiHF_pf=0; hiHFE_pf=0; hiHF_pfle =0; hiHF_pfha=0; hiHF_pfem=0;
-    hiHFPlus_pf=0; hiHFEPlus_pf=0; hiHFPlus_pfle =0; hiHFPlus_pfha=0; hiHFPlus_pfem=0;
-    hiHFMinus_pf=0; hiHFEMinus_pf=0; hiHFMinus_pfle =0; hiHFMinus_pfha=0; hiHFMinus_pfem=0;
+    hiHF_pf = 0; hiHFE_pf = 0; hiHF_pfha = 0; hiHF_pfem = 0;
+    for (auto& le : hiHF_pfle) le = 0;
+    hiHFPlus_pf = 0; hiHFEPlus_pf = 0; hiHFPlus_pfha = 0; hiHFPlus_pfem = 0;
+    for (auto& le : hiHFPlus_pfle) le = 0;
+    hiHFMinus_pf = 0; hiHFEMinus_pf = 0; hiHFMinus_pfha = 0; hiHFMinus_pfem = 0;
+    for (auto& le : hiHFMinus_pfle) le = 0;
     nCountsHF_pf = 0; nCountsHFPlus_pf = 0; nCountsHFMinus_pf = 0;
 
     for (const auto& pfcand : *pfCandidates) {
-      if (pfcand.pdgId() == 1 || pfcand.pdgId() == 2){
-        const bool eta_plus = (pfcand.eta() > 3.0) && (pfcand.eta() < 6.0);
-        const bool eta_minus = (pfcand.eta() < -3.0) && (pfcand.eta() > -6.0);
-        if (pfcand.et() < 0.0) continue;
-        if (eta_plus || eta_minus)
-        {   
-          hiHF_pf += pfcand.et();
-          hiHFE_pf += pfcand.energy();
-          if(pfcand.energy() >= hiHF_pfle) hiHF_pfle = pfcand.energy();
-          if(pfcand.pdgId() == 1) hiHF_pfha += pfcand.et();
-          if(pfcand.pdgId() == 2) hiHF_pfem += pfcand.et();
-          nCountsHF_pf++;
+      if (pfcand.pdgId() != 1 && pfcand.pdgId() != 2) continue;
+      if (pfcand.et() < 0.0) continue;
+      const bool eta_plus = (pfcand.eta() > 3.0) && (pfcand.eta() < 6.0);
+      const bool eta_minus = (pfcand.eta() < -3.0) && (pfcand.eta() > -6.0);
+      if (!eta_plus && !eta_minus) continue;
+      const auto hfe = pfcand.energy();
+      const auto hfet = pfcand.et();
+      const auto hfid = pfcand.pdgId();
 
-          if(eta_plus){
-            hiHFPlus_pf += pfcand.et();
-            hiHFEPlus_pf += pfcand.energy();
-            if(pfcand.energy() >= hiHFPlus_pfle) hiHFPlus_pfle = pfcand.energy();
-            if(pfcand.pdgId() == 1) hiHFPlus_pfha += pfcand.et();
-            if(pfcand.pdgId() == 2) hiHFPlus_pfem += pfcand.et();
-            nCountsHFPlus_pf++;
-          }
-          else if(eta_minus){
-            hiHFMinus_pf += pfcand.et();
-            hiHFEMinus_pf += pfcand.energy();
-            if(pfcand.energy() >= hiHFMinus_pfle) hiHFMinus_pfle = pfcand.energy();
-            if(pfcand.pdgId() == 1) hiHFMinus_pfha += pfcand.et();
-            if(pfcand.pdgId() == 2) hiHFMinus_pfem += pfcand.et();
-            nCountsHFMinus_pf++;
-          }
-        }
-      }
-    }
+      hiHF_pf += hfet;
+      hiHFE_pf += hfe;
+      if(hfid == 1) hiHF_pfha += hfet;
+      if(hfid == 2) hiHF_pfem += hfet;
+      nCountsHF_pf++;
+      inspfle(hfe, hiHF_pfle);
 
+      if (eta_plus) {
+        hiHFPlus_pf += hfet;
+        hiHFEPlus_pf += hfe;
+        if(hfid == 1) hiHFPlus_pfha += hfet;
+        if(hfid == 2) hiHFPlus_pfem += hfet;
+        nCountsHFPlus_pf++;
+        inspfle(hfe, hiHFPlus_pfle);
+      } // if (eta_plus) {
+      if (eta_minus) {
+        hiHFMinus_pf += hfet;
+        hiHFEMinus_pf += hfe;
+        if(hfid == 1) hiHFMinus_pfha += hfet;
+        if(hfid == 2) hiHFMinus_pfem += hfet;
+        nCountsHFMinus_pf++;
+        inspfle(hfe, hiHFMinus_pfle);
+      } // if(eta_minus) {
+    } // for (const auto& pfcand : *pfCandidates) {
   }
 
   nEvtPlanes = 0;
@@ -529,22 +544,24 @@ void HiEvtAnalyzer::beginJob() {
   
   thi_->Branch("hiHF_pf", &hiHF_pf, "hiHF_pf/F");
   thi_->Branch("hiHFE_pf", &hiHFE_pf, "hiHFE_pf/F");
-  thi_->Branch("hiHF_pfle", &hiHF_pfle, "hiHF_pfle/F");
+
   thi_->Branch("hiHF_pfha", &hiHF_pfha, "hiHF_pfha/F");
   thi_->Branch("hiHF_pfem", &hiHF_pfem, "hiHF_pfem/F");
-  
   thi_->Branch("hiHFPlus_pf", &hiHFPlus_pf, "hiHFPlus_pf/F");
   thi_->Branch("hiHFEPlus_pf", &hiHFEPlus_pf, "hiHFEPlus_pf/F");
-  thi_->Branch("hiHFPlus_pfle", &hiHFPlus_pfle, "hiHFPlus_pfle/F");
   thi_->Branch("hiHFPlus_pfha", &hiHFPlus_pfha, "hiHFPlus_pfha/F");
   thi_->Branch("hiHFPlus_pfem", &hiHFPlus_pfem, "hiHFPlus_pfem/F");
 
   thi_->Branch("hiHFMinus_pf", &hiHFMinus_pf, "hiHFMinus_pf/F");
   thi_->Branch("hiHFEMinus_pf", &hiHFEMinus_pf, "hiHFEMinus_pf/F");
-  thi_->Branch("hiHFMinus_pfle", &hiHFMinus_pfle, "hiHFMinus_pfle/F");
   thi_->Branch("hiHFMinus_pfha", &hiHFMinus_pfha, "hiHFMinus_pfha/F");
   thi_->Branch("hiHFMinus_pfem", &hiHFMinus_pfem, "hiHFMinus_pfem/F");
 
+  for (int i=0; i<NHFLEAD; i++) {
+    thi_->Branch(Form("hiHF_pfle%d", i+1), &(hiHF_pfle[i]), Form("hiHF_pfle%d/F", i+1));
+    thi_->Branch(Form("hiHFPlus_pfle%d", i+1), &(hiHFPlus_pfle[i]), Form("hiHFPlus_pfle%d/F", i+1));
+    thi_->Branch(Form("hiHFMinus_pfle%d", i+1), &(hiHFMinus_pfle[i]), Form("hiHFMinus_pfle%d/F", i+1));
+  }
   thi_->Branch("nCountsHF_pf", &nCountsHF_pf, "nCountsHF_pf/I");
   thi_->Branch("nCountsHFPlus_pf", &nCountsHFPlus_pf, "nCountsHFPlus_pf/I");
   thi_->Branch("nCountsHFMinus_pf", &nCountsHFMinus_pf, "nCountsHFMinus_pf/I");
