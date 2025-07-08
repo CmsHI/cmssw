@@ -1,3 +1,41 @@
+# Map (Small system run, July 2025)
+ZDC and FSC channel map and by default if they are saved in the 3 trees in the forest.
+
+| idet | zside | section | channel | Detector | ZDCrechit | ZDCdigi | FSCdigi |
+| -----: | -----: | -----: | -----: | :----- | :-----: | :-----: | :-----: |
+|  0 | -1 |  1 |  1 | ZDCm EM 1 | :heavy_check_mark: | :heavy_check_mark: | |
+|  1 | -1 |  1 |  2 | ZDCm EM 2 | :heavy_check_mark: | :heavy_check_mark: | |
+|  2 | -1 |  1 |  3 | ZDCm EM 3 | :heavy_check_mark: | :heavy_check_mark: | |
+|  3 | -1 |  1 |  4 | ZDCm EM 4 | :heavy_check_mark: | :heavy_check_mark: | |
+|  4 | -1 |  1 |  5 | ZDCm EM 5 | :heavy_check_mark: | :heavy_check_mark: | |
+|  5 | -1 |  1 |  6 | Dummy | | | :heavy_check_mark: |
+|  6 | -1 |  1 |  7 | FSC2 Up | | | :heavy_check_mark: |
+|  7 | -1 |  1 |  8 | FSC2 Down | | | :heavy_check_mark: |
+|  8 | -1 |  1 |  9 | FSC3 BottLeft | | | :heavy_check_mark: |
+|  9 | -1 |  1 | 10 | FSC3 BottRight | | | :heavy_check_mark: |
+| 10 | -1 |  1 | 11 | FSC3 Topleft | | | :heavy_check_mark: |
+| 11 | -1 |  1 | 12 | FSC3 TopRight | | | :heavy_check_mark: |
+| 12 | -1 |  2 |  1 | ZDCm HAD 1 | :heavy_check_mark: | :heavy_check_mark: | |
+| 13 | -1 |  2 |  2 | ZDCm HAD 2 | :heavy_check_mark: | :heavy_check_mark: | |
+| 14 | -1 |  2 |  3 | ZDCm HAD 3 | :heavy_check_mark: | :heavy_check_mark: | |
+| 15 | -1 |  2 |  4 | ZDCm HAD 4 | :heavy_check_mark: | :heavy_check_mark: | |
+| 16 |  1 |  1 |  1 | ZDCp EM 1 | :heavy_check_mark: | :heavy_check_mark: | |
+| 17 |  1 |  1 |  2 | ZDCp EM 2 | :heavy_check_mark: | :heavy_check_mark: | |
+| 18 |  1 |  1 |  3 | ZDCp EM 3 | :heavy_check_mark: | :heavy_check_mark: | |
+| 19 |  1 |  1 |  4 | ZDCp EM 4 | :heavy_check_mark: | :heavy_check_mark: | |
+| 20 |  1 |  1 |  5 | ZDCp EM 5 | :heavy_check_mark: | :heavy_check_mark: | |
+| 21 |  1 |  1 |  6 | Dummy | | | :heavy_check_mark: |
+| 22 |  1 |  1 |  7 | Dummy | | | :heavy_check_mark: |
+| 23 |  1 |  1 |  8 | Dummy | | | :heavy_check_mark: |
+| 24 |  1 |  2 |  1 | ZDCp HAD 1 | :heavy_check_mark: | :heavy_check_mark: | |
+| 25 |  1 |  2 |  2 | ZDCp HAD 2 | :heavy_check_mark: | :heavy_check_mark: | |
+| 26 |  1 |  2 |  3 | ZDCp HAD 3 | :heavy_check_mark: | :heavy_check_mark: | |
+| 27 |  1 |  2 |  4 | ZDCp HAD 4 | :heavy_check_mark: | :heavy_check_mark: | |
+| 28-43 | -1 |  4 |  1-16 | ZDCm RPD 1-16 | | :heavy_check_mark: | |
+| 44-59 |  1 |  4 |  1-16 | ZDCp RPD 1-16 | | :heavy_check_mark: | |
+
+---
+
 # ZDC analyzer
 ## Minimum usage
 Energy sum is `(float) sumPlus` and `(float) sumMinus` in `zdcanalyzer/zdcrechit`.
@@ -5,97 +43,7 @@ Energy sum is `(float) sumPlus` and `(float) sumMinus` in `zdcanalyzer/zdcrechit
    (HiForestMiniAOD.root)
    ./
     └── (TDirectoryFile) => zdcanalyzer
-        ├── (TTree) => zdcrechit (1)
-        └── (TTree) => zdcdigi (1)
-```
-## Branches
-```
-   (HiForestMiniAOD.root)
-   ./
-    └── (TDirectoryFile) => zdcanalyzer
-        ├── (TTree) => zdcrechit (1)
-******************************************************************************
-*Tree    :zdcrechit : zdcrechit                                              *
-******************************************************************************
-*Br    0 :sumPlus   : sumPlus/F                                              *
-*............................................................................*
-*Br    1 :sumMinus  : sumMinus/F                                             *
-*............................................................................*
-*Br    2 :n         : n/I                                                    *
-*............................................................................*
-*Br    3 :zside     : zside[n]/I                                             *
-*............................................................................*
-*Br    4 :section   : section[n]/I                                           *
-*............................................................................*
-*Br    5 :channel   : channel[n]/I                                           *
-*............................................................................*
-*Br    6 :energy    : energy[n]/F                                            *
-*............................................................................*
-*Br    7 :time      : time[n]/F                                              *
-*............................................................................*
-*Br    8 :TDCtime   : TDCtime[n]/F                                           *
-*............................................................................*
-*Br    9 :chargeWeightedTime : chargeWeightedTime[n]/F                       *
-*............................................................................*
-*Br   10 :energySOIp1 : energySOIp1[n]/F                                     *
-*............................................................................*
-*Br   11 :ratioSOIp1 : ratioSOIp1[n]/F                                       *
-*............................................................................*
-*Br   12 :saturation : saturation[n]/I                                       *
-*............................................................................*
-*Br   13 :sumPlus_Aux : sumPlus_Aux/F                                        *
-*............................................................................*
-*Br   14 :sumMinus_Aux : sumMinus_Aux/F                                      *
-*............................................................................*
-
-        └── (TTree) => zdcdigi (1)
-******************************************************************************
-*Tree    :zdcdigi   : zdcdigi                                                *
-******************************************************************************
-*Br    0 :n         : n/I                                                    *
-*............................................................................*
-*Br    1 :zside     : zside[n]/I                                             *
-*............................................................................*
-*Br    2 :section   : section[n]/I                                           *
-*............................................................................*
-*Br    3 :channel   : channel[n]/I                                           *
-*............................................................................*
-*Br    4 :adcTs0    : adcTs0[n]/I                                            *
-*............................................................................*
-*Br    5 :chargefCTs0 : chargefCTs0[n]/F                                     *
-*............................................................................*
-*Br    6 :tdcTs0    : tdcTs0[n]/I                                            *
-*............................................................................*
-*Br    7 :adcTs1    : adcTs1[n]/I                                            *
-*............................................................................*
-*Br    8 :chargefCTs1 : chargefCTs1[n]/F                                     *
-*............................................................................*
-*Br    9 :tdcTs1    : tdcTs1[n]/I                                            *
-*............................................................................*
-*Br   10 :adcTs2    : adcTs2[n]/I                                            *
-*............................................................................*
-*Br   11 :chargefCTs2 : chargefCTs2[n]/F                                     *
-*............................................................................*
-*Br   12 :tdcTs2    : tdcTs2[n]/I                                            *
-*............................................................................*
-*Br   13 :adcTs3    : adcTs3[n]/I                                            *
-*............................................................................*
-*Br   14 :chargefCTs3 : chargefCTs3[n]/F                                     *
-*............................................................................*
-*Br   15 :tdcTs3    : tdcTs3[n]/I                                            *
-*............................................................................*
-*Br   16 :adcTs4    : adcTs4[n]/I                                            *
-*............................................................................*
-*Br   17 :chargefCTs4 : chargefCTs4[n]/F                                     *
-*............................................................................*
-*Br   18 :tdcTs4    : tdcTs4[n]/I                                            *
-*............................................................................*
-*Br   19 :adcTs5    : adcTs5[n]/I                                            *
-*............................................................................*
-*Br   20 :chargefCTs5 : chargefCTs5[n]/F                                     *
-*............................................................................*
-*Br   21 :tdcTs5    : tdcTs5[n]/I                                            *
-*............................................................................*
+        └── (TTree) => zdcrechit (1)
 ```
 
 ## Indices and dimensions
@@ -184,9 +132,9 @@ Energy sum is `(float) sumPlus` and `(float) sumMinus` in `zdcanalyzer/zdcrechit
 *        0 *       49 *        50 *         1 *         4 *        16 *
 ***********************************************************************
 ```
-- The safe length of the arrays is 56 = (9 ZDC + 16 RPD + 3 dump) &times; 2 sides, no matter if RPD is skipped, e.g.
+- The safest length of the arrays is 60 = (9 ZDC + 16 RPD) &times; 2 sides + 4 dump (3 at plus + 1 at minus) + 6 FSC, no matter if RPD is skipped, e.g.
 ```
-#define MAXMOD 56 
+#define MAXMOD 60 
 int zside[MAXMOD];
 ```
 
