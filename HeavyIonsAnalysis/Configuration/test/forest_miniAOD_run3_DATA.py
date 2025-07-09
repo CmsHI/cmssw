@@ -96,7 +96,14 @@ process.load('HeavyIonsAnalysis.EventAnalysis.particleFlowAnalyser_cfi')
 ################################
 # electrons, photons, muons
 process.load('HeavyIonsAnalysis.EGMAnalysis.ggHiNtuplizer_cfi')
+process.load('HeavyIonsAnalysis.EGMAnalysis.hiElectrons_cfi')
+process.load('HeavyIonsAnalysis.EGMAnalysis.correctedPatElectronProducer_cfi')
+process.correctedElectrons = process.correctedPatElectronProducer.clone(src = "slimmedElectrons", centrality = "centralityBin:HFtowers")
+process.correctedElectrons.correctionFile = "HeavyIonsAnalysis/EGMAnalysis/data/SSHIRun2023A.dat"
+process.hiElectrons.electrons = "correctedElectrons"
 process.ggHiNtuplizer.doMuons = cms.bool(False)
+process.ggHiNtuplizer.electronSrc = "hiElectrons"
+process.egammaSequence = cms.Sequence(process.correctedElectrons * process.hiElectrons * process.ggHiNtuplizer)
 process.load("TrackingTools.TransientTrack.TransientTrackBuilder_cfi")
 ################################
 # jet reco sequence
@@ -107,7 +114,11 @@ process.akPu4CaloJetAnalyzer.doHiJetID = True
 # tracks
 process.load("HeavyIonsAnalysis.TrackAnalysis.TrackAnalyzers_cff")
 # muons (FTW)
+process.load('HeavyIonsAnalysis.JetAnalysis.hiFJRhoAnalyzer_cff')
+process.load('HeavyIonsAnalysis.MuonAnalysis.hiMuons_cfi')
 process.load("HeavyIonsAnalysis.MuonAnalysis.unpackedMuons_cfi")
+process.unpackedMuons.muons = "hiMuons"
+process.muonSequence = cms.Sequence(process.rhoSequence * process.hiMuons * process.unpackedMuons)
 process.load("HeavyIonsAnalysis.MuonAnalysis.muonAnalyzer_cfi")
 ###############################################################################
 
@@ -137,11 +148,11 @@ process.forest = cms.Path(
     process.l1object +
     process.trackSequencePbPb +
     #process.particleFlowAnalyser +
-    process.ggHiNtuplizer +
+    process.muonSequence +
+    process.egammaSequence +
     #process.zdcdigi +
     #process.QWzdcreco +
     process.zdcanalyzer +
-    process.unpackedMuons +
     process.muonAnalyzer +
     process.akPu4CaloJetAnalyzer
     )

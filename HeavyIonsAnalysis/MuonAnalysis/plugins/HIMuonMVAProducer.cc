@@ -12,11 +12,12 @@
 
 namespace pat {
 
-  class HIMuonIsoProducer : public edm::global::EDProducer<> {
+  class HIMuonMVAProducer : public edm::global::EDProducer<> {
   public:
-    explicit HIMuonIsoProducer(const edm::ParameterSet& iConfig)
+    explicit HIMuonMVAProducer(const edm::ParameterSet& iConfig)
         : muonToken_(consumes<pat::MuonCollection>(iConfig.getParameter<edm::InputTag>("muons"))),
           pfCandidateToken_(consumes<reco::CandidateView>(iConfig.getParameter<edm::InputTag>("pfCandidates"))),
+          centralityToken_(consumes<int>(iConfig.getParameter<edm::InputTag>("centrality"))),
           etaToken_(consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>("etaMap"))),
           rhoToken_(consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>("rhoMap"))),
           patMuonPutToken_(produces<pat::MuonCollection>()),
@@ -27,7 +28,7 @@ namespace pat {
           rCone_(iConfig.getParameter<double>("iso_rCone")),
           isoCorr_(getCorrection(iConfig)),
           isoModel_(getModel(iConfig)) {}
-    ~HIMuonIsoProducer() override{};
+    ~HIMuonMVAProducer() override{};
 
     void produce(edm::StreamID, edm::Event& iEvent, const edm::EventSetup& iSetup) const override;
 
@@ -36,6 +37,7 @@ namespace pat {
   private:
     const edm::EDGetTokenT<pat::MuonCollection> muonToken_;
     const edm::EDGetTokenT<reco::CandidateView> pfCandidateToken_;
+    const edm::EDGetTokenT<int> centralityToken_;
     const edm::EDGetTokenT<std::vector<double>> etaToken_;
     const edm::EDGetTokenT<std::vector<double>> rhoToken_;
     const edm::EDPutTokenT<pat::MuonCollection> patMuonPutToken_;
@@ -53,16 +55,41 @@ namespace pat {
     TMVA::Experimental::RBDT<>* getModel(const edm::ParameterSet& iConfig) {
       return new TMVA::Experimental::RBDT<>("muiso_BDT", iConfig.getParameter<edm::FileInPath>("file_isoModel").fullPath());
     }
+
+    enum WP { WP95, WP90, WP85, WP80 };
+    bool passMVAIso(const double&, const double&, const WP& wp) const;
   };
 
 }  // namespace pat
 
-void pat::HIMuonIsoProducer::produce(edm::StreamID, edm::Event& iEvent, const edm::EventSetup& iSetup) const {
+
+bool pat::HIMuonMVAProducer::passMVAIso(const double& mva, const double& cent, const WP& wp) const {
+  double cut(10.);
+  const auto cen = cent > 90. ? 90. : cent;
+  const auto cen2 = cen*cen;
+  const auto cen3 = cen*cen*cen;
+  //Working point: WP95
+  if (wp==WP95)
+    cut = 7.978478076287510e-07*cen3 + -0.00010197402752356007*cen2 +  0.00073749187425983740*cent + 0.44973546555978620;
+  //Working point: WP90
+  else if (wp==WP90)
+    cut = 5.023194760398722e-07*cen3 + -6.386564313645383e-05*cen2  + -0.00030034696427764694*cent + 0.26733467400525280;
+  //Working point: WP85
+  else if (wp==WP85)
+    cut = 3.642678187960558e-07*cen3 + -4.4289339403249526e-05*cen2 + -0.00038178775816005510*cent + 0.17242030428600790;
+  //Working point: WP80
+  else if (wp==WP80)
+    cut = 2.792961957599443e-07*cen3 + -3.314677611344172e-05*cen2  + -0.00028826679894283433*cent + 0.11887071187630002;
+  return mva < cut;
+}
+
+void pat::HIMuonMVAProducer::produce(edm::StreamID, edm::Event& iEvent, const edm::EventSetup& iSetup) const {
   // extract input information
   const auto& muons = iEvent.get(muonToken_);
   const auto& pfCandidates = iEvent.get(pfCandidateToken_);
   const auto& etaMap = iEvent.get(etaToken_);
   const auto& rhoMap = iEvent.get(rhoToken_);
+  const double cent = iEvent.get(centralityToken_) / 2.0;
 
   // select PF candidates
   std::vector<std::tuple<double, double, double, int, int, double>> selPFCands;
@@ -150,17 +177,22 @@ void pat::HIMuonIsoProducer::produce(edm::StreamID, edm::Event& iEvent, const ed
     const std::vector<double> inputs({std::abs(muon.eta()), muon.phi(), rho, ip3DSig, pfRelIso, pfChRelIso, skPFRelIso, skPFChRelIso});
     const std::vector<float> features(inputs.begin(), inputs.end());
     const auto isoValue = 1. - isoModel_->Compute(features)[0];
-    muon.addUserFloat("hiIso", isoValue);
+    muon.addUserFloat("hiMVAIso", isoValue);
+    muon.addUserInt("hiMVAIsoWP95", passMVAIso(isoValue, cent, WP95));
+    muon.addUserInt("hiMVAIsoWP90", passMVAIso(isoValue, cent, WP90));
+    muon.addUserInt("hiMVAIsoWP85", passMVAIso(isoValue, cent, WP85));
+    muon.addUserInt("hiMVAIsoWP80", passMVAIso(isoValue, cent, WP80));
   }
 
   iEvent.emplace(patMuonPutToken_, std::move(output));
 }
 
 // ------------ method fills 'descriptions' with the allowed parameters for the module  ------------
-void pat::HIMuonIsoProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+void pat::HIMuonMVAProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
   desc.add<edm::InputTag>("muons", edm::InputTag("slimmedMuons"))->setComment("muon input collection");
   desc.add<edm::InputTag>("pfCandidates", edm::InputTag("packedPFCandidates"))->setComment("PF candidate input collection");
+  desc.add<edm::InputTag>("centrality", edm::InputTag("centralityBin:HFtowers"))->setComment("centrality");
   desc.add<edm::InputTag>("etaMap", edm::InputTag("hiFJRhoProducerFinerBins:mapEtaEdges"))->setComment("eta ranges for rho and soft killer");
   desc.add<edm::InputTag>("rhoMap", edm::InputTag("hiFJRhoProducerFinerBins:mapToRho"))->setComment("rho");
   desc.add<double>("pf_maxAbsEta", 2.8)->setComment("Maximum absolute eta for PF candidates");
@@ -168,11 +200,11 @@ void pat::HIMuonIsoProducer::fillDescriptions(edm::ConfigurationDescriptions& de
   desc.add<double>("muon_minPt", 0.0)->setComment("Muon minimum pt");
   desc.add<double>("iso_rVeto", 1.E-3)->setComment("Isolation veto radius");
   desc.add<double>("iso_rCone", 0.3)->setComment("Isolation cone radius");
-  desc.add<edm::FileInPath>("file_isoModel", edm::FileInPath("HeavyIonsAnalysis/Configuration/data/muiso_BDT.root"))->setComment("Path to isolation model");
-  desc.add<edm::FileInPath>("file_isoCorr", edm::FileInPath("HeavyIonsAnalysis/Configuration/data/lepton_spectra_train_weights.json.gz"))->setComment("Path to isolation rho correction");
-  descriptions.add("hiIsoMuons", desc);
+  desc.add<edm::FileInPath>("file_isoModel", edm::FileInPath("HeavyIonsAnalysis/MuonAnalysis/data/muiso_BDT.root"))->setComment("Path to isolation model");
+  desc.add<edm::FileInPath>("file_isoCorr", edm::FileInPath("HeavyIonsAnalysis/MuonAnalysis/data/lepton_spectra_train_weights.json.gz"))->setComment("Path to isolation rho correction");
+  descriptions.add("hiMuons", desc);
 }
 
 #include "FWCore/Framework/interface/MakerMacros.h"
 using namespace pat;
-DEFINE_FWK_MODULE(HIMuonIsoProducer);
+DEFINE_FWK_MODULE(HIMuonMVAProducer);

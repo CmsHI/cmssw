@@ -3,12 +3,14 @@
 
 #include <DataFormats/Common/interface/Ref.h>
 #include <DataFormats/HepMCCandidate/interface/GenParticle.h>
+#include <DataFormats/PatCandidates/interface/PackedGenParticle.h>
 
 #include <vector>
 
 class GenParticleParentage {
 public:
-  GenParticleParentage(reco::GenParticleRef&);
+  GenParticleParentage(const reco::GenParticleRef&);
+  GenParticleParentage(const pat::PackedGenParticleRef& p) { GenParticleParentage(p->lastPrunedRef()); };
 
   reco::GenParticleRef match() const { return _match; }
   reco::GenParticleRef parent() const { return _realParent; }
@@ -29,6 +31,9 @@ public:
   reco::GenParticleRef getExoticParent() const { return _exoticParent; }
 
   bool hasRealParent() const { return _realParent.isNonnull() && _realParent.isAvailable(); }
+
+  static reco::GenParticleRef findGenMother(const reco::GenParticleRef&, const int& pId=0);
+  static reco::GenParticleRef findGenMother(const pat::PackedGenParticleRef& p) { return findGenMother(p->lastPrunedRef()); };
 
 private:
   void getParentageRecursive(const reco::GenParticleRef&, int);

@@ -79,7 +79,7 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps)
   }
 
   if (doElectrons_) {
-    electronsToken_ = consumes<edm::View<reco::GsfElectron>>(ps.getParameter<edm::InputTag>("electronSrc"));
+    electronsToken_ = consumes<edm::View<pat::Electron>>(ps.getParameter<edm::InputTag>("electronSrc"));
     beamSpotToken_ = consumes<reco::BeamSpot>(ps.getParameter<edm::InputTag>("beamSpotSrc"));
     conversionsToken_ = consumes<reco::ConversionCollection>(ps.getParameter<edm::InputTag>("conversionsSrc"));
   }
@@ -129,11 +129,15 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps)
 
     tree_->Branch("mcParentage", &mcParentage_);
     tree_->Branch("mcMomPID", &mcMomPID_);
+    tree_->Branch("mcMomKey", &mcMomKey_);
     tree_->Branch("mcMomPt", &mcMomPt_);
     tree_->Branch("mcMomEta", &mcMomEta_);
     tree_->Branch("mcMomPhi", &mcMomPhi_);
     tree_->Branch("mcMomMass", &mcMomMass_);
     tree_->Branch("mcGMomPID", &mcGMomPID_);
+    tree_->Branch("mcGMomKey", &mcGMomKey_);
+    tree_->Branch("mcGGMomPID", &mcGGMomPID_);
+    tree_->Branch("mcGGMomKey", &mcGGMomKey_);
     tree_->Branch("mcIndex", &mcIndex_);
     tree_->Branch("mcSube", &mcSube_);
 
@@ -173,10 +177,20 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps)
     tree_->Branch("eleIP3DErr", &eleIP3DErr_);
 
     tree_->Branch("elePt", &elePt_);
+    tree_->Branch("eleRawPt", &eleRawPt_);
     tree_->Branch("eleEta", &eleEta_);
     tree_->Branch("elePhi", &elePhi_);
     tree_->Branch("eleCharge", &eleCharge_);
     tree_->Branch("eleEn", &eleEn_);
+
+    tree_->Branch("eleMVAIso", &eleMVAIso_);
+    for (auto& w : eleMVAIsoWP_)
+      tree_->Branch(("eleMVAIso"+w.first).c_str(), &(w.second));
+    tree_->Branch("eleMVAId", &eleMVAId_);
+    for (auto& w : eleMVAIdWP_)
+      tree_->Branch(("eleMVAId"+w.first).c_str(), &(w.second));
+    for (auto& w : eleCutIdWP_)
+      tree_->Branch(("eleCutId"+w.first).c_str(), &(w.second));
 
     tree_->Branch("eleSCEn", &eleSCEn_);
     tree_->Branch("eleESEn", &eleESEn_);
@@ -192,9 +206,12 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps)
 
     tree_->Branch("eleHoverE", &eleHoverE_);
     tree_->Branch("eleHoverEBc", &eleHoverEBc_);
+    tree_->Branch("eleRawHoverE", &eleRawHoverE_);
+    tree_->Branch("eleRawHoverEBc", &eleRawHoverEBc_);
     tree_->Branch("eleEoverP", &eleEoverP_);
     tree_->Branch("eleEoverPInv", &eleEoverPInv_);
     tree_->Branch("eleEcalE", &eleEcalE_);
+    tree_->Branch("eleRawEcalE", &eleRawEcalE_);
     tree_->Branch("elePAtVtx", &elePAtVtx_);
     tree_->Branch("elePAtSC", &elePAtSC_);
     tree_->Branch("elePAtCluster", &elePAtCluster_);
@@ -240,6 +257,9 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps)
     tree_->Branch("eleSeedCryPhi", &eleSeedCryPhi_);
     tree_->Branch("eleSeedCryIeta", &eleSeedCryIeta_);
     tree_->Branch("eleSeedCryIphi", &eleSeedCryIphi_);
+
+    if (doGenParticles_)
+      tree_->Branch("ele_genMatchedIndex", &ele_genMatchedIndex_);
   }
 
   if (doPhotons_) {
@@ -491,7 +511,9 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps)
     tree_->Branch("muPhi", &muPhi_);
     tree_->Branch("muL1Eta", &muL1Eta_);
     tree_->Branch("muL1Phi", &muL1Phi_);
-    tree_->Branch("muIso", &muIso_);
+    tree_->Branch("muMVAIso", &muMVAIso_);
+    for (auto& w : muMVAIsoWP_)
+      tree_->Branch(("muMVAIso"+w.first).c_str(), &(w.second));
     tree_->Branch("muCharge", &muCharge_);
     tree_->Branch("muType", &muType_);
     tree_->Branch("muIsGood", &muIsGood_);
@@ -529,6 +551,7 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps)
     tree_->Branch("muPFNeuIso", &muPFNeuIso_);
     tree_->Branch("muPFPUIso", &muPFPUIso_);
 
+    tree_->Branch("muSelectors", &muSelectors_);
     tree_->Branch("muIDSoft", &muIDSoft_);
     tree_->Branch("muIDLoose", &muIDLoose_);
     tree_->Branch("muIDMedium", &muIDMedium_);
@@ -537,6 +560,9 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps)
     tree_->Branch("muIDGlobalHighPt", &muIDGlobalHighPt_);
     tree_->Branch("muIDTrkHighPt", &muIDTrkHighPt_);
     tree_->Branch("muIDInTime", &muIDInTime_);
+
+    if (doGenParticles_)
+      tree_->Branch("mu_genMatchedIndex", &mu_genMatchedIndex_);
   }
 }
 
@@ -568,11 +594,15 @@ void ggHiNtuplizer::analyze(const edm::Event& e, const edm::EventSetup& es) {
 
     mcParentage_.clear();
     mcMomPID_.clear();
+    mcMomKey_.clear();
     mcMomPt_.clear();
     mcMomEta_.clear();
     mcMomPhi_.clear();
     mcMomMass_.clear();
     mcGMomPID_.clear();
+    mcGMomKey_.clear();
+    mcGGMomPID_.clear();
+    mcGGMomKey_.clear();
     mcIndex_.clear();
     mcSube_.clear();
 
@@ -612,10 +642,20 @@ void ggHiNtuplizer::analyze(const edm::Event& e, const edm::EventSetup& es) {
     eleIP3DErr_.clear();
 
     elePt_.clear();
+    eleRawPt_.clear();
     eleEta_.clear();
     elePhi_.clear();
     eleCharge_.clear();
     eleEn_.clear();
+
+    eleMVAIso_.clear();
+    for (auto& w : eleMVAIsoWP_)
+      w.second.clear();
+    eleMVAId_.clear();
+    for (auto& w : eleMVAIdWP_)
+      w.second.clear();
+    for (auto& w : eleCutIdWP_)
+      w.second.clear();
 
     eleSCEn_.clear();
     eleESEn_.clear();
@@ -631,9 +671,12 @@ void ggHiNtuplizer::analyze(const edm::Event& e, const edm::EventSetup& es) {
 
     eleHoverE_.clear();
     eleHoverEBc_.clear();
+    eleRawHoverE_.clear();
+    eleRawHoverEBc_.clear();
     eleEoverP_.clear();
     eleEoverPInv_.clear();
     eleEcalE_.clear();
+    eleRawEcalE_.clear();
     elePAtVtx_.clear();
     elePAtSC_.clear();
     elePAtCluster_.clear();
@@ -677,6 +720,8 @@ void ggHiNtuplizer::analyze(const edm::Event& e, const edm::EventSetup& es) {
     eleSeedCryPhi_.clear();
     eleSeedCryIeta_.clear();
     eleSeedCryIphi_.clear();
+
+    ele_genMatchedIndex_.clear();
   }
 
   if (doPhotons_) {
@@ -917,7 +962,9 @@ void ggHiNtuplizer::analyze(const edm::Event& e, const edm::EventSetup& es) {
     muPhi_.clear();
     muL1Eta_.clear();
     muL1Phi_.clear();
-    muIso_.clear();
+    muMVAIso_.clear();
+    for (auto& w : muMVAIsoWP_)
+      w.second.clear();
     muCharge_.clear();
     muType_.clear();
     muIsGood_.clear();
@@ -955,6 +1002,7 @@ void ggHiNtuplizer::analyze(const edm::Event& e, const edm::EventSetup& es) {
     muPFNeuIso_.clear();
     muPFPUIso_.clear();
 
+    muSelectors_.clear();
     muIDSoft_.clear();
     muIDLoose_.clear();
     muIDMedium_.clear();
@@ -963,6 +1011,8 @@ void ggHiNtuplizer::analyze(const edm::Event& e, const edm::EventSetup& es) {
     muIDGlobalHighPt_.clear();
     muIDTrkHighPt_.clear();
     muIDInTime_.clear();
+
+    mu_genMatchedIndex_.clear();
   }
 
   run_ = e.id().run();
@@ -1033,14 +1083,12 @@ void ggHiNtuplizer::fillGenParticles(const edm::Event& e) {
     fillGenCandidates(packedGenParticles, signalPackedGenParticles, hasSignalPackedGen);
   } else {
     // ToDo
-    /*
     edm::Handle<std::vector<reco::GenParticle>> genParticles;
     e.getByToken(genParticlesToken_, genParticles);
 
-    edm::Handle<edm::View<pat::PackedGenParticle> > dummyHandle;
+    edm::Handle<edm::View<reco::GenParticle> > dummyHandle;
 
     fillGenCandidates(genParticles, dummyHandle, false);
-    */
   }
 }
 
@@ -1048,21 +1096,26 @@ template <typename T, typename T2>
 void ggHiNtuplizer::fillGenCandidates(const edm::Handle<std::vector<T>>& handle,
                                       const edm::Handle<edm::View<T2>>& signalPartHandle,
                                       bool hasSignalPart) {
-  for (auto p = handle->begin(); p != handle->end(); ++p) {
+  for (size_t ig = 0; ig < handle->size(); ig++) {
+    const auto& p = edm::Ref<std::vector<T>>(handle, ig);
     // skip all primary particles if not particle gun MC
     //if (!isParticleGun_ && !p->mother())
     if (!isParticleGun_ && p->numberOfMothers() == 0)
+      continue;
+
+    // require last copy
+    if (!p->statusFlags().isLastCopy())
       continue;
 
     // stable particles with pT > 5 GeV
     bool isStableFast = (p->status() == 1 && p->pt() > 5.0);
 
     // stable leptons
-    bool isStableLepton = (p->status() == 1 && abs(p->pdgId()) >= 11 && abs(p->pdgId()) <= 16);
+    const auto pdgId = std::abs(p->pdgId());
+    bool isStableLepton = (p->status() == 1 && pdgId >= 11 && pdgId <= 16);
 
     // (unstable) Z, W, H, top, bottom
-    bool isHeavy =
-        (p->pdgId() == 23 || abs(p->pdgId()) == 24 || p->pdgId() == 25 || abs(p->pdgId()) == 6 || abs(p->pdgId()) == 5);
+    bool isHeavy = (pdgId == 23 || pdgId == 24 || pdgId == 25 || pdgId == 6 || pdgId == 5);
 
     // reduce size of output root file
     if (!isStableFast && !isStableLepton && !isHeavy)
@@ -1081,64 +1134,60 @@ void ggHiNtuplizer::fillGenCandidates(const edm::Handle<std::vector<T>>& handle,
     mcEt_.push_back(p->et());
     mcMass_.push_back(p->mass());
 
-    reco::GenParticleRef partRef;
-    if (doPackedGenParticle_) {
-      partRef = (dynamic_cast<const pat::PackedGenParticle&>(*p)).lastPrunedRef();  // ref to this particle
-    } else {
-      partRef = (dynamic_cast<const reco::GenParticle&>(*p)).motherRef();  // ref to mother of this particle
-    }
-
-    GenParticleParentage particleHistory(partRef);
-
-    if (doPackedGenParticle_) {
-      mcParentage_.push_back((particleHistory.hasLeptonParent() << 4) + (particleHistory.hasBosonParent() << 3) +
-                             (particleHistory.hasNonPromptParent() << 2) + (particleHistory.hasQCDParent() << 1) +
-                             (particleHistory.hasExoticParent() << 0));
-    } else {
-      mcParentage_.push_back(-999);
-    }
+    GenParticleParentage particleHistory(p);
+    const auto& partRef = particleHistory.match();
+    mcParentage_.push_back((particleHistory.hasLeptonParent() << 4) + (particleHistory.hasBosonParent() << 3) +
+                           (particleHistory.hasNonPromptParent() << 2) + (particleHistory.hasQCDParent() << 1) +
+                           (particleHistory.hasExoticParent() << 0));
 
     int momPID = -999;
+    int momKey = -1;
     float momPt = -999;
     float momEta = -999;
     float momPhi = -999;
     float momMass = -999;
     int gmomPID = -999;
+    int gmomKey = -1;
+    int ggmomPID = -999;
+    int ggmomKey = -1;
 
-    if (particleHistory.hasRealParent()) {
-      reco::GenParticleRef momRef;
-      if (doPackedGenParticle_) {
-        //momRef = particleHistory.parent();
-        momRef = p->motherRef();
-      } else {
-        momRef = partRef;
-      }
+    // mother
+    const auto& momRef = GenParticleParentage::findGenMother(partRef);
+    if (momRef.isNonnull() && momRef.isAvailable()) {
+      momPID = momRef->pdgId();
+      momKey = std::abs(momPID) < 1E5 ? (std::abs(momPID) + momRef.key()*1E5) : -1;
+      momPt = momRef->pt();
+      momEta = momRef->eta();
+      momPhi = momRef->phi();
+      momMass = momRef->mass();
 
-      // mother
-      if (momRef.isNonnull() && momRef.isAvailable()) {
-        momPID = momRef->pdgId();
-        momPt = momRef->pt();
-        momEta = momRef->eta();
-        momPhi = momRef->phi();
-        momMass = momRef->mass();
+      // grandmother
+      const auto& grandmother = GenParticleParentage::findGenMother(momRef);
+      if (grandmother.isNonnull() && grandmother.isAvailable()) {
+        gmomPID = grandmother->pdgId();
+        gmomKey = std::abs(gmomPID) < 1E5 ? (std::abs(gmomPID) + grandmother.key()*1E5) : -1;
 
-        // grandmother
-        GenParticleParentage motherParticle(momRef);
-        if (motherParticle.hasRealParent()) {
-          reco::GenParticleRef grandmother = motherParticle.parent();
-          gmomPID = grandmother->pdgId();
+        // grand-grandmother
+        const auto& ggmother = GenParticleParentage::findGenMother(grandmother);
+        if (ggmother.isNonnull() && ggmother.isAvailable()) {
+          ggmomPID = ggmother->pdgId();
+          ggmomKey = std::abs(ggmomPID) < 1E5 ? (std::abs(ggmomPID) + ggmother.key()*1E5) : -1;
         }
       }
     }
 
     mcMomPID_.push_back(momPID);
+    mcMomKey_.push_back(momKey);
     mcMomPt_.push_back(momPt);
     mcMomEta_.push_back(momEta);
     mcMomPhi_.push_back(momPhi);
     mcMomMass_.push_back(momMass);
     mcGMomPID_.push_back(gmomPID);
+    mcGMomKey_.push_back(gmomKey);
+    mcGGMomPID_.push_back(ggmomPID);
+    mcGGMomKey_.push_back(ggmomKey);
 
-    mcIndex_.push_back(p - handle->begin());
+    mcIndex_.push_back(partRef.key());
 
     bool isSigPart = false;
     if (doPackedGenParticle_) {
@@ -1162,7 +1211,7 @@ void ggHiNtuplizer::fillGenCandidates(const edm::Handle<std::vector<T>>& handle,
       mcSube_.push_back(tmpCollId);
     }
 
-    if (isSigPart) {
+    if (hasSignalPart && isSigPart) {
       mcCalIsoDR03_.push_back(getGenCalIso(signalPartHandle, p, 0.3 * 0.3, false, false));
       mcCalIsoDR04_.push_back(getGenCalIso(signalPartHandle, p, 0.4 * 0.4, false, false));
       mcTrkIsoDR03_.push_back(getGenTrkIso(signalPartHandle, p, 0.3 * 0.3));
@@ -1275,7 +1324,7 @@ void ggHiNtuplizer::fillSC(edm::Event const& e) {
 
 void ggHiNtuplizer::fillElectrons(const edm::Event& e, const edm::EventSetup& es, reco::Vertex& pv) {
   // Fills tree branches with electrons.
-  edm::Handle<edm::View<reco::GsfElectron>> gsfElectrons;
+  edm::Handle<edm::View<pat::Electron>> gsfElectrons;
   e.getByToken(electronsToken_, gsfElectrons);
 
   edm::Handle<reco::ConversionCollection> conversions;
@@ -1303,10 +1352,20 @@ void ggHiNtuplizer::fillElectrons(const edm::Event& e, const edm::EventSetup& es
     eleMissHits_.push_back(ele->gsfTrack()->numberOfLostHits());
 
     elePt_.push_back(ele->pt());
+    eleRawPt_.push_back(ele->hasUserFloat("rawPt") ? ele->userFloat("rawPt") : ele->pt());
     eleEta_.push_back(ele->eta());
     elePhi_.push_back(ele->phi());
     eleCharge_.push_back(ele->charge());
     eleEn_.push_back(ele->energy());
+
+    eleMVAIso_.push_back(ele->hasUserFloat("hiMVAIso") ? ele->userFloat("hiMVAIso") : -99);
+    for (auto& w : eleMVAIsoWP_)
+      w.second.push_back(ele->hasUserInt("hiMVAIso"+w.first) ? ele->userInt("hiMVAIso"+w.first) : -1);
+    eleMVAId_.push_back(ele->hasUserFloat("hiMVAId") ? ele->userFloat("hiMVAId") : -99);
+    for (auto& w : eleMVAIdWP_)
+      w.second.push_back(ele->hasUserInt("hiMVAId"+w.first) ? ele->userInt("hiMVAId"+w.first) : -1);
+    for (auto& w : eleCutIdWP_)
+      w.second.push_back(ele->hasUserInt("hiCutId"+w.first) ? ele->userInt("hiCutId"+w.first) : -1);
 
     eleSCEn_.push_back(ele->superCluster()->energy());
     eleESEn_.push_back(ele->superCluster()->preshowerEnergy());
@@ -1322,9 +1381,12 @@ void ggHiNtuplizer::fillElectrons(const edm::Event& e, const edm::EventSetup& es
 
     eleHoverE_.push_back(ele->hcalOverEcal());
     eleHoverEBc_.push_back(ele->hcalOverEcalBc());
+    eleRawHoverE_.push_back(ele->full5x5_hcalOverEcal());
+    eleRawHoverEBc_.push_back(ele->full5x5_hcalOverEcalBc());
     eleEoverP_.push_back(ele->eSuperClusterOverP());
     eleEoverPInv_.push_back(1. / ele->ecalEnergy() - 1. / ele->trackMomentumAtVtx().R());
     eleEcalE_.push_back(ele->ecalEnergy());
+    eleRawEcalE_.push_back(ele->hasUserFloat("rawEcalEnergy") ? ele->userFloat("rawEcalEnergy") : ele->ecalEnergy());
     elePAtVtx_.push_back(ele->trackMomentumAtVtx().R());
     elePAtSC_.push_back(ele->trackMomentumAtCalo().R());
     elePAtCluster_.push_back(ele->trackMomentumAtEleClus().R());
@@ -1437,6 +1499,22 @@ void ggHiNtuplizer::fillElectrons(const edm::Event& e, const edm::EventSetup& es
     eleSeedCryPhi_.push_back(phi);
     eleSeedCryIeta_.push_back(ieta);
     eleSeedCryIphi_.push_back(iphi);
+
+    /////////////////////////////// MC matching //////////////////////////
+    if (doGenParticles_) {
+      float minDeltaR2(0.0225);
+      int matchedIndex = -1;
+      for (size_t igen = 0; igen < mcEt_.size(); ++igen) {
+        if (mcStatus_[igen] != 1 || mcPID_[igen] != -11*ele->charge())
+          continue;
+        const auto deltaR2 = reco::deltaR2(ele->eta(), ele->phi(), mcEta_[igen], mcPhi_[igen]);
+        if (deltaR2 < minDeltaR2 && std::abs(mcPt_[igen] - ele->pt()) < 2*mcPt_[igen]) {
+          minDeltaR2 = deltaR2;
+          matchedIndex = igen;
+        }
+      }
+      ele_genMatchedIndex_.push_back(matchedIndex);
+    }
 
     ++nEle_;
   }  // electrons loop
@@ -1910,7 +1988,9 @@ void ggHiNtuplizer::fillMuons(const edm::Event& e, const edm::EventSetup& es, re
     muPhi_.push_back(mu.phi());
     muL1Eta_.push_back(mu.hasUserFloat("l1Eta") ? mu.userFloat("l1Eta") : -99);
     muL1Phi_.push_back(mu.hasUserFloat("l1Phi") ? mu.userFloat("l1Phi") : -99);
-    muIso_.push_back(mu.hasUserFloat("hiIso") ? mu.userFloat("hiIso") : -99);
+    muMVAIso_.push_back(mu.hasUserFloat("hiMVAIso") ? mu.userFloat("hiMVAIso") : -99);
+    for (auto& w : muMVAIsoWP_)
+      w.second.push_back(mu.hasUserInt("hiMVAIso"+w.first) ? mu.userInt("hiMVAIso"+w.first) : -1);
     muCharge_.push_back(mu.charge());
     muType_.push_back(mu.type());
     muIsGood_.push_back(muon::isGoodMuon(mu, muon::selectionTypeFromString("TMOneStationTight")));
@@ -1985,6 +2065,7 @@ void ggHiNtuplizer::fillMuons(const edm::Event& e, const edm::EventSetup& es, re
     muPFNeuIso_.push_back(mu.pfIsolationR04().sumNeutralHadronEt);
     muPFPUIso_.push_back(mu.pfIsolationR04().sumPUPt);
 
+    muSelectors_.push_back(mu.selectors());
     muIDSoft_.push_back(mu.passed(reco::Muon::SoftMvaId));
     muIDLoose_.push_back(mu.passed(reco::Muon::CutBasedIdLoose));
     muIDMedium_.push_back(mu.passed(reco::Muon::CutBasedIdMedium));
@@ -1993,6 +2074,22 @@ void ggHiNtuplizer::fillMuons(const edm::Event& e, const edm::EventSetup& es, re
     muIDGlobalHighPt_.push_back(mu.passed(reco::Muon::CutBasedIdGlobalHighPt));
     muIDTrkHighPt_.push_back(mu.passed(reco::Muon::CutBasedIdTrkHighPt));
     muIDInTime_.push_back(mu.passed(reco::Muon::InTimeMuon));
+
+    /////////////////////////////// MC matching //////////////////////////
+    if (doGenParticles_) {
+      float minDeltaR2(0.0225);
+      int matchedIndex = -1;
+      for (size_t igen = 0; igen < mcEt_.size(); ++igen) {
+        if (mcStatus_[igen] != 1 || mcPID_[igen] != -13*mu.charge())
+          continue;
+        const auto deltaR2 = reco::deltaR2(mu.eta(), mu.phi(), mcEta_[igen], mcPhi_[igen]);
+        if (deltaR2 < minDeltaR2 && std::abs(mcPt_[igen] - mu.pt()) < mcPt_[igen]) {
+          minDeltaR2 = deltaR2;
+          matchedIndex = igen;
+        }
+      }
+      mu_genMatchedIndex_.push_back(matchedIndex);
+    }
 
     nMu_++;
   }  // muons loop

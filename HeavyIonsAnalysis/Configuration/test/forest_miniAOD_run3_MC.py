@@ -48,6 +48,12 @@ process.GlobalTag.toGet.extend([
          )
 ])
 
+###############################################################################
+
+# Define centrality binning
+process.load("RecoHI.HiCentralityAlgos.CentralityBin_cfi")
+process.centralityBin.Centrality = cms.InputTag("hiCentrality")
+process.centralityBin.centralityVariable = cms.string("HFtowers")
 
 ###############################################################################
 
@@ -87,8 +93,15 @@ process.load('HeavyIonsAnalysis.EventAnalysis.l1object_cfi')
 ################################
 # electrons, photons, muons
 process.load('HeavyIonsAnalysis.EGMAnalysis.ggHiNtuplizer_cfi')
+process.load('HeavyIonsAnalysis.EGMAnalysis.hiElectrons_cfi')
+process.load('HeavyIonsAnalysis.EGMAnalysis.correctedPatElectronProducer_cfi')
+process.correctedElectrons = process.correctedPatElectronProducer.clone(src = "slimmedElectrons", centrality = "centralityBin:HFtowers")
+process.correctedElectrons.correctionFile = "HeavyIonsAnalysis/EGMAnalysis/data/SS2023PbPbMC.dat"
+#process.hiElectrons.electrons = "correctedElectrons"
 process.ggHiNtuplizer.doGenParticles = cms.bool(True)
 process.ggHiNtuplizer.doMuons = cms.bool(True)
+process.ggHiNtuplizer.electronSrc = "hiElectrons"
+process.egammaSequence = cms.Sequence(process.correctedElectrons * process.hiElectrons * process.ggHiNtuplizer)
 process.load("TrackingTools.TransientTrack.TransientTrackBuilder_cfi")
 ################################
 # jet reco sequence
@@ -98,10 +111,10 @@ process.load('HeavyIonsAnalysis.JetAnalysis.akCs4PFJetSequence_pponPbPb_mc_cff')
 process.load("HeavyIonsAnalysis.TrackAnalysis.TrackAnalyzers_cff")
 #muons
 process.load('HeavyIonsAnalysis.JetAnalysis.hiFJRhoAnalyzer_cff')
-process.load('HeavyIonsAnalysis.MuonAnalysis.hiIsoMuons_cfi')
+process.load('HeavyIonsAnalysis.MuonAnalysis.hiMuons_cfi')
 process.load("HeavyIonsAnalysis.MuonAnalysis.unpackedMuons_cfi")
-process.unpackedMuons.muons = "hiIsoMuons"
-process.muonSequence = cms.Sequence(process.rhoSequence * process.hiIsoMuons * process.unpackedMuons)
+process.unpackedMuons.muons = "hiMuons"
+process.muonSequence = cms.Sequence(process.rhoSequence * process.hiMuons * process.unpackedMuons)
 process.load("HeavyIonsAnalysis.MuonAnalysis.muonAnalyzer_cfi")
 process.muonAnalyzer.doGen = cms.bool(True)
 
@@ -123,6 +136,7 @@ process.zdcanalyzer.verbose = False
 # main forest sequence
 process.forest = cms.Path(
     process.HiForestInfo +
+    process.centralityBin +
     process.hltanalysis +
 #    process.hltobject +
 #    process.l1object +
@@ -131,12 +145,11 @@ process.forest = cms.Path(
     process.hiEvtAnalyzer +
     process.HiGenParticleAna +
     process.muonSequence +
-    process.ggHiNtuplizer +
+    process.egammaSequence +
 #    process.zdcdigi +
 #    process.QWzdcreco +
     #process.akCs4PFJetAnalyzer +
     process.zdcanalyzer #+
-#    process.unpackedMuons +
 #    process.muonAnalyzer
     )
 

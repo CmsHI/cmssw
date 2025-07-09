@@ -12,6 +12,7 @@
 #include "DataFormats/EgammaCandidates/interface/Photon.h"
 #include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
 #include "DataFormats/PatCandidates/interface/Photon.h"
+#include "DataFormats/PatCandidates/interface/Electron.h"
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
 #include "DataFormats/PatCandidates/interface/Muon.h"
 #include "DataFormats/PatCandidates/interface/PackedGenParticle.h"
@@ -101,7 +102,7 @@ private:
   bool doPackedGenParticle_;
   edm::EDGetTokenT<std::vector<reco::Vertex>> vertexToken_;
   edm::EDGetTokenT<double> rhoToken_;
-  edm::EDGetTokenT<edm::View<reco::GsfElectron>> electronsToken_;
+  edm::EDGetTokenT<edm::View<pat::Electron>> electronsToken_;
   edm::EDGetTokenT<edm::View<pat::Photon>> photonsToken_;
   edm::EDGetTokenT<edm::View<pat::Muon>> muonsToken_;
   edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;
@@ -151,18 +152,21 @@ private:
   std::vector<float> mcPhi_;
   std::vector<float> muL1Eta_;
   std::vector<float> muL1Phi_;
-  std::vector<float> muIso_;
   std::vector<float> mcE_;
   std::vector<float> mcEt_;
   std::vector<float> mcMass_;
 
   std::vector<int> mcParentage_;
   std::vector<int> mcMomPID_;
+  std::vector<int> mcMomKey_;
   std::vector<float> mcMomPt_;
   std::vector<float> mcMomEta_;
   std::vector<float> mcMomPhi_;
   std::vector<float> mcMomMass_;
   std::vector<int> mcGMomPID_;
+  std::vector<int> mcGMomKey_;
+  std::vector<int> mcGGMomPID_;
+  std::vector<int> mcGGMomKey_;
 
   std::vector<int> mcIndex_;
   std::vector<int> mcSube_;
@@ -201,6 +205,7 @@ private:
   std::vector<float> eleIP3DErr_;
 
   std::vector<float> elePt_;
+  std::vector<float> eleRawPt_;
   std::vector<float> eleEta_;
   std::vector<float> elePhi_;
   std::vector<int> eleCharge_;
@@ -220,9 +225,12 @@ private:
 
   std::vector<float> eleHoverE_;
   std::vector<float> eleHoverEBc_;
+  std::vector<float> eleRawHoverE_;
+  std::vector<float> eleRawHoverEBc_;
   std::vector<float> eleEoverP_;
   std::vector<float> eleEoverPInv_;
   std::vector<float> eleEcalE_;
+  std::vector<float> eleRawEcalE_;
   std::vector<float> elePAtVtx_;
   std::vector<float> elePAtSC_;
   std::vector<float> elePAtCluster_;
@@ -264,6 +272,13 @@ private:
   std::vector<float> eleSeedCryPhi_;
   std::vector<float> eleSeedCryIeta_;
   std::vector<float> eleSeedCryIphi_;
+
+  std::vector<float> eleMVAIso_, eleMVAId_;
+  std::map<std::string, std::vector<int>> eleMVAIsoWP_{{{"WP95",{}}, {"WP90",{}}, {"WP85",{}}, {"WP80",{}}}};
+  std::map<std::string, std::vector<int>> eleMVAIdWP_ {{{"WP95",{}}, {"WP90",{}}, {"WP85",{}}, {"WP80",{}}}};
+  std::map<std::string, std::vector<int>> eleCutIdWP_ {{{"WP95",{}}, {"WP90",{}}, {"WP80",{}}, {"WP70",{}}}};
+
+  std::vector<int> ele_genMatchedIndex_;
 
   // photons
   int nPho_;
@@ -544,6 +559,7 @@ private:
   std::vector<float> muPFNeuIso_;
   std::vector<float> muPFPUIso_;
 
+  std::vector<uint64_t> muSelectors_;
   std::vector<int> muIDSoft_;
   std::vector<int> muIDLoose_;
   std::vector<int> muIDMedium_;
@@ -552,6 +568,11 @@ private:
   std::vector<int> muIDGlobalHighPt_;
   std::vector<int> muIDTrkHighPt_;
   std::vector<int> muIDInTime_;
+
+  std::vector<float> muMVAIso_;
+  std::map<std::string, std::vector<int>> muMVAIsoWP_{{{"WP95",{}}, {"WP90",{}}, {"WP85",{}}, {"WP80",{}}}};
+
+  std::vector<int> mu_genMatchedIndex_;
 };
 
 #endif /* HEAVYIONSANALYSIS_EGMANALYSIS_GGHINTUPLIZER_H */

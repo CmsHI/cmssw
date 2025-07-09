@@ -85,6 +85,11 @@ void CorrectedElectronProducerT<T>::produce(edm::Event& iEvent, const edm::Event
   auto out = std::make_unique<std::vector<T>>();
   for (const auto& ele : *electrons) {
     out->push_back(ele);
+    auto pout = dynamic_cast<pat::Electron*>(&(out->back()));
+    if (pout) {
+      pout->addUserFloat("rawPt", ele.pt());
+      pout->addUserFloat("rawEcalEnergy", ele.ecalEnergy());
+    }
 
     if (semiDeterministic_)
       setRandomSeed(iEvent, ele, electrons->size(), out->size());
