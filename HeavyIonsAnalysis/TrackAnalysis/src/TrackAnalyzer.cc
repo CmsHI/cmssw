@@ -3,6 +3,8 @@
 TrackAnalyzer::TrackAnalyzer(const edm::ParameterSet& iConfig) :
   doTrack_(iConfig.getUntrackedParameter<bool>("doTrack", true)),
   trackPtMin_(iConfig.getUntrackedParameter<double>("trackPtMin", 0.01)),
+  trackEtaMax_(iConfig.getUntrackedParameter<double>("trackEtaMax", 4.0)),
+  applyTrackSelections_(iConfig.getUntrackedParameter<bool>("applyTrackSelections", false)),
   vertexSrc_(consumes<reco::VertexCollection>(iConfig.getParameter<edm::InputTag>("vertexSrc"))),
   trackSrc_(consumes<reco::TrackCollection>(iConfig.getParameter<edm::InputTag>("trackSrc"))),
   track2pcSrc_(consumes<std::vector<edm::Ptr<pat::PackedCandidate> > >(iConfig.getParameter<edm::InputTag>("trackSrc"))),
@@ -86,6 +88,16 @@ void TrackAnalyzer::fillTracks(const edm::Event& iEvent, const edm::EventSetup& 
 
     if (t.pt() < trackPtMin_)
       continue;
+
+    if (fabs(t.eta()) > trackEtaMax_)
+	    continue;
+
+    if (applyTrackSelections_){
+      if (t.quality(reco::TrackBase::qualityByName("highPurity")) == false) // only high-purity tracks
+	      continue;
+      if (t.ptError() / t.pt() > 0.1) // only tracks with pT resolution better than 10%
+	      continue;
+    }
 
     trkPt.push_back(t.pt());
     trkPtError.push_back(t.ptError());
