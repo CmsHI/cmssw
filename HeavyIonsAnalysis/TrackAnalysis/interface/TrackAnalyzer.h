@@ -37,6 +37,8 @@ private:
   // ----------member data ---------------------------
   const bool doTrack_;
   const double trackPtMin_;
+  const double trackEtaMax_;
+  const bool applyTrackSelections_;
 
   const edm::EDGetTokenT<reco::VertexCollection> vertexSrc_;
   const edm::EDGetTokenT<reco::TrackCollection> trackSrc_;

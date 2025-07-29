@@ -99,6 +99,7 @@ process.load('HeavyIonsAnalysis.JetAnalysis.ak4PFJetSequence_ppref_data_cff')
 # tracks
 process.load("HeavyIonsAnalysis.TrackAnalysis.TrackAnalyzers_cff")
 process.ppTracks.dedxEstimators = cms.VInputTag(["dedxEstimator:dedxAllLikelihood", "dedxEstimator:dedxHarmonic2"])
+process.ppTracks.trackEtaMax = cms.untracked.double(3.0)
 # muons (FTW)
 process.load("HeavyIonsAnalysis.MuonAnalysis.unpackedMuons_cfi")
 process.unpackedMuons.muonSelectors = cms.vstring()

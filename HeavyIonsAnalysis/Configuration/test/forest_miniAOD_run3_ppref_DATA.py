@@ -106,7 +106,8 @@ process.load('HeavyIonsAnalysis.EventAnalysis.particleFlowAnalyser_cfi')
 # Track Analyzer
 #########################
 process.load('HeavyIonsAnalysis.TrackAnalysis.TrackAnalyzers_cff')
-
+process.ppTracks.trackEtaMax = cms.untracked.double(3.0)
+process.ppTracks.trackPtMin = cms.untracked.double(0.3)
 #####################################################################################
 
 #####################
