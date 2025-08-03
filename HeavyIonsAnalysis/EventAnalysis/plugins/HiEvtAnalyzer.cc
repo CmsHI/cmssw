@@ -267,11 +267,10 @@ void HiEvtAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
       edm::Handle<LHEEventProduct> evet;
       iEvent.getByToken(generatorlheToken_, evet);
       if (evet.isValid() && genInfo.isValid()) {
-        double asdd = evet->originalXWGTUP();
-        for (unsigned int i = 0; i < evet->weights().size(); i++) {
-          double asdde = evet->weights()[i].wgt;
-          ttbar_w.push_back(genInfo->weight() * asdde / asdd);
-        }
+        const auto& asdd = evet->originalXWGTUP();
+        const auto& norm = (asdd!=0. ? genInfo->weight()/asdd : 1.);
+        for (const auto& asdde : evet->weights())
+          ttbar_w.emplace_back(norm * asdde.wgt);
       }
     }
 

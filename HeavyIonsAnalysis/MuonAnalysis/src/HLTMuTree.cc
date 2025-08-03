@@ -337,19 +337,14 @@ void HLTMuTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
       edm::RefToBase<reco::Muon> muCand(muons, i);
       if (muCand.isNull())
         continue;
-      if (fabs(muCand->combinedMuon()->eta()) > 2.4)
-	continue;
       if (muCand->globalTrack().isNonnull() && muCand->innerTrack().isNonnull()) {
-        if (muCand->isGlobalMuon() && muCand->isTrackerMuon()) {
-
+        if (muCand->isGlobalMuon() && muCand->isTrackerMuon() && fabs(muCand->combinedMuon()->eta()) < 2.4) {
           for (unsigned int j = i + 1; j < muons->size(); j++) {
             edm::RefToBase<reco::Muon> muCand2(muons, j);
             if (muCand2.isNull())
               continue;
-	    if (fabs(muCand2->combinedMuon()->eta()) > 2.4)
-	      continue;
             if (muCand2->globalTrack().isNonnull() && muCand2->innerTrack().isNonnull()) {
-              if (muCand2->isGlobalMuon() && muCand2->isTrackerMuon()) {
+              if (muCand2->isGlobalMuon() && muCand2->isTrackerMuon() && fabs(muCand2->combinedMuon()->eta()) < 2.4) {
                 vector<TransientTrack> t_tks;
                 t_tks.push_back(theTTBuilder->build(
                     *muCand->track()));  // pass the reco::Track, not  the reco::TrackRef (which can be transient)

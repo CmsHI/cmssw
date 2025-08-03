@@ -71,6 +71,9 @@ MuonAnalyzer::MuonAnalyzer(const edm::ParameterSet& ps) {
   tree_->Branch("recoPFPhoIso", &recoPFPhoIso_);
   tree_->Branch("recoPFNeuIso", &recoPFNeuIso_);
   tree_->Branch("recoPFPUIso", &recoPFPUIso_);
+  tree_->Branch("recoMVAIso", &recoMVAIso_);
+  for (auto& w : recoMVAIsoWP_)
+    tree_->Branch(("recoMVAIso"+w.first).c_str(), &(w.second));
   tree_->Branch("recoIDHybridSoft", &recoIDHybridSoft_);
   tree_->Branch("recoIDSoft", &recoIDSoft_);
   tree_->Branch("recoIDLoose", &recoIDLoose_);
@@ -164,6 +167,9 @@ void MuonAnalyzer::analyze(const edm::Event& e, const edm::EventSetup& es) {
   recoPFPhoIso_.clear();
   recoPFNeuIso_.clear();
   recoPFPUIso_.clear();
+  recoMVAIso_.clear();
+  for (auto& w : recoMVAIsoWP_)
+    w.second.clear();
   recoIDHybridSoft_.clear();
   recoIDSoft_.clear();
   recoIDLoose_.clear();
@@ -421,6 +427,10 @@ void MuonAnalyzer::analyze(const edm::Event& e, const edm::EventSetup& es) {
       recoPFPhoIso_.push_back(mu.pfIsolationR04().sumPhotonEt);
       recoPFNeuIso_.push_back(mu.pfIsolationR04().sumNeutralHadronEt);
       recoPFPUIso_.push_back(mu.pfIsolationR04().sumPUPt);
+
+      recoMVAIso_.push_back(mu.hasUserFloat("hiMVAIso") ? mu.userFloat("hiMVAIso") : -99);
+      for (auto& w : recoMVAIsoWP_)
+        w.second.push_back(mu.hasUserInt("hiMVAIso"+w.first) && mu.userInt("hiMVAIso"+w.first)>0);
 
       recoIDHybridSoft_.push_back(mu.isGlobalMuon() && mu.isTrackerMuon() && mu.innerTrack()->hitPattern().trackerLayersWithMeasurement() > 5 && mu.innerTrack()->hitPattern().pixelLayersWithMeasurement() > 0 && fabs(mu.innerTrack()->dxy(pv.position()) < 0.3) && fabs(mu.innerTrack()->dz(pv.position()) < 20.));
 
