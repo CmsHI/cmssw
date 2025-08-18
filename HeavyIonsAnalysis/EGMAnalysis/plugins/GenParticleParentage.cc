@@ -1,6 +1,6 @@
 #include "HeavyIonsAnalysis/EGMAnalysis/plugins/GenParticleParentage.h"
 
-GenParticleParentage::GenParticleParentage(reco::GenParticleRef& _match) {
+GenParticleParentage::GenParticleParentage(const reco::GenParticleRef& m) : _match(m) {
   if (_match.isNonnull() && _match.isAvailable()) {
     getParentageRecursive(_match, 0);
     resolveParentage();
@@ -152,4 +152,16 @@ bool GenParticleParentage::hasAsParent(const reco::GenParticleRef& d, const reco
     }
   }
   return result;
+}
+
+reco::GenParticleRef GenParticleParentage::findGenMother(const reco::GenParticleRef& par, const int& pId) {
+  if (par.isNull() || (pId==0 && par->numberOfMothers() == 0))
+    return reco::GenParticleRef();
+  auto mom = pId==0 ? par->motherRef(0) : par;
+  const auto& pdgId = pId==0 ? par->pdgId() : pId;
+  while (mom->numberOfMothers() > 0 && mom->pdgId() == pdgId)
+    mom = mom->motherRef(0);
+  if (mom->pdgId() == pdgId)
+    return reco::GenParticleRef();
+  return mom;
 }
