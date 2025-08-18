@@ -6,6 +6,7 @@ ggHiNtuplizer = cms.EDAnalyzer("ggHiNtuplizer",
     doElectrons = cms.bool(True),
     doPhotons = cms.bool(True),
     doMuons = cms.bool(True),
+    muonPtMin = cms.double(3.0),
 
     isParticleGun = cms.bool(False),
 
