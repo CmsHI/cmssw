@@ -160,7 +160,7 @@ HiEvtAnalyzer::HiEvtAnalyzer(const edm::ParameterSet& iConfig)
       HiMCTag_(consumes<edm::GenHIEvent>(iConfig.getParameter<edm::InputTag>("HiMC"))),
       VertexTag_(consumes<std::vector<reco::Vertex>>(iConfig.getParameter<edm::InputTag>("Vertex"))),
       HFfilters_(consumes<reco::HFFilterInfo>(iConfig.getParameter<edm::InputTag>("HFfilters"))),
-      puInfoToken_(consumes<std::vector<PileupSummaryInfo>>(edm::InputTag("addPileupInfo"))),
+      puInfoToken_(consumes<std::vector<PileupSummaryInfo>>(iConfig.getParameter<edm::InputTag>("addPileupInfo"))),
       genInfoToken_(consumes<GenEventInfoProduct>(edm::InputTag("generator"))),
       generatorlheToken_(consumes<LHEEventProduct>(edm::InputTag("externalLHEProducer", ""))),
       doEvtPlane_(iConfig.getParameter<bool>("doEvtPlane")),
