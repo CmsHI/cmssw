@@ -43,7 +43,7 @@
 #include "CalibFormats/HcalObjects/interface/HcalDbRecord.h"
 #include "CalibFormats/HcalObjects/interface/HcalDbService.h"
 
-#include "ZDCstruct.h"
+#include "FSCstruct.h"
 #include "ZDCHardCodeHelper.h"
 
 //
@@ -72,11 +72,12 @@ private:
   // ----------member data ---------------------------
   const edm::EDGetTokenT<QIE10DigiCollection> ZDCDigiToken_;
   edm::ESGetToken<HcalDbService, HcalDbRecord> hcalDatabaseToken_;
+  bool do50nsRecoFSC_;
   bool doHardcodedFSC_;
   edm::Service<TFileService> fs;
   TTree* t1;
 
-  MyZDCDigi zdcDigi;
+  MyFSCDigi fscDigi;
 
 #ifdef THIS_IS_AN_EVENTSETUP_EXAMPLE
   edm::ESGetToken<SetupData, SetupRecord> setupToken_;
@@ -86,7 +87,30 @@ private:
 //
 // constants, enums and typedefs
 //
+// This information is temrorarly stored here, once the sequence is validated it will be ported to the database
+// These numbers extracted on November 13, 2025. Any time timing calibration is applied, the F3, F4, F5 need to be updated
+namespace {
+  // 2 sides (−, +) × NFSC channels
+  constexpr float Pedestal[2][NFSC] = {
+    {1256.1f, 1287.21f, 1129.36f, 1216.32f, 1285.49f, 1169.89f}, // side minus
+    {1256.1f, 1287.21f, 1129.36f, 1216.32f, 1285.49f, 1169.89f}  // side plus
+  };
 
+  constexpr float f3[2][NFSC] = {
+    {0.530911f, 0.41923f, 0.568465f, 0.564356f, 0.663121f, 0.437691f},
+    {0.404952f, 0.367785f, 0.289732f, 0.28137f,  0.295755f, 0.288639f}
+  };
+
+  constexpr float f4[2][NFSC] = {
+    {0.203833f, 0.173217f, 0.172461f, 0.178248f, 0.204802f, 0.143328f},
+    {0.146871f, 0.136037f, 0.102299f, 0.102644f, 0.102658f, 0.105907f}
+  };
+
+  constexpr float f5[2][NFSC] = {
+    {0.125581f, 0.106735f, 0.0923971f, 0.0920702f, 0.116749f, 0.0762132f},
+    {0.0850411f, 0.0786189f, 0.0595604f, 0.0607462f, 0.058937f, 0.0614747f}
+  };
+}  // namespace
 //
 // static data member definitions
 //
@@ -97,6 +121,7 @@ private:
 FSCAnalyzerHC::FSCAnalyzerHC(const edm::ParameterSet& iConfig)
     : ZDCDigiToken_(consumes<QIE10DigiCollection>(iConfig.getParameter<edm::InputTag>("ZDCDigiSource"))),
       hcalDatabaseToken_(esConsumes<HcalDbService, HcalDbRecord>()),
+      do50nsRecoFSC_(iConfig.getParameter<bool>("do50nsRecoFSC")),
       doHardcodedFSC_(iConfig.getParameter<bool>("doHardcodedFSC")) {
 #ifdef THIS_IS_AN_EVENTSETUP_EXAMPLE
   setupDataToken_ = esConsumes<SetupData, SetupRecord>();
@@ -126,16 +151,28 @@ void FSCAnalyzerHC::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 
   edm::ESHandle<HcalDbService> conditions = iSetup.getHandle(hcalDatabaseToken_);
 
-  zdcDigi.n = 0;
+  fscDigi.sumPlus = 0;
+  fscDigi.sumMinus = 0;
+  fscDigi.sumPlus_FSC2only = 0;
+  fscDigi.sumPlus_FSC3only = 0;
+  fscDigi.sumMinus_FSC2only = 0;
+  fscDigi.sumMinus_FSC3only = 0;
+  
+  fscDigi.n = 0;
   for (unsigned int i = 0; i < NMOD; i++) {
-    zdcDigi.zside[i] = -99;
-    zdcDigi.section[i] = -99;
-    zdcDigi.channel[i] = -99;
+    fscDigi.zside[i] = -99;
+    fscDigi.section[i] = -99;
+    fscDigi.channel[i] = -99;
     for (int ts = 0; ts < NTS; ts++) {
-      zdcDigi.chargefC[ts][i] = -99;
-      zdcDigi.adc[ts][i] = -99;
-      zdcDigi.tdc[ts][i] = -99;
+      fscDigi.chargefC[ts][i] = -99;
+      fscDigi.adc[ts][i] = -99;
+      fscDigi.tdc[ts][i] = -99;
     }
+    fscDigi.charge[i] = -99;
+    fscDigi.charge_bare[i] = -99;
+    fscDigi.Fitted_QTS0[i] = -99;
+    fscDigi.Fitted_QTS2[i] = -99;
+    fscDigi.saturation[i] = -99;
   }
 
   int nhits = 0;
@@ -149,7 +186,7 @@ void FSCAnalyzerHC::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 
     if (nhits >= NMOD)
       break;
-    if (!(section == 1 && channel > 5))
+    if (!(section == 1 && channel > 6))
       continue;  // Only consider FSC channel located in dummy ECAL
 
     CaloSamples caldigi;
@@ -164,24 +201,141 @@ void FSCAnalyzerHC::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
       coder.adc2fC(digi, caldigi);
     }
 
-    zdcDigi.zside[nhits] = zside;
-    zdcDigi.section[nhits] = section;
-    zdcDigi.channel[nhits] = channel;
+    fscDigi.zside[nhits] = zside;
+    fscDigi.section[nhits] = section;
+    fscDigi.channel[nhits] = channel;
 
     for (int ts = 0; ts < digi.samples(); ts++) {
-      zdcDigi.adc[ts][nhits] = digi[ts].adc();
-      zdcDigi.tdc[ts][nhits] = digi[ts].le_tdc();
+      fscDigi.adc[ts][nhits] = digi[ts].adc();
+      fscDigi.tdc[ts][nhits] = digi[ts].le_tdc();
       if (doHardcodedFSC_) {
-        zdcDigi.chargefC[ts][nhits] = HardCodeZDC.charge(digi[ts].adc(), digi[ts].capid());
+        fscDigi.chargefC[ts][nhits] = HardCodeZDC.charge(digi[ts].adc(), digi[ts].capid());
       } else {
-        zdcDigi.chargefC[ts][nhits] = caldigi[ts];
+        fscDigi.chargefC[ts][nhits] = caldigi[ts];
       }
     }
+	
+	// CHARGE RECONSTRUCTION
+	int side = (zside<0) ? 0 : 1;
+	int ch = channel - 7;
+	float ped = Pedestal[side][ch];
+	float f3v=f3[side][ch];
+	float f4v=f4[side][ch];
+	float f5v=f5[side][ch];
+	int saturation = 0;
 
+	float Q0 = fscDigi.chargefC[0][nhits] - ped, Q1 = fscDigi.chargefC[1][nhits] - ped;
+	float Q2 = fscDigi.chargefC[2][nhits] - ped, Q3 = fscDigi.chargefC[3][nhits] - ped;
+	float charge = 0;
+	
+	// Reconstruct the charge in Q2
+	if (do50nsRecoFSC_){ // apply correction from the first time slice
+
+        auto chi2 = [&](double A, double B) {
+            double r0 = B + A * f4v - Q0;
+            double r1 = B * f3v + A * Q1;
+            return r0 * r0 + r1 * r1;
+        };
+
+        double bestB    = 0.0;
+        double bestChi2 = std::numeric_limits<double>::infinity();
+
+        // --- 0) Unconstrained interior solution ---
+        double denom = f3v * f4v - f5v;
+        if (std::fabs(denom) > 1e-12) {
+            double A_star = (Q0 * f3v - Q1) / denom;
+            double B_star = (Q1 * f4v - Q0 * f5v) / denom;
+            if (A_star >= 0.0 && B_star >= 0.0) {
+                double c = chi2(A_star, B_star);
+                bestChi2 = c;
+                bestB    = B_star;
+            }
+        }		
+
+        // --- 1) Boundary case A = 0 ---
+        {
+            double denomA = 1.0 + f3v * f3v;
+            if (denomA > 1e-12) {
+                double B_A = (Q0 + f3v * Q1) / denomA;
+                if (B_A >= 0.0) {
+                    double c = chi2(0.0, B_A);
+                    if (c < bestChi2) {
+                        bestChi2 = c;
+                        bestB    = B_A;
+                    }
+                }
+            }
+        }
+        // --- 2) Boundary case B = 0 ---
+        {
+            double denomB = f4v * f4v + f5v * f5v;
+            if (denomB > 1e-12) {
+                double A_B = (Q0 * f4v + Q1 * f5v) / denomB;
+                if (A_B >= 0.0) {
+                    double c = chi2(A_B, 0.0);
+                    if (c < bestChi2) {
+                        bestChi2 = c;
+                        bestB    = 0.0;
+                    }
+                }
+            }
+        }
+        // --- 3) Corner A = 0, B = 0 ---
+        {
+            double c = chi2(0.0, 0.0);
+            if (c < bestChi2) {
+                bestChi2 = c;
+                bestB    = 0.0;
+            }
+        }	
+
+        // Best-fit previous-bunch charge
+        Q0 = static_cast<float>(bestB);	
+	}
+	else{ Q0 = 0; }
+	
+	// saturated signals goes here
+	if(fscDigi.adc[2][nhits]==255) { // TS2 saturated
+		if(fscDigi.adc[3][nhits]==255) { // TS3 saturated
+			Q2 = Q3 / f3v + ped;
+			saturation = 2;
+		}
+		else{
+			Q2 = (Q3 - Q0 * f5v) / f3v + ped;
+			saturation = 1;
+		}
+	}
+	else{
+		Q2 = (Q2 + f3v * Q3) / (1.0f + f3v*f3v);
+	}
+	if(fscDigi.adc[0][nhits]==255) saturation +=10; // TS0 saturated
+	
+	// new calibrated charge
+	charge = Q2 * (1.0f + f3v*f3v + f4v*f4v + f5v*f5v);
+	
+	fscDigi.Fitted_QTS0[nhits] = Q0 + ped;
+	fscDigi.Fitted_QTS2[nhits] = Q2 + ped;
+	fscDigi.saturation[nhits] = saturation;
+	fscDigi.charge[nhits] = charge;	
+	fscDigi.charge_bare[nhits] = (fscDigi.chargefC[2][nhits] - ped) * (1.0f + f3v*f3v + f4v*f4v + f5v*f5v);
+	
     nhits++;
+	
+	// add sums:
+	if(zside < 0){
+		fscDigi.sumMinus += charge;
+		if(section < 9) fscDigi.sumMinus_FSC2only += charge;
+		else fscDigi.sumMinus_FSC3only += charge;
+	}
+	else{
+		fscDigi.sumPlus += charge;
+		if(section < 9) fscDigi.sumPlus_FSC2only += charge;
+		else fscDigi.sumPlus_FSC3only += charge;
+	}
+	
   }  // end loop zdc digis
 
-  zdcDigi.n = nhits;
+  fscDigi.n = nhits;
 
   t1->Fill();
 
@@ -197,10 +351,10 @@ void FSCAnalyzerHC::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 void FSCAnalyzerHC::beginJob() {
   t1 = fs->make<TTree>("fscdigi", "fscdigi");
 
-  t1->Branch("n", &zdcDigi.n, "n/I");
-  t1->Branch("zside", zdcDigi.zside, "zside[n]/I");
-  t1->Branch("section", zdcDigi.section, "section[n]/I");
-  t1->Branch("channel", zdcDigi.channel, "channel[n]/I");
+  t1->Branch("n", &fscDigi.n, "n/I");
+  t1->Branch("zside", fscDigi.zside, "zside[n]/I");
+  t1->Branch("section", fscDigi.section, "section[n]/I");
+  t1->Branch("channel", fscDigi.channel, "channel[n]/I");
 
   for (int i = 0; i < NTS; i++) {
     TString adcTsSt("adcTs"), chargefCTsSt("chargefCTs"), tdcTsSt("tdcTs");
@@ -208,10 +362,22 @@ void FSCAnalyzerHC::beginJob() {
     chargefCTsSt += i;
     tdcTsSt += i;
 
-    t1->Branch(adcTsSt, zdcDigi.adc[i], adcTsSt + "[n]/I");
-    t1->Branch(chargefCTsSt, zdcDigi.chargefC[i], chargefCTsSt + "[n]/F");
-    t1->Branch(tdcTsSt, zdcDigi.tdc[i], tdcTsSt + "[n]/I");
+    t1->Branch(adcTsSt, fscDigi.adc[i], adcTsSt + "[n]/I");
+    t1->Branch(chargefCTsSt, fscDigi.chargefC[i], chargefCTsSt + "[n]/F");
+    t1->Branch(tdcTsSt, fscDigi.tdc[i], tdcTsSt + "[n]/I");
   }
+
+  t1->Branch("Fitted_QTS0", fscDigi.Fitted_QTS0, "Fitted_QTS0[n]/F");
+  t1->Branch("Fitted_QTS2", fscDigi.Fitted_QTS2, "Fitted_QTS2[n]/F");
+  t1->Branch("saturation", fscDigi.saturation, "saturation[n]/I");
+  t1->Branch("charge", fscDigi.charge, "charge[n]/F");
+  t1->Branch("charge_bare", fscDigi.charge_bare, "charge_bare[n]/F");
+  t1->Branch("sumMinus", &fscDigi.sumMinus);
+  t1->Branch("sumMinus_FSC2only", &fscDigi.sumMinus_FSC2only);
+  t1->Branch("sumMinus_FSC3only", &fscDigi.sumMinus_FSC3only);
+  t1->Branch("sumPlus", &fscDigi.sumPlus);
+  t1->Branch("sumPlus_FSC2only", &fscDigi.sumPlus_FSC2only);
+  t1->Branch("sumPlus_FSC3only", &fscDigi.sumPlus_FSC3only);
 }
 
 // ------------ method called once each job just after ending the event loop  ------------
