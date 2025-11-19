@@ -318,13 +318,13 @@ void HiEvtAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
     hiZDC = centrality->zdcSum();
     hiZDCplus = centrality->zdcSumPlus();
     hiZDCminus = centrality->zdcSumMinus();
-  }
   
-  hiEEplus = centrality->EtEESumPlus();
-  hiEEminus = centrality->EtEESumMinus();
-  hiEE = centrality->EtEESum();
-  hiEB = centrality->EtEBSum();
-  hiET = centrality->EtMidRapiditySum();
+    hiEEplus = centrality->EtEESumPlus();
+    hiEEminus = centrality->EtEESumMinus();
+    hiEE = centrality->EtEESum();
+    hiEB = centrality->EtEBSum();
+    hiET = centrality->EtMidRapiditySum();
+  }
   
   edm::Handle<pat::PackedCandidateCollection> pfCandidates;
   iEvent.getByToken(pfCandidateTag_, pfCandidates);
