@@ -29,6 +29,7 @@
 #include "DataFormats/HeavyIonEvent/interface/HFFilterInfo.h"  //this line is needed to access the HF Filters
 #include "DataFormats/PatCandidates/interface/PackedCandidate.h"
 #include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
+#include "DataFormats/HeavyIonEvent/interface/ClusterCompatibility.h"
 
 #include <HepMC/PdfInfo.h>
 
@@ -64,6 +65,7 @@ private:
   edm::EDGetTokenT<std::vector<reco::Vertex>> VertexTag_;
 
   edm::EDGetTokenT<reco::HFFilterInfo> HFfilters_;
+  edm::EDGetTokenT<reco::ClusterCompatibility> clusCompToken_;
 
   edm::EDGetTokenT<std::vector<PileupSummaryInfo>> puInfoToken_;
   edm::EDGetTokenT<GenEventInfoProduct> genInfoToken_;
@@ -135,6 +137,10 @@ private:
 
   int numMinHFTower2, numMinHFTower3, numMinHFTower4, numMinHFTower5;
 
+  int clusComp_nPixHits;
+  std::vector<int> clusComp_nHit;
+  std::vector<float> clusComp_z0, clusComp_chi;
+
   float vx, vy, vz;
 
   unsigned long long event;
@@ -172,6 +178,7 @@ HiEvtAnalyzer::HiEvtAnalyzer(const edm::ParameterSet& iConfig)
       HiMCTag_(consumes<edm::GenHIEvent>(iConfig.getParameter<edm::InputTag>("HiMC"))),
       VertexTag_(consumes<std::vector<reco::Vertex>>(iConfig.getParameter<edm::InputTag>("Vertex"))),
       HFfilters_(consumes<reco::HFFilterInfo>(iConfig.getParameter<edm::InputTag>("HFfilters"))),
+      clusCompToken_(consumes<reco::ClusterCompatibility>(iConfig.getParameter<edm::InputTag>("ClusterCompSrc"))),
       puInfoToken_(consumes<std::vector<PileupSummaryInfo>>(edm::InputTag("addPileupInfo"))),
       genInfoToken_(consumes<GenEventInfoProduct>(edm::InputTag("generator"))),
       generatorlheToken_(consumes<LHEEventProduct>(edm::InputTag("externalLHEProducer", ""))),
@@ -419,6 +426,21 @@ void HiEvtAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
     numMinHFTower5 = 0;
   }
 
+  // cluster compatibility information
+  clusComp_nPixHits = -1;
+  clusComp_z0.clear();
+  clusComp_nHit.clear();
+  clusComp_chi.clear();
+  const auto& clusComp = iEvent.getHandle(clusCompToken_);
+  if (clusComp.isValid()) {
+    clusComp_nPixHits = clusComp->nValidPixelHits();
+    for (int i=0; i<clusComp->size(); i++) {
+      clusComp_z0.emplace_back(clusComp->z0(i));
+      clusComp_nHit.emplace_back(clusComp->nHit(i));
+      clusComp_chi.emplace_back(clusComp->chi(i));
+    }
+  }
+
   thi_->Fill();
 }
 
@@ -575,6 +597,12 @@ void HiEvtAnalyzer::beginJob() {
   thi_->Branch("numMinHFTower3", &numMinHFTower3, "numMinHFTower3/I");
   thi_->Branch("numMinHFTower4", &numMinHFTower4, "numMinHFTower4/I");
   thi_->Branch("numMinHFTower5", &numMinHFTower5, "numMinHFTower5/I");
+
+  // cluster compatibility information
+  thi_->Branch("clusComp_nPixHits", &clusComp_nPixHits, "clusComp_nPixHits/I");
+  thi_->Branch("clusComp_z0", &clusComp_z0);
+  thi_->Branch("clusComp_nHit", &clusComp_nHit);
+  thi_->Branch("clusComp_chi", &clusComp_chi);
 }
 
 // ------------ method called once each job just after ending the event loop  ------------
