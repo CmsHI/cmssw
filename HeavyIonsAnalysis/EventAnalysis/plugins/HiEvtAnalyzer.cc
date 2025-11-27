@@ -30,6 +30,7 @@
 #include "DataFormats/PatCandidates/interface/PackedCandidate.h"
 #include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
 #include "DataFormats/HeavyIonEvent/interface/ClusterCompatibility.h"
+#include "DataFormats/METReco/interface/BeamHaloSummary.h"
 
 #include <HepMC/PdfInfo.h>
 
@@ -66,6 +67,7 @@ private:
 
   edm::EDGetTokenT<reco::HFFilterInfo> HFfilters_;
   edm::EDGetTokenT<reco::ClusterCompatibility> clusCompToken_;
+  edm::EDGetTokenT<reco::BeamHaloSummary> beamHaloSummaryToken_;
 
   edm::EDGetTokenT<std::vector<PileupSummaryInfo>> puInfoToken_;
   edm::EDGetTokenT<GenEventInfoProduct> genInfoToken_;
@@ -140,6 +142,7 @@ private:
   int clusComp_nPixHits;
   std::vector<int> clusComp_nHit;
   std::vector<float> clusComp_z0, clusComp_chi;
+  int beamHaloId;
 
   float vx, vy, vz;
 
@@ -179,6 +182,7 @@ HiEvtAnalyzer::HiEvtAnalyzer(const edm::ParameterSet& iConfig)
       VertexTag_(consumes<std::vector<reco::Vertex>>(iConfig.getParameter<edm::InputTag>("Vertex"))),
       HFfilters_(consumes<reco::HFFilterInfo>(iConfig.getParameter<edm::InputTag>("HFfilters"))),
       clusCompToken_(consumes<reco::ClusterCompatibility>(iConfig.getParameter<edm::InputTag>("ClusterCompSrc"))),
+      beamHaloSummaryToken_(consumes<reco::BeamHaloSummary>(iConfig.getParameter<edm::InputTag>("BeamHaloSummary"))),
       puInfoToken_(consumes<std::vector<PileupSummaryInfo>>(edm::InputTag("addPileupInfo"))),
       genInfoToken_(consumes<GenEventInfoProduct>(edm::InputTag("generator"))),
       generatorlheToken_(consumes<LHEEventProduct>(edm::InputTag("externalLHEProducer", ""))),
@@ -441,6 +445,15 @@ void HiEvtAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
     }
   }
 
+  // beam halo information
+  const auto& beamHalo = iEvent.getHandle(beamHaloSummaryToken_);
+  if (beamHalo.isValid()) {
+    beamHaloId = 0;
+    std::vector<bool> flags({beamHalo->CSCLooseHaloId(), beamHalo->CSCTightHaloId(), beamHalo->EcalLooseHaloId(), beamHalo->EcalTightHaloId(), beamHalo->HcalLooseHaloId(), beamHalo->HcalTightHaloId(), beamHalo->GlobalLooseHaloId(), beamHalo->GlobalTightHaloId(), beamHalo->LooseId(), beamHalo->TightId()});
+    for (size_t i=0; i<flags.size(); i++)
+      beamHaloId += flags[i] ? std::pow(2,i) : 0;
+  }
+
   thi_->Fill();
 }
 
@@ -603,6 +616,9 @@ void HiEvtAnalyzer::beginJob() {
   thi_->Branch("clusComp_z0", &clusComp_z0);
   thi_->Branch("clusComp_nHit", &clusComp_nHit);
   thi_->Branch("clusComp_chi", &clusComp_chi);
+
+  // beam halo information
+  thi_->Branch("beamHaloId", &beamHaloId, "beamHaloId/I");
 }
 
 // ------------ method called once each job just after ending the event loop  ------------
