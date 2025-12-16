@@ -3,14 +3,14 @@
 # Type: data
 
 import FWCore.ParameterSet.Config as cms
-from Configuration.Eras.Era_Run3_2025_OXY_cff import Run3_2025_OXY
-process = cms.Process('HiForest', Run3_2025_OXY)
+from Configuration.Eras.Era_Run3_2025_UPC_cff import Run3_2025_UPC
+process = cms.Process('HiForest', Run3_2025_UPC)
 
 ###############################################################################
 
 # HiForest info
 process.load("HeavyIonsAnalysis.EventAnalysis.HiForestInfo_cfi")
-process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 150X, data")
+process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 151X, data")
 
 # import subprocess, os
 # version = subprocess.check_output(
@@ -25,7 +25,7 @@ process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 150X, data")
 process.source = cms.Source("PoolSource",
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
     fileNames = cms.untracked.vstring(
-        'root://xrootd-cms.infn.it//store/hidata/HIRun2024A/HIForward0/MINIAOD/PromptReco-v1/000/387/878/00000/b7894635-d50c-454f-a11b-f072514f8dfc.root'
+        '/store/hidata/HIRun2025A/HIForward9/MINIAOD/PromptReco-v1/000/400/401/00000/17810c72-10b7-434a-a587-b23cf3df10eb.root'
     ), 
 )
 
@@ -46,7 +46,7 @@ process.load('FWCore.MessageService.MessageLogger_cfi')
 
 from Configuration.AlCa.GlobalTag import GlobalTag
 
-process.GlobalTag = GlobalTag(process.GlobalTag, '150X_dataRun3_Prompt_v3', '')
+process.GlobalTag = GlobalTag(process.GlobalTag, '151X_dataRun3_Prompt_v1', '')
 process.HiForestInfo.GlobalTagLabel = process.GlobalTag.globaltag
 
 ###############################################################################
@@ -98,7 +98,7 @@ process.load('HeavyIonsAnalysis.JetAnalysis.ak4PFJetSequence_ppref_data_cff')
 ################################
 # tracks
 process.load("HeavyIonsAnalysis.TrackAnalysis.TrackAnalyzers_cff")
-process.ppTracks.dedxEstimators = cms.VInputTag(["dedxEstimator:dedxAllLikelihood", "dedxEstimator:dedxHarmonic2"])
+process.ppTracks.dedxEstimators = cms.VInputTag(["dedxEstimator:dedxAllLikelihood"])
 process.ppTracks.trackEtaMax = cms.untracked.double(3.0)
 # muons (FTW)
 process.load("HeavyIonsAnalysis.MuonAnalysis.unpackedMuons_cfi")
@@ -182,22 +182,24 @@ process.load('HeavyIonsAnalysis.EventAnalysis.collisionEventSelection_cff')
 process.pclusterCompatibilityFilter = cms.Path(process.clusterCompatibilityFilter)
 process.pprimaryVertexFilter = cms.Path(process.primaryVertexFilter)
 process.load('HeavyIonsAnalysis.EventAnalysis.hffilterPF_cfi')
+process.load('HeavyIonsAnalysis.ZDCAnalysis.HiZDCfilter_cfi')
 process.pAna = cms.EndPath(process.skimanalysis)
 
-#from HLTrigger.HLTfilters.hltHighLevel_cfi import hltHighLevel
-#process.hltfilter = hltHighLevel.clone(
+# from HLTrigger.HLTfilters.hltHighLevel_cfi import hltHighLevel
+# process.hltfilter = hltHighLevel.clone(
 #    HLTPaths = [
-#        #"HLT_HIZeroBias_v4",                                                     
 #        "HLT_HIMinimumBias_v2",
 #    ]
-#)
-#process.filterSequence = cms.Sequence(
-#    process.hltfilter
-#)
-#
-#process.superFilterPath = cms.Path(process.filterSequence)
-#process.skimanalysis.superFilters = cms.vstring("superFilterPath")
-#
-#for path in process.paths:
+# )
+# process.filterSequence = cms.Sequence(
+#     process.hltfilter *
+#     process.primaryVertexFilter *
+#     (process.zdcrecoRun3 + process.zdcEnergyFilter0nOr)
+# )
+
+# process.superFilterPath = cms.Path(process.filterSequence)
+# process.skimanalysis.superFilters = cms.vstring("superFilterPath")
+
+# for path in process.paths:
 #    getattr(process, path)._seq = process.filterSequence * getattr(process,path)._seq
 
