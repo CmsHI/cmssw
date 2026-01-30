@@ -122,20 +122,8 @@ process.muonSequence = cms.Sequence(process.rhoSequence * process.hiMuons * proc
 process.load("HeavyIonsAnalysis.MuonAnalysis.muonAnalyzer_cfi")
 ###############################################################################
 
-# ZDC RecHit Producer
-process.load('HeavyIonsAnalysis.ZDCAnalysis.QWZDC2018Producer_cfi')
-process.load('HeavyIonsAnalysis.ZDCAnalysis.QWZDC2018RecHit_cfi')
-process.load('HeavyIonsAnalysis.ZDCAnalysis.zdcanalyzer_cfi')
-
-process.zdcdigi.SOI = cms.untracked.int32(2)
-process.zdcanalyzer.doZDCRecHit = False
-process.zdcanalyzer.doZDCDigi = True
-process.zdcanalyzer.zdcRecHitSrc = cms.InputTag("QWzdcreco")
-process.zdcanalyzer.zdcDigiSrc = cms.InputTag("hcalDigis", "ZDC")
-process.zdcanalyzer.calZDCDigi = False
-process.zdcanalyzer.verbose = False
-process.zdcanalyzer.nZdcTs = cms.int32(6)
-
+# ZDC RecHit producer + analyzer
+process.load('HeavyIonsAnalysis.ZDCAnalysis.ZDCAnalyzersHC2023_cff')
 
 ###############################################################################
 # main forest sequence
@@ -150,9 +138,7 @@ process.forest = cms.Path(
     #process.particleFlowAnalyser +
     process.muonSequence +
     process.egammaSequence +
-    #process.zdcdigi +
-    #process.QWzdcreco +
-    process.zdcanalyzer +
+    process.zdcSequence +
     process.muonAnalyzer +
     process.akPu4CaloJetAnalyzer
     )
@@ -232,22 +218,27 @@ process.pphfCoincFilter2Th6 = cms.Path(process.phfCoincFilter2Th6)
 process.pphfCoincFilter3Th6 = cms.Path(process.phfCoincFilter3Th6)
 process.pphfCoincFilter4Th6 = cms.Path(process.phfCoincFilter4Th6)
 process.pphfCoincFilter5Th6 = cms.Path(process.phfCoincFilter5Th6)
+process.load('HeavyIonsAnalysis.ZDCAnalysis.HiZDCfilter_cfi')
 process.pAna = cms.EndPath(process.skimanalysis)
 
-#from HLTrigger.HLTfilters.hltHighLevel_cfi import hltHighLevel
-#process.hltfilter = hltHighLevel.clone(
-#    HLTPaths = [
-#        #"HLT_HIZeroBias_v4",                                                     
-#        "HLT_HIMinimumBias_v2",
-#    ]
-#)
-#process.filterSequence = cms.Sequence(
-#    process.hltfilter
-#)
-#
-#process.superFilterPath = cms.Path(process.filterSequence)
-#process.skimanalysis.superFilters = cms.vstring("superFilterPath")
-#
-#for path in process.paths:
-#    getattr(process, path)._seq = process.filterSequence * getattr(process,path)._seq
+# process.MessageLogger.cerr.FwkReport.reportEvery = 1000
 
+#########################
+# Event Filters
+#########################
+
+# from HLTrigger.HLTfilters.hltHighLevel_cfi import hltHighLevel
+# process.hltfilter = hltHighLevel.clone(
+#    HLTPaths = [
+#        "HLT_HIZeroBias_v4",
+#    ]
+# )
+# process.filterSequence = cms.Sequence(
+#     process.hltfilter *
+#     process.primaryVertexFilter *
+#     (process.zdcreco2023HardCode + process.zdcEnergyFilter1nOr)
+# )
+# process.prefilter = cms.Path(process.filterSequence)
+# process.skimanalysis.superFilters = cms.vstring("prefilter")
+# for path in process.paths:
+#       getattr(process, path)._seq = process.filterSequence * getattr(process,path)._seq

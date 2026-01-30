@@ -29,13 +29,10 @@ process.source = cms.Source("PoolSource",
     ),
 )
 
-import FWCore.PythonUtilities.LumiList as LumiList
-process.source.lumisToProcess = LumiList.LumiList(filename = '/eos/user/c/cmsdqm/www/CAF/certification/Collisions23HI/Cert_Collisions2023HI_374288_375823_Golden.json').getVLuminosityBlockRange()
-
 # number of events to process, set to -1 to process all events
 process.maxEvents = cms.untracked.PSet(
     input = cms.untracked.int32(25)
-    )
+)
 
 ###############################################################################
 
@@ -45,7 +42,6 @@ process.load('Configuration.StandardSequences.Services_cff')
 process.load('Configuration.StandardSequences.MagneticField_38T_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 process.load('FWCore.MessageService.MessageLogger_cfi')
-
 
 from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, '132X_dataRun3_Prompt_v7', '')
@@ -65,7 +61,6 @@ process.TFileService = cms.Service("TFileService",
 #         'keep *',
 #         )
 #     )
-
 # process.output_path = cms.EndPath(process.output)
 
 ###############################################################################
@@ -77,7 +72,6 @@ process.load('HeavyIonsAnalysis.EventAnalysis.hltanalysis_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.skimanalysis_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.hltobject_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.l1object_cfi')
-
 process.hiEvtAnalyzer.doCentrality = cms.bool(False)
 process.hiEvtAnalyzer.doHFfilters = cms.bool(False)
 
@@ -102,20 +96,8 @@ process.load("HeavyIonsAnalysis.TrackAnalysis.TrackAnalyzers_cff")
 process.load("HeavyIonsAnalysis.MuonAnalysis.muonAnalyzer_cfi")
 ###############################################################################
 
-# ZDC RecHit Producer
-process.load('HeavyIonsAnalysis.ZDCAnalysis.QWZDC2018Producer_cfi')
-process.load('HeavyIonsAnalysis.ZDCAnalysis.QWZDC2018RecHit_cfi')
-process.load('HeavyIonsAnalysis.ZDCAnalysis.zdcanalyzer_cfi')
-
-process.zdcdigi.SOI = cms.untracked.int32(2)
-process.zdcanalyzer.doZDCRecHit = False
-process.zdcanalyzer.doZDCDigi = True
-process.zdcanalyzer.zdcRecHitSrc = cms.InputTag("QWzdcreco")
-process.zdcanalyzer.zdcDigiSrc = cms.InputTag("hcalDigis", "ZDC")
-process.zdcanalyzer.calZDCDigi = False
-process.zdcanalyzer.verbose = False
-process.zdcanalyzer.nZdcTs = cms.int32(6)
-
+# ZDC RecHit producer + analyzer
+process.load('HeavyIonsAnalysis.ZDCAnalysis.ZDCAnalyzersHC2023_cff')
 
 ###############################################################################
 # main forest sequence
@@ -128,10 +110,8 @@ process.forest = cms.Path(
     process.trackSequencePP +
     process.particleFlowAnalyser +
     process.ggHiNtuplizer +
-    #process.zdcdigi +
-    #process.QWzdcreco +
-    process.zdcanalyzer +
-    process.muonSequencePP
+    process.muonSequencePP +
+    process.zdcSequence 
     )
 
 #customisation
@@ -142,24 +122,8 @@ process.forest = cms.Path(
 process.load('HeavyIonsAnalysis.EventAnalysis.collisionEventSelection_cff')
 process.pclusterCompatibilityFilter = cms.Path(process.clusterCompatibilityFilter)
 process.pprimaryVertexFilter = cms.Path(process.primaryVertexFilter)
+process.load('HeavyIonsAnalysis.ZDCAnalysis.HiZDCfilter_cfi')
 process.pAna = cms.EndPath(process.skimanalysis)
-
-#from HLTrigger.HLTfilters.hltHighLevel_cfi import hltHighLevel
-#process.hltfilter = hltHighLevel.clone(
-#    HLTPaths = [
-#        #"HLT_HIZeroBias_v4",
-#        "HLT_HIMinimumBias_v2",
-#    ]
-#)
-#process.filterSequence = cms.Sequence(
-#    process.hltfilter
-#)
-#
-#process.superFilterPath = cms.Path(process.filterSequence)
-#process.skimanalysis.superFilters = cms.vstring("superFilterPath")
-#
-#for path in process.paths:
-#    getattr(process, path)._seq = process.filterSequence * getattr(process,path)._seq
 
 #####################################################################################
 # Select the types of jets filled
@@ -194,3 +158,32 @@ if doBtagging:
     getattr(process,"ak"+jetLabel+"PFJetAnalyzer").pfJetProbabilityBJetTag = cms.untracked.string("pfJetProbabilityBJetTagsDeepFlavour")
     getattr(process,"ak"+jetLabel+"PFJetAnalyzer").pfUnifiedParticleTransformerAK4JetTags = cms.untracked.string("pfUnifiedParticleTransformerAK4JetTagsDeepFlavour")
 process.forest += getattr(process,"ak"+jetLabel+"PFJetAnalyzer")
+
+# process.MessageLogger.cerr.FwkReport.reportEvery = 1000
+
+#########################
+# Event Filters
+#########################
+
+# from HLTrigger.HLTfilters.hltHighLevel_cfi import hltHighLevel
+# process.hltfilter = hltHighLevel.clone(
+#    HLTPaths = [
+#        "HLT_HIZeroBias_v4",
+#    ]
+# )
+# process.filterSequence = cms.Sequence(
+#     process.hltfilter *
+#     process.primaryVertexFilter *
+#     (process.zdcreco2023HardCode + process.zdcEnergyFilter0nOr)
+# )
+# process.prefilter = cms.Path(process.filterSequence)
+# process.skimanalysis.superFilters = cms.vstring("prefilter")
+# for path in process.paths:
+#       getattr(process, path)._seq = process.filterSequence * getattr(process,path)._seq
+
+#########################
+# JSON in cmsRun
+#########################
+
+# import FWCore.PythonUtilities.LumiList as LumiList
+# process.source.lumisToProcess = LumiList.LumiList(filename = '/eos/user/c/cmsdqm/www/CAF/certification/Collisions23HI/Cert_Collisions2023HI_374288_375823_Golden.json').getVLuminosityBlockRange()
