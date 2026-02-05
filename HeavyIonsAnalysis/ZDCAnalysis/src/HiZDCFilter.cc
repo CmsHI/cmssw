@@ -12,8 +12,6 @@
 #include "DataFormats/HcalDetId/interface/HcalDetId.h"
 #include "DataFormats/HcalRecHit/interface/HcalRecHitCollections.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
-// #include "CommonTools/Utils/interface/StringCutObjectSelector.h"
-// #include "HeavyIonsAnalysis/ZDCAnalysis/interface/Zdcesum.h"
 
 class HiZDCFilter : public edm::one::EDFilter<> {
 public:
@@ -27,9 +25,7 @@ private:
   const double ltPlus_, gtPlus_;
   const double ltMinus_, gtMinus_;
   std::string algo_;
-  // StringCutObjectSelector<Zdcesum, false> energyCut_;
 
-  // Zdcesum zdc;
   float sumPlus, sumMinus;
   bool has_algo(std::string key) { return (algo_.find(key) != std::string::npos); }
 };
@@ -40,7 +36,6 @@ HiZDCFilter::HiZDCFilter(const edm::ParameterSet& iConfig) :
   gtPlus_(iConfig.getParameter<double>("threshold4gtPlus")),
   ltMinus_(iConfig.getParameter<double>("threshold4ltMinus")),
   gtMinus_(iConfig.getParameter<double>("threshold4gtMinus")),
-  // energyCut_(iConfig.getParameter<std::string>("algorithm")) {
   algo_(iConfig.getParameter<std::string>("algorithm")) {
   std::transform(algo_.begin(), algo_.end(), algo_.begin(),
                  [](unsigned char c){ return std::tolower(c); });
@@ -55,19 +50,21 @@ bool HiZDCFilter::filter(edm::Event& iEvent, const edm::EventSetup& iSetup) {
 
   const auto& zdcrechits = iEvent.get(ZDCRecHitToken_);
 
-  for (auto const& rh : zdcrechits) { // does not have RPD if it was skipped in reco
+  for (auto const& rh : zdcrechits) { 
     HcalZDCDetId zdcid = rh.id();
     int zside = zdcid.zside();
     int section = zdcid.section();
     float energy = rh.energy();
-    if (zside < 0 && (section == 1 || section == 2))
+
+    if (!(section == 1 || section == 2)) continue; // only count EM and HAD
+    if (section == 1 && zdcid.channel() > 5) continue; // ignore extra EM channels
+
+    if (zside < 0)
       sumMinus += energy;
-    if (zside > 0 && (section == 1 || section == 2))
+    if (zside > 0)
       sumPlus += energy;
   }
 
-  // accepted = energyCut_(zdc);
-  
   if (has_algo("lt") && has_algo("or")) {
     accepted = (sumPlus <= ltPlus_ || sumMinus <= ltMinus_);
   } else if (has_algo("lt") && has_algo("and")) {
