@@ -19,7 +19,7 @@ process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 125X, data")
 process.source = cms.Source("PoolSource",
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
     fileNames = cms.untracked.vstring(
-        "/store/hidata/HIRun2018A/HISingleMuon/MINIAOD/PbPb18_MiniAODv1-v1/00000/00345f79-641f-4002-baf1-19ae8e83c48b.root"
+        "root://xrootd-cms.infn.it//store/hidata/HIRun2018A/HIHardProbes/MINIAOD/PbPb18_MiniAODv1-v1/240000/c83bc22b-3863-441b-8910-991b300c2fe8.root"
     ),
 )
 
@@ -149,6 +149,17 @@ addR3FlowJets = False
 addR4Jets = True
 addR4FlowJets = True
 
+# Configuration for jet flow subtraction
+iterativeFlow = True         # Iterative jetty region exclusion. Default = True
+pfCandidateEtaCut = 2        # Eta range for PF candidates used in flow fit. Default = 2
+minPfCandidatesPerEvent = 60 # Minimum number of PF candidates to make the flow fit. Default = 60
+minPfCandidatePt = 0.3       # Minimum pT for PF candidates in flow fit. Default = 0.3
+maxPfCandidatePt = 3         # Maximum pT for PF candidates in flow fit. Default = 3
+minFitQuality = 0            # Minimum flow fit quality score. Default = 0
+maxFitQuality = 1            # Maximum flow fit quality score. Default = 1
+firstFittedVn = 2            # First fitted vn component. Default = 2
+lastFittedVn = 3             # Last fitted vn component. Default = 3
+
 # this is only for non-reclustered jets
 addCandidateTagging = False
 
@@ -187,7 +198,60 @@ if addR3Jets or addR3FlowJets or addR4Jets or addR4FlowJets :
         process.akCs4PFFlowpatJetCorrFactors.levels = ['L2Relative', 'L2L3Residual']
         process.akFlowPuCs4PFJetAnalyzer.jetTag = 'akCs4PFFlowpatJets'
         process.akFlowPuCs4PFJetAnalyzer.jetName = 'akCs4PFFlow'
-        process.forest += process.extraFlowJetsData * process.jetsR4flow * process.akFlowPuCs4PFJetAnalyzer
+        process.akFlowPuCs4PFJetAnalyzer.doHiJetID = True
+        process.akFlowPuCs4PFJetAnalyzer.doWTARecluster = True
+
+        #############################################
+        # Configuration for flow modulation details #
+        #############################################
+
+        # Exclude jetty regions iteratively
+        process.hiFJRhoFlowModulation.doJettyExclusion = False
+        if iterativeFlow:
+            process.hiFJRhoFlowModulation.doJettyExclusion = True
+
+        # Particle flow candidates to be included in the fit
+        process.hiFJRhoFlowModulation.minPfCandidatesPerEvent = minPfCandidatesPerEvent
+        process.hiFJRhoFlowModulation.pfCandidateEtaCut = pfCandidateEtaCut
+        process.hiFJRhoFlowModulation.pfCandidateMinPtCut = minPfCandidatePt
+        process.hiFJRhoFlowModulation.pfCandidateMaxPtCut = maxPfCandidatePt
+
+        # Range of flow components extracted from the fit
+        process.hiFJRhoFlowModulation.firstFittedVn = firstFittedVn
+        process.hiFJRhoFlowModulation.lastFittedVn = lastFittedVn
+
+        # Reliability parameters for the fit to be applied
+        process.akCs4PFFlowJets.minFlowChi2Prob = minFitQuality;
+        process.akCs4PFFlowJets.maxFlowChi2Prob = maxFitQuality;
+
+        # Set the parameters for the first iteration in case of iterative jetty region exclusion
+        if iterativeFlow:
+
+            # Flow modulation configuration for the first iteration
+
+            # Particle flow candidates to be included in the fit
+            process.hiFJRhoFlowModulationIteration.minPfCandidatesPerEvent = minPfCandidatesPerEvent
+            process.hiFJRhoFlowModulationIteration.pfCandidateEtaCut = pfCandidateEtaCut
+            process.hiFJRhoFlowModulationIteration.pfCandidateMinPtCut = minPfCandidatePt
+            process.hiFJRhoFlowModulationIteration.pfCandidateMaxPtCut = maxPfCandidatePt
+            process.hiFJRhoFlowModulationIteration.firstFittedVn = firstFittedVn  # First flow component included in the fit
+            process.hiFJRhoFlowModulationIteration.lastFittedVn = lastFittedVn  # Last flow component included in the fit
+
+            # Configure CS subtracted jets for jetty region subtraction
+            process.akCs4PFJetsForFlow.src = "packedPFCandidates" # Packed candidates as a source for jets for flow subtraction in second iteration
+            process.akCs4PFJetsForFlow.jetPtMin = 40 # Minimum jet pT to exclude area around it in second iteration
+            process.akCs4PFJetsForFlow.minFlowChi2Prob = minFitQuality
+            process.akCs4PFJetsForFlow.maxFlowChi2Prob = maxFitQuality
+            process.akCs4PFJetsForFlow.rhoFlowFitParams = cms.InputTag('hiFJRhoFlowModulationIteration', 'rhoFlowFitParams') # Minimum jet pT to exclude area around it in second iteration
+
+            # Configure the second iteration of the flow modulation to use CS subtracted jets as the jet collection
+            process.hiFJRhoFlowModulation.jetTag = "akCs4PFJetsForFlow"
+
+            # Updated process for iterative jetty region determination for flow modulation
+            process.forest += process.extraIterativeFlowJetsData * process.jetsR4flow * process.akFlowPuCs4PFJetAnalyzer
+
+        else:
+            process.forest += process.extraFlowJetsData * process.jetsR4flow * process.akFlowPuCs4PFJetAnalyzer
 
 
 if addCandidateTagging:

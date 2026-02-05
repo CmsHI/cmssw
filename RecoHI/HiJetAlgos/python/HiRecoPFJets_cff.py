@@ -45,6 +45,7 @@ hiPFCandCleanerforJets = cms.EDFilter('GenericPFCandidateSelector',
                                 cut = cms.string("pt>5 && abs(eta)< 2")
                                 )
 
+# Jet collection for excluding jetty regions from flow modulation calculation
 ak4PFJetsForFlow = akPu5PFJets.clone(
    Ghost_EtaMax = 5.0,
    Rho_EtaMax   = 4.4,
@@ -70,8 +71,10 @@ kt4PFJetsForRho.GhostArea     = 0.005
 
 from RecoHI.HiJetAlgos.hiFJRhoProducer import hiFJRhoProducer
 
+# Initialize the flow modulation calculation for regular and iterative flow subtraction
 import RecoHI.HiJetAlgos.hiFJRhoFlowModulationProducer_cfi as _mod
 hiFJRhoFlowModulation = _mod.hiFJRhoFlowModulationProducer.clone()
+hiFJRhoFlowModulationIteration = _mod.hiFJRhoFlowModulationProducer.clone()
 
 import RecoHI.HiJetAlgos.hiPuRhoProducer_cfi as _mod
 hiPuRho = _mod.hiPuRhoProducer.clone()
@@ -89,6 +92,8 @@ akCs4PFJets = cms.EDProducer(
     csAlpha   = cms.double(2.),
     writeJetsWithConst = cms.bool(True),
     useModulatedRho = cms.bool(False),
+    minFlowChi2Prob = cms.double(0),
+    maxFlowChi2Prob = cms.double(1),
     rhoFlowFitParams = cms.InputTag('hiFJRhoFlowModulation', 'rhoFlowFitParams'),
     jetCollInstanceName = cms.string("pfParticlesCs"),
 )
@@ -99,6 +104,12 @@ akCs4PFJets.useExplicitGhosts = cms.bool(True)
 akCs4PFJets.GhostArea         = 0.005
 
 akCs3PFJets = akCs4PFJets.clone(rParam = 0.3)
+
+# Jet collection for iteratively excluding jetty regions from flow modulation
+akCs4PFJetsForFlow = akCs4PFJets.clone(
+    useModulatedRho = cms.bool(True),
+    rhoFlowFitParams = cms.InputTag('hiFJRhoFlowModulation', 'rhoFlowFitParams')
+)
 
 hiRecoPFJetsTask = cms.Task(
                            PFTowers,
