@@ -139,24 +139,33 @@ void TriggerAnalyzer::analyze(edm::Event const& iEvent, edm::EventSetup const& i
       int itdum = 0;
       for (auto const& dummy : hltdummies) {
         TString dummyname(dummy.data());
-        t_->Branch(dummyname, hltflag + itdum, dummyname + "/I");
-        t_->Branch(dummyname + "_PrescaleNumerator", hltPrescaleNumerator + itdum, dummyname + "_PrescaleNumerator/I");
-        t_->Branch(dummyname + "_PrescaleDenominator", hltPrescaleDenominator + itdum, dummyname + "_PrescaleDenominator/I");
-        pathtoindex[dummy] = itdum;
-        ++itdum;
+	if(dummyname.Contains("Single")){
+	  if(dummyname.Contains("ZDC")) continue;
+	  if(dummyname.Contains("hower")) continue;
+	  if(dummyname.Contains("osmics")) continue;
+	  t_->Branch(dummyname, hltflag + itdum, dummyname + "/I");
+	  t_->Branch(dummyname + "_PrescaleNumerator", hltPrescaleNumerator + itdum, dummyname + "_PrescaleNumerator/I");
+	  t_->Branch(dummyname + "_PrescaleDenominator", hltPrescaleDenominator + itdum, dummyname + "_PrescaleDenominator/I");
+	  pathtoindex[dummy] = itdum;
+	  ++itdum;
+	}
       }
-
+    
       for (int itrig = 0; itrig != ntrigs; ++itrig) {
         const std::string& trigname = triggerNames.triggerName(itrig);
         if (pathtoindex.find(trigname) == pathtoindex.end()) {
           TString hltname = trigname;
-          t_->Branch(hltname, hltflag + itdum + itrig, hltname + "/I");
-          t_->Branch(hltname + "_PrescaleNumerator", hltPrescaleNumerator + itdum + itrig, hltname + "_PrescaleNumerator/I");
-          t_->Branch(hltname + "_PrescaleDenominator", hltPrescaleDenominator + itdum + itrig, hltname + "_PrescaleDenominator/I");
-          pathtoindex[trigname] = itdum + itrig;
-        }
+	  if(hltname.Contains("Single")){
+	    if(hltname.Contains("ZDC")) continue;
+	    if(hltname.Contains("hower")) continue;
+	    if(hltname.Contains("osmics")) continue;
+	    t_->Branch(hltname, hltflag + itdum + itrig, hltname + "/I");
+	    t_->Branch(hltname + "_PrescaleNumerator", hltPrescaleNumerator + itdum + itrig, hltname + "_PrescaleNumerator/I");
+	    t_->Branch(hltname + "_PrescaleDenominator", hltPrescaleDenominator + itdum + itrig, hltname + "_PrescaleDenominator/I");
+	    pathtoindex[trigname] = itdum + itrig;
+	  }
+	}
       }
-
       HltEvtCnt++;
     }
     // ...Fill the corresponding accepts in branch-variables
@@ -198,10 +207,15 @@ void TriggerAnalyzer::analyze(edm::Event const& iEvent, edm::EventSetup const& i
       int itdum = 0;
       for (auto const& dummy : l1dummies) {
         TString dummyname(dummy.data());
-        t_->Branch(dummyname, l1flag + itdum, dummyname + "/I");
-        t_->Branch(dummyname + "_Prescl", l1Prescl + itdum, dummyname + "_Prescl/I");
-        pathtoindex[dummy] = itdum;
-        ++itdum;
+	if(dummyname.Contains("Single")){
+	  if(dummyname.Contains("ZDC")) continue;
+	  if(dummyname.Contains("hower")) continue;
+	  if(dummyname.Contains("osmics")) continue;
+	  t_->Branch(dummyname, l1flag + itdum, dummyname + "/I");
+	  t_->Branch(dummyname + "_Prescl", l1Prescl + itdum, dummyname + "_Prescl/I");
+	  pathtoindex[dummy] = itdum;
+	  ++itdum;
+	}
       }
 
       int il1 = 0;
@@ -211,11 +225,16 @@ void TriggerAnalyzer::analyze(edm::Event const& iEvent, edm::EventSetup const& i
 
         if (pathtoindex.find(trigname) == pathtoindex.end()) {
           TString l1name = trigname;
-          t_->Branch(l1name, l1flag + itdum + il1, l1name + "/I");
-          t_->Branch(l1name + "_Prescl", l1Prescl + itdum + il1, l1name + "_Prescl/I");
-          pathtoindex[trigname] = itdum + il1;
-          ++il1;
-        }
+	  if(l1name.Contains("Single")){
+	    if(l1name.Contains("ZDC")) continue;
+	    if(l1name.Contains("hower")) continue;
+	    if(l1name.Contains("osmics")) continue;
+	    t_->Branch(l1name, l1flag + itdum + il1, l1name + "/I");
+	    t_->Branch(l1name + "_Prescl", l1Prescl + itdum + il1, l1name + "_Prescl/I");
+	    pathtoindex[trigname] = itdum + il1;
+	    ++il1;
+	  }
+	}
       }  // end algo Map
 
       L1EvtCnt++;

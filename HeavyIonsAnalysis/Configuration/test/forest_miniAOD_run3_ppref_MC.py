@@ -132,7 +132,8 @@ process.forest = cms.Path(
     process.l1object +
     process.HiGenParticleAna +
     process.ggHiNtuplizer +
-    process.trackSequencePP +
+    process.unpackedTracksAndVertices +
+    #process.trackSequencePP +
     process.unpackedMuons +
     process.muonAnalyzer
 )
@@ -178,3 +179,55 @@ for jetLabel in jetLabels:
         getattr(process,"ak"+jetLabel+"PFJetAnalyzer").pfJetProbabilityBJetTag = cms.untracked.string("pfJetProbabilityBJetTagsAK"+jetLabel+"PFCHSBtag")
         getattr(process,"ak"+jetLabel+"PFJetAnalyzer").pfUnifiedParticleTransformerAK4JetTags = cms.untracked.string("pfUnifiedParticleTransformerAK4JetTagsAK"+jetLabel+"PFCHSBtag")
     process.forest += getattr(process,"ak"+jetLabel+"PFJetAnalyzer")
+
+process.hltobject.triggerNames = cms.vstring(
+    'HLT_HIL1DoubleMuOpen_v',
+    'HLT_HIL1DoubleMu10_v',
+    'HLT_HIL2_L1DoubleMu10_v',
+    'HLT_HIL3_L1DoubleMu10_v',
+    'HLT_HIL2DoubleMuOpen_v',
+    'HLT_HIL3DoubleMuOpen_v',
+    'HLT_HIL3DoubleMuOpen_M60120_v',
+    'HLT_HIL3Mu0_L2Mu0_v',
+    'HLT_HIL3Mu0NHitQ10_L2Mu0_MAXdR3p5_M1to5_v',
+    'HLT_HIL3Mu2p5NHitQ10_L2Mu2_M7toinf_v',
+    'HLT_HIL2Mu3_NHitQ15_v',
+    'HLT_HIL2Mu5_NHitQ15_v',
+    'HLT_HIL2Mu7_NHitQ15_v',
+    'HLT_HIL3Mu12_v',
+    'HLT_HIL3Mu15_v',
+    'HLT_HIL3Mu20_v',
+    'HLT_HIL3Mu3_NHitQ10_v',
+    'HLT_HIL3Mu5_NHitQ10_v',
+    'HLT_HIL3Mu7_NHitQ10_v',
+    'HLT_HIEle10Gsf_v',
+    'HLT_HIEle15Gsf_v',
+    'HLT_HIEle20Gsf_v',
+    'HLT_HIEle30Gsf_v',
+    'HLT_HIEle40Gsf_v',
+    'HLT_HIEle50Gsf_v',
+    'HLT_HIDoubleEle15Gsf_v',
+    'HLT_HIDoubleEle15GsfMass50_v',
+    'HLT_HIEle15Ele10Gsf_v',
+    'HLT_HIEle15Ele10GsfMass50_v',
+    'HLT_HIDoubleEle10Gsf_v',
+    'HLT_HIDoubleEle10GsfMass50_v',
+    'HLT_HIGEDPhoton10_v',
+    'HLT_HIGEDPhoton20_v',
+    'HLT_HIGEDPhoton30_v',
+    'HLT_HIGEDPhoton40_v',
+    'HLT_HIGEDPhoton50_v',
+    'HLT_HIGEDPhoton60_v',
+    'HLT_HIGEDPhoton10_EB_v',
+    'HLT_HIGEDPhoton20_EB_v',
+    'HLT_HIGEDPhoton30_EB_v',
+    'HLT_HIGEDPhoton40_EB_v',
+    'HLT_HIGEDPhoton50_EB_v',
+    'HLT_HIGEDPhoton60_EB_v',
+    'HLT_HIL2Mu3_NHitQ15_tagging_v',
+    'HLT_HIL2Mu5_NHitQ15_tagging_v',
+    'HLT_HIL2Mu7_NHitQ15_tagging_v',
+    'HLT_HIL3Mu3_NHitQ10_tagging_v',
+    'HLT_HIL3Mu5_NHitQ10_tagging_v',
+    'HLT_HIL3Mu7_NHitQ10_tagging_v',
+)

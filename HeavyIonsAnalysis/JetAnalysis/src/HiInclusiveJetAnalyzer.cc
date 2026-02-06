@@ -171,11 +171,11 @@ void HiInclusiveJetAnalyzer::beginJob() {
   t->Branch("jtPfCEM", jets_.jtPfCEM, "jtPfCEM[nref]/I");
   t->Branch("jtPfNEM", jets_.jtPfNEM, "jtPfNEM[nref]/I");
   t->Branch("jtPfMUM", jets_.jtPfMUM, "jtPfMUM[nref]/I");
-
+  /*
   t->Branch("jttau1", jets_.jttau1, "jttau1[nref]/F");
   t->Branch("jttau2", jets_.jttau2, "jttau2[nref]/F");
   t->Branch("jttau3", jets_.jttau3, "jttau3[nref]/F");
-
+  */
   if (doSubJets_) {
     t->Branch("jtSubJetPt", &jets_.jtSubJetPt);
     t->Branch("jtSubJetEta", &jets_.jtSubJetEta);
@@ -308,8 +308,8 @@ void HiInclusiveJetAnalyzer::beginJob() {
     t->Branch("refdphijt", jets_.refdphijt, "refdphijt[nref]/F");
     t->Branch("refdrjt", jets_.refdrjt, "refdrjt[nref]/F");
     // matched parton
-    t->Branch("refparton_pt", jets_.refparton_pt, "refparton_pt[nref]/F");
-    t->Branch("refparton_flavor", jets_.refparton_flavor, "refparton_flavor[nref]/I");
+    //t->Branch("refparton_pt", jets_.refparton_pt, "refparton_pt[nref]/F");
+    //t->Branch("refparton_flavor", jets_.refparton_flavor, "refparton_flavor[nref]/I");
     t->Branch("refparton_flavorForB", jets_.refparton_flavorForB, "refparton_flavorForB[nref]/I");
 
     if (doGenSubJets_) {
@@ -339,12 +339,12 @@ void HiInclusiveJetAnalyzer::beginJob() {
       t->Branch("refSDConstituentsPhi", &jets_.refSDConstituentsPhi);
       t->Branch("refSDConstituentsM", &jets_.refSDConstituentsM);
     }
-
+    /*
     t->Branch("genChargedSum", jets_.genChargedSum, "genChargedSum[nref]/F");
     t->Branch("genHardSum", jets_.genHardSum, "genHardSum[nref]/F");
     t->Branch("signalChargedSum", jets_.signalChargedSum, "signalChargedSum[nref]/F");
     t->Branch("signalHardSum", jets_.signalHardSum, "signalHardSum[nref]/F");
-
+    */
     if (doSubEvent_) {
       t->Branch("subid", jets_.subid, "subid[nref]/I");
     }
