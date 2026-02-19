@@ -19,6 +19,7 @@
 #include "DataFormats/HeavyIonEvent/interface/Centrality.h"
 #include "DataFormats/HeavyIonEvent/interface/EvtPlane.h"
 #include "DataFormats/VertexReco/interface/Vertex.h"
+#include "DataFormats/PatCandidates/interface/MET.h"
 
 #include "SimDataFormats/HiGenData/interface/GenHIEvent.h"
 #include "SimDataFormats/GeneratorProducts/interface/HepMCProduct.h"
@@ -67,7 +68,7 @@ private:
   edm::EDGetTokenT<std::vector<PileupSummaryInfo>> puInfoToken_;
   edm::EDGetTokenT<GenEventInfoProduct> genInfoToken_;
   edm::EDGetTokenT<LHEEventProduct> generatorlheToken_;
-
+  
   bool doEvtPlane_;
   bool doEvtPlaneFlat_;
   bool doCentrality_;
@@ -77,7 +78,8 @@ private:
   bool doHFfilters_;
   bool useHepMC_;
   bool doVertex_;
-
+  bool doMET_;
+  
   int evtPlaneLevel_;
 
   edm::Service<TFileService> fs_;
@@ -138,6 +140,12 @@ private:
   unsigned long long event;
   unsigned int run;
   unsigned int lumi;
+
+  edm::EDGetTokenT<pat::METCollection> PFMETt1;
+  float metT1, metT1Phi, metT1SumEt;
+  float metRawCHS, metRawCHSPhi, metRawCHSSumEt;
+  float metUncor, metUncorPhi, metUncorSumEt;
+
 };
 
 //
@@ -160,7 +168,7 @@ HiEvtAnalyzer::HiEvtAnalyzer(const edm::ParameterSet& iConfig)
       HiMCTag_(consumes<edm::GenHIEvent>(iConfig.getParameter<edm::InputTag>("HiMC"))),
       VertexTag_(consumes<std::vector<reco::Vertex>>(iConfig.getParameter<edm::InputTag>("Vertex"))),
       HFfilters_(consumes<reco::HFFilterInfo>(iConfig.getParameter<edm::InputTag>("HFfilters"))),
-      puInfoToken_(consumes<std::vector<PileupSummaryInfo>>(edm::InputTag("addPileupInfo"))),
+      puInfoToken_(consumes<std::vector<PileupSummaryInfo>>(iConfig.getParameter<edm::InputTag>("addPileupInfo"))),
       genInfoToken_(consumes<GenEventInfoProduct>(edm::InputTag("generator"))),
       generatorlheToken_(consumes<LHEEventProduct>(edm::InputTag("externalLHEProducer", ""))),
       doEvtPlane_(iConfig.getParameter<bool>("doEvtPlane")),
@@ -171,7 +179,9 @@ HiEvtAnalyzer::HiEvtAnalyzer(const edm::ParameterSet& iConfig)
       doHFfilters_(iConfig.getParameter<bool>("doHFfilters")),
       useHepMC_(iConfig.getParameter<bool>("useHepMC")),
       doVertex_(iConfig.getParameter<bool>("doVertex")),
-      evtPlaneLevel_(iConfig.getParameter<int>("evtPlaneLevel")) {}
+      doMET_(iConfig.getParameter<bool>("doMET")),
+      evtPlaneLevel_(iConfig.getParameter<int>("evtPlaneLevel")),
+      PFMETt1(consumes<pat::METCollection>(iConfig.getParameter<edm::InputTag>("met"))) {}
 
 HiEvtAnalyzer::~HiEvtAnalyzer() {
   // do anything here that needs to be done at desctruction time
@@ -196,6 +206,26 @@ void HiEvtAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
   run = iEvent.id().run();
   lumi = iEvent.id().luminosityBlock();
 
+  // MET - for jet energy scale studies
+  if (doMET_) {   
+    edm::Handle<pat::METCollection> pfmett1;
+    iEvent.getByToken(PFMETt1, pfmett1);
+    // Default MET in slimmedMETs is PFMET T1 (= AK4PFCHS JEC from the GT has been propagated)
+    const pat::MET &mett1 = pfmett1->front();
+
+    metT1 = mett1.pt();
+    metT1Phi = mett1.phi();
+    metT1SumEt = mett1.sumEt();
+    // PFMET without JEC
+    metUncor = mett1.uncorPt();
+    metUncorPhi = mett1.uncorPhi();
+    metUncorSumEt = mett1.uncorSumEt();
+
+    metRawCHS = mett1.corPt(pat::MET::RawChs);
+    metRawCHSPhi = mett1.corPhi(pat::MET::RawChs);
+    metRawCHSSumEt = mett1.corSumEt(pat::MET::RawChs);
+  }
+  
   if (doHiMC_) {
     edm::Handle<edm::GenHIEvent> mchievt;
     if (iEvent.getByToken(HiMCTag_, mchievt)) {
@@ -489,6 +519,17 @@ void HiEvtAnalyzer::beginJob() {
     thi_->Branch("ttbar_w", &ttbar_w);
     thi_->Branch("npus", &npus);
     thi_->Branch("tnpus", &tnpus);
+  }
+  if (doMET_) {
+    thi_->Branch("metT1", &metT1);
+    thi_->Branch("metT1Phi", &metT1Phi);
+    thi_->Branch("metT1SumEt", &metT1SumEt);
+    thi_->Branch("metUncor", &metUncor);
+    thi_->Branch("metUncorPhi", &metUncorPhi);
+    thi_->Branch("metUncorSumEt", &metUncorSumEt);
+    thi_->Branch("metRawCHS", &metRawCHS);
+    thi_->Branch("metRawCHSPhi", &metRawCHSPhi);
+    thi_->Branch("metRawCHSSumEt", &metRawCHSSumEt);    
   }
 
   // Centrality
