@@ -83,6 +83,7 @@ process.hiEvtAnalyzer.Vertex = cms.InputTag("offlineSlimmedPrimaryVertices")
 process.hiEvtAnalyzer.doCentrality = cms.bool(False)
 process.hiEvtAnalyzer.doEvtPlane = cms.bool(False)
 process.hiEvtAnalyzer.doEvtPlaneFlat = cms.bool(False)
+process.hiEvtAnalyzer.doMET = cms.bool(False)   ## Missing Et
 #Turn off MC info
 process.hiEvtAnalyzer.doMC = cms.bool(False) # general MC info
 process.hiEvtAnalyzer.doHiMC = cms.bool(False) # HI specific MC info
