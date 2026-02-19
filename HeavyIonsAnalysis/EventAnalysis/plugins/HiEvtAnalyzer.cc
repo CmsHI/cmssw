@@ -263,15 +263,22 @@ void HiEvtAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
         }
       }
 
-      //alternative weights for systematics
+	  // LHE: use it for weights and (critically) IDPRUP when present
       edm::Handle<LHEEventProduct> evet;
       iEvent.getByToken(generatorlheToken_, evet);
-      if (evet.isValid() && genInfo.isValid()) {
-        const auto& asdd = evet->originalXWGTUP();
-        const auto& norm = (asdd!=0. ? genInfo->weight()/asdd : 1.);
-        for (const auto& asdde : evet->weights())
-          ttbar_w.emplace_back(norm * asdde.wgt);
-      }
+	  
+	  if (evet.isValid()){
+		// Prefer LHE process id when available
+		proc_id = evet->hepeup().IDPRUP;
+		
+		//alternative weights for systematics
+		if (genInfo.isValid()) {
+			const auto& asdd = evet->originalXWGTUP();
+			const auto& norm = (asdd!=0. ? genInfo->weight()/asdd : 1.);
+			for (const auto& asdde : evet->weights())
+			  ttbar_w.emplace_back(norm * asdde.wgt);
+		}
+	  }		
     }
 
     // MC PILEUP INFORMATION
