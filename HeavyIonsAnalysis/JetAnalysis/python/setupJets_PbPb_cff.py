@@ -1,6 +1,6 @@
 import FWCore.ParameterSet.Config as cms
 
-def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels = ['L2Relative', 'L3Absolute'], doBtagging = False, labelR = "0"):
+def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels = ['L2Relative', 'L3Absolute'], doBtagging = False, labelR = "0", iterativeFlow = True):
 
     # First, check if the label contains the string "Flow" to mark the use of flow subtraction
     doFlow = "Flow" in labelR
@@ -72,7 +72,8 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
 
         setattr(process,"ak"+labelR+"GenJetsReclusterNoNu",
                 ak4GenJets.clone(
-                    src = 'packedGenParticlesForJetsNoNu'
+                    src = 'packedGenParticlesForJetsNoNu',
+                    rParam = jetR
                 )
         )
  
@@ -196,6 +197,8 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
     processAdditives = ["PackedPFTowers", "hiPuRho"]
 
     # If we do flow subtraction, we need to setup the producers for flow modulation
+    from PhysicsTools.PatAlgos.producersLayer1.jetProducer_cff import akCs4PFJets
+    iterativeTag = ""
     if doFlow:
         from PhysicsTools.PatAlgos.producersLayer1.jetProducer_cff import ak4PFJetsForFlow, hiFJRhoFlowModulation
         setattr(process, "ak4PFJetsFor"+labelR,
@@ -214,14 +217,40 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
         processAdditives.append("ak4PFJetsFor"+labelR)
         processAdditives.append("rhoModulationAkCs"+labelR+"PFJets")
 
-    from PhysicsTools.PatAlgos.producersLayer1.jetProducer_cff import akCs4PFJets
+        # For iterative flow, we need to use the previously determined flow components to create a jet collection that will be used in jetty region subtraction
+        if iterativeFlow:
+            setattr(process, "akCs4PFJetsFor"+labelR,
+                    akCs4PFJets.clone(
+                        src = 'packedPFCandidates',
+                        rParam = jetR,
+                        jetPtMin = 40,
+                        useModulatedRho = cms.bool(True),
+                        rhoFlowFitParams = cms.InputTag("rhoModulationAkCs"+labelR+"PFJets", "rhoFlowFitParams")
+                    )
+            )
+
+            setattr(process, "rhoModulationIterAkCs"+labelR+"PFJets",
+                    hiFJRhoFlowModulation.clone(
+                        jetTag = "akCs4PFJetsFor"+labelR,
+                        doJettyExclusion = cms.bool(True)
+                    )
+            )
+            
+            # Both of these processes are needed for flow subtracted jets
+            processAdditives.append("akCs4PFJetsFor"+labelR)
+            processAdditives.append("rhoModulationIterAkCs"+labelR+"PFJets")
+
+            # Add iterative tag to the jet collection
+            iterativeTag = "Iter"
+
+
     setattr(process,"akCs"+labelR+"PFJets",
             akCs4PFJets.clone(
                 src = 'packedPFCandidates',
                 jetPtMin = jetPtMin,
                 rParam = jetR,
                 useModulatedRho = doFlow,
-                rhoFlowFitParams = cms.InputTag("rhoModulationAkCs"+labelR+"PFJets","rhoFlowFitParams")
+                rhoFlowFitParams = cms.InputTag("rhoModulation"+iterativeTag+"AkCs"+labelR+"PFJets","rhoFlowFitParams")
             )
     )
 
