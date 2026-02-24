@@ -10,7 +10,7 @@ process = cms.Process('HiForest', Run3_pp_on_PbPb_2024)
 
 # HiForest info
 process.load("HeavyIonsAnalysis.EventAnalysis.HiForestInfo_cfi")
-process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 150X, mc")
+process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 151X, mc")
 
 ###############################################################################
 
@@ -18,7 +18,7 @@ process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 150X, mc")
 process.source = cms.Source("PoolSource",
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
     fileNames = cms.untracked.vstring(
-        'root://eoscms.cern.ch//store/group/phys_heavyions/jviinika/PythiaHydjetRun3_5p36TeV_dijet_ptHat15_100kEvents_miniAOD_2023_08_30/PythiaHydjetDijetRun3/PythiaHydjetRun3_dijet_ptHat15_5p36TeV_miniAOD/230830_165931/0000/pythiaHydjet_miniAOD_11.root'
+        'root://cmsxrootd.fnal.gov//store/mc/HINPbPbWinter24MiniAOD/Dijet_pThat-15to1200_TuneCP5_5p36TeV_pythia8/MINIAODSIM/141X_mcRun3_2024_realistic_HI_v14-v2/2520003/fb3d1c69-59df-4e79-bf33-91cb43316e94.root'
     ),
 )
 
@@ -76,6 +76,8 @@ process.TFileService = cms.Service("TFileService",
 # Gen Analyzer
 #############################
 process.load('HeavyIonsAnalysis.EventAnalysis.HiGenAnalyzer_cfi')
+#process.HiGenParticleAna.ptMin = cms.untracked.double(0.7) # default is 5
+#process.HiGenParticleAna.etaMax = cms.untracked.double(2.6) # default is 2.5
 
 # event analysis
 process.load('HeavyIonsAnalysis.EventAnalysis.hltanalysis_cfi')
@@ -144,6 +146,17 @@ doHIJetID = True             # Fill jet ID and composition information branches
 doWTARecluster = False        # Add jet phi and eta for WTA axis
 doBtagging  =  False         # Note that setting to True increases computing time a lot
 
+# Configuration for jet flow subtraction
+iterativeFlow = True         # Iterative jetty region exclusion. Default = True
+pfCandidateEtaCut = 2        # Eta range for PF candidates used in flow fit. Default = 2
+minPfCandidatesPerEvent = 60 # Minimum number of PF candidates to make the flow fit. Default = 60
+minPfCandidatePt = 0.3       # Minimum pT for PF candidates in flow fit. Default = 0.3
+maxPfCandidatePt = 3         # Maximum pT for PF candidates in flow fit. Default = 3
+minFitQuality = 0            # Minimum flow fit quality score. Default = 0
+maxFitQuality = 1            # Maximum flow fit quality score. Default = 1
+firstFittedVn = 2            # First fitted vn component. Default = 2
+lastFittedVn = 3             # Last fitted vn component. Default = 3
+
 # 0 means use original mini-AOD jets, otherwise use R value, e.g., 3,4,8
 # Generator level jets in original miniAOD jets contain neutrinos
 # You will need to do reclustering with R-value to get generator level jets without neutrinos
@@ -183,6 +196,25 @@ for jetLabel in allJetLabels:
         getattr(process,"akCs"+jetLabel+"PFJetAnalyzer").pfUnifiedParticleTransformerAK4JetTags = cms.untracked.string("pfUnifiedParticleTransformerAK4JetTagsAK"+jetLabel+"PFBtag")
     process.forest += getattr(process,"akCs"+jetLabel+"PFJetAnalyzer")
 
+# Configuration for the flow fit
+for jetLabel in [flowR + "Flow" for flowR in jetLabelsFlowCS]:
+
+    getattr(process, "rhoModulationAkCs"+jetLabel+"PFJets").pfCandidateEtaCut = pfCandidateEtaCut
+    getattr(process, "rhoModulationAkCs"+jetLabel+"PFJets").minPfCandidatesPerEvent = minPfCandidatesPerEvent
+    getattr(process, "rhoModulationAkCs"+jetLabel+"PFJets").firstFittedVn = firstFittedVn
+    getattr(process, "rhoModulationAkCs"+jetLabel+"PFJets").lastFittedVn = lastFittedVn
+    getattr(process, "rhoModulationAkCs"+jetLabel+"PFJets").pfCandidateMinPtCut = minPfCandidatePt
+    getattr(process, "rhoModulationAkCs"+jetLabel+"PFJets").pfCandidateMaxPtCut = maxPfCandidatePt
+    getattr(process, "akCs"+jetLabel+"PFJets").minFlowChi2Prob = minFitQuality
+    getattr(process, "akCs"+jetLabel+"PFJets").maxFlowChi2Prob = maxFitQuality
+
+    if iterativeFlow:
+        getattr(process, "rhoModulationIterAkCs"+jetLabel+"PFJets").pfCandidateEtaCut = pfCandidateEtaCut
+        getattr(process, "rhoModulationIterAkCs"+jetLabel+"PFJets").minPfCandidatesPerEvent = minPfCandidatesPerEvent
+        getattr(process, "rhoModulationIterAkCs"+jetLabel+"PFJets").firstFittedVn = firstFittedVn
+        getattr(process, "rhoModulationIterAkCs"+jetLabel+"PFJets").lastFittedVn = lastFittedVn
+        getattr(process, "rhoModulationIterAkCs"+jetLabel+"PFJets").pfCandidateMinPtCut = minPfCandidatePt
+        getattr(process, "rhoModulationIterAkCs"+jetLabel+"PFJets").pfCandidateMaxPtCut = maxPfCandidatePt
 
 #########################
 # Event Selection -> add the needed filters here
