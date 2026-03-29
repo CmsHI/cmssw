@@ -9,6 +9,7 @@ hiEvtAnalyzer = cms.EDAnalyzer('HiEvtAnalyzer',
    HiMC             = cms.InputTag("heavyIon"),
    Vertex           = cms.InputTag("offlineSlimmedPrimaryVertices"),
    HFfilters = cms.InputTag("hiHFfilters","hiHFfilters"),
+   ClusterSummSrc   = cms.InputTag("clusterSummaryProducer"),
    ClusterCompSrc   = cms.InputTag("hiClusterCompatibility"),
    BeamHaloSummary  = cms.InputTag(""),
    doCentrality     = cms.bool(True),
@@ -19,6 +20,7 @@ hiEvtAnalyzer = cms.EDAnalyzer('HiEvtAnalyzer',
    doHiMC           = cms.bool(True),
    useHepMC         = cms.bool(False),
    doHFfilters      = cms.bool(True),
+   addClusterInfo   = cms.bool(False),
    evtPlaneLevel    = cms.int32(0)
 )
 
