@@ -29,6 +29,7 @@
 #include "DataFormats/HeavyIonEvent/interface/HFFilterInfo.h"  //this line is needed to access the HF Filters
 #include "DataFormats/PatCandidates/interface/PackedCandidate.h"
 #include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
+#include "DataFormats/TrackerCommon/interface/ClusterSummary.h"
 #include "DataFormats/HeavyIonEvent/interface/ClusterCompatibility.h"
 #include "DataFormats/METReco/interface/BeamHaloSummary.h"
 
@@ -66,6 +67,7 @@ private:
   edm::EDGetTokenT<std::vector<reco::Vertex>> VertexTag_;
 
   edm::EDGetTokenT<reco::HFFilterInfo> HFfilters_;
+  edm::EDGetTokenT<ClusterSummary> clusSummToken_;
   edm::EDGetTokenT<reco::ClusterCompatibility> clusCompToken_;
   edm::EDGetTokenT<reco::BeamHaloSummary> beamHaloSummaryToken_;
 
@@ -82,6 +84,7 @@ private:
   bool doHFfilters_;
   bool useHepMC_;
   bool doVertex_;
+  bool addClusterInfo_;
 
   int evtPlaneLevel_;
 
@@ -139,7 +142,7 @@ private:
 
   int numMinHFTower2, numMinHFTower3, numMinHFTower4, numMinHFTower5;
 
-  int clusComp_nPixHits;
+  int clusComp_nPixHits, clusSumm_nPixHits, clusSumm_nStrHits;
   std::vector<int> clusComp_nHit;
   std::vector<float> clusComp_z0, clusComp_chi;
   int beamHaloId;
@@ -181,6 +184,7 @@ HiEvtAnalyzer::HiEvtAnalyzer(const edm::ParameterSet& iConfig)
       HiMCTag_(consumes<edm::GenHIEvent>(iConfig.getParameter<edm::InputTag>("HiMC"))),
       VertexTag_(consumes<std::vector<reco::Vertex>>(iConfig.getParameter<edm::InputTag>("Vertex"))),
       HFfilters_(consumes<reco::HFFilterInfo>(iConfig.getParameter<edm::InputTag>("HFfilters"))),
+      clusSummToken_(consumes<ClusterSummary>(iConfig.getParameter<edm::InputTag>("ClusterSummSrc"))),
       clusCompToken_(consumes<reco::ClusterCompatibility>(iConfig.getParameter<edm::InputTag>("ClusterCompSrc"))),
       beamHaloSummaryToken_(consumes<reco::BeamHaloSummary>(iConfig.getParameter<edm::InputTag>("BeamHaloSummary"))),
       puInfoToken_(consumes<std::vector<PileupSummaryInfo>>(edm::InputTag("addPileupInfo"))),
@@ -194,6 +198,7 @@ HiEvtAnalyzer::HiEvtAnalyzer(const edm::ParameterSet& iConfig)
       doHFfilters_(iConfig.getParameter<bool>("doHFfilters")),
       useHepMC_(iConfig.getParameter<bool>("useHepMC")),
       doVertex_(iConfig.getParameter<bool>("doVertex")),
+      addClusterInfo_(iConfig.getParameter<bool>("addClusterInfo")),
       evtPlaneLevel_(iConfig.getParameter<int>("evtPlaneLevel")) {}
 
 HiEvtAnalyzer::~HiEvtAnalyzer() {
@@ -436,13 +441,22 @@ void HiEvtAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
   clusComp_nHit.clear();
   clusComp_chi.clear();
   const auto& clusComp = iEvent.getHandle(clusCompToken_);
-  if (clusComp.isValid()) {
+  if (clusComp.isValid() && addClusterInfo_) {
     clusComp_nPixHits = clusComp->nValidPixelHits();
     for (int i=0; i<clusComp->size(); i++) {
       clusComp_z0.emplace_back(clusComp->z0(i));
       clusComp_nHit.emplace_back(clusComp->nHit(i));
       clusComp_chi.emplace_back(clusComp->chi(i));
     }
+  }
+
+  // cluster summary information
+  clusSumm_nPixHits = -1;
+  clusSumm_nStrHits = -1;
+  const auto& clusSumm = iEvent.getHandle(clusSummToken_);
+  if (clusSumm.isValid() && addClusterInfo_) {
+    clusSumm_nPixHits = clusSumm->getNClus(ClusterSummary::PIXEL, false);
+    clusSumm_nStrHits = clusSumm->getNClus(ClusterSummary::STRIP, false);
   }
 
   // beam halo information
@@ -611,11 +625,16 @@ void HiEvtAnalyzer::beginJob() {
   thi_->Branch("numMinHFTower4", &numMinHFTower4, "numMinHFTower4/I");
   thi_->Branch("numMinHFTower5", &numMinHFTower5, "numMinHFTower5/I");
 
-  // cluster compatibility information
-  thi_->Branch("clusComp_nPixHits", &clusComp_nPixHits, "clusComp_nPixHits/I");
-  thi_->Branch("clusComp_z0", &clusComp_z0);
-  thi_->Branch("clusComp_nHit", &clusComp_nHit);
-  thi_->Branch("clusComp_chi", &clusComp_chi);
+  if (addClusterInfo_) {
+    // cluster compatibility information
+    thi_->Branch("clusComp_nPixHits", &clusComp_nPixHits, "clusComp_nPixHits/I");
+    thi_->Branch("clusComp_z0", &clusComp_z0);
+    thi_->Branch("clusComp_nHit", &clusComp_nHit);
+    thi_->Branch("clusComp_chi", &clusComp_chi);
+    // cluster summary information
+    thi_->Branch("clusSumm_nPixHits", &clusSumm_nPixHits, "clusSumm_nPixHits/I");
+    thi_->Branch("clusSumm_nStrHits", &clusSumm_nStrHits, "clusSumm_nStrHits/I");
+  }
 
   // beam halo information
   thi_->Branch("beamHaloId", &beamHaloId, "beamHaloId/I");
