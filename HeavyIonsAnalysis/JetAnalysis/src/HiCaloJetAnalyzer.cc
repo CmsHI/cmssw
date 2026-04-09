@@ -39,7 +39,9 @@ HiCaloJetAnalyzer::HiCaloJetAnalyzer(const edm::ParameterSet& iConfig) {
   doHiJetID_ = iConfig.getUntrackedParameter<bool>("doHiJetID", false);
   doCaloEnergyFractions_ = iConfig.getUntrackedParameter<bool>("doCaloEnergyFractions", false);
 
-  rParam = iConfig.getParameter<double>("rParam");
+  r2Param = iConfig.getParameter<double>("rParam");
+  r2Param *= r2Param;
+  
   hardPtMin_ = iConfig.getUntrackedParameter<double>("hardPtMin", 4);
   jetPtMin_ = iConfig.getParameter<double>("jetPtMin");
   jetAbsEtaMax_ = iConfig.getUntrackedParameter<double>("jetAbsEtaMax", 5.1);
@@ -178,8 +180,7 @@ void HiCaloJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSetup) {
   // FILL JRA TREE
   jets_.nref = 0;
 
-  for (unsigned int j = 0; j < jets->size(); ++j) {
-    const reco::CaloJet& jet = (*jets)[j];
+  for (const auto& jet : *jets) {
 
     auto pt = jet.pt();
     if (pt < jetPtMin_)
@@ -226,8 +227,7 @@ void HiCaloJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSetup) {
       jets_.signalChargedSum[jets_.nref] = 0;
       jets_.signalHardSum[jets_.nref] = 0;
 
-      for (unsigned int icand = 0; icand < pfCandidates->size(); ++icand) {
-        const pat::PackedCandidate& currentCandidate = (*pfCandidates)[icand];
+      for (const auto& currentCandidate : *pfCandidates) {
 
         if (!currentCandidate.hasTrackDetails())
           continue;
@@ -240,8 +240,8 @@ void HiCaloJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSetup) {
             continue;
         }
 
-        double dr = deltaR(jet, track);
-        if (dr < rParam) {
+        double dr2 = deltaR2(jet, track);
+        if (dr2 < r2Param) {
           double ptcand = track.pt();
           jets_.trackSum[jets_.nref] += ptcand;
           jets_.trackN[jets_.nref] += 1;
@@ -256,10 +256,10 @@ void HiCaloJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSetup) {
       }
 
       reco::PFCandidate converter = reco::PFCandidate();
-      for (unsigned int icand = 0; icand < pfCandidates->size(); ++icand) {
-        const pat::PackedCandidate& track = (*pfCandidates)[icand];
-        double dr = deltaR(jet, track);
-        if (dr < rParam) {
+      for (const auto& track : *pfCandidates) {
+
+        double dr2 = deltaR2(jet, track);
+        if (dr2 < r2Param) {
           double ptcand = track.pt();
           int pfid = converter.translatePdgIdToType(track.pdgId());
 
@@ -354,8 +354,8 @@ void HiCaloJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSetup) {
 
     jets_.ngen = 0;
 
-    for (unsigned int igen = 0; igen < genjets->size(); ++igen) {
-      const reco::GenJet& genjet = (*genjets)[igen];
+    for (const auto& genjet : *genjets) {
+
       float genjet_pt = genjet.pt();
 
       // threshold to reduce size of output in minbias PbPb

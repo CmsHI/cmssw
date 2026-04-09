@@ -66,7 +66,7 @@ private:
   bool doHiJetID_;
   bool doCaloEnergyFractions_;
 
-  double rParam;
+  double r2Param;
   double hardPtMin_;
   double jetPtMin_;
   double jetAbsEtaMax_;

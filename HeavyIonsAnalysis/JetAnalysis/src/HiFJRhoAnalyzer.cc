@@ -19,9 +19,6 @@
 #include <memory>
 #include <string>
 
-#include "TLorentzVector.h"
-#include "TMath.h"
-#include "TString.h"
 #include "TTree.h"
 
 #include "HeavyIonsAnalysis/JetAnalysis/interface/HiFJRhoAnalyzer.h"
@@ -92,7 +89,6 @@ HiFJRhoAnalyzer::~HiFJRhoAnalyzer()
 // ------------ method called to analyze the data  ------------
 void HiFJRhoAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
-  using namespace edm;
 
   //clear vectors
   rhoObj_.etaMin.clear();
@@ -206,12 +202,9 @@ void HiFJRhoAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& i
 }
 
 // ------------ method called once each job just before starting event loop  ------------
-void 
-HiFJRhoAnalyzer::beginJob()
-{
+void HiFJRhoAnalyzer::beginJob() {
 
-  TString jetTagTitle = "HiFJRho Jet background analysis tree";
-  tree_ = fs_->make<TTree>("t",jetTagTitle.Data());
+  tree_ = fs_->make<TTree>("t", "HiFJRho Jet background analysis tree");
   
   tree_->Branch("etaMin",&(rhoObj_.etaMin));
   tree_->Branch("etaMax",&(rhoObj_.etaMax));
@@ -238,9 +231,7 @@ HiFJRhoAnalyzer::beginJob()
 }
 
 // ------------ method called once each job just after ending the event loop  ------------
-void 
-HiFJRhoAnalyzer::endJob() {
-}
+void HiFJRhoAnalyzer::endJob() {}
 
 // ------------ method fills 'descriptions' with the allowed parameters for the module  ------------
 void HiFJRhoAnalyzer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {

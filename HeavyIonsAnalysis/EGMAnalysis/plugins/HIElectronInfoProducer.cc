@@ -232,9 +232,9 @@ void pat::HIElectronInfoProducer::produce(edm::StreamID, edm::Event& iEvent, con
     double rho(-1.);
     for (size_t i=1; i<etaMap.size(); i++)
       if (electron.eta() >= etaMap[i-1] && electron.eta() < etaMap[i]) {
-		rho = rhoMap[i-1];
-		break;
-	  }
+		    rho = rhoMap[i-1];
+		    break;
+	    }
     if (rho < 0)
       continue;
 
@@ -268,9 +268,9 @@ void pat::HIElectronInfoProducer::produce(edm::StreamID, edm::Event& iEvent, con
     double pfChIso(0.), pfNeuIso(0.), pfPhoIso(0.);
     double skPFChIso(0.), skPFNeuIso(0.), skPFPhoIso(0.);
     for (const auto& cand : selPFCands) {
-	  const auto& [pt, eta, phi, id, ieta, skThr] = cand;
-	  const auto dR = reco::deltaR(electron.eta(), electron.phi(), eta, phi);
-	  if (dR >= rVeto_ && dR <= rCone_) {
+	    const auto& [pt, eta, phi, id, ieta, skThr] = cand;
+	    const auto dR2 = reco::deltaR2(electron.eta(), electron.phi(), eta, phi);
+	    if (dR2 >= rVeto_ * rVeto_ && dR2 <= rCone_ * rCone_) {
         (id == 5 ? pfNeuIso : (id == 4 ? pfPhoIso : pfChIso)) += pt;
 	    (id == 5 ? skPFNeuIso : (id == 4 ? skPFPhoIso : skPFChIso)) += pt * (pt > skThr);
       }

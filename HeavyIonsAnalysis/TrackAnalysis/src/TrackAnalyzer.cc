@@ -89,7 +89,7 @@ void TrackAnalyzer::fillTracks(const edm::Event& iEvent, const edm::EventSetup& 
     if (t.pt() < trackPtMin_)
       continue;
 
-    if (fabs(t.eta()) > trackEtaMax_)
+    if (std::abs(t.eta()) > trackEtaMax_)
 	    continue;
 
     if (applyTrackSelections_){
