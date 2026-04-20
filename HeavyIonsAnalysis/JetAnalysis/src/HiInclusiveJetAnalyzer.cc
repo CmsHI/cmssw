@@ -694,7 +694,7 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
     if (doMatch_) {
       // Alternative reconstruction matching (PF for calo, calo for PF)
 
-      double dr2Min = 100;
+      double dr2Min = 10000;
       for (unsigned int imatch = 0; imatch < matchedjets->size(); ++imatch) {
         const pat::Jet& mjet = (*matchedjets)[imatch];
 
@@ -709,7 +709,7 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
             jets_.matchedPartonFlavor[jets_.nref] = mjet.partonFlavour();
           }
 
-          jets_.matchedR[jets_.nref] = deltaR(jet, mjet);
+          jets_.matchedR[jets_.nref] = std::sqrt(dr2);
           dr2Min = dr2;
         }
       }
