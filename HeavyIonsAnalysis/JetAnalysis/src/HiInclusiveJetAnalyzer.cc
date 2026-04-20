@@ -511,14 +511,14 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
   }
 
   auto getTag = [](const edm::Handle<reco::JetTagCollection> &bTags,const pat::Jet &jet) {
-    float tagValue(-999),maxDR2(9.8690); // 3.1415^2
+    float tagValue(-999), maxDR2(9.8690); // = 3.1415^2
     for (const auto &t : *bTags) {
       auto const dR2 = deltaR2(jet, *(t.first));
       if (dR2 > maxDR2) continue;
       maxDR2=dR2;
       tagValue=t.second;
     }
-    if(maxDR2 > 0.4 * 0.4) tagValue=-999;
+    if(maxDR2 > 0.16) tagValue=-999; // 0.16 = 0.4^2
     return tagValue;
   };
 
@@ -536,11 +536,11 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
         auto& discr = jets_discr_.at(t.first);
         if (t.first == "pfJP")
           discr["b"][jets_.nref] = getTag(t.second.at("probb"),jet);
-	else if (t.first == "deepCSV")
+	      else if (t.first == "deepCSV")
           discr["b"][jets_.nref]  = getTag(t.second.at("probb"),jet)+getTag(t.second.at("probbb"),jet);
         else if (t.first == "deepFlavour" || t.first == "particleTransformer" || t.first == "unifiedParticleTransformer")
           discr["b"][jets_.nref] = getTag(t.second.at("probb"),jet)+getTag(t.second.at("probbb"),jet)+getTag(t.second.at("problepb"),jet);
-	if (t.first == "unifiedParticleTransformer") {
+	      if (t.first == "unifiedParticleTransformer") {
           float tag(0.0);
           for (const auto& n : {"probtaup1h0p", "probtaup1h1p", "probtaup1h2p", "probtaup3h0p", "probtaup3h1p", "probtaum1h0p", "probtaum1h1p", "probtaum1h2p", "probtaum3h0p", "probtaum3h1p"})
             tag += getTag(t.second.at(n), jet);
@@ -694,12 +694,12 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
     if (doMatch_) {
       // Alternative reconstruction matching (PF for calo, calo for PF)
 
-      double drMin = 100;
+      double dr2Min = 100;
       for (unsigned int imatch = 0; imatch < matchedjets->size(); ++imatch) {
         const pat::Jet& mjet = (*matchedjets)[imatch];
 
-        double dr = deltaR(jet, mjet);
-        if (dr < drMin) {
+        double dr2 = deltaR2(jet, mjet);
+        if (dr2 < dr2Min) {
           jets_.matchedPt[jets_.nref] = mjet.pt();
 
           jets_.matchedRawPt[jets_.nref] = mjet.correctedJet("Uncorrected").pt();
@@ -709,8 +709,8 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
             jets_.matchedPartonFlavor[jets_.nref] = mjet.partonFlavour();
           }
 
-          jets_.matchedR[jets_.nref] = dr;
-          drMin = dr;
+          jets_.matchedR[jets_.nref] = deltaR(jet, mjet);
+          dr2Min = dr2;
         }
       }
     }
@@ -941,12 +941,12 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
       for (int ijet = 0; ijet < jets_.nref; ++ijet) {
         // poor man's matching, someone fix please
 
-        double deltaPt = fabs(genjet.pt() - jets_.refpt[ijet]);  //Note: precision of this ~ .0001, so cut .01
-        double deltaEta = fabs(
+        double deltaPt = std::abs(genjet.pt() - jets_.refpt[ijet]);  //Note: precision of this ~ .0001, so cut .01
+        double deltaEta = std::abs(
             genjet.eta() -
             jets_.refeta
                 [ijet]);  //Note: precision of this is  ~.0000001, but keep it low, .0001 is well below cone size and typical pointing resolution
-        double deltaPhi = fabs(reco::deltaPhi(
+        double deltaPhi = std::abs(reco::deltaPhi(
             genjet.phi(),
             jets_.refphi
                 [ijet]));  //Note: precision of this is  ~.0000001, but keep it low, .0001 is well below cone size and typical pointing resolution
@@ -956,7 +956,7 @@ void HiInclusiveJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSet
             jets_.genmatchindex[jets_.ngen] = (int)ijet;
             jets_.gendphijt[jets_.ngen] = reco::deltaPhi(jets_.refphi[ijet], genjet.phi());
             jets_.gendrjt[jets_.ngen] =
-                sqrt(pow(jets_.gendphijt[jets_.ngen], 2) + pow(fabs(genjet.eta() - jets_.refeta[ijet]), 2));
+                sqrt(pow(jets_.gendphijt[jets_.ngen], 2) + pow(deltaEta, 2));
           }
           if (doGenTaus_) {
             jets_.reftau1[ijet] = tau1;
@@ -1038,7 +1038,7 @@ int HiInclusiveJetAnalyzer::getPFJetMuon(const pat::Jet& pfJet,
     if (abs(id) != 3)
       continue;
 
-    if (reco::deltaR2(pfJet, pfCandidate) > 0.5 * 0.5)
+    if (reco::deltaR2(pfJet, pfCandidate) > 0.25) // 0.25 = 0.5^2
       continue;
 
     double pt = pfCandidate.pt();
@@ -1051,9 +1051,7 @@ int HiInclusiveJetAnalyzer::getPFJetMuon(const pat::Jet& pfJet,
   return pfMuonIndex;
 }
 
-double HiInclusiveJetAnalyzer::getPtRel(const pat::PackedCandidate& lep, const pat::Jet& jet)
-
-{
+double HiInclusiveJetAnalyzer::getPtRel(const pat::PackedCandidate& lep, const pat::Jet& jet) {
   float lj_x = jet.p4().px();
   float lj_y = jet.p4().py();
   float lj_z = jet.p4().pz();
@@ -1103,15 +1101,15 @@ void HiInclusiveJetAnalyzer::analyzeSubjets(const reco::Jet& jet) {
 //--------------------------------------------------------------------------------------------------
 int HiInclusiveJetAnalyzer::getGroomedGenJetIndex(const reco::GenJet& jet) const {
   //Find closest soft-dropped gen jet
-  double drMin2 = 10000;
+  double dr2Min = 10000;
   int imatch = -1;
   for (unsigned int i = 0; i < gensubjets_->size(); ++i) {
     const reco::Jet& mjet = (*gensubjets_)[i];
 
     double dr2 = deltaR2(jet, mjet);
-    if (dr2 < drMin2) {
+    if (dr2 < dr2Min) {
       imatch = i;
-      drMin2 = dr2;
+      dr2Min = dr2;
     }
   }
   return imatch;
@@ -1138,7 +1136,7 @@ void HiInclusiveJetAnalyzer::analyzeRefSubjets(const reco::GenJet& jet) {
   std::vector<float> sjeta;
   std::vector<float> sjphi;
   std::vector<float> sjm;
-  if (imatch > -1 && dr2 < 0.4 * 0.4) {
+  if (imatch > -1 && dr2 < 0.16) { // 0.16 = 0.4^2
     const reco::Jet& mjet = (*gensubjets_)[imatch];
     jets_.refptG[jets_.nref] = mjet.pt();
     jets_.refetaG[jets_.nref] = mjet.eta();
@@ -1201,7 +1199,7 @@ void HiInclusiveJetAnalyzer::analyzeGenSubjets(const reco::GenJet& jet) {
   std::vector<float> sjphi;
   std::vector<float> sjm;
   std::vector<float> sjarea;
-  if (imatch > -1 && dr2 < 0.4 * 0.4) {
+  if (imatch > -1 && dr2 < 0.16) { // 0.16 = 0.4^2
     const reco::Jet& mjet = (*gensubjets_)[imatch];
     jets_.genptG[jets_.ngen] = mjet.pt();
     jets_.genetaG[jets_.ngen] = mjet.eta();

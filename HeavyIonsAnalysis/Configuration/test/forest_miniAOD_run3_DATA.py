@@ -101,9 +101,8 @@ process.load('HeavyIonsAnalysis.EventAnalysis.l1object_cfi')
 #process.hiEvtAnalyzer.doCentrality = cms.bool(False)
 #process.hiEvtAnalyzer.doHFfilters = cms.bool(False)
 
-# FIXME: Do we have an updated trigger list?
-#from HeavyIonsAnalysis.EventAnalysis.hltobject_cfi import trigger_list_data_2023_skimmed
-#process.hltobject.triggerNames = trigger_list_data_2023_skimmed
+from HeavyIonsAnalysis.EventAnalysis.hltobject_cfi import trigger_list_data_2025
+process.hltobject.triggerNames = trigger_list_data_2025
 
 process.load('HeavyIonsAnalysis.EventAnalysis.particleFlowAnalyser_cfi')
 ################################
