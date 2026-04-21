@@ -3,8 +3,8 @@
 # Type: data
 
 import FWCore.ParameterSet.Config as cms
-from Configuration.Eras.Era_Run3_pp_on_PbPb_2024_cff import Run3_pp_on_PbPb_2024
-process = cms.Process('HiForest',Run3_pp_on_PbPb_2024)
+from Configuration.Eras.Era_Run3_pp_on_PbPb_2025_cff import Run3_pp_on_PbPb_2025
+process = cms.Process('HiForest',Run3_pp_on_PbPb_2025)
 
 ###############################################################################
 
@@ -25,7 +25,7 @@ process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 151X, data")
 process.source = cms.Source("PoolSource",
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
     fileNames = cms.untracked.vstring(
-         '/store/hidata/HIRun2024A/HIPhysicsRawPrime2/MINIAOD/PromptReco-v1/000/387/908/00000/93a76f4f-4e90-4357-9a7f-3c64a1be8e29.root'
+         '/store/hidata/HIRun2025A/HIPhysicsRawPrime14/MINIAOD/PromptReco-v1/000/399/584/00000/36bccf34-1cb6-4f4a-99b8-c9fee4ee1fe7.root'
         #'/store/group/phys_heavyions/wangj/RECO2024/miniaod_PhysicsHIPhysicsRawPrime0_388056_ZB.root'
     ), 
 )
@@ -46,7 +46,7 @@ process.load('FWCore.MessageService.MessageLogger_cfi')
 
 
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, '141X_dataRun3_Prompt_v3', '')
+process.GlobalTag = GlobalTag(process.GlobalTag, '151X_dataRun3_Prompt_v1', '')
 process.HiForestInfo.GlobalTagLabel = process.GlobalTag.globaltag
 
 ## --> only use this starting from 388000
@@ -101,9 +101,8 @@ process.load('HeavyIonsAnalysis.EventAnalysis.l1object_cfi')
 #process.hiEvtAnalyzer.doCentrality = cms.bool(False)
 #process.hiEvtAnalyzer.doHFfilters = cms.bool(False)
 
-# FIXME: Do we have an updated trigger list?
-#from HeavyIonsAnalysis.EventAnalysis.hltobject_cfi import trigger_list_data_2023_skimmed
-#process.hltobject.triggerNames = trigger_list_data_2023_skimmed
+from HeavyIonsAnalysis.EventAnalysis.hltobject_cfi import trigger_list_data_2025
+process.hltobject.triggerNames = trigger_list_data_2025
 
 process.load('HeavyIonsAnalysis.EventAnalysis.particleFlowAnalyser_cfi')
 ################################

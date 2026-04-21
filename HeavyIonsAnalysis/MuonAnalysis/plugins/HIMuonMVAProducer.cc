@@ -155,10 +155,10 @@ void pat::HIMuonMVAProducer::produce(edm::StreamID, edm::Event& iEvent, const ed
     // compute soft killer isolation
     double skPFChIso(0.), skPFNeuIso(0.), skPFPhoIso(0.);
     for (const auto& cand : selPFCands) {
-	  const auto& [pt, eta, phi, id, ieta, skThr] = cand;
-	  const auto dR = reco::deltaR(muon.eta(), muon.phi(), eta, phi);
-	  if (dR >= rVeto_ && dR <= rCone_)
-	    (id == 5 ? skPFNeuIso : (id == 4 ? skPFPhoIso : skPFChIso)) += pt * (pt > skThr);
+	    const auto& [pt, eta, phi, id, ieta, skThr] = cand;
+	    const auto dR2 = reco::deltaR2(muon.eta(), muon.phi(), eta, phi);
+	    if (dR2 >= rVeto_ * rVeto_ && dR2 <= rCone_ * rCone_)
+	      (id == 5 ? skPFNeuIso : (id == 4 ? skPFPhoIso : skPFChIso)) += pt * (pt > skThr);
     }
     const auto& skPFIso = skPFChIso + skPFNeuIso + skPFPhoIso;
 

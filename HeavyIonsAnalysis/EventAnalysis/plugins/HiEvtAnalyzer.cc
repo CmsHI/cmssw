@@ -435,28 +435,33 @@ void HiEvtAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
     numMinHFTower5 = 0;
   }
 
-  // cluster compatibility information
   clusComp_nPixHits = -1;
   clusComp_z0.clear();
   clusComp_nHit.clear();
   clusComp_chi.clear();
-  const auto& clusComp = iEvent.getHandle(clusCompToken_);
-  if (clusComp.isValid() && addClusterInfo_) {
-    clusComp_nPixHits = clusComp->nValidPixelHits();
-    for (int i=0; i<clusComp->size(); i++) {
-      clusComp_z0.emplace_back(clusComp->z0(i));
-      clusComp_nHit.emplace_back(clusComp->nHit(i));
-      clusComp_chi.emplace_back(clusComp->chi(i));
-    }
-  }
-
-  // cluster summary information
+  
   clusSumm_nPixHits = -1;
   clusSumm_nStrHits = -1;
-  const auto& clusSumm = iEvent.getHandle(clusSummToken_);
-  if (clusSumm.isValid() && addClusterInfo_) {
-    clusSumm_nPixHits = clusSumm->getNClus(ClusterSummary::PIXEL, false);
-    clusSumm_nStrHits = clusSumm->getNClus(ClusterSummary::STRIP, false);
+
+  if (addClusterInfo_) {
+
+    // cluster compatibility information
+    const auto& clusComp = iEvent.getHandle(clusCompToken_);
+    if (clusComp.isValid()) {
+      clusComp_nPixHits = clusComp->nValidPixelHits();
+      for (int i=0; i<clusComp->size(); i++) {
+        clusComp_z0.emplace_back(clusComp->z0(i));
+        clusComp_nHit.emplace_back(clusComp->nHit(i));
+        clusComp_chi.emplace_back(clusComp->chi(i));
+      }
+    }
+
+    // cluster summary information
+    const auto& clusSumm = iEvent.getHandle(clusSummToken_);
+    if (clusSumm.isValid()) {
+      clusSumm_nPixHits = clusSumm->getNClus(ClusterSummary::PIXEL, false);
+      clusSumm_nStrHits = clusSumm->getNClus(ClusterSummary::STRIP, false);
+    }
   }
 
   // beam halo information
@@ -519,9 +524,11 @@ void HiEvtAnalyzer::beginJob() {
   thi_->Branch("lumi", &lumi, "lumi/i");
 
   // Vertex
-  thi_->Branch("vx", &vx, "vx/F");
-  thi_->Branch("vy", &vy, "vy/F");
-  thi_->Branch("vz", &vz, "vz/F");
+  if (doVertex_) {
+    thi_->Branch("vx", &vx, "vx/F");
+    thi_->Branch("vy", &vy, "vy/F");
+    thi_->Branch("vz", &vz, "vz/F");
+  }
 
   //Event observables
   if (doHiMC_) {
@@ -556,39 +563,41 @@ void HiEvtAnalyzer::beginJob() {
   }
 
   // Centrality
-  thi_->Branch("hiBin", &hiBin, "hiBin/I");
-  thi_->Branch("hiHF", &hiHF, "hiHF/F");
-  thi_->Branch("hiHFplus", &hiHFplus, "hiHFplus/F");
-  thi_->Branch("hiHFminus", &hiHFminus, "hiHFminus/F");
-  thi_->Branch("hiHFECut", &hiHFECut, "hiHFECut/F");
-  thi_->Branch("hiHFECutPlus", &hiHFECutPlus, "hiHFECutPlus/F");
-  thi_->Branch("hiHFECutMinus", &hiHFECutMinus, "hiHFECutMinus/F");
-  thi_->Branch("hiHFplusEta4", &hiHFplusEta4, "hiHFplusEta4/F");
-  thi_->Branch("hiHFminusEta4", &hiHFminusEta4, "hiHFminusEta4/F");
+  if (doCentrality_) {
+    thi_->Branch("hiBin", &hiBin, "hiBin/I");
+    thi_->Branch("hiHF", &hiHF, "hiHF/F");
+    thi_->Branch("hiHFplus", &hiHFplus, "hiHFplus/F");
+    thi_->Branch("hiHFminus", &hiHFminus, "hiHFminus/F");
+    thi_->Branch("hiHFECut", &hiHFECut, "hiHFECut/F");
+    thi_->Branch("hiHFECutPlus", &hiHFECutPlus, "hiHFECutPlus/F");
+    thi_->Branch("hiHFECutMinus", &hiHFECutMinus, "hiHFECutMinus/F");
+    thi_->Branch("hiHFplusEta4", &hiHFplusEta4, "hiHFplusEta4/F");
+    thi_->Branch("hiHFminusEta4", &hiHFminusEta4, "hiHFminusEta4/F");
 
-  thi_->Branch("hiZDC", &hiZDC, "hiZDC/F");
-  thi_->Branch("hiZDCplus", &hiZDCplus, "hiZDCplus/F");
-  thi_->Branch("hiZDCminus", &hiZDCminus, "hiZDCminus/F");
+    thi_->Branch("hiZDC", &hiZDC, "hiZDC/F");
+    thi_->Branch("hiZDCplus", &hiZDCplus, "hiZDCplus/F");
+    thi_->Branch("hiZDCminus", &hiZDCminus, "hiZDCminus/F");
 
-  thi_->Branch("hiHFhit", &hiHFhit, "hiHFhit/F");
-  thi_->Branch("hiHFhitPlus", &hiHFhitPlus, "hiHFhitPlus/F");
-  thi_->Branch("hiHFhitMinus", &hiHFhitMinus, "hiHFhitMinus/F");
+    thi_->Branch("hiHFhit", &hiHFhit, "hiHFhit/F");
+    thi_->Branch("hiHFhitPlus", &hiHFhitPlus, "hiHFhitPlus/F");
+    thi_->Branch("hiHFhitMinus", &hiHFhitMinus, "hiHFhitMinus/F");
 
-  thi_->Branch("hiET", &hiET, "hiET/F");
-  thi_->Branch("hiEE", &hiEE, "hiEE/F");
-  thi_->Branch("hiEB", &hiEB, "hiEB/F");
-  thi_->Branch("hiEEplus", &hiEEplus, "hiEEplus/F");
-  thi_->Branch("hiEEminus", &hiEEminus, "hiEEminus/F");
-  thi_->Branch("hiNpix", &hiNpix, "hiNpix/I");
-  thi_->Branch("hiNpixPlus", &hiNpixPlus, "hiNpixPlus/I");
-  thi_->Branch("hiNpixMinus", &hiNpixMinus, "hiNpixMinus/I");
-  thi_->Branch("hiNpixelTracks", &hiNpixelTracks, "hiNpixelTracks/I");
-  thi_->Branch("hiNpixelTracksPlus", &hiNpixelTracksPlus, "hiNpixelTracksPlus/I");
-  thi_->Branch("hiNpixelTracksMinus", &hiNpixelTracksMinus, "hiNpixelTracksMinus/I");
-  thi_->Branch("hiNtracks", &hiNtracks, "hiNtracks/I");
-  thi_->Branch("hiNtracksPtCut", &hiNtracksPtCut, "hiNtracksPtCut/I");
-  thi_->Branch("hiNtracksEtaCut", &hiNtracksEtaCut, "hiNtracksEtaCut/I");
-  thi_->Branch("hiNtracksEtaPtCut", &hiNtracksEtaPtCut, "hiNtracksEtaPtCut/I");
+    thi_->Branch("hiET", &hiET, "hiET/F");
+    thi_->Branch("hiEE", &hiEE, "hiEE/F");
+    thi_->Branch("hiEB", &hiEB, "hiEB/F");
+    thi_->Branch("hiEEplus", &hiEEplus, "hiEEplus/F");
+    thi_->Branch("hiEEminus", &hiEEminus, "hiEEminus/F");
+    thi_->Branch("hiNpix", &hiNpix, "hiNpix/I");
+    thi_->Branch("hiNpixPlus", &hiNpixPlus, "hiNpixPlus/I");
+    thi_->Branch("hiNpixMinus", &hiNpixMinus, "hiNpixMinus/I");
+    thi_->Branch("hiNpixelTracks", &hiNpixelTracks, "hiNpixelTracks/I");
+    thi_->Branch("hiNpixelTracksPlus", &hiNpixelTracksPlus, "hiNpixelTracksPlus/I");
+    thi_->Branch("hiNpixelTracksMinus", &hiNpixelTracksMinus, "hiNpixelTracksMinus/I");
+    thi_->Branch("hiNtracks", &hiNtracks, "hiNtracks/I");
+    thi_->Branch("hiNtracksPtCut", &hiNtracksPtCut, "hiNtracksPtCut/I");
+    thi_->Branch("hiNtracksEtaCut", &hiNtracksEtaCut, "hiNtracksEtaCut/I");
+    thi_->Branch("hiNtracksEtaPtCut", &hiNtracksEtaPtCut, "hiNtracksEtaPtCut/I");
+  }
   
   thi_->Branch("hiHF_pf", &hiHF_pf, "hiHF_pf/F");
   thi_->Branch("hiHFE_pf", &hiHFE_pf, "hiHFE_pf/F");
@@ -620,10 +629,12 @@ void HiEvtAnalyzer::beginJob() {
     thi_->Branch("hiEvtPlanes", hiEvtPlane, "hiEvtPlanes[hiNevtPlane]/F");
   }
 
-  thi_->Branch("numMinHFTower2", &numMinHFTower2, "numMinHFTower2/I");
-  thi_->Branch("numMinHFTower3", &numMinHFTower3, "numMinHFTower3/I");
-  thi_->Branch("numMinHFTower4", &numMinHFTower4, "numMinHFTower4/I");
-  thi_->Branch("numMinHFTower5", &numMinHFTower5, "numMinHFTower5/I");
+  if (doHFfilters_) {
+    thi_->Branch("numMinHFTower2", &numMinHFTower2, "numMinHFTower2/I");
+    thi_->Branch("numMinHFTower3", &numMinHFTower3, "numMinHFTower3/I");
+    thi_->Branch("numMinHFTower4", &numMinHFTower4, "numMinHFTower4/I");
+    thi_->Branch("numMinHFTower5", &numMinHFTower5, "numMinHFTower5/I");
+  }
 
   if (addClusterInfo_) {
     // cluster compatibility information

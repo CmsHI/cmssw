@@ -3,8 +3,8 @@
 # Type: mc
 
 import FWCore.ParameterSet.Config as cms
-from Configuration.Eras.Era_Run3_pp_on_PbPb_2024_cff import Run3_pp_on_PbPb_2024
-process = cms.Process('HiForest', Run3_pp_on_PbPb_2024)
+from Configuration.Eras.Era_Run3_pp_on_PbPb_2025_cff import Run3_pp_on_PbPb_2025
+process = cms.Process('HiForest', Run3_pp_on_PbPb_2025)
 
 ###############################################################################
 
@@ -18,7 +18,7 @@ process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 151X, mc")
 process.source = cms.Source("PoolSource",
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
     fileNames = cms.untracked.vstring(
-        'root://cmsxrootd.fnal.gov//store/mc/HINPbPbWinter24MiniAOD/Dijet_pThat-15to1200_TuneCP5_5p36TeV_pythia8/MINIAODSIM/141X_mcRun3_2024_realistic_HI_v14-v2/2520003/fb3d1c69-59df-4e79-bf33-91cb43316e94.root'
+        'root://cmsxrootd.fnal.gov//store/user/anstahll/CERN/PbPb2025/MC/2026_03_24/HYDJET/HYDJET_5p36TeV_2025Run3/minbias_HYDJET_5p36TeV_2025Run3_RECO_2026_03_24/260327_025709/0000/HYDJET_minbias_RECO_102.root'
     ),
 )
 
@@ -38,7 +38,7 @@ process.load('FWCore.MessageService.MessageLogger_cfi')
 
 
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, '141X_mcRun3_2024_realistic_HI_v11', '')
+process.GlobalTag = GlobalTag(process.GlobalTag, '151X_mcRun3_2025_realistic_HI_v5', '')
 process.HiForestInfo.GlobalTagLabel = process.GlobalTag.globaltag
 process.GlobalTag.snapshotTime = cms.string("9999-12-31 23:59:59.000")
 process.GlobalTag.toGet.extend([
@@ -57,7 +57,7 @@ process.centralityBin.centralityVariable = cms.string("HFtowers")
 
 # root output
 process.TFileService = cms.Service("TFileService",
-    fileName = cms.string("HiForestMiniAOD.root"))
+    fileName = cms.string("HiForestMiniAODMC.root"))
 
 # # edm output for debugging purposes
 # process.output = cms.OutputModule(
@@ -87,8 +87,8 @@ process.load('HeavyIonsAnalysis.EventAnalysis.skimanalysis_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.hltobject_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.l1object_cfi')
 
-#from HeavyIonsAnalysis.EventAnalysis.hltobject_cfi import trigger_list_mc
-#process.hltobject.triggerNames = trigger_list_mc
+from HeavyIonsAnalysis.EventAnalysis.hltobject_cfi import trigger_list_data_2025
+process.hltobject.triggerNames = trigger_list_data_2025
 
 ################################
 # electrons, photons, muons

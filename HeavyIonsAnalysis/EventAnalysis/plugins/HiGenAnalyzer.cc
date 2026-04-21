@@ -197,8 +197,8 @@ vector<int> HiGenAnalyzer::getMotherIdx(edm::Handle<std::vector<pat::PackedGenPa
         continue;  //don't match to the initial collision particles
       for (unsigned int idx = 0; idx < p.numberOfDaughters(); idx++) {
         //if (p.daughter(idx)->pt()*p.daughter(idx)->eta()*p.daughter(idx)->phi() == pin.pt()*pin.eta()*pin.phi()) motherArr.push_back(i);
-        if (fabs(p.daughter(idx)->pt() - pin.pt()) < 0.001 && fabs(p.daughter(idx)->eta() - pin.eta()) < 0.001 &&
-            fabs(p.daughter(idx)->phi() - pin.phi()) < 0.001)
+        if (abs(p.daughter(idx)->pt() - pin.pt()) < 0.001 && abs(p.daughter(idx)->eta() - pin.eta()) < 0.001 &&
+            abs(p.daughter(idx)->phi() - pin.phi()) < 0.001)
           motherArr.push_back(i);
       }
     }
@@ -233,8 +233,8 @@ vector<int> HiGenAnalyzer::getDaughterIdx(edm::Handle<std::vector<pat::PackedGen
         continue;  //don't match to the initial collision particles
       for (unsigned int idx = 0; idx < p.numberOfMothers(); idx++) {
         //if (p.mother(idx)->pt()*p.mother(idx)->eta()*p.mother(idx)->phi() == pin.pt()*pin.eta()*pin.phi()) daughterArr.push_back(i);
-        if (fabs(p.mother(idx)->pt() - pin.pt()) < 0.001 && fabs(p.mother(idx)->eta() - pin.eta()) < 0.001 &&
-            fabs(p.mother(idx)->phi() - pin.phi()) < 0.001)
+        if (abs(p.mother(idx)->pt() - pin.pt()) < 0.001 && abs(p.mother(idx)->eta() - pin.eta()) < 0.001 &&
+            abs(p.mother(idx)->phi() - pin.phi()) < 0.001)
           daughterArr.push_back(i);
       }
     }
@@ -305,7 +305,7 @@ void HiGenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
       nparticles++;
       if ((*it)->momentum().perp() < ptMin_)
         continue;
-      if (fabs((*it)->momentum().eta()) > etaMax_)
+      if (abs((*it)->momentum().eta()) > etaMax_)
         continue;
       Int_t pdg_id = (*it)->pdg_id();
       Float_t eta = (*it)->momentum().eta();
@@ -324,7 +324,7 @@ void HiGenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
       hev_.sta.push_back((*it)->status());
       hev_.matchingID.push_back(nparticles);
 
-      eta = fabs(eta);
+      eta = abs(eta);
       Int_t etabin = 0;
       if (eta > 0.5)
         etabin = 1;
@@ -350,7 +350,7 @@ void HiGenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
         continue;
       if (p.pt() < ptMin_)
         continue;
-      if (fabs(p.eta()) > etaMax_)
+      if (abs(p.eta()) > etaMax_)
         continue;
       if (chargedOnly_ && p.charge() == 0)
         continue;
@@ -380,7 +380,7 @@ void HiGenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
       hev_.nDaughters.push_back(p.numberOfDaughters());
       vector<int> tempDaughters = getDaughterIdx(parts, p);
       hev_.daughterIndex.push_back(tempDaughters);
-      Double_t eta = fabs(p.eta());
+      Double_t eta = abs(p.eta());
 
       Int_t etabin = 0;
       if (eta > 0.5)
@@ -449,11 +449,13 @@ void HiGenAnalyzer::endRun(const edm::Run& run, const edm::EventSetup& iSetup) {
 void HiGenAnalyzer::beginJob() {
   hydjetTree_ = f->make<TTree>("hi", "Tree of Hi gen Event");
   hydjetTree_->Branch("event", &hev_.event, "event/I");
-  hydjetTree_->Branch("b", &hev_.b, "b/F");
-  hydjetTree_->Branch("npart", &hev_.npart, "npart/F");
-  hydjetTree_->Branch("ncoll", &hev_.ncoll, "ncoll/F");
-  hydjetTree_->Branch("nhard", &hev_.nhard, "nhard/F");
-  hydjetTree_->Branch("phi0", &hev_.phi0, "phi0/F");
+  if (doHI_) {
+    hydjetTree_->Branch("b", &hev_.b, "b/F");
+    hydjetTree_->Branch("npart", &hev_.npart, "npart/F");
+    hydjetTree_->Branch("ncoll", &hev_.ncoll, "ncoll/F");
+    hydjetTree_->Branch("nhard", &hev_.nhard, "nhard/F");
+    hydjetTree_->Branch("phi0", &hev_.phi0, "phi0/F");
+  }
   hydjetTree_->Branch("scale", &hev_.scale, "scale/F");
 
   hydjetTree_->Branch("n", hev_.n, "n[3]/I");
@@ -476,10 +478,13 @@ void HiGenAnalyzer::beginJob() {
     }
     hydjetTree_->Branch("sube", &hev_.sube);
 
-    hydjetTree_->Branch("vx", &hev_.vx, "vx/F");
-    hydjetTree_->Branch("vy", &hev_.vy, "vy/F");
-    hydjetTree_->Branch("vz", &hev_.vz, "vz/F");
-    hydjetTree_->Branch("vr", &hev_.vr, "vr/F");
+    if (doVertex_){
+      hydjetTree_->Branch("vx", &hev_.vx, "vx/F");
+      hydjetTree_->Branch("vy", &hev_.vy, "vy/F");
+      hydjetTree_->Branch("vz", &hev_.vz, "vz/F");
+      hydjetTree_->Branch("vr", &hev_.vr, "vr/F");
+    }
+    
   }
 }
 

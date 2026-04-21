@@ -544,7 +544,7 @@ RecHitTreeProducer::analyze(const edm::Event& ev, const edm::EventSetup& iSetup)
 
       if(useJets_){
         for (auto const& jet : *jets) {
-          double dr2 = reco::deltaR(eeRecHit.eta[eeRecHit.n],eeRecHit.phi[eeRecHit.n],jet.eta(),jet.phi());
+          double dr2 = reco::deltaR2(eeRecHit.eta[eeRecHit.n],eeRecHit.phi[eeRecHit.n],jet.eta(),jet.phi());
           eeRecHit.isjet[eeRecHit.n] = (dr2 < cone2);
         }
       }
