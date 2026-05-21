@@ -1,6 +1,6 @@
 import FWCore.ParameterSet.Config as cms
 
-zdcreco2023HardCode = cms.EDProducer(
+zdcrecoRun3 = cms.EDProducer(
     "ZDC2023RecHit",
     zdcDigiSrc = cms.InputTag('hcalDigis', 'ZDC'),
     calZDCDigi = cms.bool(False),
