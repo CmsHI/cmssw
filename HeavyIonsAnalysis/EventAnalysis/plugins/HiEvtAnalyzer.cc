@@ -342,49 +342,48 @@ void HiEvtAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
     hiEE = centrality->EtEESum();
     hiEB = centrality->EtEBSum();
     hiET = centrality->EtMidRapiditySum();
+  }
     
-    edm::Handle<pat::PackedCandidateCollection> pfCandidates;
-    iEvent.getByToken(pfCandidateTag_, pfCandidates);
+  edm::Handle<pat::PackedCandidateCollection> pfCandidates;
+  iEvent.getByToken(pfCandidateTag_, pfCandidates);
 
-    hiHF_pf=0; hiHFE_pf=0; hiHF_pfle =0; hiHF_pfha=0; hiHF_pfem=0;
-    hiHFPlus_pf=0; hiHFEPlus_pf=0; hiHFPlus_pfle =0; hiHFPlus_pfha=0; hiHFPlus_pfem=0;
-    hiHFMinus_pf=0; hiHFEMinus_pf=0; hiHFMinus_pfle =0; hiHFMinus_pfha=0; hiHFMinus_pfem=0;
-    nCountsHF_pf = 0; nCountsHFPlus_pf = 0; nCountsHFMinus_pf = 0;
+  hiHF_pf=0; hiHFE_pf=0; hiHF_pfle =0; hiHF_pfha=0; hiHF_pfem=0;
+  hiHFPlus_pf=0; hiHFEPlus_pf=0; hiHFPlus_pfle =0; hiHFPlus_pfha=0; hiHFPlus_pfem=0;
+  hiHFMinus_pf=0; hiHFEMinus_pf=0; hiHFMinus_pfle =0; hiHFMinus_pfha=0; hiHFMinus_pfem=0;
+  nCountsHF_pf = 0; nCountsHFPlus_pf = 0; nCountsHFMinus_pf = 0;
 
-    for (const auto& pfcand : *pfCandidates) {
-      if (pfcand.pdgId() == 1 || pfcand.pdgId() == 2){
-        const bool eta_plus = (pfcand.eta() > 3.0) && (pfcand.eta() < 6.0);
-        const bool eta_minus = (pfcand.eta() < -3.0) && (pfcand.eta() > -6.0);
-        if (pfcand.et() < 0.0) continue;
-        if (eta_plus || eta_minus)
-        {   
-          hiHF_pf += pfcand.et();
-          hiHFE_pf += pfcand.energy();
-          if(pfcand.energy() >= hiHF_pfle) hiHF_pfle = pfcand.energy();
-          if(pfcand.pdgId() == 1) hiHF_pfha += pfcand.et();
-          if(pfcand.pdgId() == 2) hiHF_pfem += pfcand.et();
-          nCountsHF_pf++;
+  for (const auto& pfcand : *pfCandidates) {
+    if (pfcand.pdgId() == 1 || pfcand.pdgId() == 2){
+      const bool eta_plus = (pfcand.eta() > 3.0) && (pfcand.eta() < 6.0);
+      const bool eta_minus = (pfcand.eta() < -3.0) && (pfcand.eta() > -6.0);
+      if (pfcand.et() < 0.0) continue;
+      if (eta_plus || eta_minus)
+      {   
+        hiHF_pf += pfcand.et();
+        hiHFE_pf += pfcand.energy();
+        if(pfcand.energy() >= hiHF_pfle) hiHF_pfle = pfcand.energy();
+        if(pfcand.pdgId() == 1) hiHF_pfha += pfcand.et();
+        if(pfcand.pdgId() == 2) hiHF_pfem += pfcand.et();
+        nCountsHF_pf++;
 
-          if(eta_plus){
-            hiHFPlus_pf += pfcand.et();
-            hiHFEPlus_pf += pfcand.energy();
-            if(pfcand.energy() >= hiHFPlus_pfle) hiHFPlus_pfle = pfcand.energy();
-            if(pfcand.pdgId() == 1) hiHFPlus_pfha += pfcand.et();
-            if(pfcand.pdgId() == 2) hiHFPlus_pfem += pfcand.et();
-            nCountsHFPlus_pf++;
-          }
-          else if(eta_minus){
-            hiHFMinus_pf += pfcand.et();
-            hiHFEMinus_pf += pfcand.energy();
-            if(pfcand.energy() >= hiHFMinus_pfle) hiHFMinus_pfle = pfcand.energy();
-            if(pfcand.pdgId() == 1) hiHFMinus_pfha += pfcand.et();
-            if(pfcand.pdgId() == 2) hiHFMinus_pfem += pfcand.et();
-            nCountsHFMinus_pf++;
-          }
+        if(eta_plus){
+          hiHFPlus_pf += pfcand.et();
+          hiHFEPlus_pf += pfcand.energy();
+          if(pfcand.energy() >= hiHFPlus_pfle) hiHFPlus_pfle = pfcand.energy();
+          if(pfcand.pdgId() == 1) hiHFPlus_pfha += pfcand.et();
+          if(pfcand.pdgId() == 2) hiHFPlus_pfem += pfcand.et();
+          nCountsHFPlus_pf++;
+        }
+        else if(eta_minus){
+          hiHFMinus_pf += pfcand.et();
+          hiHFEMinus_pf += pfcand.energy();
+          if(pfcand.energy() >= hiHFMinus_pfle) hiHFMinus_pfle = pfcand.energy();
+          if(pfcand.pdgId() == 1) hiHFMinus_pfha += pfcand.et();
+          if(pfcand.pdgId() == 2) hiHFMinus_pfem += pfcand.et();
+          nCountsHFMinus_pf++;
         }
       }
     }
-
   }
 
   nEvtPlanes = 0;
