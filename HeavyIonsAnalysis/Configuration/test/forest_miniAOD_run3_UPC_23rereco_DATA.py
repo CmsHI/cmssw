@@ -32,7 +32,7 @@ process.source = cms.Source("PoolSource",
 # number of events to process, set to -1 to process all events
 process.maxEvents = cms.untracked.PSet(
     input = cms.untracked.int32(20)
-    )
+)
 
 ###############################################################################
 
@@ -112,9 +112,8 @@ process.load("HeavyIonsAnalysis.MuonAnalysis.muonAnalyzer_cfi")
 #########################
 # to prevent crash related to HcalSeverityLevelComputerRcd record
 process.load("RecoLocalCalo.HcalRecAlgos.hcalRecAlgoESProd_cfi")
-process.load('HeavyIonsAnalysis.ZDCAnalysis.ZDCAnalyzersPbPb_cff')
 # 2023 only had hard coded calibration
-process.zdcanalyzer.doHardcodedChargeSum = cms.bool(True)
+process.load('HeavyIonsAnalysis.ZDCAnalysis.ZDCAnalyzersHC2023_cff')
 
 ###############################################################################
 # main forest sequence
