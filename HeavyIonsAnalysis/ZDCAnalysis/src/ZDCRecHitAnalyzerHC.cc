@@ -78,7 +78,6 @@ private:
   bool doAuxZdcRecHits_;
   bool skipRpdRecHits_;
   bool skipRpdDigis_;
-  bool doHardcodedChargeSum_;
   bool doHardcodedRPD_;
   edm::Service<TFileService> fs;
   TTree *t1, *t2;   
@@ -112,7 +111,6 @@ ZDCRecHitAnalyzerHC::ZDCRecHitAnalyzerHC(const edm::ParameterSet& iConfig) :
   doAuxZdcRecHits_(iConfig.getParameter<bool>("doAuxZdcRecHits")),
   skipRpdRecHits_(iConfig.getParameter<bool>("skipRpdRecHits")),
   skipRpdDigis_(iConfig.getParameter<bool>("skipRpdDigis")),
-  doHardcodedChargeSum_(iConfig.getParameter<bool>("doHardcodedChargeSum")),
   doHardcodedRPD_(iConfig.getParameter<bool>("doHardcodedRPD"))
 {
 #ifdef THIS_IS_AN_EVENTSETUP_EXAMPLE
@@ -256,11 +254,6 @@ void ZDCRecHitAnalyzerHC::analyze(const edm::Event& iEvent, const edm::EventSetu
 
   } // if (doAuxZdcRecHits_) {
 
-  if (doHardcodedChargeSum_) {
-    zdcRechit.sumMinus = 0;
-    zdcRechit.sumPlus = 0;
-  }
-  
   if (doZdcDigis_) {
     zdcDigi.n = 0;
     for (unsigned int i = 0; i < NMOD; i++) {
@@ -306,25 +299,13 @@ void ZDCRecHitAnalyzerHC::analyze(const edm::Event& iEvent, const edm::EventSetu
       for (int ts = 0; ts < digi.samples(); ts++) {
         zdcDigi.adc[ts][nhits] = digi[ts].adc();
         zdcDigi.tdc[ts][nhits] = digi[ts].le_tdc();
-        if ((doHardcodedRPD_ && section == 4) || doHardcodedChargeSum_) {
+        if (doHardcodedRPD_ && section == 4) {
           zdcDigi.chargefC[ts][nhits] = HardCodeZDC.charge(digi[ts].adc(),digi[ts].capid());
         } else {
           zdcDigi.chargefC[ts][nhits] = caldigi[ts];
         }
       }
 
-      if (doHardcodedChargeSum_ && (section == 1 || section == 2)) {
-        float te = zdcDigi.chargefC[2][nhits] - zdcDigi.chargefC[1][nhits];
-        if (section == 1) { te *= 0.1; } // EM
-        if (zside < 0) {
-          te *= 0.5031;
-          zdcRechit.sumMinus += te;
-        } else {
-          te *= 0.9397;
-          zdcRechit.sumPlus += te;
-        }
-      }
-      
       nhits++;
     }  // end loop zdc digis
 
