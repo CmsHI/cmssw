@@ -3,14 +3,14 @@
 # Type: data
 
 import FWCore.ParameterSet.Config as cms
-from Configuration.Eras.Era_Run3_2025_UPC_cff import Run3_2025_UPC
-process = cms.Process('HiForest', Run3_2025_UPC)
+from Configuration.Eras.Era_Run3_2026_UPC_cff import Run3_2026_UPC
+process = cms.Process('HiForest', Run3_2026_UPC)
 
 ###############################################################################
 
 # HiForest info
 process.load("HeavyIonsAnalysis.EventAnalysis.HiForestInfo_cfi")
-process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 151X, data")
+process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 161X, data")
 
 # import subprocess, os
 # version = subprocess.check_output(
@@ -46,7 +46,7 @@ process.load('FWCore.MessageService.MessageLogger_cfi')
 
 from Configuration.AlCa.GlobalTag import GlobalTag
 
-process.GlobalTag = GlobalTag(process.GlobalTag, '151X_dataRun3_Prompt_v1', '')
+process.GlobalTag = GlobalTag(process.GlobalTag, '161X_dataRun3_Prompt_v1', '')
 process.HiForestInfo.GlobalTagLabel = process.GlobalTag.globaltag
 
 ###############################################################################
@@ -191,15 +191,15 @@ process.pAna = cms.EndPath(process.skimanalysis)
 #        "HLT_HIMinimumBias_v2",
 #    ]
 # )
-# process.filterSequence = cms.Sequence(
+process.filterSequence = cms.Sequence(
 #     process.hltfilter *
-#     process.primaryVertexFilter *
-#     (process.zdcrecoRun3 + process.zdcEnergyFilter0nOr)
-# )
+     process.primaryVertexFilter *
+     (process.zdcrecoRun3 + process.zdcEnergyFilter0nOr)
+)
 
-# process.superFilterPath = cms.Path(process.filterSequence)
-# process.skimanalysis.superFilters = cms.vstring("superFilterPath")
+process.superFilterPath = cms.Path(process.filterSequence)
+process.skimanalysis.superFilters = cms.vstring("superFilterPath")
 
-# for path in process.paths:
-#    getattr(process, path)._seq = process.filterSequence * getattr(process,path)._seq
+for path in process.paths:
+    getattr(process, path)._seq = process.filterSequence * getattr(process,path)._seq
 

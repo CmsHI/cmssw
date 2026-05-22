@@ -25,8 +25,8 @@ process.HiForestInfo.info = cms.vstring("HiForest, miniAOD, 161X, data")
 process.source = cms.Source("PoolSource",
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
     fileNames = cms.untracked.vstring(
-        'file:recoPbPbraw2mini_RAW2DIGI_L1Reco_RECO_PAT.root' 
-        #'/store/hidata/HIRun2026A/HIPhysicsRawPrime14/MINIAOD/PromptReco-v1/000/399/584/00000/36bccf34-1cb6-4f4a-99b8-c9fee4ee1fe7.root'
+        #'file:recoPbPbraw2mini_RAW2DIGI_L1Reco_RECO_PAT.root' 
+        '/store/hidata/HIRun20265/HIPhysicsRawPrime14/MINIAOD/PromptReco-v1/000/399/584/00000/36bccf34-1cb6-4f4a-99b8-c9fee4ee1fe7.root'
         #'/store/group/phys_heavyions/wangj/RECO2024/miniaod_PhysicsHIPhysicsRawPrime0_388056_ZB.root'
     ), 
 )
@@ -84,8 +84,8 @@ process.load('HeavyIonsAnalysis.EventAnalysis.skimanalysis_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.hltobject_cfi')
 process.load('HeavyIonsAnalysis.EventAnalysis.l1object_cfi')
 
-#process.hiEvtAnalyzer.doCentrality = cms.bool(False)
-#process.hiEvtAnalyzer.doHFfilters = cms.bool(False)
+process.hiEvtAnalyzer.doCentrality = cms.bool(True)
+process.hiEvtAnalyzer.doHFfilters = cms.bool(True)
 
 #from HeavyIonsAnalysis.EventAnalysis.hltobject_cfi import trigger_list_data_2026
 #process.hltobject.triggerNames = trigger_list_data_2026
@@ -104,6 +104,8 @@ process.akPu4CaloJetAnalyzer.doHiJetID = True
 ################################
 # tracks
 process.load("HeavyIonsAnalysis.TrackAnalysis.TrackAnalyzers_cff")
+process.PbPbTracks.trackEtaMax = cms.untracked.double(3.0)
+process.PbPbTracks.trackPtMax = cms.untracked.double(0.3)
 # muons (FTW)
 process.load("HeavyIonsAnalysis.MuonAnalysis.unpackedMuons_cfi")
 process.load("HeavyIonsAnalysis.MuonAnalysis.muonAnalyzer_cfi")
