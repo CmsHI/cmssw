@@ -89,28 +89,51 @@ private:
 // constants, enums and typedefs
 //
 // This information is temrorarly stored here, once the sequence is validated it will be ported to the database
-// These numbers extracted on November 16, 2025 (run=399551). Any time timing calibration is applied, the F3, F4, F5 need to be updated
 namespace {
+  // These numbers extracted on May 23, 2026 (run=404186). Any time timing calibration is applied, the F3, F4, F5 need to be updated
   // 2 sides (−, +) × NFSC channels
   constexpr float Pedestal[2][NFSC] = {
-    {1248.54f, 1287.14f, 1129.79f, 1216.63f, 1285.63f, 1170.79f}, // side minus
-    {1202.87f, 1199.81f, 1187.31f, 1218.55f, 1147.67f, 1231.52f}, // side plus
+    {1219.87f, 1271.12f, 1127.33f, 1217.13f, 1279.15f, 1169.95f}, // side minus
+    {1208.47f, 1202.63f, 1185.96f, 1218.78f, 1153.28f, 1232.16f}, // side plus
   };
 
   constexpr float f3[2][NFSC] = {
-    {0.485614f, 0.37147f, 0.431836f, 0.357515f, 0.432989f, 0.314054f}, // side minus
-    {0.40573f, 0.368565f, 0.239196f, 0.281138f, 0.295968f, 0.290039f}, // side plus
+    {0.340505f, 0.305597f, 0.329587f, 0.301616f, 0.414768f, 0.29799f}, // side minus
+    {0.337498f, 0.257172f, 0.217287f, 0.253035f, 0.267206f, 0.249678f}, // side plus
   };
 
   constexpr float f4[2][NFSC] = {
-    {0.191546f, 0.159452f, 0.142411f, 0.131297f, 0.154015f, 0.11559f}, // side minus
-    {0.145969f, 0.134359f, 0.0892946f, 0.101017f, 0.101158f, 0.1043f}, // side plus
+    {0.150853f, 0.138382f, 0.12047f, 0.119138f, 0.148445f, 0.113992f}, // side minus
+    {0.130116f, 0.109807f, 0.0877023f, 0.0956144f, 0.098166f, 0.0960243f}, // side plus
   };
 
   constexpr float f5[2][NFSC] = {
-    {0.119143f, 0.0990354f, 0.080384f, 0.0701533f, 0.0912764f, 0.0629495f}, // side minus
-    {0.083688f, 0.0764629f, 0.0522635f, 0.0588876f, 0.0572844f, 0.0595602f}, // side plus
+    {0.0971438f, 0.0862192f, 0.0731887f, 0.0640541f, 0.0874797f, 0.0629369f}, // side minus
+    {0.0773656f, 0.0665124f, 0.0537608f, 0.0574765f, 0.0578339f, 0.0563724f}, // side plus
   };
+
+
+  // These numbers extracted on November 16, 2025 (run=399551). Any time timing calibration is applied, the F3, F4, F5 need to be updated
+  // 2 sides (−, +) × NFSC channels
+  //constexpr float Pedestal[2][NFSC] = {
+  //  {1248.54f, 1287.14f, 1129.79f, 1216.63f, 1285.63f, 1170.79f}, // side minus
+  //  {1202.87f, 1199.81f, 1187.31f, 1218.55f, 1147.67f, 1231.52f}, // side plus
+  //};
+
+  //constexpr float f3[2][NFSC] = {
+  //  {0.485614f, 0.37147f, 0.431836f, 0.357515f, 0.432989f, 0.314054f}, // side minus
+  //  {0.40573f, 0.368565f, 0.239196f, 0.281138f, 0.295968f, 0.290039f}, // side plus
+  //};
+
+  //constexpr float f4[2][NFSC] = {
+  //  {0.191546f, 0.159452f, 0.142411f, 0.131297f, 0.154015f, 0.11559f}, // side minus
+  //  {0.145969f, 0.134359f, 0.0892946f, 0.101017f, 0.101158f, 0.1043f}, // side plus
+  //};
+
+  //constexpr float f5[2][NFSC] = {
+  //  {0.119143f, 0.0990354f, 0.080384f, 0.0701533f, 0.0912764f, 0.0629495f}, // side minus
+  //  {0.083688f, 0.0764629f, 0.0522635f, 0.0588876f, 0.0572844f, 0.0595602f}, // side plus
+  //};
 
   // pO pulse shape constants, uncomment in case if running on oxygen data (extracted from run=393953)
   //constexpr float Pedestal[2][NFSC] = {{1240.81f, 1244.26f, 1129.9f, 1217.23f, 1279.97f, 1169.07f},{}};
@@ -255,7 +278,7 @@ void FSCAnalyzerHC::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 
         auto chi2 = [&](double A, double B) {
             double r0 = B + A * f4v - Q0;
-            double r1 = B * f3v + A * Q1;
+            double r1 = B * f3v + A * f5v - Q1;
             return r0 * r0 + r1 * r1;
         };
 
