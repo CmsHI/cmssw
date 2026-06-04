@@ -17,7 +17,11 @@ hiEvtAnalyzer = cms.EDAnalyzer('HiEvtAnalyzer',
    doHiMC           = cms.bool(True),
    useHepMC         = cms.bool(False),
    doHFfilters      = cms.bool(True),
-   evtPlaneLevel    = cms.int32(0)
+   evtPlaneLevel    = cms.int32(0),
+
+   minHFEnergy_pf   = cms.double(0.0),
+   minAbsEtaHF_pf   = cms.double(3.0),
+   maxAbsEtaHF_pf   = cms.double(6.0),
 )
 
 #from HeavyIonsAnalysis.EventAnalysis.hievtanalyzer_data_cfi import *
