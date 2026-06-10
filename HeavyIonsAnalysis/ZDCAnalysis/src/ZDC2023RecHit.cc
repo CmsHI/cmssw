@@ -43,7 +43,7 @@
      rh.setEnergySOIp1();
      rh.setRatioSOIp1();
      saturation
-***/    
+***/
 
 class ZDC2023RecHit : public edm::one::EDProducer<> {
 public:
@@ -57,11 +57,10 @@ private:
   edm::EDGetTokenT<QIE10DigiCollection> tok_input_QIE10_;
   bool calZDCDigi_;
   bool skipRPD_;
-  
+
   // Consts
   const unsigned int signalTs_ = 3, noiseTs_ = 2;
-  const float ratioNoise_ = -1., fracEM_ = 0.1, fracHAD_ = 1., fracRPD_ = 1.,
-    corrPlus_ = 0.9397, corrMinus_ = 0.5031;
+  const float ratioNoise_ = -1., fracEM_ = 0.1, fracHAD_ = 1., fracRPD_ = 1., corrPlus_ = 0.9397, corrMinus_ = 0.5031;
   /**** Hard coded calibration
         https://github.com/CmsHI/cmssw/blob/fb599d384eb19890240466d9bba3520419ae3b2a/HeavyIonsAnalysis/ZDCAnalysis/src/ZDCTreeProducer.cc#L268-L283
         Ts3 - 1.*Ts2:
@@ -72,26 +71,24 @@ private:
 
   // Conditions
   edm::ESGetToken<HcalDbService, HcalDbRecord> hcalDatabaseToken_;
-
 };
 
-ZDC2023RecHit::ZDC2023RecHit(const edm::ParameterSet& iConfig) :
-  tok_input_QIE10_( consumes<QIE10DigiCollection>(iConfig.getParameter<edm::InputTag>("zdcDigiSrc")) ),
-  calZDCDigi_( iConfig.getParameter<bool>("calZDCDigi") ),
-  skipRPD_( iConfig.getParameter<bool>("skipRPD") ),
-  hcalDatabaseToken_( esConsumes<HcalDbService, HcalDbRecord>() ) {
-
+ZDC2023RecHit::ZDC2023RecHit(const edm::ParameterSet& iConfig)
+    : tok_input_QIE10_(consumes<QIE10DigiCollection>(iConfig.getParameter<edm::InputTag>("zdcDigiSrc"))),
+      calZDCDigi_(iConfig.getParameter<bool>("calZDCDigi")),
+      skipRPD_(iConfig.getParameter<bool>("skipRPD")),
+      hcalDatabaseToken_(esConsumes<HcalDbService, HcalDbRecord>()) {
   produces<ZDCRecHitCollection>();
 }
 
 ZDC2023RecHit::~ZDC2023RecHit() { return; }
 
 void ZDC2023RecHit::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
-  
   edm::Handle<QIE10DigiCollection> zdcdigis;
   iEvent.getByToken(tok_input_QIE10_, zdcdigis);
-  edm::ESHandle<HcalDbService> conditions = iSetup.getHandle(hcalDatabaseToken_); // is only used when calZDCDigi_ is true
-  
+  edm::ESHandle<HcalDbService> conditions =
+      iSetup.getHandle(hcalDatabaseToken_);  // is only used when calZDCDigi_ is true
+
   auto prec = std::make_unique<ZDCRecHitCollection>();
   // prec->reserve(zdcdigis->size());
 
@@ -101,11 +98,12 @@ void ZDC2023RecHit::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
     const HcalZDCDetId zdcid = digi.id();
 
     auto section = zdcid.section();
-    bool is_EM = (section == 1), // extra EM channels are still kept which should be excluded in energy sum in the analyzer
-      is_HAD = (section == 2),
-      is_RPD = (section == 4);
+    bool is_EM =
+             (section == 1),  // extra EM channels are still kept which should be excluded in energy sum in the analyzer
+        is_HAD = (section == 2), is_RPD = (section == 4);
 
-    if (skipRPD_ && is_RPD) continue;
+    if (skipRPD_ && is_RPD)
+      continue;
 
     // Prepare digi calibration if calZDCDigi_;
     // Default calZDCDigi_ is False, i.e. this is not used
@@ -119,30 +117,38 @@ void ZDC2023RecHit::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
 
     unsigned int nTs = digi.samples();
     if (nTs < signalTs_ || nTs < noiseTs_) {
-      std::cout<<__FUNCTION__<<" error: Number of Ts ("<<nTs<<") is too small for signal Ts ("<<signalTs_<<") or noise Ts ("<<noiseTs_<<")"<<std::endl;
+      std::cout << __FUNCTION__ << " error: Number of Ts (" << nTs << ") is too small for signal Ts (" << signalTs_
+                << ") or noise Ts (" << noiseTs_ << ")" << std::endl;
       continue;
     }
 
     // Outpu subtraction: Ts3 + (-1.)*Ts2, Ts starts from Ts1 rather than Ts0 :
-    float signalfC = calZDCDigi_ ?
-      caldigi[signalTs_-1] :                                                                // by default not used
-      QWAna::ZDC2018::QIE10_regular_fC[digi[signalTs_-1].adc()][digi[signalTs_-1].capid()]; // by default used
-    float noisefC = calZDCDigi_ ?
-      caldigi[noiseTs_-1] :                                                                 // by default not used
-      QWAna::ZDC2018::QIE10_regular_fC[digi[noiseTs_-1].adc()][digi[noiseTs_-1].capid()];   // by default used
+    float signalfC =
+        calZDCDigi_ ? caldigi[signalTs_ - 1] :  // by default not used
+            QWAna::ZDC2018::QIE10_regular_fC[digi[signalTs_ - 1].adc()][digi[signalTs_ - 1].capid()];  // by default used
+    float noisefC =
+        calZDCDigi_ ? caldigi[noiseTs_ - 1] :  // by default not used
+            QWAna::ZDC2018::QIE10_regular_fC[digi[noiseTs_ - 1].adc()][digi[noiseTs_ - 1].capid()];  // by default used
     float energy = signalfC + ratioNoise_ * noisefC;
 
-    if (is_EM) { energy *= fracEM_; }
-    else if (is_HAD) { energy *= fracHAD_; }
-    else if (is_RPD) { energy *= fracRPD_; }
+    if (is_EM) {
+      energy *= fracEM_;
+    } else if (is_HAD) {
+      energy *= fracHAD_;
+    } else if (is_RPD) {
+      energy *= fracRPD_;
+    }
 
-    if (zdcid.zside() > 0) { energy *= corrPlus_; }
-    else { energy *= corrMinus_; }
+    if (zdcid.zside() > 0) {
+      energy *= corrPlus_;
+    } else {
+      energy *= corrMinus_;
+    }
 
     // Make ZDCRechit https://github.com/cms-sw/cmssw/blob/master/DataFormats/HcalRecHit/interface/ZDCRecHit.h
     auto rh = ZDCRecHit(digi.id(), energy, -99, -99);
     // (HcalZDCDetId&, energy, time, lowGainEnergy)
-    rh.setFlags(0); // saturation
+    rh.setFlags(0);  // saturation
     /*** What are not writen: 
          rh.setTDCtime(tmp_tdctime);
          rh.setChargeWeightedTime(chargeWeightedTime);
@@ -151,12 +157,12 @@ void ZDC2023RecHit::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
     ***/
 
     prec->push_back(rh);
-    
+
     nhits++;
-  } // for (auto it = zdcdigis->begin(); it != zdcdigis->end(); it++) {
+  }  // for (auto it = zdcdigis->begin(); it != zdcdigis->end(); it++) {
 
   iEvent.put(std::move(prec));
-  
+
   return;
 }
 
