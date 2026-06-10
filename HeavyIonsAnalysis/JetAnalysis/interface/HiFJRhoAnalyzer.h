@@ -27,75 +27,75 @@
 //
 
 class HiFJRhoAnalyzer : public edm::one::EDAnalyzer<> {
-   public:
-      explicit HiFJRhoAnalyzer(const edm::ParameterSet&);
-      ~HiFJRhoAnalyzer() override;
+public:
+  explicit HiFJRhoAnalyzer(const edm::ParameterSet&);
+  ~HiFJRhoAnalyzer() override;
 
-      static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
+  static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
-      void beginJob() override;
-      void analyze(const edm::Event&, const edm::EventSetup&) override;
-      void endJob() override;
+  void beginJob() override;
+  void analyze(const edm::Event&, const edm::EventSetup&) override;
+  void endJob() override;
 
-   private:
-      // ----------member data ---------------------------
-      //input
-      edm::EDGetTokenT<std::vector<double>>                  etaToken_;
-      edm::EDGetTokenT<std::vector<double>>                  rhoToken_;
-      edm::EDGetTokenT<std::vector<double>>                  rhomToken_;
-      edm::EDGetTokenT<std::vector<double>>                  rhoCorrToken_;
-      edm::EDGetTokenT<std::vector<double>>                  rhomCorrToken_;
-      edm::EDGetTokenT<std::vector<double>>                  rhoCorr1BinToken_;
-      edm::EDGetTokenT<std::vector<double>>                  rhomCorr1BinToken_;
-	  
-      edm::EDGetTokenT<std::vector<double>>                  rhoGridToken_;
-      edm::EDGetTokenT<std::vector<double>>                  meanRhoGridToken_;
-      edm::EDGetTokenT<std::vector<double>>                  etaMinRhoGridToken_;
-      edm::EDGetTokenT<std::vector<double>>                  etaMaxRhoGridToken_;
-      
-      edm::EDGetTokenT<std::vector<double>>                  ptJetsToken_;
-      edm::EDGetTokenT<std::vector<double>>                  areaJetsToken_;
-      edm::EDGetTokenT<std::vector<double>>                  etaJetsToken_;
+private:
+  // ----------member data ---------------------------
+  //input
+  edm::EDGetTokenT<std::vector<double>> etaToken_;
+  edm::EDGetTokenT<std::vector<double>> rhoToken_;
+  edm::EDGetTokenT<std::vector<double>> rhomToken_;
+  edm::EDGetTokenT<std::vector<double>> rhoCorrToken_;
+  edm::EDGetTokenT<std::vector<double>> rhomCorrToken_;
+  edm::EDGetTokenT<std::vector<double>> rhoCorr1BinToken_;
+  edm::EDGetTokenT<std::vector<double>> rhomCorr1BinToken_;
 
-      edm::EDGetTokenT<std::vector<double>>                  rhoFlowFitParamsToken_;
-      edm::EDGetTokenT<std::vector<int>>                     nTowToken_;
-      edm::EDGetTokenT<std::vector<double>>                  towExcludePtToken_;
-      edm::EDGetTokenT<std::vector<double>>                  towExcludePhiToken_;
-      edm::EDGetTokenT<std::vector<double>>                  towExcludeEtaToken_;
+  edm::EDGetTokenT<std::vector<double>> rhoGridToken_;
+  edm::EDGetTokenT<std::vector<double>> meanRhoGridToken_;
+  edm::EDGetTokenT<std::vector<double>> etaMinRhoGridToken_;
+  edm::EDGetTokenT<std::vector<double>> etaMaxRhoGridToken_;
 
-      bool useModulatedRho_;
+  edm::EDGetTokenT<std::vector<double>> ptJetsToken_;
+  edm::EDGetTokenT<std::vector<double>> areaJetsToken_;
+  edm::EDGetTokenT<std::vector<double>> etaJetsToken_;
 
-      //output
-      TTree *tree_;
-      edm::Service<TFileService> fs_;
+  edm::EDGetTokenT<std::vector<double>> rhoFlowFitParamsToken_;
+  edm::EDGetTokenT<std::vector<int>> nTowToken_;
+  edm::EDGetTokenT<std::vector<double>> towExcludePtToken_;
+  edm::EDGetTokenT<std::vector<double>> towExcludePhiToken_;
+  edm::EDGetTokenT<std::vector<double>> towExcludeEtaToken_;
 
-      struct RHO {
-        std::vector<double> etaMin;
-        std::vector<double> etaMax;
-        std::vector<double> rho;
-        std::vector<double> rhom;
-        std::vector<double> rhoCorr;
-        std::vector<double> rhomCorr;
-        std::vector<double> rhoCorr1Bin;
-        std::vector<double> rhomCorr1Bin;
-		
-        std::vector<double> rhoGrid;
-        std::vector<double> meanRhoGrid;
-        std::vector<double> etaMinRhoGrid;
-        std::vector<double> etaMaxRhoGrid;
-		
-        std::vector<double>ptJets;
-        std::vector<double>areaJets;
-        std::vector<double>etaJets;
+  bool useModulatedRho_;
 
-        std::vector<double> rhoFlowFitParams;
-        std::vector<int> nTow;
-        std::vector<double> towExcludePt;
-        std::vector<double> towExcludePhi;
-        std::vector<double> towExcludeEta;
-      };
-      
-      RHO rhoObj_;
+  //output
+  TTree* tree_;
+  edm::Service<TFileService> fs_;
+
+  struct RHO {
+    std::vector<double> etaMin;
+    std::vector<double> etaMax;
+    std::vector<double> rho;
+    std::vector<double> rhom;
+    std::vector<double> rhoCorr;
+    std::vector<double> rhomCorr;
+    std::vector<double> rhoCorr1Bin;
+    std::vector<double> rhomCorr1Bin;
+
+    std::vector<double> rhoGrid;
+    std::vector<double> meanRhoGrid;
+    std::vector<double> etaMinRhoGrid;
+    std::vector<double> etaMaxRhoGrid;
+
+    std::vector<double> ptJets;
+    std::vector<double> areaJets;
+    std::vector<double> etaJets;
+
+    std::vector<double> rhoFlowFitParams;
+    std::vector<int> nTow;
+    std::vector<double> towExcludePt;
+    std::vector<double> towExcludePhi;
+    std::vector<double> towExcludeEta;
+  };
+
+  RHO rhoObj_;
 };
 
 #endif

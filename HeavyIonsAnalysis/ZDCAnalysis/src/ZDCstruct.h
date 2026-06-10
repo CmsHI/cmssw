@@ -1,7 +1,7 @@
-#define MAXMOD 56 // 50 real channels + 6 dump channels
-#define NMOD 50 // 50 real channels: (9 ZDC + 16 RPD) x 2 sides
-#define MAXTS 10 // 10 time slices before 2024
-#define NTS 6 // 6 time slices since 2024
+#define MAXMOD 56  // 50 real channels + 6 dump channels
+#define NMOD 50    // 50 real channels: (9 ZDC + 16 RPD) x 2 sides
+#define MAXTS 10   // 10 time slices before 2024
+#define NTS 6      // 6 time slices since 2024
 
 struct MyZDCRecHit {
   int n;
@@ -35,4 +35,3 @@ struct MyZDCDigi {
   float sumPlus;
   float sumMinus;
 };
-
