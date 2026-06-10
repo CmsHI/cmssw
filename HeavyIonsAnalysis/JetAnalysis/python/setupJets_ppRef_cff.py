@@ -206,9 +206,6 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
     process.patAlgosToolsTask.add(getattr(process,"unsubUpdatedPatJetsAK"+labelR+"PFCHS"))
 
     if doBtagging:
-        getattr(process,"pfUnifiedParticleTransformerAK4JetTagsAK"+labelR+"PFCHSBtag").model_path = 'RecoBTag/Combined/data/UParTAK4/HIN/V00/UParTAK4_PbPb_2023.onnx'
-        getattr(process,"pfUnifiedParticleTransformerAK4TagInfosAK"+labelR+"PFCHSBtag").sort_cand_by_pt = True 
-        getattr(process,"pfUnifiedParticleTransformerAK4TagInfosAK"+labelR+"PFCHSBtag").fix_lt_sorting = True
 
         if hasattr(process,'updatedPatJetsTransientCorrectedAK'+labelR+'PFCHSBtag'):
             getattr(process,'updatedPatJetsTransientCorrectedAK'+labelR+'PFCHSBtag').addTagInfos = True
@@ -216,14 +213,6 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
         else:
             raise ValueError('I could not find updatedPatJetsTransientCorrected to embed the tagInfos, please check the cfg')
 
-            # Remove PUPPI
-        process.patAlgosToolsTask.remove(process.packedpuppi)
-        process.patAlgosToolsTask.remove(process.packedpuppiNoLep)
-        getattr(process,"pfInclusiveSecondaryVertexFinderTagInfosAK"+labelR+"PFCHSBtag").weights = ""
-        for taginfo in [ "pfDeepFlavourTagInfosAK"+labelR+"PFCHSBtag", "pfParticleTransformerAK4TagInfosAK"+labelR+"PFCHSBtag", "pfUnifiedParticleTransformerAK4TagInfosAK"+labelR+"PFCHSBtag"]:
-            getattr(process, taginfo).fallback_puppi_weight = True
-            getattr(process, taginfo).fallback_vertex_association = True
-            getattr(process, taginfo).puppi_value_map = ""
 
     # Match with unsubtracted jets
     setattr(process,"unsubAK"+labelR+"JetMap",
