@@ -53,7 +53,7 @@ using reco::TrackCollection;
 class PPSAnalyzerHC : public edm::one::EDAnalyzer<edm::one::SharedResources> {
 public:
   explicit PPSAnalyzerHC(const edm::ParameterSet&);
-  ~PPSAnalyzerHC();
+  ~PPSAnalyzerHC() override;
 
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
@@ -86,8 +86,8 @@ private:
 // constructors and destructor
 //
 PPSAnalyzerHC::PPSAnalyzerHC(const edm::ParameterSet& iConfig)
-    : ctppsToken_(consumes<std::vector<CTPPSLocalTrackLite> >(iConfig.getParameter<edm::InputTag>("ctppsLocalTracks")))
-      {
+    : ctppsToken_(
+          consumes<std::vector<CTPPSLocalTrackLite> >(iConfig.getParameter<edm::InputTag>("ctppsLocalTracks"))) {
 #ifdef THIS_IS_AN_EVENTSETUP_EXAMPLE
   setupDataToken_ = esConsumes<SetupData, SetupRecord>();
 #endif
@@ -123,7 +123,7 @@ void PPSAnalyzerHC::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
   int nhits = 0;
   for (const auto& trk : *recoPPSTracks) {
     CTPPSDetId detid(trk.rpId());
-    
+
     int zside = detid.arm();
     int station = detid.station();
     int rp = detid.rp();
@@ -133,8 +133,8 @@ void PPSAnalyzerHC::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
     if (!(rp == 3))
       continue;  // only pixels (horizontal tracking stations)
 
-    ppsTracks.zside[nhits] = zside ? -1 : 1; // arm 0 is sector 45 (positive z), arm 1 is sector 56 (negative z)
-    ppsTracks.station[nhits] = station; // 0 for near pixel, 2 for far pixel station
+    ppsTracks.zside[nhits] = zside ? -1 : 1;  // arm 0 is sector 45 (positive z), arm 1 is sector 56 (negative z)
+    ppsTracks.station[nhits] = station;       // 0 for near pixel, 2 for far pixel station
 
     ppsTracks.x[nhits] = trk.x();
     ppsTracks.y[nhits] = trk.y();
@@ -163,7 +163,6 @@ void PPSAnalyzerHC::beginJob() {
   t1->Branch("station", ppsTracks.station, "station[n]/I");
   t1->Branch("x", ppsTracks.x, "x[n]/F");
   t1->Branch("y", ppsTracks.y, "y[n]/F");
-
 }
 
 // ------------ method called once each job just after ending the event loop  ------------

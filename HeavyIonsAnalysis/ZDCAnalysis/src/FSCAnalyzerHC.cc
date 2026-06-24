@@ -60,7 +60,7 @@ using reco::TrackCollection;
 class FSCAnalyzerHC : public edm::one::EDAnalyzer<edm::one::SharedResources> {
 public:
   explicit FSCAnalyzerHC(const edm::ParameterSet&);
-  ~FSCAnalyzerHC();
+  ~FSCAnalyzerHC() override;
 
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
@@ -93,23 +93,23 @@ private:
 namespace {
   // 2 sides (−, +) × NFSC channels
   constexpr float Pedestal[2][NFSC] = {
-    {1248.54f, 1287.14f, 1129.79f, 1216.63f, 1285.63f, 1170.79f}, // side minus
-    {1202.87f, 1199.81f, 1187.31f, 1218.55f, 1147.67f, 1231.52f}, // side plus
+      {1248.54f, 1287.14f, 1129.79f, 1216.63f, 1285.63f, 1170.79f},  // side minus
+      {1202.87f, 1199.81f, 1187.31f, 1218.55f, 1147.67f, 1231.52f},  // side plus
   };
 
   constexpr float f3[2][NFSC] = {
-    {0.485614f, 0.37147f, 0.431836f, 0.357515f, 0.432989f, 0.314054f}, // side minus
-    {0.40573f, 0.368565f, 0.239196f, 0.281138f, 0.295968f, 0.290039f}, // side plus
+      {0.485614f, 0.37147f, 0.431836f, 0.357515f, 0.432989f, 0.314054f},  // side minus
+      {0.40573f, 0.368565f, 0.239196f, 0.281138f, 0.295968f, 0.290039f},  // side plus
   };
 
   constexpr float f4[2][NFSC] = {
-    {0.191546f, 0.159452f, 0.142411f, 0.131297f, 0.154015f, 0.11559f}, // side minus
-    {0.145969f, 0.134359f, 0.0892946f, 0.101017f, 0.101158f, 0.1043f}, // side plus
+      {0.191546f, 0.159452f, 0.142411f, 0.131297f, 0.154015f, 0.11559f},  // side minus
+      {0.145969f, 0.134359f, 0.0892946f, 0.101017f, 0.101158f, 0.1043f},  // side plus
   };
 
   constexpr float f5[2][NFSC] = {
-    {0.119143f, 0.0990354f, 0.080384f, 0.0701533f, 0.0912764f, 0.0629495f}, // side minus
-    {0.083688f, 0.0764629f, 0.0522635f, 0.0588876f, 0.0572844f, 0.0595602f}, // side plus
+      {0.119143f, 0.0990354f, 0.080384f, 0.0701533f, 0.0912764f, 0.0629495f},   // side minus
+      {0.083688f, 0.0764629f, 0.0522635f, 0.0588876f, 0.0572844f, 0.0595602f},  // side plus
   };
 
   // pO pulse shape constants, uncomment in case if running on oxygen data (extracted from run=393953)
@@ -134,21 +134,19 @@ FSCAnalyzerHC::FSCAnalyzerHC(const edm::ParameterSet& iConfig)
 #ifdef THIS_IS_AN_EVENTSETUP_EXAMPLE
   setupDataToken_ = esConsumes<SetupData, SetupRecord>();
 #endif
-    // ---- PROTECTION: user must choose exactly one method ----
-    int nSelected = (doFullFitFSC_ ? 1 : 0) + (do50nsRecoFSC_ ? 1 : 0);
+  // ---- PROTECTION: user must choose exactly one method ----
+  int nSelected = (doFullFitFSC_ ? 1 : 0) + (do50nsRecoFSC_ ? 1 : 0);
 
-    if (nSelected != 1) {
-        throw cms::Exception("Configuration")
-            << "Invalid FSC charge reconstruction configuration:\n"
-            << "  doFullFitFSC = " << doFullFitFSC_ << "\n"
-            << "  do50nsRecoFSC = " << do50nsRecoFSC_ << "\n"
-            << "Exactly ONE of these must be set to True.\n"
-            << "Please fix the configuration and rerun.\n";
-    }
+  if (nSelected != 1) {
+    throw cms::Exception("Configuration") << "Invalid FSC charge reconstruction configuration:\n"
+                                          << "  doFullFitFSC = " << doFullFitFSC_ << "\n"
+                                          << "  do50nsRecoFSC = " << do50nsRecoFSC_ << "\n"
+                                          << "Exactly ONE of these must be set to True.\n"
+                                          << "Please fix the configuration and rerun.\n";
+  }
 
-    // now continue with other initialization…
+  // now continue with other initialization…
 }
-
 
 FSCAnalyzerHC::~FSCAnalyzerHC() {
   // do anything here that needs to be done at desctruction time
@@ -178,7 +176,7 @@ void FSCAnalyzerHC::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
   fscDigi.sumPlus_FSC3only = 0;
   fscDigi.sumMinus_FSC2only = 0;
   fscDigi.sumMinus_FSC3only = 0;
-  
+
   fscDigi.n = 0;
   for (unsigned int i = 0; i < NMOD; i++) {
     fscDigi.zside[i] = -99;
@@ -235,173 +233,168 @@ void FSCAnalyzerHC::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
         fscDigi.chargefC[ts][nhits] = caldigi[ts];
       }
     }
-	
-	// CHARGE RECONSTRUCTION
-	int side = (zside<0) ? 0 : 1;
-	int ch = channel - 7;
-	float ped = Pedestal[side][ch];
-	float f3v=f3[side][ch];
-	float f4v=f4[side][ch];
-	float f5v=f5[side][ch];
-	int saturation = 0;
 
-	float Q0 = fscDigi.chargefC[0][nhits] - ped, Q1 = fscDigi.chargefC[1][nhits] - ped;
-	float Q2 = fscDigi.chargefC[2][nhits] - ped, Q3 = fscDigi.chargefC[3][nhits] - ped;
-	float Q4 = fscDigi.chargefC[4][nhits] - ped, Q5 = fscDigi.chargefC[5][nhits] - ped;
-	float charge = 0;
-	
-	// Reconstruct the charge in Q2
-	if (do50nsRecoFSC_){ // apply correction from the first time slice
+    // CHARGE RECONSTRUCTION
+    int side = (zside < 0) ? 0 : 1;
+    int ch = channel - 7;
+    float ped = Pedestal[side][ch];
+    float f3v = f3[side][ch];
+    float f4v = f4[side][ch];
+    float f5v = f5[side][ch];
+    int saturation = 0;
 
-        auto chi2 = [&](double A, double B) {
-            double r0 = B + A * f4v - Q0;
-            double r1 = B * f3v + A * Q1;
-            return r0 * r0 + r1 * r1;
-        };
+    float Q0 = fscDigi.chargefC[0][nhits] - ped, Q1 = fscDigi.chargefC[1][nhits] - ped;
+    float Q2 = fscDigi.chargefC[2][nhits] - ped, Q3 = fscDigi.chargefC[3][nhits] - ped;
+    float Q4 = fscDigi.chargefC[4][nhits] - ped, Q5 = fscDigi.chargefC[5][nhits] - ped;
+    float charge = 0;
 
-        double bestB    = 0.0;
-        double bestChi2 = std::numeric_limits<double>::infinity();
+    // Reconstruct the charge in Q2
+    if (do50nsRecoFSC_) {  // apply correction from the first time slice
 
-        // --- 0) Unconstrained interior solution ---
-        double denom = f3v * f4v - f5v;
-        if (std::fabs(denom) > 1e-12) {
-            double A_star = (Q0 * f3v - Q1) / denom;
-            double B_star = (Q1 * f4v - Q0 * f5v) / denom;
-            if (A_star >= 0.0 && B_star >= 0.0) {
-                double c = chi2(A_star, B_star);
-                bestChi2 = c;
-                bestB    = B_star;
-            }
-        }		
+      auto chi2 = [&](double A, double B) {
+        double r0 = B + A * f4v - Q0;
+        double r1 = B * f3v + A * Q1;
+        return r0 * r0 + r1 * r1;
+      };
 
-        // --- 1) Boundary case A = 0 ---
-        {
-            double denomA = 1.0 + f3v * f3v;
-            if (denomA > 1e-12) {
-                double B_A = (Q0 + f3v * Q1) / denomA;
-                if (B_A >= 0.0) {
-                    double c = chi2(0.0, B_A);
-                    if (c < bestChi2) {
-                        bestChi2 = c;
-                        bestB    = B_A;
-                    }
-                }
-            }
+      double bestB = 0.0;
+      double bestChi2 = std::numeric_limits<double>::infinity();
+
+      // --- 0) Unconstrained interior solution ---
+      double denom = f3v * f4v - f5v;
+      if (std::fabs(denom) > 1e-12) {
+        double A_star = (Q0 * f3v - Q1) / denom;
+        double B_star = (Q1 * f4v - Q0 * f5v) / denom;
+        if (A_star >= 0.0 && B_star >= 0.0) {
+          double c = chi2(A_star, B_star);
+          bestChi2 = c;
+          bestB = B_star;
         }
-        // --- 2) Boundary case B = 0 ---
-        {
-            double denomB = f4v * f4v + f5v * f5v;
-            if (denomB > 1e-12) {
-                double A_B = (Q0 * f4v + Q1 * f5v) / denomB;
-                if (A_B >= 0.0) {
-                    double c = chi2(A_B, 0.0);
-                    if (c < bestChi2) {
-                        bestChi2 = c;
-                        bestB    = 0.0;
-                    }
-                }
-            }
-        }
-        // --- 3) Corner A = 0, B = 0 ---
-        {
-            double c = chi2(0.0, 0.0);
+      }
+
+      // --- 1) Boundary case A = 0 ---
+      {
+        double denomA = 1.0 + f3v * f3v;
+        if (denomA > 1e-12) {
+          double B_A = (Q0 + f3v * Q1) / denomA;
+          if (B_A >= 0.0) {
+            double c = chi2(0.0, B_A);
             if (c < bestChi2) {
-                bestChi2 = c;
-                bestB    = 0.0;
+              bestChi2 = c;
+              bestB = B_A;
             }
-        }	
+          }
+        }
+      }
+      // --- 2) Boundary case B = 0 ---
+      {
+        double denomB = f4v * f4v + f5v * f5v;
+        if (denomB > 1e-12) {
+          double A_B = (Q0 * f4v + Q1 * f5v) / denomB;
+          if (A_B >= 0.0) {
+            double c = chi2(A_B, 0.0);
+            if (c < bestChi2) {
+              bestChi2 = c;
+              bestB = 0.0;
+            }
+          }
+        }
+      }
+      // --- 3) Corner A = 0, B = 0 ---
+      {
+        double c = chi2(0.0, 0.0);
+        if (c < bestChi2) {
+          bestChi2 = c;
+          bestB = 0.0;
+        }
+      }
 
-        // Best-fit previous-bunch charge
-        Q0 = static_cast<float>(bestB);	
-	}
-	else{ Q0 = 0; }
-		
-	if (doFullFitFSC_) {
+      // Best-fit previous-bunch charge
+      Q0 = static_cast<float>(bestB);
+    } else {
+      Q0 = 0;
+    }
 
-		// ===== Full fit: TS2–TS5 optimal combination =====
+    if (doFullFitFSC_) {
+      // ===== Full fit: TS2–TS5 optimal combination =====
 
-		if (fscDigi.adc[2][nhits] == 255) {          // TS2 saturated
-			if (fscDigi.adc[3][nhits] == 255) {      // TS3 saturated
-				if (fscDigi.adc[4][nhits] == 255) {  // TS4 saturated
-					// TS2–TS4 saturated → only TS5 available
-					Q2 = Q5 / f5v;
+      if (fscDigi.adc[2][nhits] == 255) {      // TS2 saturated
+        if (fscDigi.adc[3][nhits] == 255) {    // TS3 saturated
+          if (fscDigi.adc[4][nhits] == 255) {  // TS4 saturated
+            // TS2–TS4 saturated → only TS5 available
+            Q2 = Q5 / f5v;
 
-					if (fscDigi.adc[5][nhits] == 255) { // TS5 saturated
-						saturation = 5;                 // TS2–TS5 saturated
-					} else {
-						saturation = 4;                 // TS2–TS4 saturated
-					}
-				}
-				else {
-					// TS2–TS3 saturated, TS4 OK → use TS4 & TS5
-					Q2 = (f4v * Q4 + f5v * Q5) / (f4v*f4v + f5v*f5v);
-					saturation = 3;
-				}
-			}
-			else {
-				// TS2 saturated, TS3 OK → use TS3–TS5
-				Q2 = (f3v * Q3 + f4v * Q4 + f5v * Q5) /
-					 (f3v*f3v + f4v*f4v + f5v*f5v);
-				saturation = 1;
-			}
-		}
-		else {
-			// TS2 not saturated → full optimal combination
-			Q2 = (Q2 + f3v * Q3 + f4v * Q4 + f5v * Q5) /
-				 (1.0f + f3v*f3v + f4v*f4v + f5v*f5v);
-			saturation = 0;
-		}
+            if (fscDigi.adc[5][nhits] == 255) {  // TS5 saturated
+              saturation = 5;                    // TS2–TS5 saturated
+            } else {
+              saturation = 4;  // TS2–TS4 saturated
+            }
+          } else {
+            // TS2–TS3 saturated, TS4 OK → use TS4 & TS5
+            Q2 = (f4v * Q4 + f5v * Q5) / (f4v * f4v + f5v * f5v);
+            saturation = 3;
+          }
+        } else {
+          // TS2 saturated, TS3 OK → use TS3–TS5
+          Q2 = (f3v * Q3 + f4v * Q4 + f5v * Q5) / (f3v * f3v + f4v * f4v + f5v * f5v);
+          saturation = 1;
+        }
+      } else {
+        // TS2 not saturated → full optimal combination
+        Q2 = (Q2 + f3v * Q3 + f4v * Q4 + f5v * Q5) / (1.0f + f3v * f3v + f4v * f4v + f5v * f5v);
+        saturation = 0;
+      }
 
-	} else {
+    } else {
+      // subtract signal leackage from out-of-time pileup signal
+      Q2 -= Q0 * f4v;
+      Q3 -= Q0 * f5v;
 
-		// subtract signal leackage from out-of-time pileup signal
-		Q2 -= Q0 * f4v;
-		Q3 -= Q0 * f5v;
-		
-		// ===== Reduced fit: ONLY TS2 and TS3  =====
+      // ===== Reduced fit: ONLY TS2 and TS3  =====
 
-		if (fscDigi.adc[2][nhits] == 255) {   // TS2 saturated
-			Q2 = Q3 / f3v;
+      if (fscDigi.adc[2][nhits] == 255) {  // TS2 saturated
+        Q2 = Q3 / f3v;
 
-			if (fscDigi.adc[3][nhits] == 255) { // TS3 saturated
-				saturation = 2;
-			}
-			else {
-				saturation = 1;
-			}
-		}
-		else {
-			Q2 = (Q2 + f3v * Q3) / (1.0f + f3v*f3v);
-			saturation = 0;
-		}
-	}
+        if (fscDigi.adc[3][nhits] == 255) {  // TS3 saturated
+          saturation = 2;
+        } else {
+          saturation = 1;
+        }
+      } else {
+        Q2 = (Q2 + f3v * Q3) / (1.0f + f3v * f3v);
+        saturation = 0;
+      }
+    }
 
+    if (fscDigi.adc[0][nhits] == 255)
+      saturation += 10;  // TS0 saturated
 
-	if(fscDigi.adc[0][nhits]==255) saturation +=10; // TS0 saturated
-	
-	// new calibrated charge
-	charge = Q2 * (1.0f + f3v + f4v + f5v);
-	
-	fscDigi.Fitted_QTS0[nhits] = Q0 + ped;
-	fscDigi.Fitted_QTS2[nhits] = Q2 + ped;
-	fscDigi.saturation[nhits] = saturation;
-	fscDigi.charge[nhits] = charge;	
-	fscDigi.charge_bare[nhits] = (fscDigi.chargefC[2][nhits] - ped) * (1.0f + f3v + f4v + f5v);
-	
+    // new calibrated charge
+    charge = Q2 * (1.0f + f3v + f4v + f5v);
+
+    fscDigi.Fitted_QTS0[nhits] = Q0 + ped;
+    fscDigi.Fitted_QTS2[nhits] = Q2 + ped;
+    fscDigi.saturation[nhits] = saturation;
+    fscDigi.charge[nhits] = charge;
+    fscDigi.charge_bare[nhits] = (fscDigi.chargefC[2][nhits] - ped) * (1.0f + f3v + f4v + f5v);
+
     nhits++;
-	
-	// add sums:
-	if(zside < 0){
-		fscDigi.sumMinus += charge;
-		if(channel < 9) fscDigi.sumMinus_FSC2only += charge;
-		else fscDigi.sumMinus_FSC3only += charge;
-	}
-	else{
-		fscDigi.sumPlus += charge;
-		if(channel < 9) fscDigi.sumPlus_FSC2only += charge;
-		else fscDigi.sumPlus_FSC3only += charge;
-	}
-	
+
+    // add sums:
+    if (zside < 0) {
+      fscDigi.sumMinus += charge;
+      if (channel < 9)
+        fscDigi.sumMinus_FSC2only += charge;
+      else
+        fscDigi.sumMinus_FSC3only += charge;
+    } else {
+      fscDigi.sumPlus += charge;
+      if (channel < 9)
+        fscDigi.sumPlus_FSC2only += charge;
+      else
+        fscDigi.sumPlus_FSC3only += charge;
+    }
+
   }  // end loop zdc digis
 
   fscDigi.n = nhits;
