@@ -7,13 +7,12 @@
 #include "fastjet/contrib/SoftKiller.hh"
 #include "TTree.h"
 
-
 class HiFJSoftKillerAnalyzer : public edm::one::EDAnalyzer<> {
 public:
   explicit HiFJSoftKillerAnalyzer(const edm::ParameterSet& iConfig)
       : pfToken_(consumes<reco::CandidateView>(iConfig.getParameter<edm::InputTag>("source"))),
         etaMap_(iConfig.getParameter<std::vector<double>>("etaMap")) {};
-  ~HiFJSoftKillerAnalyzer() override{};
+  ~HiFJSoftKillerAnalyzer() override {};
 
   void beginJob() override;
   void analyze(const edm::Event&, const edm::EventSetup&) override;
@@ -23,7 +22,7 @@ private:
   const std::vector<double> etaMap_;
 
   //output
-  TTree *tree_;
+  TTree* tree_;
   edm::Service<TFileService> fs_;
   std::vector<float> radius_;
   std::vector<float> etaMin_;
@@ -33,8 +32,7 @@ private:
   std::vector<unsigned short> nPar_;
 };
 
-void HiFJSoftKillerAnalyzer::beginJob()
-{
+void HiFJSoftKillerAnalyzer::beginJob() {
   const auto jetTagTitle = "HiFJSoftKiller Jet background analysis tree";
   tree_ = fs_->make<TTree>("t", jetTagTitle);
   tree_->Branch("radius", &radius_);
@@ -45,8 +43,7 @@ void HiFJSoftKillerAnalyzer::beginJob()
   tree_->Branch("nPar", &nPar_);
 }
 
-void HiFJSoftKillerAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
-{
+void HiFJSoftKillerAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
   //clear vectors
   radius_.clear();
   etaMin_.clear();
@@ -59,9 +56,9 @@ void HiFJSoftKillerAnalyzer::analyze(const edm::Event& iEvent, const edm::EventS
   static const reco::PFCandidate PF;
   std::map<std::pair<double, double>, std::map<char, std::vector<fastjet::PseudoJet>>> particles;
   for (const auto& pf : iEvent.get(pfToken_)) {
-    for (size_t i=1; i<etaMap_.size(); i++) {
-      if (pf.eta() >= etaMap_[i-1] && pf.eta() < etaMap_[i]) {
-        auto& par = particles[{etaMap_[i-1], etaMap_[i]}];
+    for (size_t i = 1; i < etaMap_.size(); i++) {
+      if (pf.eta() >= etaMap_[i - 1] && pf.eta() < etaMap_[i]) {
+        auto& par = particles[{etaMap_[i - 1], etaMap_[i]}];
         par[0].emplace_back(pf.px(), pf.py(), pf.pz(), pf.energy());
         if (pf.pdgId() == 211 || pf.pdgId() == -211)
           par[1].emplace_back(pf.px(), pf.py(), pf.pz(), pf.energy());
@@ -74,18 +71,18 @@ void HiFJSoftKillerAnalyzer::analyze(const edm::Event& iEvent, const edm::EventS
   }
 
   //extract soft killer threshold
-  for (size_t i=1; i<etaMap_.size(); i++) {
-    const auto& par = particles.find({etaMap_[i-1], etaMap_[i]});
+  for (size_t i = 1; i < etaMap_.size(); i++) {
+    const auto& par = particles.find({etaMap_[i - 1], etaMap_[i]});
     if (par == particles.end())
       continue;
     for (const auto& r : {0.2, 0.3, 0.4}) {
-      fastjet::contrib::SoftKiller soft_killer(etaMap_[i-1], etaMap_[i], r, r);
+      fastjet::contrib::SoftKiller soft_killer(etaMap_[i - 1], etaMap_[i], r, r);
       for (const auto& p : par->second) {
         double pt_threshold;
         std::vector<fastjet::PseudoJet> soft_killed_event;
         soft_killer.apply(p.second, soft_killed_event, pt_threshold);
         radius_.emplace_back(r);
-        etaMin_.emplace_back(etaMap_[i-1]);
+        etaMin_.emplace_back(etaMap_[i - 1]);
         etaMax_.emplace_back(etaMap_[i]);
         pfType_.emplace_back(p.first);
         thr_.emplace_back(pt_threshold);

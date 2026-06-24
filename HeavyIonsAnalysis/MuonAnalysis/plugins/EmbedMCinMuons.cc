@@ -12,7 +12,7 @@ namespace pat {
           muonGenMatchToken_(consumes(iConfig.getParameter<edm::InputTag>("matchedGen"))) {
       produces<pat::MuonCollection>();
     }
-    ~EmbedMCinMuons() override{};
+    ~EmbedMCinMuons() override {};
 
     void produce(edm::StreamID, edm::Event& iEvent, const edm::EventSetup& iSetup) const override;
 
