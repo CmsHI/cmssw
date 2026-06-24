@@ -2,7 +2,7 @@
 //
 // Package:    HiJetBackground/HiFJRhoAnalyzer
 // Class:      HiFJRhoAnalyzer
-// 
+//
 /**\class HiFJRhoAnalyzer HiFJRhoAnalyzer.cc HiJetBackground/HiFJRhoAnalyzer/plugins/HiFJRhoAnalyzer.cc
 
  Description: [one line class summary]
@@ -40,7 +40,6 @@ using namespace edm;
 // constants, enums and typedefs
 //
 
-
 //
 // static data member definitions
 //
@@ -48,48 +47,42 @@ using namespace edm;
 //
 // constructors and destructor
 //
-HiFJRhoAnalyzer::HiFJRhoAnalyzer(const edm::ParameterSet& iConfig) 
-{
-  etaToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>( "etaMap" ));
-  rhoToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>( "rho" ));
-  rhomToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>( "rhom" ));
-  rhoCorrToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>( "rhoCorr" ));
-  rhomCorrToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>( "rhomCorr" ));
-  rhoCorr1BinToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>( "rhoCorr1Bin" ));
-  rhomCorr1BinToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>( "rhomCorr1Bin" ));
+HiFJRhoAnalyzer::HiFJRhoAnalyzer(const edm::ParameterSet& iConfig) {
+  etaToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>("etaMap"));
+  rhoToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>("rho"));
+  rhomToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>("rhom"));
+  rhoCorrToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>("rhoCorr"));
+  rhomCorrToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>("rhomCorr"));
+  rhoCorr1BinToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>("rhoCorr1Bin"));
+  rhomCorr1BinToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>("rhomCorr1Bin"));
   //rhoGridToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>( "rhoGrid" ));
   //meanRhoGridToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>( "meanRhoGrid" ));
   //etaMinRhoGridToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>( "etaMinRhoGrid" ));
   //etaMaxRhoGridToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>( "etaMaxRhoGrid" ));
-  ptJetsToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>( "ptJets" ));
-  areaJetsToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>( "areaJets" ));
-  etaJetsToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>( "etaJets" ));
+  ptJetsToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>("ptJets"));
+  areaJetsToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>("areaJets"));
+  etaJetsToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>("etaJets"));
   useModulatedRho_ = iConfig.getParameter<bool>("useModulatedRho");
   if (useModulatedRho_) {
-    rhoFlowFitParamsToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>( "rhoFlowFitParams" ));
-    nTowToken_ = consumes<std::vector<int>>(iConfig.getParameter<edm::InputTag>( "nTow" ));
-    towExcludePtToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>( "towExcludePt" ));
-    towExcludePhiToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>( "towExcludePhi" ));
-    towExcludeEtaToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>( "towExcludeEta" ));
+    rhoFlowFitParamsToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>("rhoFlowFitParams"));
+    nTowToken_ = consumes<std::vector<int>>(iConfig.getParameter<edm::InputTag>("nTow"));
+    towExcludePtToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>("towExcludePt"));
+    towExcludePhiToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>("towExcludePhi"));
+    towExcludeEtaToken_ = consumes<std::vector<double>>(iConfig.getParameter<edm::InputTag>("towExcludeEta"));
   }
 }
 
-
-HiFJRhoAnalyzer::~HiFJRhoAnalyzer()
-{
+HiFJRhoAnalyzer::~HiFJRhoAnalyzer() {
   // do anything here that needs to be done at desctruction time
   // (e.g. close files, deallocate resources etc.)
 }
-
 
 //
 // member functions
 //
 
 // ------------ method called to analyze the data  ------------
-void HiFJRhoAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
-{
-
+void HiFJRhoAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
   //clear vectors
   rhoObj_.etaMin.clear();
   rhoObj_.etaMax.clear();
@@ -99,12 +92,12 @@ void HiFJRhoAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& i
   rhoObj_.rhomCorr.clear();
   rhoObj_.rhoCorr1Bin.clear();
   rhoObj_.rhomCorr1Bin.clear();
-  
+
   rhoObj_.rhoGrid.clear();
   rhoObj_.meanRhoGrid.clear();
   rhoObj_.etaMinRhoGrid.clear();
   rhoObj_.etaMaxRhoGrid.clear();
-  
+
   rhoObj_.ptJets.clear();
   rhoObj_.areaJets.clear();
   rhoObj_.etaJets.clear();
@@ -114,7 +107,7 @@ void HiFJRhoAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& i
   rhoObj_.towExcludePt.clear();
   rhoObj_.towExcludePhi.clear();
   rhoObj_.towExcludeEta.clear();
-  
+
   // Get the vector of background densities
   edm::Handle<std::vector<double>> etaRanges;
   edm::Handle<std::vector<double>> rho;
@@ -123,12 +116,12 @@ void HiFJRhoAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& i
   edm::Handle<std::vector<double>> rhomCorr;
   edm::Handle<std::vector<double>> rhoCorr1Bin;
   edm::Handle<std::vector<double>> rhomCorr1Bin;
-  
+
   // edm::Handle<std::vector<double>> rhoGrid;
   // edm::Handle<std::vector<double>> meanRhoGrid;
   // edm::Handle<std::vector<double>> etaMinRhoGrid;
   // edm::Handle<std::vector<double>> etaMaxRhoGrid;
-  
+
   edm::Handle<std::vector<double>> ptJets;
   edm::Handle<std::vector<double>> areaJets;
   edm::Handle<std::vector<double>> etaJets;
@@ -138,7 +131,7 @@ void HiFJRhoAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& i
   edm::Handle<std::vector<double>> towExcludePt;
   edm::Handle<std::vector<double>> towExcludePhi;
   edm::Handle<std::vector<double>> towExcludeEta;
-  
+
   iEvent.getByToken(etaToken_, etaRanges);
   iEvent.getByToken(rhoToken_, rho);
   iEvent.getByToken(rhomToken_, rhom);
@@ -150,7 +143,7 @@ void HiFJRhoAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& i
   // iEvent.getByToken(meanRhoGridToken_, meanRhoGrid);
   // iEvent.getByToken(etaMinRhoGridToken_, etaMinRhoGrid);
   // iEvent.getByToken(etaMaxRhoGridToken_, etaMaxRhoGrid);
-  
+
   iEvent.getByToken(ptJetsToken_, ptJets);
   iEvent.getByToken(areaJetsToken_, areaJets);
   iEvent.getByToken(etaJetsToken_, etaJets);
@@ -162,11 +155,11 @@ void HiFJRhoAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& i
     iEvent.getByToken(towExcludePhiToken_, towExcludePhi);
     iEvent.getByToken(towExcludeEtaToken_, towExcludeEta);
   }
-  
+
   int neta = (int)etaRanges->size();
-  for(int ieta = 0; ieta<(neta-1); ieta++) {
+  for (int ieta = 0; ieta < (neta - 1); ieta++) {
     rhoObj_.etaMin.push_back(etaRanges->at(ieta));
-    rhoObj_.etaMax.push_back(etaRanges->at(ieta+1));
+    rhoObj_.etaMax.push_back(etaRanges->at(ieta + 1));
     rhoObj_.rho.push_back(rho->at(ieta));
     rhoObj_.rhom.push_back(rhom->at(ieta));
     rhoObj_.rhoCorr.push_back(rhoCorr->at(ieta));
@@ -176,7 +169,7 @@ void HiFJRhoAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& i
   }
 
   int njets = (int)ptJets->size();
-  for(int ijet = 0; ijet<njets; ijet++) {
+  for (int ijet = 0; ijet < njets; ijet++) {
     rhoObj_.ptJets.push_back(ptJets->at(ijet));
     rhoObj_.areaJets.push_back(areaJets->at(ijet));
     rhoObj_.etaJets.push_back(etaJets->at(ijet));
@@ -189,7 +182,7 @@ void HiFJRhoAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& i
     rhoObj_.towExcludePhi = *towExcludePhi;
     rhoObj_.towExcludeEta = *towExcludeEta;
   }
-  
+
   // int netaGrid = (int)rhoGrid->size();
   // for(int igrid = 0; igrid<netaGrid; igrid++) {
   //   rhoObj_.rhoGrid.push_back(rhoGrid->at(igrid));
@@ -197,36 +190,35 @@ void HiFJRhoAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& i
   //   rhoObj_.etaMinRhoGrid.push_back(etaMinRhoGrid->at(igrid));
   //   rhoObj_.etaMaxRhoGrid.push_back(etaMaxRhoGrid->at(igrid));
   // }
-  
+
   tree_->Fill();
 }
 
 // ------------ method called once each job just before starting event loop  ------------
 void HiFJRhoAnalyzer::beginJob() {
-
   tree_ = fs_->make<TTree>("t", "HiFJRho Jet background analysis tree");
-  
-  tree_->Branch("etaMin",&(rhoObj_.etaMin));
-  tree_->Branch("etaMax",&(rhoObj_.etaMax));
-  tree_->Branch("rho",&(rhoObj_.rho));
-  tree_->Branch("rhom",&(rhoObj_.rhom));
-  tree_->Branch("rhoCorr",&(rhoObj_.rhoCorr));
-  tree_->Branch("rhomCorr",&(rhoObj_.rhomCorr));
-  tree_->Branch("rhoCorr1Bin",&(rhoObj_.rhoCorr1Bin));
-  tree_->Branch("rhomCorr1Bin",&(rhoObj_.rhomCorr1Bin));
-  tree_->Branch("rhoGrid",&(rhoObj_.rhoGrid));
-  tree_->Branch("meanRhoGrid",&(rhoObj_.meanRhoGrid));
-  tree_->Branch("etaMinRhoGrid",&(rhoObj_.etaMinRhoGrid));
-  tree_->Branch("etaMaxRhoGrid",&(rhoObj_.etaMaxRhoGrid));
-  tree_->Branch("ptJets",&(rhoObj_.ptJets));
-  tree_->Branch("etaJets",&(rhoObj_.etaJets));
-  tree_->Branch("areaJets",&(rhoObj_.areaJets));
+
+  tree_->Branch("etaMin", &(rhoObj_.etaMin));
+  tree_->Branch("etaMax", &(rhoObj_.etaMax));
+  tree_->Branch("rho", &(rhoObj_.rho));
+  tree_->Branch("rhom", &(rhoObj_.rhom));
+  tree_->Branch("rhoCorr", &(rhoObj_.rhoCorr));
+  tree_->Branch("rhomCorr", &(rhoObj_.rhomCorr));
+  tree_->Branch("rhoCorr1Bin", &(rhoObj_.rhoCorr1Bin));
+  tree_->Branch("rhomCorr1Bin", &(rhoObj_.rhomCorr1Bin));
+  tree_->Branch("rhoGrid", &(rhoObj_.rhoGrid));
+  tree_->Branch("meanRhoGrid", &(rhoObj_.meanRhoGrid));
+  tree_->Branch("etaMinRhoGrid", &(rhoObj_.etaMinRhoGrid));
+  tree_->Branch("etaMaxRhoGrid", &(rhoObj_.etaMaxRhoGrid));
+  tree_->Branch("ptJets", &(rhoObj_.ptJets));
+  tree_->Branch("etaJets", &(rhoObj_.etaJets));
+  tree_->Branch("areaJets", &(rhoObj_.areaJets));
   if (useModulatedRho_) {
-    tree_->Branch("rhoFlowFitParams",&(rhoObj_.rhoFlowFitParams));
-    tree_->Branch("nTow",&(rhoObj_.nTow));
-    tree_->Branch("towExcludePt",&(rhoObj_.towExcludePt));
-    tree_->Branch("towExcludePhi",&(rhoObj_.towExcludePhi));
-    tree_->Branch("towExcludeEta",&(rhoObj_.towExcludeEta));
+    tree_->Branch("rhoFlowFitParams", &(rhoObj_.rhoFlowFitParams));
+    tree_->Branch("nTow", &(rhoObj_.nTow));
+    tree_->Branch("towExcludePt", &(rhoObj_.towExcludePt));
+    tree_->Branch("towExcludePhi", &(rhoObj_.towExcludePhi));
+    tree_->Branch("towExcludeEta", &(rhoObj_.towExcludeEta));
   }
 }
 

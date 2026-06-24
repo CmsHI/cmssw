@@ -31,9 +31,8 @@ using namespace HepMC;
 //
 // constructors and destructor
 //
-HLTMuTree::HLTMuTree(const edm::ParameterSet& iConfig):
-  transientTrackToken_(esConsumes(edm::ESInputTag("", "TransientTrackBuilder")))
-{
+HLTMuTree::HLTMuTree(const edm::ParameterSet& iConfig)
+    : transientTrackToken_(esConsumes(edm::ESInputTag("", "TransientTrackBuilder"))) {
   //now do what ever initialization is needed
   //tagRecoMu = iConfig.getParameter<edm::InputTag>("muons");
   tagRecoMu = consumes<edm::View<reco::Muon> >(iConfig.getParameter<edm::InputTag>("muons"));
@@ -150,6 +149,7 @@ void HLTMuTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
           if (genPtl.numberOfMothers() > 0) {
             vector<int> momid;
             vector<int>::iterator it_jpsi, it_ups;
+            momid.reserve(genPtl.numberOfMothers());
             for (unsigned int mom = 0; mom < genPtl.numberOfMothers(); mom++) {
               //cout << "mom pid: " << genPtl.mother(mom)->pdgId() << endl;
               momid.push_back(genPtl.mother(mom)->pdgId());

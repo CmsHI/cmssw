@@ -63,7 +63,7 @@ private:
   void analyzeRefSubjets(const reco::GenJet& jet);
   void analyzeGenSubjets(const reco::GenJet& jet);
 
-  int TaggedJet(pat::Jet patjet, edm::Handle<reco::JetTagCollection > jetTags );
+  int TaggedJet(pat::Jet patjet, edm::Handle<reco::JetTagCollection> jetTags);
 
   edm::InputTag jetTagLabel_;
   edm::EDGetTokenT<pat::JetCollection> jetTag_;
@@ -74,7 +74,7 @@ private:
   edm::EDGetTokenT<edm::View<reco::GenJet>> genjetTag_;
   edm::EDGetTokenT<edm::HepMCProduct> eventInfoTag_;
   edm::EDGetTokenT<GenEventInfoProduct> eventGenInfoTag_;
-  // b and c hadrons                                                                                                                                                     
+  // b and c hadrons
   edm::EDGetTokenT<reco::JetFlavourInfoMatchingCollection> jetFlavourInfosToken_;
 
   std::string jetName_;  //used as prefix for jet structures
@@ -121,7 +121,8 @@ private:
   std::string bTagJetName_;
   std::string particleTransformerJetTags_;
 
-  edm::EDGetTokenT<reco::JetTagCollection> particleTransformerJetTagsTkn_,particleTransformerJetTagsBBTkn_,particleTransformerJetTagsLepBTkn_;
+  edm::EDGetTokenT<reco::JetTagCollection> particleTransformerJetTagsTkn_, particleTransformerJetTagsBBTkn_,
+      particleTransformerJetTagsLepBTkn_;
   std::map<std::string, std::map<std::string, edm::EDGetTokenT<reco::JetTagCollection>>> jetTaggers_;
 
   static const int MAXJETS = 1000;
@@ -378,8 +379,6 @@ private:
     float calopt[MAXCALO] = {0};
     float caloeta[MAXCALO] = {0};
     float calophi[MAXCALO] = {0};
-
-
   };
 
   JRA jets_;
