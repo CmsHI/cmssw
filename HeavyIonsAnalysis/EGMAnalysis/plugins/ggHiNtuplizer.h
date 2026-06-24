@@ -274,9 +274,9 @@ private:
   std::vector<float> eleSeedCryIphi_;
 
   std::vector<float> eleMVAIso_, eleMVAId_;
-  std::map<std::string, std::vector<int>> eleMVAIsoWP_{{{"WP95",{}}, {"WP90",{}}, {"WP85",{}}, {"WP80",{}}}};
-  std::map<std::string, std::vector<int>> eleMVAIdWP_ {{{"WP95",{}}, {"WP90",{}}, {"WP85",{}}, {"WP80",{}}}};
-  std::map<std::string, std::vector<int>> eleCutIdWP_ {{{"WP95",{}}, {"WP90",{}}, {"WP80",{}}, {"WP70",{}}}};
+  std::map<std::string, std::vector<int>> eleMVAIsoWP_{{{"WP95", {}}, {"WP90", {}}, {"WP85", {}}, {"WP80", {}}}};
+  std::map<std::string, std::vector<int>> eleMVAIdWP_{{{"WP95", {}}, {"WP90", {}}, {"WP85", {}}, {"WP80", {}}}};
+  std::map<std::string, std::vector<int>> eleCutIdWP_{{{"WP95", {}}, {"WP90", {}}, {"WP80", {}}, {"WP70", {}}}};
 
   std::vector<int> ele_genMatchedIndex_;
 
@@ -570,7 +570,7 @@ private:
   std::vector<int> muIDInTime_;
 
   std::vector<float> muMVAIso_;
-  std::map<std::string, std::vector<int>> muMVAIsoWP_{{{"WP95",{}}, {"WP90",{}}, {"WP85",{}}, {"WP80",{}}}};
+  std::map<std::string, std::vector<int>> muMVAIsoWP_{{{"WP95", {}}, {"WP90", {}}, {"WP85", {}}, {"WP80", {}}}};
 
   std::vector<int> mu_genMatchedIndex_;
 };

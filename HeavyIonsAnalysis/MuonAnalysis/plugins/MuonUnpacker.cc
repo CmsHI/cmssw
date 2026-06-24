@@ -24,8 +24,8 @@ namespace pat {
           trackBuilderToken_(esConsumes(edm::ESInputTag("", "TransientTrackBuilder"))),
           candidateMuonIDToken_(getPackedCandidateMap(muonSelectors_)),
           propToMuonSetup_(getMuonPropagator(iConfig, consumesCollector())),
-          patMuonPutToken_(produces<pat::MuonCollection>()){};
-    ~MuonUnpacker() override{};
+          patMuonPutToken_(produces<pat::MuonCollection>()) {};
+    ~MuonUnpacker() override {};
 
     void produce(edm::StreamID, edm::Event& iEvent, const edm::EventSetup& iSetup) const override;
 

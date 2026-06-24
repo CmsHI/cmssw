@@ -141,7 +141,8 @@ void TriggerAnalyzer::analyze(edm::Event const& iEvent, edm::EventSetup const& i
         TString dummyname(dummy.data());
         t_->Branch(dummyname, hltflag + itdum, dummyname + "/I");
         t_->Branch(dummyname + "_PrescaleNumerator", hltPrescaleNumerator + itdum, dummyname + "_PrescaleNumerator/I");
-        t_->Branch(dummyname + "_PrescaleDenominator", hltPrescaleDenominator + itdum, dummyname + "_PrescaleDenominator/I");
+        t_->Branch(
+            dummyname + "_PrescaleDenominator", hltPrescaleDenominator + itdum, dummyname + "_PrescaleDenominator/I");
         pathtoindex[dummy] = itdum;
         ++itdum;
       }
@@ -151,8 +152,11 @@ void TriggerAnalyzer::analyze(edm::Event const& iEvent, edm::EventSetup const& i
         if (pathtoindex.find(trigname) == pathtoindex.end()) {
           TString hltname = trigname;
           t_->Branch(hltname, hltflag + itdum + itrig, hltname + "/I");
-          t_->Branch(hltname + "_PrescaleNumerator", hltPrescaleNumerator + itdum + itrig, hltname + "_PrescaleNumerator/I");
-          t_->Branch(hltname + "_PrescaleDenominator", hltPrescaleDenominator + itdum + itrig, hltname + "_PrescaleDenominator/I");
+          t_->Branch(
+              hltname + "_PrescaleNumerator", hltPrescaleNumerator + itdum + itrig, hltname + "_PrescaleNumerator/I");
+          t_->Branch(hltname + "_PrescaleDenominator",
+                     hltPrescaleDenominator + itdum + itrig,
+                     hltname + "_PrescaleDenominator/I");
           pathtoindex[trigname] = itdum + itrig;
         }
       }
