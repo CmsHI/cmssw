@@ -28,16 +28,15 @@ private:
   const double threshold_;
   const int minnumtowers_;
   int numMinHFTowersP, numMinHFTowersM;
-
 };
 
 using namespace edm;
 using namespace std;
 
-HiHFFilterPF::HiHFFilterPF(const edm::ParameterSet& iConfig) :
-  pfCandidateTag_(consumes<pat::PackedCandidateCollection>(iConfig.getParameter<edm::InputTag>("pfCandidateSrc"))),
-  threshold_(iConfig.getParameter<double>("threshold")),
-  minnumtowers_(iConfig.getParameter<int>("minnumtowers")) { }
+HiHFFilterPF::HiHFFilterPF(const edm::ParameterSet& iConfig)
+    : pfCandidateTag_(consumes<pat::PackedCandidateCollection>(iConfig.getParameter<edm::InputTag>("pfCandidateSrc"))),
+      threshold_(iConfig.getParameter<double>("threshold")),
+      minnumtowers_(iConfig.getParameter<int>("minnumtowers")) {}
 
 HiHFFilterPF::~HiHFFilterPF() {}
 
@@ -50,8 +49,8 @@ bool HiHFFilterPF::filter(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   const auto& pfCandidates = iEvent.get(pfCandidateTag_);
 
   for (const auto& pfcand : pfCandidates) {
-
-    if (pfcand.pdgId() != 1 && pfcand.pdgId() != 2) continue;
+    if (pfcand.pdgId() != 1 && pfcand.pdgId() != 2)
+      continue;
 
     const auto eta = pfcand.eta();
     const auto abseta = std::abs(eta);
@@ -59,11 +58,14 @@ bool HiHFFilterPF::filter(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       continue;
 
     if (pfcand.energy() >= threshold_) {
-      if (eta > 0) { numMinHFTowersP++; }
-      else { numMinHFTowersM++; }
+      if (eta > 0) {
+        numMinHFTowersP++;
+      } else {
+        numMinHFTowersM++;
+      }
     }
-    
-  } // for (const auto& pfcand : *pfCandidates)
+
+  }  // for (const auto& pfcand : *pfCandidates)
   if (numMinHFTowersP >= minnumtowers_ && numMinHFTowersM >= minnumtowers_)
     accepted = true;
 
