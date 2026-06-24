@@ -73,7 +73,7 @@ MuonAnalyzer::MuonAnalyzer(const edm::ParameterSet& ps) {
   tree_->Branch("recoPFPUIso", &recoPFPUIso_);
   tree_->Branch("recoMVAIso", &recoMVAIso_);
   for (auto& w : recoMVAIsoWP_)
-    tree_->Branch(("recoMVAIso"+w.first).c_str(), &(w.second));
+    tree_->Branch(("recoMVAIso" + w.first).c_str(), &(w.second));
   tree_->Branch("recoIDHybridSoft", &recoIDHybridSoft_);
   tree_->Branch("recoIDSoft", &recoIDSoft_);
   tree_->Branch("recoIDLoose", &recoIDLoose_);
@@ -385,41 +385,41 @@ void MuonAnalyzer::analyze(const edm::Event& e, const edm::EventSetup& es) {
 
       // global muons, avoiding overlaps with inner track variables if possible
       if (mu.globalTrack().isNonnull() && mu.isGlobalMuon()) {
-          const reco::TrackRef glbMu = mu.globalTrack();
+        const reco::TrackRef glbMu = mu.globalTrack();
 
-          nGlobal_++;
+        nGlobal_++;
 
-          globalP_.push_back(glbMu->p());
-          globalPt_.push_back(glbMu->pt());
-          globalPtErr_.push_back(glbMu->ptError());
-          globalEta_.push_back(glbMu->eta());
+        globalP_.push_back(glbMu->p());
+        globalPt_.push_back(glbMu->pt());
+        globalPtErr_.push_back(glbMu->ptError());
+        globalEta_.push_back(glbMu->eta());
 
-          globalIsArbitrated_.push_back(muon::isGoodMuon(mu, muon::selectionTypeFromString("TrackerMuonArbitrated")));
+        globalIsArbitrated_.push_back(muon::isGoodMuon(mu, muon::selectionTypeFromString("TrackerMuonArbitrated")));
 
-          globalDxy_.push_back(glbMu->dxy(pv.position()));
-          globalDz_.push_back(glbMu->dz(pv.position()));
-          globalDxyErr_.push_back(glbMu->dxyError());
-          globalDzErr_.push_back(glbMu->dzError());
+        globalDxy_.push_back(glbMu->dxy(pv.position()));
+        globalDz_.push_back(glbMu->dz(pv.position()));
+        globalDxyErr_.push_back(glbMu->dxyError());
+        globalDzErr_.push_back(glbMu->dzError());
 
-          globalNormChi2_.push_back(glbMu->normalizedChi2());
-          globalNMuonHits_.push_back(glbMu->hitPattern().numberOfValidMuonHits());
+        globalNormChi2_.push_back(glbMu->normalizedChi2());
+        globalNMuonHits_.push_back(glbMu->hitPattern().numberOfValidMuonHits());
 
-        } else {
-          globalP_.push_back(-99);
-          globalPt_.push_back(-99);
-          globalPtErr_.push_back(-99);
-          globalEta_.push_back(-99);
+      } else {
+        globalP_.push_back(-99);
+        globalPt_.push_back(-99);
+        globalPtErr_.push_back(-99);
+        globalEta_.push_back(-99);
 
-          globalIsArbitrated_.push_back(false);
+        globalIsArbitrated_.push_back(false);
 
-          globalDxy_.push_back(-99);
-          globalDz_.push_back(-99);
-          globalDxyErr_.push_back(-99);
-          globalDzErr_.push_back(-99);
+        globalDxy_.push_back(-99);
+        globalDz_.push_back(-99);
+        globalDxyErr_.push_back(-99);
+        globalDzErr_.push_back(-99);
 
-          globalNormChi2_.push_back(-99);
-          globalNMuonHits_.push_back(-99);
-        }
+        globalNormChi2_.push_back(-99);
+        globalNMuonHits_.push_back(-99);
+      }
 
       recoNMatchedStations_.push_back(mu.numberOfMatchedStations());
       recoIsoTrk_.push_back(mu.isolationR03().sumPt);
@@ -430,9 +430,12 @@ void MuonAnalyzer::analyze(const edm::Event& e, const edm::EventSetup& es) {
 
       recoMVAIso_.push_back(mu.hasUserFloat("hiMVAIso") ? mu.userFloat("hiMVAIso") : -99);
       for (auto& w : recoMVAIsoWP_)
-        w.second.push_back(mu.hasUserInt("hiMVAIso"+w.first) && mu.userInt("hiMVAIso"+w.first)>0);
+        w.second.push_back(mu.hasUserInt("hiMVAIso" + w.first) && mu.userInt("hiMVAIso" + w.first) > 0);
 
-      recoIDHybridSoft_.push_back(mu.isGlobalMuon() && mu.isTrackerMuon() && mu.innerTrack()->hitPattern().trackerLayersWithMeasurement() > 5 && mu.innerTrack()->hitPattern().pixelLayersWithMeasurement() > 0 && fabs(mu.innerTrack()->dxy(pv.position()) < 0.3) && fabs(mu.innerTrack()->dz(pv.position()) < 20.));
+      recoIDHybridSoft_.push_back(
+          mu.isGlobalMuon() && mu.isTrackerMuon() && mu.innerTrack()->hitPattern().trackerLayersWithMeasurement() > 5 &&
+          mu.innerTrack()->hitPattern().pixelLayersWithMeasurement() > 0 &&
+          fabs(mu.innerTrack()->dxy(pv.position()) < 0.3) && fabs(mu.innerTrack()->dz(pv.position()) < 20.));
 
       //  muon selectors available at https://github.com/cms-sw/cmssw/blob/4c9240b33ace61c92c6803f0c4eace9ba06e6c8d/DataFormats/MuonReco/interface/Muon.h#L202
       // Cut-based Ids
@@ -454,7 +457,7 @@ void MuonAnalyzer::analyze(const edm::Event& e, const edm::EventSetup& es) {
       recoMVAIDMediumLowPt_.push_back(mu.passed(reco::Muon::LowPtMvaMedium));
 
     }  // muons loop
-  }    // end of doReco_
+  }  // end of doReco_
 
   tree_->Fill();
 }

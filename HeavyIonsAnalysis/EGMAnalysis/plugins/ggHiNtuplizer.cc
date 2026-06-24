@@ -185,12 +185,12 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps)
 
     tree_->Branch("eleMVAIso", &eleMVAIso_);
     for (auto& w : eleMVAIsoWP_)
-      tree_->Branch(("eleMVAIso"+w.first).c_str(), &(w.second));
+      tree_->Branch(("eleMVAIso" + w.first).c_str(), &(w.second));
     tree_->Branch("eleMVAId", &eleMVAId_);
     for (auto& w : eleMVAIdWP_)
-      tree_->Branch(("eleMVAId"+w.first).c_str(), &(w.second));
+      tree_->Branch(("eleMVAId" + w.first).c_str(), &(w.second));
     for (auto& w : eleCutIdWP_)
-      tree_->Branch(("eleCutId"+w.first).c_str(), &(w.second));
+      tree_->Branch(("eleCutId" + w.first).c_str(), &(w.second));
 
     tree_->Branch("eleSCEn", &eleSCEn_);
     tree_->Branch("eleESEn", &eleESEn_);
@@ -513,7 +513,7 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps)
     tree_->Branch("muL1Phi", &muL1Phi_);
     tree_->Branch("muMVAIso", &muMVAIso_);
     for (auto& w : muMVAIsoWP_)
-      tree_->Branch(("muMVAIso"+w.first).c_str(), &(w.second));
+      tree_->Branch(("muMVAIso" + w.first).c_str(), &(w.second));
     tree_->Branch("muCharge", &muCharge_);
     tree_->Branch("muType", &muType_);
     tree_->Branch("muIsGood", &muIsGood_);
@@ -1086,7 +1086,7 @@ void ggHiNtuplizer::fillGenParticles(const edm::Event& e) {
     edm::Handle<std::vector<reco::GenParticle>> genParticles;
     e.getByToken(genParticlesToken_, genParticles);
 
-    edm::Handle<edm::View<reco::GenParticle> > dummyHandle;
+    edm::Handle<edm::View<reco::GenParticle>> dummyHandle;
 
     fillGenCandidates(genParticles, dummyHandle, false);
   }
@@ -1155,7 +1155,7 @@ void ggHiNtuplizer::fillGenCandidates(const edm::Handle<std::vector<T>>& handle,
     const auto& momRef = GenParticleParentage::findGenMother(partRef);
     if (momRef.isNonnull() && momRef.isAvailable()) {
       momPID = momRef->pdgId();
-      momKey = std::abs(momPID) < 1E5 ? (std::abs(momPID) + momRef.key()*1E5) : -1;
+      momKey = std::abs(momPID) < 1E5 ? (std::abs(momPID) + momRef.key() * 1E5) : -1;
       momPt = momRef->pt();
       momEta = momRef->eta();
       momPhi = momRef->phi();
@@ -1165,13 +1165,13 @@ void ggHiNtuplizer::fillGenCandidates(const edm::Handle<std::vector<T>>& handle,
       const auto& grandmother = GenParticleParentage::findGenMother(momRef);
       if (grandmother.isNonnull() && grandmother.isAvailable()) {
         gmomPID = grandmother->pdgId();
-        gmomKey = std::abs(gmomPID) < 1E5 ? (std::abs(gmomPID) + grandmother.key()*1E5) : -1;
+        gmomKey = std::abs(gmomPID) < 1E5 ? (std::abs(gmomPID) + grandmother.key() * 1E5) : -1;
 
         // grand-grandmother
         const auto& ggmother = GenParticleParentage::findGenMother(grandmother);
         if (ggmother.isNonnull() && ggmother.isAvailable()) {
           ggmomPID = ggmother->pdgId();
-          ggmomKey = std::abs(ggmomPID) < 1E5 ? (std::abs(ggmomPID) + ggmother.key()*1E5) : -1;
+          ggmomKey = std::abs(ggmomPID) < 1E5 ? (std::abs(ggmomPID) + ggmother.key() * 1E5) : -1;
         }
       }
     }
@@ -1360,12 +1360,12 @@ void ggHiNtuplizer::fillElectrons(const edm::Event& e, const edm::EventSetup& es
 
     eleMVAIso_.push_back(ele->hasUserFloat("hiMVAIso") ? ele->userFloat("hiMVAIso") : -99);
     for (auto& w : eleMVAIsoWP_)
-      w.second.push_back(ele->hasUserInt("hiMVAIso"+w.first) ? ele->userInt("hiMVAIso"+w.first) : -1);
+      w.second.push_back(ele->hasUserInt("hiMVAIso" + w.first) ? ele->userInt("hiMVAIso" + w.first) : -1);
     eleMVAId_.push_back(ele->hasUserFloat("hiMVAId") ? ele->userFloat("hiMVAId") : -99);
     for (auto& w : eleMVAIdWP_)
-      w.second.push_back(ele->hasUserInt("hiMVAId"+w.first) ? ele->userInt("hiMVAId"+w.first) : -1);
+      w.second.push_back(ele->hasUserInt("hiMVAId" + w.first) ? ele->userInt("hiMVAId" + w.first) : -1);
     for (auto& w : eleCutIdWP_)
-      w.second.push_back(ele->hasUserInt("hiCutId"+w.first) ? ele->userInt("hiCutId"+w.first) : -1);
+      w.second.push_back(ele->hasUserInt("hiCutId" + w.first) ? ele->userInt("hiCutId" + w.first) : -1);
 
     eleSCEn_.push_back(ele->superCluster()->energy());
     eleESEn_.push_back(ele->superCluster()->preshowerEnergy());
@@ -1505,10 +1505,10 @@ void ggHiNtuplizer::fillElectrons(const edm::Event& e, const edm::EventSetup& es
       float minDeltaR2(0.0225);
       int matchedIndex = -1;
       for (size_t igen = 0; igen < mcEt_.size(); ++igen) {
-        if (mcStatus_[igen] != 1 || mcPID_[igen] != -11*ele->charge())
+        if (mcStatus_[igen] != 1 || mcPID_[igen] != -11 * ele->charge())
           continue;
         const auto deltaR2 = reco::deltaR2(ele->eta(), ele->phi(), mcEta_[igen], mcPhi_[igen]);
-        if (deltaR2 < minDeltaR2 && std::abs(mcPt_[igen] - ele->pt()) < 2*mcPt_[igen]) {
+        if (deltaR2 < minDeltaR2 && std::abs(mcPt_[igen] - ele->pt()) < 2 * mcPt_[igen]) {
           minDeltaR2 = deltaR2;
           matchedIndex = igen;
         }
@@ -1990,7 +1990,7 @@ void ggHiNtuplizer::fillMuons(const edm::Event& e, const edm::EventSetup& es, re
     muL1Phi_.push_back(mu.hasUserFloat("l1Phi") ? mu.userFloat("l1Phi") : -99);
     muMVAIso_.push_back(mu.hasUserFloat("hiMVAIso") ? mu.userFloat("hiMVAIso") : -99);
     for (auto& w : muMVAIsoWP_)
-      w.second.push_back(mu.hasUserInt("hiMVAIso"+w.first) ? mu.userInt("hiMVAIso"+w.first) : -1);
+      w.second.push_back(mu.hasUserInt("hiMVAIso" + w.first) ? mu.userInt("hiMVAIso" + w.first) : -1);
     muCharge_.push_back(mu.charge());
     muType_.push_back(mu.type());
     muIsGood_.push_back(muon::isGoodMuon(mu, muon::selectionTypeFromString("TMOneStationTight")));
@@ -2080,7 +2080,7 @@ void ggHiNtuplizer::fillMuons(const edm::Event& e, const edm::EventSetup& es, re
       float minDeltaR2(0.0225);
       int matchedIndex = -1;
       for (size_t igen = 0; igen < mcEt_.size(); ++igen) {
-        if (mcStatus_[igen] != 1 || mcPID_[igen] != -13*mu.charge())
+        if (mcStatus_[igen] != 1 || mcPID_[igen] != -13 * mu.charge())
           continue;
         const auto deltaR2 = reco::deltaR2(mu.eta(), mu.phi(), mcEta_[igen], mcPhi_[igen]);
         if (deltaR2 < minDeltaR2 && std::abs(mcPt_[igen] - mu.pt()) < mcPt_[igen]) {

@@ -42,7 +42,7 @@ private:
 
   const edm::EDGetTokenT<reco::VertexCollection> vertexSrc_;
   const edm::EDGetTokenT<reco::TrackCollection> trackSrc_;
-  const edm::EDGetTokenT<std::vector<edm::Ptr<pat::PackedCandidate> > > track2pcSrc_;
+  const edm::EDGetTokenT<std::vector<edm::Ptr<pat::PackedCandidate>>> track2pcSrc_;
   const edm::EDGetTokenT<reco::BeamSpot> beamSpotProducer_;
   std::map<std::string, edm::EDGetTokenT<edm::ValueMap<reco::DeDxData>>> dedxEstimatorsSrc_;
 

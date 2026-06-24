@@ -117,7 +117,7 @@ private:
   std::vector<float> recoPFPUIso_;
 
   std::vector<float> recoMVAIso_;
-  std::map<std::string, std::vector<bool>> recoMVAIsoWP_{{{"WP95",{}}, {"WP90",{}}, {"WP85",{}}, {"WP80",{}}}};
+  std::map<std::string, std::vector<bool>> recoMVAIsoWP_{{{"WP95", {}}, {"WP90", {}}, {"WP85", {}}, {"WP80", {}}}};
 
   std::vector<bool> recoIDHybridSoft_;
   std::vector<bool> recoIDSoft_;

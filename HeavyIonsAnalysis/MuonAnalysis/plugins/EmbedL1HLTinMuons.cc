@@ -19,7 +19,7 @@ namespace pat {
           geometryToken_(esConsumes()) {
       produces<pat::MuonCollection>();
     }
-    ~EmbedL1HLTinMuons() override{};
+    ~EmbedL1HLTinMuons() override {};
 
     void produce(edm::StreamID, edm::Event& iEvent, const edm::EventSetup& iSetup) const override;
 

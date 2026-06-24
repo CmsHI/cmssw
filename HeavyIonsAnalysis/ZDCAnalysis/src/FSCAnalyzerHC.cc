@@ -60,7 +60,7 @@ using reco::TrackCollection;
 class FSCAnalyzerHC : public edm::one::EDAnalyzer<edm::one::SharedResources> {
 public:
   explicit FSCAnalyzerHC(const edm::ParameterSet&);
-  ~FSCAnalyzerHC();
+  ~FSCAnalyzerHC() override;
 
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 

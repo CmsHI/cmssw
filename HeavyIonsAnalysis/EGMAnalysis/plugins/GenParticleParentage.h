@@ -32,8 +32,10 @@ public:
 
   bool hasRealParent() const { return _realParent.isNonnull() && _realParent.isAvailable(); }
 
-  static reco::GenParticleRef findGenMother(const reco::GenParticleRef&, const int& pId=0);
-  static reco::GenParticleRef findGenMother(const pat::PackedGenParticleRef& p) { return findGenMother(p->lastPrunedRef()); };
+  static reco::GenParticleRef findGenMother(const reco::GenParticleRef&, const int& pId = 0);
+  static reco::GenParticleRef findGenMother(const pat::PackedGenParticleRef& p) {
+    return findGenMother(p->lastPrunedRef());
+  };
 
 private:
   void getParentageRecursive(const reco::GenParticleRef&, int);

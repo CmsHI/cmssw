@@ -85,7 +85,6 @@ private:
   float minAbsEtaHF_pf_;
   float maxAbsEtaHF_pf_;
 
-
   edm::Service<TFileService> fs_;
 
   TTree* thi_;
@@ -147,12 +146,14 @@ private:
   unsigned int lumi;
 
   void inspfle(float hfe, float pfle[NHFLEAD]) {
-    if (hfe <= pfle[NHFLEAD-1]) { return; }
+    if (hfe <= pfle[NHFLEAD - 1]) {
+      return;
+    }
     auto* end = pfle + NHFLEAD;
     auto* insert_pos = std::lower_bound(pfle, end, hfe, std::greater<float>{});
     if (insert_pos != end) {
-        std::move_backward(insert_pos, end - 1, end);
-        *insert_pos = hfe;
+      std::move_backward(insert_pos, end - 1, end);
+      *insert_pos = hfe;
     }
   }
 };
@@ -271,22 +272,22 @@ void HiEvtAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
         }
       }
 
-	  // LHE: use it for weights and (critically) IDPRUP when present
+      // LHE: use it for weights and (critically) IDPRUP when present
       edm::Handle<LHEEventProduct> evet;
       iEvent.getByToken(generatorlheToken_, evet);
-	  
-	  if (evet.isValid()){
-		// Prefer LHE process id when available
-		proc_id = evet->hepeup().IDPRUP;
-		
-		//alternative weights for systematics
-		if (genInfo.isValid()) {
-			const auto& asdd = evet->originalXWGTUP();
-			const auto& norm = (asdd!=0. ? genInfo->weight()/asdd : 1.);
-			for (const auto& asdde : evet->weights())
-			  ttbar_w.emplace_back(norm * asdde.wgt);
-		}
-	  }		
+
+      if (evet.isValid()) {
+        // Prefer LHE process id when available
+        proc_id = evet->hepeup().IDPRUP;
+
+        //alternative weights for systematics
+        if (genInfo.isValid()) {
+          const auto& asdd = evet->originalXWGTUP();
+          const auto& norm = (asdd != 0. ? genInfo->weight() / asdd : 1.);
+          for (const auto& asdde : evet->weights())
+            ttbar_w.emplace_back(norm * asdde.wgt);
+        }
+      }
     }
 
     // MC PILEUP INFORMATION
@@ -339,27 +340,44 @@ void HiEvtAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
     hiEE = centrality->EtEESum();
     hiEB = centrality->EtEBSum();
     hiET = centrality->EtMidRapiditySum();
-    
+
     edm::Handle<pat::PackedCandidateCollection> pfCandidates;
     iEvent.getByToken(pfCandidateTag_, pfCandidates);
 
-    hiHF_pf = 0; hiHFE_pf = 0; hiHF_pfha = 0; hiHF_pfem = 0;
-    for (auto& le : hiHF_pfle) le = 0;
-    hiHFPlus_pf = 0; hiHFEPlus_pf = 0; hiHFPlus_pfha = 0; hiHFPlus_pfem = 0;
-    for (auto& le : hiHFPlus_pfle) le = 0;
-    hiHFMinus_pf = 0; hiHFEMinus_pf = 0; hiHFMinus_pfha = 0; hiHFMinus_pfem = 0;
-    for (auto& le : hiHFMinus_pfle) le = 0;
-    nCountsHF_pf = 0; nCountsHFPlus_pf = 0; nCountsHFMinus_pf = 0;
+    hiHF_pf = 0;
+    hiHFE_pf = 0;
+    hiHF_pfha = 0;
+    hiHF_pfem = 0;
+    for (auto& le : hiHF_pfle)
+      le = 0;
+    hiHFPlus_pf = 0;
+    hiHFEPlus_pf = 0;
+    hiHFPlus_pfha = 0;
+    hiHFPlus_pfem = 0;
+    for (auto& le : hiHFPlus_pfle)
+      le = 0;
+    hiHFMinus_pf = 0;
+    hiHFEMinus_pf = 0;
+    hiHFMinus_pfha = 0;
+    hiHFMinus_pfem = 0;
+    for (auto& le : hiHFMinus_pfle)
+      le = 0;
+    nCountsHF_pf = 0;
+    nCountsHFPlus_pf = 0;
+    nCountsHFMinus_pf = 0;
 
     for (const auto& pfcand : *pfCandidates) {
-      if (pfcand.pdgId() != 1 && pfcand.pdgId() != 2) continue;
+      if (pfcand.pdgId() != 1 && pfcand.pdgId() != 2)
+        continue;
 
       const float eta = pfcand.eta();
       const float absEta = std::abs(eta);
-      if (absEta < minAbsEtaHF_pf_ || absEta > maxAbsEtaHF_pf_) continue;
+      if (absEta < minAbsEtaHF_pf_ || absEta > maxAbsEtaHF_pf_)
+        continue;
 
-      const float hfe  = pfcand.energy();
-      if (hfe < minHFEnergy_pf_) continue;
+      const float hfe = pfcand.energy();
+      if (hfe < minHFEnergy_pf_)
+        continue;
 
       const bool eta_plus = (eta > 0.f);
       const bool eta_minus = !eta_plus;
@@ -369,28 +387,34 @@ void HiEvtAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 
       hiHF_pf += hfet;
       hiHFE_pf += hfe;
-      if(hfid == 1) hiHF_pfha += hfet;
-      if(hfid == 2) hiHF_pfem += hfet;
+      if (hfid == 1)
+        hiHF_pfha += hfet;
+      if (hfid == 2)
+        hiHF_pfem += hfet;
       nCountsHF_pf++;
       inspfle(hfe, hiHF_pfle);
 
       if (eta_plus) {
         hiHFPlus_pf += hfet;
         hiHFEPlus_pf += hfe;
-        if(hfid == 1) hiHFPlus_pfha += hfet;
-        if(hfid == 2) hiHFPlus_pfem += hfet;
+        if (hfid == 1)
+          hiHFPlus_pfha += hfet;
+        if (hfid == 2)
+          hiHFPlus_pfem += hfet;
         nCountsHFPlus_pf++;
         inspfle(hfe, hiHFPlus_pfle);
-      } // if (eta_plus) {
+      }  // if (eta_plus) {
       if (eta_minus) {
         hiHFMinus_pf += hfet;
         hiHFEMinus_pf += hfe;
-        if(hfid == 1) hiHFMinus_pfha += hfet;
-        if(hfid == 2) hiHFMinus_pfem += hfet;
+        if (hfid == 1)
+          hiHFMinus_pfha += hfet;
+        if (hfid == 2)
+          hiHFMinus_pfem += hfet;
         nCountsHFMinus_pf++;
         inspfle(hfe, hiHFMinus_pfle);
-      } // if(eta_minus) {
-    } // for (const auto& pfcand : *pfCandidates) {
+      }  // if(eta_minus) {
+    }  // for (const auto& pfcand : *pfCandidates) {
   }
 
   nEvtPlanes = 0;
@@ -425,7 +449,7 @@ void HiEvtAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
   }
 
   // Option to disable HF filters for ppref
-  if(doHFfilters_){
+  if (doHFfilters_) {
     edm::Handle<reco::HFFilterInfo> HFfilter;
     iEvent.getByToken(HFfilters_, HFfilter);
 
@@ -561,7 +585,7 @@ void HiEvtAnalyzer::beginJob() {
   thi_->Branch("hiNtracksPtCut", &hiNtracksPtCut, "hiNtracksPtCut/I");
   thi_->Branch("hiNtracksEtaCut", &hiNtracksEtaCut, "hiNtracksEtaCut/I");
   thi_->Branch("hiNtracksEtaPtCut", &hiNtracksEtaPtCut, "hiNtracksEtaPtCut/I");
-  
+
   thi_->Branch("hiHF_pf", &hiHF_pf, "hiHF_pf/F");
   thi_->Branch("hiHFE_pf", &hiHFE_pf, "hiHFE_pf/F");
 
@@ -577,10 +601,10 @@ void HiEvtAnalyzer::beginJob() {
   thi_->Branch("hiHFMinus_pfha", &hiHFMinus_pfha, "hiHFMinus_pfha/F");
   thi_->Branch("hiHFMinus_pfem", &hiHFMinus_pfem, "hiHFMinus_pfem/F");
 
-  for (int i=0; i<NHFLEAD; i++) {
-    thi_->Branch(Form("hiHF_pfle%d", i+1), &(hiHF_pfle[i]), Form("hiHF_pfle%d/F", i+1));
-    thi_->Branch(Form("hiHFPlus_pfle%d", i+1), &(hiHFPlus_pfle[i]), Form("hiHFPlus_pfle%d/F", i+1));
-    thi_->Branch(Form("hiHFMinus_pfle%d", i+1), &(hiHFMinus_pfle[i]), Form("hiHFMinus_pfle%d/F", i+1));
+  for (int i = 0; i < NHFLEAD; i++) {
+    thi_->Branch(Form("hiHF_pfle%d", i + 1), &(hiHF_pfle[i]), Form("hiHF_pfle%d/F", i + 1));
+    thi_->Branch(Form("hiHFPlus_pfle%d", i + 1), &(hiHFPlus_pfle[i]), Form("hiHFPlus_pfle%d/F", i + 1));
+    thi_->Branch(Form("hiHFMinus_pfle%d", i + 1), &(hiHFMinus_pfle[i]), Form("hiHFMinus_pfle%d/F", i + 1));
   }
   thi_->Branch("nCountsHF_pf", &nCountsHF_pf, "nCountsHF_pf/I");
   thi_->Branch("nCountsHFPlus_pf", &nCountsHFPlus_pf, "nCountsHFPlus_pf/I");
