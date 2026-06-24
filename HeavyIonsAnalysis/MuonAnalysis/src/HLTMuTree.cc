@@ -31,9 +31,8 @@ using namespace HepMC;
 //
 // constructors and destructor
 //
-HLTMuTree::HLTMuTree(const edm::ParameterSet& iConfig):
-  transientTrackToken_(esConsumes(edm::ESInputTag("", "TransientTrackBuilder")))
-{
+HLTMuTree::HLTMuTree(const edm::ParameterSet& iConfig)
+    : transientTrackToken_(esConsumes(edm::ESInputTag("", "TransientTrackBuilder"))) {
   //now do what ever initialization is needed
   //tagRecoMu = iConfig.getParameter<edm::InputTag>("muons");
   tagRecoMu = consumes<edm::View<reco::Muon> >(iConfig.getParameter<edm::InputTag>("muons"));

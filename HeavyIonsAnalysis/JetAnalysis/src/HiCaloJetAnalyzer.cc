@@ -119,12 +119,10 @@ void HiCaloJetAnalyzer::beginJob() {
   }
 
   // Calorimeter energy fractions
-  if(doCaloEnergyFractions_){
+  if (doCaloEnergyFractions_) {
     caloJetTree_->Branch("emEnergyFraction", jets_.emEnergyFraction, "emEnergyFraction[nref]/F");
     caloJetTree_->Branch("hadronicEnergyFraction", jets_.hadronicEnergyFraction, "hadronicEnergyFraction[nref]/F");
   }
-
-
 
   if (isMC_) {
     if (useHepMC_) {
@@ -147,10 +145,8 @@ void HiCaloJetAnalyzer::beginJob() {
       caloJetTree_->Branch("geny", jets_.geny, "geny[ngen]/F");
       caloJetTree_->Branch("genphi", jets_.genphi, "genphi[ngen]/F");
       caloJetTree_->Branch("genm", jets_.genm, "genm[ngen]/F");
-
     }
   }
-
 }
 
 void HiCaloJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSetup) {
@@ -315,7 +311,7 @@ void HiCaloJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSetup) {
     }
 
     // Calorimeter energy fractions
-    if(doCaloEnergyFractions_){
+    if (doCaloEnergyFractions_) {
       jets_.emEnergyFraction[jets_.nref] = jet.emEnergyFraction();
       jets_.hadronicEnergyFraction[jets_.nref] = jet.energyFractionHadronic();
     }
@@ -370,7 +366,7 @@ void HiCaloJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSetup) {
       }
     }
   }
-  
+
   caloJetTree_->Fill();
 
   jets_ = {0};

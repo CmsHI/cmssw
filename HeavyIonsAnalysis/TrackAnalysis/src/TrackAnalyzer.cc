@@ -1,14 +1,14 @@
 #include "HeavyIonsAnalysis/TrackAnalysis/interface/TrackAnalyzer.h"
 
-TrackAnalyzer::TrackAnalyzer(const edm::ParameterSet& iConfig) :
-  doTrack_(iConfig.getUntrackedParameter<bool>("doTrack", true)),
-  trackPtMin_(iConfig.getUntrackedParameter<double>("trackPtMin", 0.01)),
-  vertexSrc_(consumes<reco::VertexCollection>(iConfig.getParameter<edm::InputTag>("vertexSrc"))),
-  trackSrc_(consumes<reco::TrackCollection>(iConfig.getParameter<edm::InputTag>("trackSrc"))),
-  track2pcSrc_(consumes<std::vector<edm::Ptr<pat::PackedCandidate> > >(iConfig.getParameter<edm::InputTag>("trackSrc"))),
-  beamSpotProducer_(consumes<reco::BeamSpot>(
-      iConfig.getUntrackedParameter<edm::InputTag>("beamSpotSrc", edm::InputTag("offlineBeamSpot")))) {
-}
+TrackAnalyzer::TrackAnalyzer(const edm::ParameterSet& iConfig)
+    : doTrack_(iConfig.getUntrackedParameter<bool>("doTrack", true)),
+      trackPtMin_(iConfig.getUntrackedParameter<double>("trackPtMin", 0.01)),
+      vertexSrc_(consumes<reco::VertexCollection>(iConfig.getParameter<edm::InputTag>("vertexSrc"))),
+      trackSrc_(consumes<reco::TrackCollection>(iConfig.getParameter<edm::InputTag>("trackSrc"))),
+      track2pcSrc_(
+          consumes<std::vector<edm::Ptr<pat::PackedCandidate> > >(iConfig.getParameter<edm::InputTag>("trackSrc"))),
+      beamSpotProducer_(consumes<reco::BeamSpot>(
+          iConfig.getUntrackedParameter<edm::InputTag>("beamSpotSrc", edm::InputTag("offlineBeamSpot")))) {}
 
 //--------------------------------------------------------------------------------------------------
 TrackAnalyzer::~TrackAnalyzer() {}
@@ -121,7 +121,8 @@ void TrackAnalyzer::fillTracks(const edm::Event& iEvent, const edm::EventSetup& 
       // WARNING !! reco::Track::dzError() and pat::PackedCandidate::dzError() give different values. Former must be used for HIN track   ID.
       trkDzErrFirstVtx.push_back(sqrt(t.dzError() * t.dzError() + zErrVtx.at(iMaxPtSumVtx) * zErrVtx.at(iMaxPtSumVtx)));
       trkDxyFirstVtx.push_back(t.dxy(v));
-      trkDxyErrFirstVtx.push_back(sqrt(t.dxyError() * t.dxyError() + xErrVtx.at(iMaxPtSumVtx) * yErrVtx.at(iMaxPtSumVtx)));
+      trkDxyErrFirstVtx.push_back(
+          sqrt(t.dxyError() * t.dxyError() + xErrVtx.at(iMaxPtSumVtx) * yErrVtx.at(iMaxPtSumVtx)));
     } else {
       trkFirstVtxQuality.push_back(-999999);
       trkDzFirstVtx.push_back(-999999);
