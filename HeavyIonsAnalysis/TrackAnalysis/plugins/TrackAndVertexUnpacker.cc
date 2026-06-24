@@ -24,7 +24,7 @@ namespace pat {
       produces<edm::Association<reco::TrackCollection> >();
       produces<std::vector<edm::Ptr<pat::PackedCandidate> > >();
     };
-    ~TrackAndVertexUnpacker() override{};
+    ~TrackAndVertexUnpacker() override {};
 
     void produce(edm::StreamID, edm::Event& iEvent, const edm::EventSetup& iSetup) const override;
 

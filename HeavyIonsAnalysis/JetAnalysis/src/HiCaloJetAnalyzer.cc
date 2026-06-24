@@ -41,7 +41,7 @@ HiCaloJetAnalyzer::HiCaloJetAnalyzer(const edm::ParameterSet& iConfig) {
 
   r2Param = iConfig.getParameter<double>("rParam");
   r2Param *= r2Param;
-  
+
   hardPtMin_ = iConfig.getUntrackedParameter<double>("hardPtMin", 4);
   jetPtMin_ = iConfig.getParameter<double>("jetPtMin");
   jetAbsEtaMax_ = iConfig.getUntrackedParameter<double>("jetAbsEtaMax", 5.1);
@@ -121,12 +121,10 @@ void HiCaloJetAnalyzer::beginJob() {
   }
 
   // Calorimeter energy fractions
-  if(doCaloEnergyFractions_){
+  if (doCaloEnergyFractions_) {
     caloJetTree_->Branch("emEnergyFraction", jets_.emEnergyFraction, "emEnergyFraction[nref]/F");
     caloJetTree_->Branch("hadronicEnergyFraction", jets_.hadronicEnergyFraction, "hadronicEnergyFraction[nref]/F");
   }
-
-
 
   if (isMC_) {
     if (useHepMC_) {
@@ -149,10 +147,8 @@ void HiCaloJetAnalyzer::beginJob() {
       caloJetTree_->Branch("geny", jets_.geny, "geny[ngen]/F");
       caloJetTree_->Branch("genphi", jets_.genphi, "genphi[ngen]/F");
       caloJetTree_->Branch("genm", jets_.genm, "genm[ngen]/F");
-
     }
   }
-
 }
 
 void HiCaloJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSetup) {
@@ -181,7 +177,6 @@ void HiCaloJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSetup) {
   jets_.nref = 0;
 
   for (const auto& jet : *jets) {
-
     auto pt = jet.pt();
     if (pt < jetPtMin_)
       continue;
@@ -228,7 +223,6 @@ void HiCaloJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSetup) {
       jets_.signalHardSum[jets_.nref] = 0;
 
       for (const auto& currentCandidate : *pfCandidates) {
-
         if (!currentCandidate.hasTrackDetails())
           continue;
 
@@ -257,7 +251,6 @@ void HiCaloJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSetup) {
 
       reco::PFCandidate converter = reco::PFCandidate();
       for (const auto& track : *pfCandidates) {
-
         double dr2 = deltaR2(jet, track);
         if (dr2 < r2Param) {
           double ptcand = track.pt();
@@ -315,7 +308,7 @@ void HiCaloJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSetup) {
     }
 
     // Calorimeter energy fractions
-    if(doCaloEnergyFractions_){
+    if (doCaloEnergyFractions_) {
       jets_.emEnergyFraction[jets_.nref] = jet.emEnergyFraction();
       jets_.hadronicEnergyFraction[jets_.nref] = jet.energyFractionHadronic();
     }
@@ -355,7 +348,6 @@ void HiCaloJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSetup) {
     jets_.ngen = 0;
 
     for (const auto& genjet : *genjets) {
-
       float genjet_pt = genjet.pt();
 
       // threshold to reduce size of output in minbias PbPb
@@ -370,7 +362,7 @@ void HiCaloJetAnalyzer::analyze(const Event& iEvent, const EventSetup& iSetup) {
       }
     }
   }
-  
+
   caloJetTree_->Fill();
 
   jets_ = {0};
