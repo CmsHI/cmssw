@@ -1,4 +1,4 @@
-#define MAXPRO 56 // MAX number of reconstructed tracks
+#define MAXPRO 56  // MAX number of reconstructed tracks
 
 struct MyPPSTracks {
   int n;
@@ -6,7 +6,4 @@ struct MyPPSTracks {
   int station[MAXPRO];
   float x[MAXPRO];
   float y[MAXPRO];
-
 };
-
-

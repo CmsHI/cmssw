@@ -109,7 +109,7 @@ void FilterAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
   bool saveEvent = true;
 
   for (int itrig = 0; itrig != ntrigs; ++itrig) {
-    std::string trigName = triggerNames.triggerName(itrig);
+    const std::string& trigName = triggerNames.triggerName(itrig);
     bool accept = hltresults->accept(itrig);
 
     for (unsigned int ifilter = 0; ifilter < superFilters_.size(); ++ifilter) {

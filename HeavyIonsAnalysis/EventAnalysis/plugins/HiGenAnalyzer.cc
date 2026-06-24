@@ -414,7 +414,7 @@ void HiGenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 
     edm::SimVertexContainer::const_iterator it = simVertices->begin();
     if (it != simVertices->end()) {
-      SimVertex vertex = (*it);
+      const SimVertex& vertex = (*it);
       vx = vertex.position().x();
       vy = vertex.position().y();
       vz = vertex.position().z();
@@ -478,13 +478,12 @@ void HiGenAnalyzer::beginJob() {
     }
     hydjetTree_->Branch("sube", &hev_.sube);
 
-    if (doVertex_){
+    if (doVertex_) {
       hydjetTree_->Branch("vx", &hev_.vx, "vx/F");
       hydjetTree_->Branch("vy", &hev_.vy, "vy/F");
       hydjetTree_->Branch("vz", &hev_.vz, "vz/F");
       hydjetTree_->Branch("vr", &hev_.vr, "vr/F");
     }
-    
   }
 }
 
