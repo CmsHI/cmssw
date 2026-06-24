@@ -44,7 +44,6 @@ public:
   void beginJob() override;
 
 private:
-
   edm::InputTag jetTagLabel_;
   edm::EDGetTokenT<reco::CaloJetCollection> jetTag_;
   edm::EDGetTokenT<edm::View<pat::PackedCandidate>> pfCandidateLabel_;
@@ -147,7 +146,6 @@ private:
     float genphi[MAXJETS] = {0};
     float genm[MAXJETS] = {0};
     float geny[MAXJETS] = {0};
-
   };
 
   JRA jets_;

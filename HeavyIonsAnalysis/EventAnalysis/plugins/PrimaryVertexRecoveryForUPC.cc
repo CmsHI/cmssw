@@ -33,7 +33,7 @@
 class PrimaryVertexRecoveryForUPC : public edm::stream::EDProducer<> {
 public:
   PrimaryVertexRecoveryForUPC(const edm::ParameterSet&);
-  ~PrimaryVertexRecoveryForUPC() override {};
+  ~PrimaryVertexRecoveryForUPC() override{};
 
   void produce(edm::Event&, const edm::EventSetup&) override;
 
@@ -41,60 +41,59 @@ public:
 
 private:
   // ----------functions ---------------------------
-  const auto getTrackFilters(const std::vector<edm::ParameterSet>& conf) const
-  {
+  const auto getTrackFilters(const std::vector<edm::ParameterSet>& conf) const {
     std::vector<FILTER_t> res(conf.size());
     size_t i(0);
     for (const auto& filter : conf) {
       auto& r = res[i++];
       const auto& algo = filter.getParameter<std::string>("algorithm");
       if (algo == "filter")
-        r.filter.reset(new TrackFilterForPVFinding(filter));
+        r.filter = std::make_unique<TrackFilterForPVFinding>(filter);
       else if (algo == "filterWithThreshold")
-        r.filter.reset(new HITrackFilterForPVFinding(filter));
+        r.filter = std::make_unique<HITrackFilterForPVFinding>(filter);
       else if (algo != "none")
-        throw std::logic_error("[ERROR] Invalid cluster algorithm: "+algo);
+        throw std::logic_error("[ERROR] Invalid cluster algorithm: " + algo);
       r.minNtracks = filter.getParameter<int>("minNtracks");
       r.maxNtracks = filter.getParameter<int>("maxNtracks");
     }
     return res;
   };
 
-  const auto getTrackClusterizers(const std::vector<edm::ParameterSet>& conf) const
-  {
+  const auto getTrackClusterizers(const std::vector<edm::ParameterSet>& conf) const {
     std::vector<CLUS_t> res(conf.size());
     size_t i(0);
     for (const auto& clusterizer : conf) {
       auto& r = res[i++];
       const auto& algo = clusterizer.getParameter<std::string>("algorithm");
       if (algo == "gap")
-        r.clusterizer.reset(new GapClusterizerInZ(clusterizer));
+        r.clusterizer = std::make_unique<GapClusterizerInZ>(clusterizer);
       else if (algo == "DA")
-        r.clusterizer.reset(new DAClusterizerInZ(clusterizer));
+        r.clusterizer = std::make_unique<DAClusterizerInZ>(clusterizer);
       else if (algo == "DA_vect")
-        r.clusterizer.reset(new DAClusterizerInZ_vect(clusterizer));
+        r.clusterizer = std::make_unique<DAClusterizerInZ_vect>(clusterizer);
       else if (algo == "DA2D_vect")
-        r.clusterizer.reset(new DAClusterizerInZT_vect(clusterizer));
+        r.clusterizer = std::make_unique<DAClusterizerInZT_vect>(clusterizer);
       else if (algo != "none")
-        throw std::logic_error("[ERROR] Invalid cluster algorithm: "+algo);
+        throw std::logic_error("[ERROR] Invalid cluster algorithm: " + algo);
       r.minNtracks = clusterizer.getParameter<int>("minNtracks");
       r.maxNtracks = clusterizer.getParameter<int>("maxNtracks");
     }
     return res;
   };
 
-  const auto getVertexFitters(const std::vector<edm::ParameterSet>& conf) const
-  {
+  const auto getVertexFitters(const std::vector<edm::ParameterSet>& conf) const {
     std::vector<FIT_t> res(conf.size());
     size_t i(0);
     for (const auto& fitter : conf) {
       auto& r = res[i++];
       const auto& algo = fitter.getParameter<std::string>("algorithm");
       if (algo == "KalmanVertexFitter")
-        r.fitter.reset(new KalmanVertexFitter());
+        r.fitter = std::make_unique<KalmanVertexFitter>();
       else if (algo == "AdaptiveVertexFitter")
-        r.fitter.reset(new AdaptiveVertexFitter(GeometricAnnealing(fitter.getParameter<double>("chi2cutoff"))));
-      r.vertexSelector.reset(new VertexCompatibleWithBeam(VertexDistanceXY(), fitter.getParameter<double>("maxDistanceToBeam")));
+        r.fitter =
+            std::make_unique<AdaptiveVertexFitter>(GeometricAnnealing(fitter.getParameter<double>("chi2cutoff")));
+      r.vertexSelector = std::make_unique<VertexCompatibleWithBeam>(VertexDistanceXY(),
+                                                                    fitter.getParameter<double>("maxDistanceToBeam"));
       r.minNdof = fitter.getParameter<double>("minNdof");
       r.useBeamConstraint = fitter.getParameter<bool>("useBeamConstraint");
       r.minNclusters = fitter.getParameter<int>("minNclusters");
@@ -136,20 +135,18 @@ private:
   const std::vector<FIT_t> vertexFitters_;
 };
 
-PrimaryVertexRecoveryForUPC::PrimaryVertexRecoveryForUPC(const edm::ParameterSet& conf) :
-    pvToken_(consumes<reco::VertexCollection>(conf.getParameter<edm::InputTag>("primaryVertexLabel"))),
-    trkToken_(consumes<reco::TrackCollection>(conf.getParameter<edm::InputTag>("TrackLabel"))),
-    bsToken_(consumes<reco::BeamSpot>(conf.getParameter<edm::InputTag>("beamSpotLabel"))),
-    theTTBToken_(esConsumes(edm::ESInputTag("", "TransientTrackBuilder"))),
-    trackFilters_(getTrackFilters(conf.getParameter<std::vector<edm::ParameterSet> >("TkFilterParameters"))),
-    trackClusterizers_(getTrackClusterizers(conf.getParameter<std::vector<edm::ParameterSet> >("TkClusParameters"))),
-    vertexFitters_(getVertexFitters(conf.getParameter<std::vector<edm::ParameterSet> >("VtxFitParameters")))
-{
+PrimaryVertexRecoveryForUPC::PrimaryVertexRecoveryForUPC(const edm::ParameterSet& conf)
+    : pvToken_(consumes<reco::VertexCollection>(conf.getParameter<edm::InputTag>("primaryVertexLabel"))),
+      trkToken_(consumes<reco::TrackCollection>(conf.getParameter<edm::InputTag>("TrackLabel"))),
+      bsToken_(consumes<reco::BeamSpot>(conf.getParameter<edm::InputTag>("beamSpotLabel"))),
+      theTTBToken_(esConsumes(edm::ESInputTag("", "TransientTrackBuilder"))),
+      trackFilters_(getTrackFilters(conf.getParameter<std::vector<edm::ParameterSet> >("TkFilterParameters"))),
+      trackClusterizers_(getTrackClusterizers(conf.getParameter<std::vector<edm::ParameterSet> >("TkClusParameters"))),
+      vertexFitters_(getVertexFitters(conf.getParameter<std::vector<edm::ParameterSet> >("VtxFitParameters"))) {
   produces<reco::VertexCollection>();
 }
 
-void PrimaryVertexRecoveryForUPC::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
-{
+void PrimaryVertexRecoveryForUPC::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   // get the input collections
   const auto& origPVs = iEvent.get(pvToken_);
   const auto& tracks = iEvent.getHandle(trkToken_);
@@ -199,9 +196,12 @@ void PrimaryVertexRecoveryForUPC::produce(edm::Event& iEvent, const edm::EventSe
       u2 += 1;
       if (nSelTrk < trackClusterizer.minNtracks || nSelTrk > trackClusterizer.maxNtracks)
         continue;
-      auto clusters = trackClusterizer.clusterizer ? trackClusterizer.clusterizer->clusterize(selTrk) : std::vector<std::vector<reco::TransientTrack> >({selTrk});
-      clusters.erase(std::remove_if(clusters.begin(), clusters.end(), [](const auto& x) { return x.size() < 2; }), clusters.end());
-      const auto& nClTrk = std::accumulate(clusters.cbegin(), clusters.cend(), 0, [](int s, const auto& x){ return s + x.size(); });
+      auto clusters = trackClusterizer.clusterizer ? trackClusterizer.clusterizer->clusterize(selTrk)
+                                                   : std::vector<std::vector<reco::TransientTrack> >({selTrk});
+      clusters.erase(std::remove_if(clusters.begin(), clusters.end(), [](const auto& x) { return x.size() < 2; }),
+                     clusters.end());
+      const auto& nClTrk =
+          std::accumulate(clusters.cbegin(), clusters.cend(), 0, [](int s, const auto& x) { return s + x.size(); });
       if (nClTrk <= prevNcltrk)
         continue;
       prevNcltrk = nClTrk;
@@ -217,10 +217,12 @@ void PrimaryVertexRecoveryForUPC::produce(edm::Event& iEvent, const edm::EventSe
         for (const auto& iclus : clusters) {
           if (iclus.size() < 2)
             continue;
-          const TransientVertex v(vertexFitter.useBeamConstraint ? vertexFitter.fitter->vertex(iclus, beamSpot) : vertexFitter.fitter->vertex(iclus));
-          if (v.isValid() && v.degreesOfFreedom() >= vertexFitter.minNdof && (!validBS || (*vertexFitter.vertexSelector)(v, bsState)) && goodVertex(v)) {
+          const TransientVertex v(vertexFitter.useBeamConstraint ? vertexFitter.fitter->vertex(iclus, beamSpot)
+                                                                 : vertexFitter.fitter->vertex(iclus));
+          if (v.isValid() && v.degreesOfFreedom() >= vertexFitter.minNdof &&
+              (!validBS || (*vertexFitter.vertexSelector)(v, bsState)) && goodVertex(v)) {
             reco::Vertex p(v);
-            reco::Vertex o(p.position(), p.error4D(), u1 + u2*10 + u3*100, p.chi2(), p.ndof(), p.tracks().size());
+            reco::Vertex o(p.position(), p.error4D(), u1 + u2 * 10 + u3 * 100, p.chi2(), p.ndof(), p.tracks().size());
             for (const auto& t : p.tracks())
               o.add(t, p.trackWeight(t));
             result->emplace_back(o);
@@ -271,7 +273,7 @@ void PrimaryVertexRecoveryForUPC::fillDescriptions(edm::ConfigurationDescription
   psd0.add<int>("minNtracks", -1);
   psd0.add<int>("maxNtracks", 1E9);
   vpsd0.reserve(5);
-  { // PbPb tight parameters
+  {  // PbPb tight parameters
     edm::ParameterSet psd;
     psd.addParameter<std::string>("algorithm", "filter");
     psd.addParameter<double>("maxNormalizedChi2", 10.0);
@@ -286,7 +288,8 @@ void PrimaryVertexRecoveryForUPC::fillDescriptions(edm::ConfigurationDescription
     psd.addParameter<int>("minNtracks", 500);
     psd.addParameter<int>("maxNtracks", 1E9);
     vpsd0.emplace_back(psd);
-  }{ // PbPb parameters
+  }
+  {  // PbPb parameters
     edm::ParameterSet psd;
     psd.addParameter<std::string>("algorithm", "filter");
     psd.addParameter<double>("maxNormalizedChi2", 10.0);
@@ -301,7 +304,8 @@ void PrimaryVertexRecoveryForUPC::fillDescriptions(edm::ConfigurationDescription
     psd.addParameter<int>("minNtracks", 10);
     psd.addParameter<int>("maxNtracks", 1E9);
     vpsd0.emplace_back(psd);
-  }{ // pp parameters
+  }
+  {  // pp parameters
     edm::ParameterSet psd;
     psd.addParameter<std::string>("algorithm", "filter");
     psd.addParameter<double>("maxNormalizedChi2", 10.0);
@@ -316,7 +320,8 @@ void PrimaryVertexRecoveryForUPC::fillDescriptions(edm::ConfigurationDescription
     psd.addParameter<int>("minNtracks", 3);
     psd.addParameter<int>("maxNtracks", 1E9);
     vpsd0.emplace_back(psd);
-  }{ // high beta* parameters
+  }
+  {  // high beta* parameters
     edm::ParameterSet psd;
     psd.addParameter<std::string>("algorithm", "filter");
     psd.addParameter<double>("maxNormalizedChi2", 80.0);
@@ -331,7 +336,8 @@ void PrimaryVertexRecoveryForUPC::fillDescriptions(edm::ConfigurationDescription
     psd.addParameter<int>("minNtracks", 3);
     psd.addParameter<int>("maxNtracks", 1E9);
     vpsd0.emplace_back(psd);
-  }{
+  }
+  {
     edm::ParameterSet psd;
     psd.addParameter<std::string>("algorithm", "none");
     psd.addParameter<int>("minNtracks", 2);
@@ -362,14 +368,15 @@ void PrimaryVertexRecoveryForUPC::fillDescriptions(edm::ConfigurationDescription
   psd1.add<int>("minNtracks", -1);
   psd1.add<int>("maxNtracks", 1E9);
   vpsd1.reserve(4);
-  { // PbPb parameters
+  {  // PbPb parameters
     edm::ParameterSet psd;
     psd.addParameter<std::string>("algorithm", "gap");
     psd.addParameter<double>("zSeparation", 1.0);
     psd.addParameter<int>("minNtracks", 3);
     psd.addParameter<int>("maxNtracks", 1E9);
     vpsd1.emplace_back(psd);
-  }{ // pp parameters
+  }
+  {  // pp parameters
     edm::ParameterSet psd;
     psd.addParameter<std::string>("algorithm", "DA_vect");
     psd.addParameter<double>("d0CutOff", 3.0);
@@ -392,7 +399,8 @@ void PrimaryVertexRecoveryForUPC::fillDescriptions(edm::ConfigurationDescription
     psd.addParameter<int>("minNtracks", 3);
     psd.addParameter<int>("maxNtracks", 1E9);
     vpsd1.emplace_back(psd);
-  }{ // high beta* parameters
+  }
+  {  // high beta* parameters
     edm::ParameterSet psd;
     psd.addParameter<std::string>("algorithm", "DA_vect");
     psd.addParameter<double>("d0CutOff", 4.0);
@@ -415,7 +423,8 @@ void PrimaryVertexRecoveryForUPC::fillDescriptions(edm::ConfigurationDescription
     psd.addParameter<int>("minNtracks", 3);
     psd.addParameter<int>("maxNtracks", 1E9);
     vpsd1.emplace_back(psd);
-  }{
+  }
+  {
     edm::ParameterSet psd;
     psd.addParameter<std::string>("algorithm", "none");
     psd.addParameter<int>("minNtracks", 2);
@@ -431,7 +440,7 @@ void PrimaryVertexRecoveryForUPC::fillDescriptions(edm::ConfigurationDescription
   psd2.add<bool>("useBeamConstraint", false);
   psd2.add<int>("minNclusters", -1);
   vpsd2.reserve(6);
-  { // PbPb and pp parameters
+  {  // PbPb and pp parameters
     edm::ParameterSet psd;
     psd.addParameter<std::string>("algorithm", "AdaptiveVertexFitter");
     psd.addParameter<double>("maxDistanceToBeam", 1.0);
@@ -440,7 +449,8 @@ void PrimaryVertexRecoveryForUPC::fillDescriptions(edm::ConfigurationDescription
     psd.addParameter<bool>("useBeamConstraint", false);
     psd.addParameter<int>("minNclusters", 2);
     vpsd2.emplace_back(psd);
-  }{ // high beta* parameters
+  }
+  {  // high beta* parameters
     edm::ParameterSet psd;
     psd.addParameter<std::string>("algorithm", "AdaptiveVertexFitter");
     psd.addParameter<double>("maxDistanceToBeam", 1.0);
@@ -449,7 +459,8 @@ void PrimaryVertexRecoveryForUPC::fillDescriptions(edm::ConfigurationDescription
     psd.addParameter<bool>("useBeamConstraint", false);
     psd.addParameter<int>("minNclusters", 2);
     vpsd2.emplace_back(psd);
-  }{ // high beta* parameters + extended beam distance
+  }
+  {  // high beta* parameters + extended beam distance
     edm::ParameterSet psd;
     psd.addParameter<std::string>("algorithm", "AdaptiveVertexFitter");
     psd.addParameter<double>("maxDistanceToBeam", 2.0);
@@ -458,7 +469,8 @@ void PrimaryVertexRecoveryForUPC::fillDescriptions(edm::ConfigurationDescription
     psd.addParameter<bool>("useBeamConstraint", false);
     psd.addParameter<int>("minNclusters", 1);
     vpsd2.emplace_back(psd);
-  }{ // kalman vertex fitter
+  }
+  {  // kalman vertex fitter
     edm::ParameterSet psd;
     psd.addParameter<std::string>("algorithm", "KalmanVertexFitter");
     psd.addParameter<double>("maxDistanceToBeam", 2.0);
@@ -466,7 +478,8 @@ void PrimaryVertexRecoveryForUPC::fillDescriptions(edm::ConfigurationDescription
     psd.addParameter<bool>("useBeamConstraint", false);
     psd.addParameter<int>("minNclusters", 1);
     vpsd2.emplace_back(psd);
-  }{ // high beta* parameters + beam constraint
+  }
+  {  // high beta* parameters + beam constraint
     edm::ParameterSet psd;
     psd.addParameter<std::string>("algorithm", "AdaptiveVertexFitter");
     psd.addParameter<double>("maxDistanceToBeam", 1.0);

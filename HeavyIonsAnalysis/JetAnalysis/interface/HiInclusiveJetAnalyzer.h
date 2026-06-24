@@ -64,7 +64,7 @@ private:
   void analyzeRefSubjets(const reco::GenJet& jet);
   void analyzeGenSubjets(const reco::GenJet& jet);
 
-  int TaggedJet(pat::Jet patjet, edm::Handle<reco::JetTagCollection > jetTags );
+  int TaggedJet(pat::Jet patjet, edm::Handle<reco::JetTagCollection> jetTags);
 
   edm::InputTag jetTagLabel_;
   edm::EDGetTokenT<pat::JetCollection> jetTag_;
@@ -270,8 +270,8 @@ private:
     float mjtPu[MAXJETS] = {0};
     int mjtHadronFlavor[MAXJETS] = {0};
     int mjtPartonFlavor[MAXJETS] = {0};
-    int mjtNbHad[MAXJETS]={0};
-    int mjtNcHad[MAXJETS]={0};
+    int mjtNbHad[MAXJETS] = {0};
+    int mjtNcHad[MAXJETS] = {0};
 
     float discr_csvV2[MAXJETS] = {0};
     float discr_deepCSV[MAXJETS] = {0};
@@ -408,8 +408,6 @@ private:
     float calopt[MAXCALO] = {0};
     float caloeta[MAXCALO] = {0};
     float calophi[MAXCALO] = {0};
-
-
   };
 
   JRA jets_;

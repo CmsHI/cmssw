@@ -102,7 +102,7 @@ private:
 
   // Conditions
   edm::ESGetToken<HcalDbService, HcalDbRecord> hcalDatabaseToken_;
-  
+
   // Helpers
   MyZDCRecHit zdcRecHit;
   MyZDCDigi zdcDigi;
@@ -122,15 +122,15 @@ private:
 //
 // constructors and destructor
 //
-ZDCTreeProducer::ZDCTreeProducer(const edm::ParameterSet& iConfig) :
-  zdcDigiSrc_( consumes<QIE10DigiCollection>(iConfig.getParameter<edm::InputTag>("zdcDigiSrc")) ),
-  zdcRecHitSrc_( consumes<ZDCRecHitCollection>(iConfig.getParameter<edm::InputTag>("zdcRecHitSrc")) ),
-  doZDCDigi_( iConfig.getParameter<bool>("doZDCDigi") ),
-  doZDCRecHit_( iConfig.getParameter<bool>("doZDCRecHit") ),
-  calZDCDigi_( iConfig.getParameter<bool>("calZDCDigi") ),
-  skipRPD_( iConfig.getParameter<bool>("skipRPD") ),
-  verbose_( iConfig.getParameter<bool>("verbose") ),
-  hcalDatabaseToken_( esConsumes<HcalDbService, HcalDbRecord>() ) {
+ZDCTreeProducer::ZDCTreeProducer(const edm::ParameterSet& iConfig)
+    : zdcDigiSrc_(consumes<QIE10DigiCollection>(iConfig.getParameter<edm::InputTag>("zdcDigiSrc"))),
+      zdcRecHitSrc_(consumes<ZDCRecHitCollection>(iConfig.getParameter<edm::InputTag>("zdcRecHitSrc"))),
+      doZDCDigi_(iConfig.getParameter<bool>("doZDCDigi")),
+      doZDCRecHit_(iConfig.getParameter<bool>("doZDCRecHit")),
+      calZDCDigi_(iConfig.getParameter<bool>("calZDCDigi")),
+      skipRPD_(iConfig.getParameter<bool>("skipRPD")),
+      verbose_(iConfig.getParameter<bool>("verbose")),
+      hcalDatabaseToken_(esConsumes<HcalDbService, HcalDbRecord>()) {
   ;
 }
 
@@ -145,7 +145,6 @@ ZDCTreeProducer::~ZDCTreeProducer() {
 
 // ------------ method called to for each event  ------------
 void ZDCTreeProducer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
-
   if (doZDCRecHit_) {
     edm::Handle<ZDCRecHitCollection> zdcrechits;
     iEvent.getByToken(zdcRecHitSrc_, zdcrechits);
@@ -157,8 +156,10 @@ void ZDCTreeProducer::analyze(const edm::Event& iEvent, const edm::EventSetup& i
     for (auto const& rh : *zdcrechits) {
       HcalZDCDetId zdcid = rh.id();
 
-      if (skipRPD_ && zdcid.section() == 4) continue;
-      if (zdcid.section() == 1 && zdcid.channel() > 5) continue; // ignore extra EM channels
+      if (skipRPD_ && zdcid.section() == 4)
+        continue;
+      if (zdcid.section() == 1 && zdcid.channel() > 5)
+        continue;  // ignore extra EM channels
 
       zdcRecHit.e[nhits] = rh.energy();
       zdcRecHit.zside[nhits] = zdcid.zside();
@@ -166,7 +167,7 @@ void ZDCTreeProducer::analyze(const edm::Event& iEvent, const edm::EventSetup& i
       zdcRecHit.channel[nhits] = zdcid.channel();
       zdcRecHit.saturation[nhits] = static_cast<int>(rh.flagField(HcalCaloFlagLabels::ADCSaturationBit));
 
-      if ((zdcid.section() == 1 && zdcid.channel() <= 5) || zdcid.section() == 2) { // safely exclude extra EM channels
+      if ((zdcid.section() == 1 && zdcid.channel() <= 5) || zdcid.section() == 2) {  // safely exclude extra EM channels
         if (zdcid.zside() > 0) {
           zdcRecHit.sumPlus += rh.energy();
         }
@@ -176,11 +177,11 @@ void ZDCTreeProducer::analyze(const edm::Event& iEvent, const edm::EventSetup& i
       }
 
       nhits++;
-    } // for (auto const& rh : *zdcrechits) {
+    }  // for (auto const& rh : *zdcrechits) {
 
     zdcRecHit.n = nhits;
     zdcRecHitTree->Fill();
-  } // if (doZDCRecHit_) {
+  }  // if (doZDCRecHit_) {
 
   if (doZDCDigi_) {
     edm::Handle<QIE10DigiCollection> zdcdigis;
@@ -191,33 +192,28 @@ void ZDCTreeProducer::analyze(const edm::Event& iEvent, const edm::EventSetup& i
     if (verbose_) {
       std::cout << "zdcdigis->size() : " << zdcdigis->size() << std::endl;
       std::cout << "zdcdigis->samples() : " << zdcdigis->samples() << std::endl;
-      std::cout << std::left
-                << " " << std::setw(6) << "nhits"
+      std::cout << std::left << " " << std::setw(6) << "nhits"
                 << " " << std::setw(8) << "section"
                 << " " << std::setw(6) << "zside"
-                << " " << std::setw(8) << "channel"
-                << std::endl;
+                << " " << std::setw(8) << "channel" << std::endl;
     }
 
     float sumcEMP = 0, sumcEMN = 0, sumcHDP = 0, sumcHDN = 0;
-    
+
     int nhits = 0;
     for (auto it = zdcdigis->begin(); it != zdcdigis->end(); it++) {
-
       const QIE10DataFrame digi = static_cast<const QIE10DataFrame>(*it);
       HcalZDCDetId zdcid = digi.id();
 
       if (verbose_) {
-        std::cout << std::left
-                  << " " << std::setw(6) << nhits
-                  << " " << std::setw(8) << zdcid.section()
-                  << " " << std::setw(6) << zdcid.zside()
-                  << " " << std::setw(8) << zdcid.channel()
-                  << std::endl;
+        std::cout << std::left << " " << std::setw(6) << nhits << " " << std::setw(8) << zdcid.section() << " "
+                  << std::setw(6) << zdcid.zside() << " " << std::setw(8) << zdcid.channel() << std::endl;
       }
 
-      if (skipRPD_ && zdcid.section() == 4) continue;
-      if (zdcid.section() == 1 && zdcid.channel() > 5) continue; // ignore extra EM channels
+      if (skipRPD_ && zdcid.section() == 4)
+        continue;
+      if (zdcid.section() == 1 && zdcid.channel() > 5)
+        continue;  // ignore extra EM channels
 
       CaloSamples caldigi;
       if (calZDCDigi_) {
@@ -230,13 +226,14 @@ void ZDCTreeProducer::analyze(const edm::Event& iEvent, const edm::EventSetup& i
       zdcDigi.zside[nhits] = zdcid.zside();
       zdcDigi.section[nhits] = zdcid.section();
       zdcDigi.channel[nhits] = zdcid.channel();
-      
+
       for (int ts = 0; ts < digi.samples(); ts++) {
-        zdcDigi.chargefC[ts][nhits] = calZDCDigi_ ? caldigi[ts] : QWAna::ZDC2018::QIE10_regular_fC[digi[ts].adc()][digi[ts].capid()];
+        zdcDigi.chargefC[ts][nhits] =
+            calZDCDigi_ ? caldigi[ts] : QWAna::ZDC2018::QIE10_regular_fC[digi[ts].adc()][digi[ts].capid()];
         zdcDigi.adc[ts][nhits] = digi[ts].adc();
       }
 
-      if ((zdcid.section() == 1 && zdcid.channel() <= 5) || zdcid.section() == 2) { // safely exclude extra EM channels
+      if ((zdcid.section() == 1 && zdcid.channel() <= 5) || zdcid.section() == 2) {  // safely exclude extra EM channels
         if (zdcid.section() == 1 && zdcid.zside() > 0)
           sumcEMP += (zdcDigi.chargefC[2][nhits] - zdcDigi.chargefC[1][nhits]);
         if (zdcid.section() == 1 && zdcid.zside() < 0)
@@ -246,13 +243,13 @@ void ZDCTreeProducer::analyze(const edm::Event& iEvent, const edm::EventSetup& i
         if (zdcid.section() == 2 && zdcid.zside() < 0)
           sumcHDN += (zdcDigi.chargefC[2][nhits] - zdcDigi.chargefC[1][nhits]);
       }
-      
+
       nhits++;
     }  // for (auto it = zdcdigis->begin(); it != zdcdigis->end(); it++) {
 
     // Very preliminary calibration
     zdcDigi.sumMinus = (sumcEMN * 0.1 + sumcHDN) * 0.5031;
-    zdcDigi.sumPlus= (sumcEMP * 0.1 + sumcHDP) * 0.9397;
+    zdcDigi.sumPlus = (sumcEMP * 0.1 + sumcHDP) * 0.9397;
 
     zdcDigi.n = nhits;
     zdcDigiTree->Fill();
