@@ -23,6 +23,7 @@ def setupHeavyIonJets(tag, sequence, process, isMC, radius = -1, JECTag = 'None'
     else:
        radiustag = "{:.0f}".format(radius*10)
 
+    akCs4PFJets = akCs4PFJets.clone(minFlowChi2Prob = cms.double(0), maxFlowChi2Prob = cms.double(1))
     addToSequence( tag+'Jets',
                    akCs4PFJets.clone(rParam = radius, src = 'packedPFCandidates', useModulatedRho = doFlow),
                    process, sequence)

@@ -198,6 +198,7 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
 
     # If we do flow subtraction, we need to setup the producers for flow modulation
     from PhysicsTools.PatAlgos.producersLayer1.jetProducer_cff import akCs4PFJets
+    akCs4PFJets = akCs4PFJets.clone(minFlowChi2Prob = cms.double(0), maxFlowChi2Prob = cms.double(1))
     iterativeTag = ""
     if doFlow:
         from PhysicsTools.PatAlgos.producersLayer1.jetProducer_cff import ak4PFJetsForFlow, hiFJRhoFlowModulation
