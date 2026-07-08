@@ -89,8 +89,6 @@ akCs4PFJets = cms.EDProducer(
     csAlpha   = cms.double(2.),
     writeJetsWithConst = cms.bool(True),
     useModulatedRho = cms.bool(False),
-    minFlowChi2Prob = cms.double(0),
-    maxFlowChi2Prob = cms.double(1),
     rhoFlowFitParams = cms.InputTag('hiFJRhoFlowModulation', 'rhoFlowFitParams'),
     jetCollInstanceName = cms.string("pfParticlesCs"),
 )
