@@ -17,46 +17,14 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
             'pfParticleTransformerAK4TagInfos',
             'pfUnifiedParticleTransformerAK4TagInfos'
         ]
-
-        bTagDiscriminators = [
-            'pfUnifiedParticleTransformerAK4JetTags:probb',
-            'pfUnifiedParticleTransformerAK4JetTags:probbb',
-            'pfUnifiedParticleTransformerAK4JetTags:probc',
-            'pfUnifiedParticleTransformerAK4JetTags:probg',
-            'pfUnifiedParticleTransformerAK4JetTags:problepb',
-            'pfUnifiedParticleTransformerAK4JetTags:probu',
-            'pfUnifiedParticleTransformerAK4JetTags:probd',
-            'pfUnifiedParticleTransformerAK4JetTags:probs',
-            'pfUnifiedParticleTransformerAK4JetTags:probtaup1h0p',
-            'pfUnifiedParticleTransformerAK4JetTags:probtaup1h1p',
-            'pfUnifiedParticleTransformerAK4JetTags:probtaup1h2p',
-            'pfUnifiedParticleTransformerAK4JetTags:probtaup3h0p',
-            'pfUnifiedParticleTransformerAK4JetTags:probtaup3h1p',
-            'pfUnifiedParticleTransformerAK4JetTags:probtaum1h0p',
-            'pfUnifiedParticleTransformerAK4JetTags:probtaum1h1p',
-            'pfUnifiedParticleTransformerAK4JetTags:probtaum1h2p',
-            'pfUnifiedParticleTransformerAK4JetTags:probtaum3h0p',
-            'pfUnifiedParticleTransformerAK4JetTags:probtaum3h1p',
-            'pfUnifiedParticleTransformerAK4JetTags:probele',
-            'pfUnifiedParticleTransformerAK4JetTags:probmu',
-            'pfUnifiedParticleTransformerAK4JetTags:ptcorr',
-            'pfUnifiedParticleTransformerAK4JetTags:ptnu',
-        ]
+        from RecoBTag.ONNXRuntime.pfUnifiedParticleTransformerAK4JetTags_cfi import pfUnifiedParticleTransformerAK4JetTags as _UParTJetTags
+        bTagDiscriminators += ['pfUnifiedParticleTransformerAK4JetTags:' + f for f in _UParTJetTags.flav_names]
     else: 
         bTagInfos = ['None']
         bTagDiscriminators = ['None']
 
     # Create gen-level information
     if isMC:
-        from RecoHI.HiJetAlgos.hiSignalParticleProducer_cfi import hiSignalParticleProducer as hiSignalGenParticles
-        process.hiSignalGenParticles = hiSignalGenParticles.clone(
-            src = "prunedGenParticles"
-        )
-        from PhysicsTools.PatAlgos.producersHeavyIons.heavyIonJets_cff import allPartons
-        process.allPartons = allPartons.clone(
-            src = 'hiSignalGenParticles'
-        )
-
         # Define generator level jets without neutrinos
         from RecoJets.JetProducers.ak4GenJets_cfi import ak4GenJets
 
@@ -75,8 +43,7 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
         if hasattr(process, "genTask"):
             process.genTask.add( getattr(process,"ak"+labelR+"GenJetsReclusterNoNu"))
         else:
-            process.genTask = cms.Task(process.hiSignalGenParticles, process.allPartons, process.packedGenParticlesForJetsNoNu, getattr(process,"ak"+labelR+"GenJetsReclusterNoNu"))
-
+            process.genTask = cms.Task(process.packedGenParticlesForJetsNoNu, getattr(process,"ak"+labelR+"GenJetsReclusterNoNu"))
 
     # Create unsubtracted reco jets
 
@@ -128,7 +95,7 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
         elSource           = cms.InputTag("slimmedElectrons"),
         getJetMCFlavour    = isMC,
         genJetCollection   = cms.InputTag(matchedGenJets),
-        genParticles       = cms.InputTag("hiSignalGenParticles" if isMC else ""),
+        genParticles       = cms.InputTag("prunedGenParticles" if isMC else ""),
         jetCorrections     = ('AK4PFchs' if labelR=='0' else 'AK'+labelR+'PFchs',) + jetCorrectionsAK4[1:],
     )
 
@@ -152,7 +119,7 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
         elSource           = cms.InputTag("slimmedElectrons"),
         getJetMCFlavour    = isMC,
         genJetCollection   = cms.InputTag(matchedGenJets),
-        genParticles       = cms.InputTag("hiSignalGenParticles" if isMC else ""),
+        genParticles       = cms.InputTag("prunedGenParticles" if isMC else ""),
         jetCorrections     = jetCorrectionsAK4,
     )
     if labelR == "0": getattr(process,"patJetsAK"+labelR+"PFCHS").embedPFCandidates = True # not working with CHS jet reclustering
@@ -206,6 +173,9 @@ def candidateBtaggingMiniAOD(process, isMC = True, jetPtMin = 15, jetCorrLevels 
     process.patAlgosToolsTask.add(getattr(process,"unsubUpdatedPatJetsAK"+labelR+"PFCHS"))
 
     if doBtagging:
+        getattr(process,"pfUnifiedParticleTransformerAK4JetTagsAK"+labelR+"PFCHSBtag").model_path = 'RecoBTag/Combined/data/UParTAK4/PUPPI/V01/UParTAK4_v2.onnx'
+        getattr(process,"pfUnifiedParticleTransformerAK4TagInfosAK"+labelR+"PFCHSBtag").fix_lt_sorting = True
+        getattr(process,"pfUnifiedParticleTransformerAK4TagInfosAK"+labelR+"PFCHSBtag").unsubjet_map = "unsubUpdatedPatJetsAK"+labelR+"PFCHS"
 
         if hasattr(process,'updatedPatJetsTransientCorrectedAK'+labelR+'PFCHSBtag'):
             getattr(process,'updatedPatJetsTransientCorrectedAK'+labelR+'PFCHSBtag').addTagInfos = True
