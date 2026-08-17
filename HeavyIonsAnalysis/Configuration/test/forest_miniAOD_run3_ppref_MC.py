@@ -167,7 +167,7 @@ for jetLabel in jetLabels:
     getattr(process,"ak"+jetLabel+"PFJetAnalyzer").jetTag = "selectedUpdatedPatJetsAK"+jetLabel+"PFCHSBtag"
     getattr(process,"ak"+jetLabel+"PFJetAnalyzer").jetName = 'ak'+jetLabel+'PF'
     getattr(process,"ak"+jetLabel+"PFJetAnalyzer").matchJets = matchJets
-    getattr(process,"ak"+jetLabel+"PFJetAnalyzer").matchTag = 'patJetsAK'+jetLabel+'PFUnsubJets'
+    getattr(process,"ak"+jetLabel+"PFJetAnalyzer").matchTag = "patJetsAK"+jetLabel+"PFCHS" if jetLabel!='0' else "slimmedJets"
     getattr(process,"ak"+jetLabel+"PFJetAnalyzer").doBtagging = doBtagging
     getattr(process,"ak"+jetLabel+"PFJetAnalyzer").doHiJetID = doHIJetID
     getattr(process,"ak"+jetLabel+"PFJetAnalyzer").doWTARecluster = doWTARecluster
