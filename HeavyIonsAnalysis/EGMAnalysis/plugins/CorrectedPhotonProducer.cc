@@ -1,15 +1,15 @@
 /*
  *  adapted from:
- *    RecoEgamma/EgammaTools/plugins/CalibratedElectronProducers.cc
- *    RecoEgamma/EgammaTools/src/ElectronEnergyCalibrator.cc
+ *    RecoEgamma/EgammaTools/plugins/CalibratedPhotonProducers.cc
+ *    RecoEgamma/EgammaTools/src/PhotonEnergyCalibrator.cc
  *  extended + simplified for HI use
  */
 
 #include "DataFormats/Common/interface/Handle.h"
 #include "DataFormats/Common/interface/ValueMap.h"
-#include "DataFormats/EgammaCandidates/interface/GsfElectron.h"
-#include "DataFormats/EgammaCandidates/interface/GsfElectronFwd.h"
-#include "DataFormats/PatCandidates/interface/Electron.h"
+#include "DataFormats/EgammaCandidates/interface/Photon.h"
+#include "DataFormats/EgammaCandidates/interface/PhotonFwd.h"
+#include "DataFormats/PatCandidates/interface/Photon.h"
 #include "FWCore/Framework/interface/ESHandle.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
@@ -20,7 +20,6 @@
 #include "FWCore/Utilities/interface/EDGetToken.h"
 #include "HeavyIonsAnalysis/EGMAnalysis/interface/EnergyScaleCorrector.h"
 #include "RecoEgamma/EgammaTools/interface/EgammaRandomSeeds.h"
-#include "RecoEgamma/EgammaTools/interface/EpCombinationTool.h"
 #include "FWCore/Framework/interface/ConsumesCollector.h"
 
 #include "TRandom2.h"
@@ -29,10 +28,10 @@
 #include <vector>
 
 template <typename T>
-class CorrectedElectronProducerT : public edm::stream::EDProducer<> {
+class CorrectedPhotonProducerT : public edm::stream::EDProducer<> {
 public:
-  explicit CorrectedElectronProducerT(const edm::ParameterSet&);
-  ~CorrectedElectronProducerT() override {}
+  explicit CorrectedPhotonProducerT(const edm::ParameterSet&);
+  ~CorrectedPhotonProducerT() override {}
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
   void produce(edm::Event&, const edm::EventSetup&) override;
 
@@ -40,83 +39,69 @@ private:
   void setRandomSeed(const edm::Event& iEvent, const T& obj, size_t size, size_t index);
 
   bool semiDeterministic_;
-  bool calibrateSuperCluster_;
   std::unique_ptr<TRandom2> semiDeterministicRng_;
-  edm::EDGetTokenT<edm::View<T>> electronToken_;
+  edm::EDGetTokenT<edm::View<T>> photonToken_;
   edm::EDGetTokenT<int> centralityToken_;
-  EpCombinationTool epCombinator_;
   EnergyScaleCorrector energyCorrector_;
 };
 
 template <typename T>
-CorrectedElectronProducerT<T>::CorrectedElectronProducerT(const edm::ParameterSet& conf)
+CorrectedPhotonProducerT<T>::CorrectedPhotonProducerT(const edm::ParameterSet& conf)
     : semiDeterministic_(conf.getParameter<bool>("semiDeterministic")),
-      calibrateSuperCluster_(conf.getParameter<bool>("calibrateSuperCluster")),
       semiDeterministicRng_(new TRandom2()),
-      electronToken_(consumes<edm::View<T>>(conf.getParameter<edm::InputTag>("src"))),
+      photonToken_(consumes<edm::View<T>>(conf.getParameter<edm::InputTag>("src"))),
       centralityToken_(consumes<int>(conf.getParameter<edm::InputTag>("centrality"))),
-      epCombinator_{conf.getParameter<edm::ParameterSet>("epCombConfig"), consumesCollector()},
       energyCorrector_(conf.getParameter<std::string>("correctionFile"),
-                       epCombinator_,
                        semiDeterministicRng_.get(),
                        conf.getParameter<double>("minPt")) {
   produces<std::vector<T>>();
 }
 
 template <typename T>
-void CorrectedElectronProducerT<T>::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+void CorrectedPhotonProducerT<T>::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
-  desc.add<edm::InputTag>("src", edm::InputTag("gedGsfElectrons"));
+  desc.add<edm::InputTag>("src", edm::InputTag("gedPhotons"));
   desc.add<edm::InputTag>("centrality", edm::InputTag("centralityBin"));
-  desc.add<edm::ParameterSetDescription>("epCombConfig", EpCombinationTool::makePSetDescription());
   desc.add<std::string>("correctionFile", std::string());
   desc.add<double>("minPt", 20.0);
   desc.add<bool>("semiDeterministic", true);
-  desc.add<bool>("calibrateSuperCluster", false);
   descriptions.addWithDefaultLabel(desc);
 }
 
 template <typename T>
-void CorrectedElectronProducerT<T>::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
-  epCombinator_.setEventContent(iSetup);
-
-  edm::Handle<edm::View<T>> electrons;
-  iEvent.getByToken(electronToken_, electrons);
+void CorrectedPhotonProducerT<T>::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
+  edm::Handle<edm::View<T>> photons;
+  iEvent.getByToken(photonToken_, photons);
   edm::Handle<int> bin;
   iEvent.getByToken(centralityToken_, bin);
 
   auto out = std::make_unique<std::vector<T>>();
-  for (const auto& ele : *electrons) {
-    out->push_back(ele);
-    auto pout = dynamic_cast<pat::Electron*>(&(out->back()));
-    if (pout) {
-      pout->addUserFloat("rawPt", ele.pt());
-      pout->addUserFloat("rawEcalEnergy", ele.ecalEnergy());
-    }
+  for (const auto& pho : *photons) {
+    out->push_back(pho);
+    auto pout = dynamic_cast<pat::Photon*>(&(out->back()));
+    if (pout)
+      pout->addUserFloat("rawEt", pho.et());
 
     if (semiDeterministic_)
-      setRandomSeed(iEvent, ele, electrons->size(), out->size());
+      setRandomSeed(iEvent, pho, photons->size(), out->size());
 
-    if (calibrateSuperCluster_)
-      energyCorrector_.calibrateSuperCluster(out->back(), *bin);
-    else
-      energyCorrector_.calibrateElectron(out->back(), *bin);
+    energyCorrector_.calibratePhoton(out->back(), *bin);
   }
 
   iEvent.put(std::move(out));
 }
 
 template <typename T>
-void CorrectedElectronProducerT<T>::setRandomSeed(const edm::Event& iEvent, const T& obj, size_t size, size_t index) {
+void CorrectedPhotonProducerT<T>::setRandomSeed(const edm::Event& iEvent, const T& obj, size_t size, size_t index) {
   semiDeterministicRng_->SetSeed(obj.superCluster().isNonnull()
                                      ? egamma::getRandomSeedFromSC(iEvent, obj.superCluster())
                                      : egamma::getRandomSeedFromObj(iEvent, obj, size, index));
 }
 
-using CorrectedElectronProducer = CorrectedElectronProducerT<reco::GsfElectron>;
-using CorrectedPatElectronProducer = CorrectedElectronProducerT<pat::Electron>;
+using CorrectedPhotonProducer = CorrectedPhotonProducerT<reco::Photon>;
+using CorrectedPatPhotonProducer = CorrectedPhotonProducerT<pat::Photon>;
 
 #include "FWCore/Framework/interface/MakerMacros.h"
 
-DEFINE_FWK_MODULE(CorrectedElectronProducer);
-DEFINE_FWK_MODULE(CorrectedPatElectronProducer);
+DEFINE_FWK_MODULE(CorrectedPhotonProducer);
+DEFINE_FWK_MODULE(CorrectedPatPhotonProducer);

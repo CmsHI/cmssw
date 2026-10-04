@@ -64,8 +64,10 @@ hiPuRhoR3Analyzer = hiFJRhoAnalyzer.clone(
 
 # Add rho estimator
 from RecoHI.HiJetAlgos.HiRecoPFJets_cff import kt4PFJetsForRho
-from RecoHI.HiJetAlgos.hiFJRhoProducer import hiFJRhoProducer, hiFJRhoProducerFinerBins
-from RecoHI.HiJetAlgos.hiFJGridEmptyAreaCalculator_cff import hiFJGridEmptyAreaCalculator, hiFJGridEmptyAreaCalculatorFinerBins
+from RecoHI.HiJetAlgos.hiFJRhoProducer import hiFJRhoProducer
+from RecoHI.HiJetAlgos.hiFJGridEmptyAreaCalculator_cff import hiFJGridEmptyAreaCalculator
+hiFJRhoProducerFinerBins = hiFJRhoProducer.clone(etaRanges = [-5., -4., -3, -2.5, -2.0, -0.8, 0.8, 2.0, 2.5, 3., 4., 5.])
+hiFJGridEmptyAreaCalculatorFinerBins = hiFJGridEmptyAreaCalculator.clone(mapEtaEdges = 'hiFJRhoProducerFinerBins:mapEtaEdges', mapToRho = 'hiFJRhoProducerFinerBins:mapToRho', mapToRhoM = 'hiFJRhoProducerFinerBins:mapToRhoM')
 kt4PFJetsForRho.src = 'packedPFCandidates'
 hiFJGridEmptyAreaCalculatorFinerBins.pfCandSource = 'packedPFCandidates'
 rhoSequence = cms.Sequence(kt4PFJetsForRho + hiFJRhoProducerFinerBins + hiFJGridEmptyAreaCalculatorFinerBins + hiFJRhoAnalyzerFinerBins)
