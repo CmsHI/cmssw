@@ -149,6 +149,7 @@ void HLTMuTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
           if (genPtl.numberOfMothers() > 0) {
             vector<int> momid;
             vector<int>::iterator it_jpsi, it_ups;
+            momid.reserve(genPtl.numberOfMothers());
             for (unsigned int mom = 0; mom < genPtl.numberOfMothers(); mom++) {
               //cout << "mom pid: " << genPtl.mother(mom)->pdgId() << endl;
               momid.push_back(genPtl.mother(mom)->pdgId());
@@ -367,7 +368,7 @@ void HLTMuTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
                   const math::XYZTLorentzVector ZRecoGlb(muCand->px() + muCand2->px(),
                                                          muCand->py() + muCand2->py(),
                                                          muCand->pz() + muCand2->pz(),
-                                                         muCand->p() + muCand2->p());
+                                                         muCand->energy() + muCand2->energy());
                   DiMu.mass[nDiMu] = ZRecoGlb.mass();
                   DiMu.e[nDiMu] = ZRecoGlb.e();
                   DiMu.pt[nDiMu] = ZRecoGlb.pt();
