@@ -21,7 +21,12 @@ EnergyScaleCorrector::EnergyScaleCorrector(std::string const& file,
   read(file);
 }
 
-void EnergyScaleCorrector::calibrate(reco::GsfElectron& ele, int hiBin) const {
+EnergyScaleCorrector::EnergyScaleCorrector(std::string const& file, TRandom* rng, float min_pt)
+    : rng_(rng), min_pt_(min_pt) {
+  read(file);
+}
+
+void EnergyScaleCorrector::calibrateSuperCluster(reco::GsfElectron& ele, int hiBin) const {
   /* skip low pt electrons */
   if (ele.pt() < min_pt_) {
     return;
@@ -41,6 +46,44 @@ void EnergyScaleCorrector::calibrate(reco::GsfElectron& ele, int hiBin) const {
       oldP4.x() * energy_scale, oldP4.y() * energy_scale, oldP4.z() * energy_scale, combined.first);
 
   ele.correctMomentum(newP4, ele.trackMomentumError(), combined.second);
+}
+
+void EnergyScaleCorrector::calibratePhoton(reco::Photon& pho, int hiBin) const {
+  /* skip low et photons */
+  if (pho.et() < min_pt_) {
+    return;
+  }
+
+  auto scale = scale_for(hiBin, pho.superCluster()->eta());
+  auto smear = smear_for(hiBin, pho.superCluster()->eta());
+
+  auto fsmear = rng_->Gaus(1., smear / 91.1876);
+  auto fscale = scale * fsmear;
+
+  const double oldEcalEnergy = pho.getCorrectedEnergy(reco::Photon::P4type::regression2);
+  const double oldEcalEnergyError = pho.getCorrectedEnergyError(reco::Photon::P4type::regression2);
+  const double newEcalEnergy = oldEcalEnergy * fscale;
+  const double newEcalEnergyError = std::hypot(oldEcalEnergyError * fscale, fsmear * newEcalEnergy);
+
+  pho.setCorrectedEnergy(reco::Photon::P4type::regression2, newEcalEnergy, newEcalEnergyError, true);
+}
+
+void EnergyScaleCorrector::calibrateElectron(reco::GsfElectron& ele, int hiBin) const {
+  /* skip low pt electrons */
+  if (ele.pt() < min_pt_) {
+    return;
+  }
+
+  auto scale = scale_for(hiBin, ele.superCluster()->eta());
+  auto smear = smear_for(hiBin, ele.superCluster()->eta());
+
+  auto fsmear = rng_->Gaus(1., smear / 91.1876);
+  auto fscale = scale * fsmear;
+
+  math::PtEtaPhiMLorentzVector const corP4(ele.pt() * fscale, ele.eta(), ele.phi(), 0.000511);
+  math::XYZTLorentzVector const newP4(corP4.x(), corP4.y(), corP4.z(), corP4.t());
+
+  ele.correctMomentum(newP4, ele.trackMomentumError(), ele.p4Error(reco::GsfElectron::P4_COMBINATION));
 }
 
 std::pair<float, float> EnergyScaleCorrector::combined_momentum(reco::GsfElectron& ele,
