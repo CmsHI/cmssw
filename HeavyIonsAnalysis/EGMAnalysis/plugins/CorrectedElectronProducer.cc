@@ -40,6 +40,7 @@ private:
   void setRandomSeed(const edm::Event& iEvent, const T& obj, size_t size, size_t index);
 
   bool semiDeterministic_;
+  bool calibrateSuperCluster_;
   std::unique_ptr<TRandom2> semiDeterministicRng_;
   edm::EDGetTokenT<edm::View<T>> electronToken_;
   edm::EDGetTokenT<int> centralityToken_;
@@ -50,6 +51,7 @@ private:
 template <typename T>
 CorrectedElectronProducerT<T>::CorrectedElectronProducerT(const edm::ParameterSet& conf)
     : semiDeterministic_(conf.getParameter<bool>("semiDeterministic")),
+      calibrateSuperCluster_(conf.getParameter<bool>("calibrateSuperCluster")),
       semiDeterministicRng_(new TRandom2()),
       electronToken_(consumes<edm::View<T>>(conf.getParameter<edm::InputTag>("src"))),
       centralityToken_(consumes<int>(conf.getParameter<edm::InputTag>("centrality"))),
@@ -70,6 +72,7 @@ void CorrectedElectronProducerT<T>::fillDescriptions(edm::ConfigurationDescripti
   desc.add<std::string>("correctionFile", std::string());
   desc.add<double>("minPt", 20.0);
   desc.add<bool>("semiDeterministic", true);
+  desc.add<bool>("calibrateSuperCluster", false);
   descriptions.addWithDefaultLabel(desc);
 }
 
@@ -94,7 +97,10 @@ void CorrectedElectronProducerT<T>::produce(edm::Event& iEvent, const edm::Event
     if (semiDeterministic_)
       setRandomSeed(iEvent, ele, electrons->size(), out->size());
 
-    energyCorrector_.calibrate(out->back(), *bin);
+    if (calibrateSuperCluster_)
+      energyCorrector_.calibrateSuperCluster(out->back(), *bin);
+    else
+      energyCorrector_.calibrateElectron(out->back(), *bin);
   }
 
   iEvent.put(std::move(out));
