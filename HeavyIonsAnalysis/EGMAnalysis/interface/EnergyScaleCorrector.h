@@ -2,6 +2,7 @@
 #define HEAVYIONSANALYSIS_EGMANALYSIS_ENERGYSCALECORRECTOR_H
 
 #include "DataFormats/EcalRecHit/interface/EcalRecHitCollections.h"
+#include "DataFormats/EgammaCandidates/interface/Photon.h"
 #include "DataFormats/EgammaCandidates/interface/GsfElectron.h"
 #include "RecoEgamma/EgammaTools/interface/EpCombinationTool.h"
 
@@ -13,10 +14,13 @@
 class EnergyScaleCorrector {
 public:
   EnergyScaleCorrector(std::string const& file, EpCombinationTool const& combinator, TRandom* rng, float min_pt);
+  EnergyScaleCorrector(std::string const& file, TRandom* rng, float min_pt);
 
   ~EnergyScaleCorrector() = default;
 
-  void calibrate(reco::GsfElectron& ele, int hiBin) const;
+  void calibrateSuperCluster(reco::GsfElectron& ele, int hiBin) const;
+  void calibratePhoton(reco::Photon& pho, int hiBin) const;
+  void calibrateElectron(reco::GsfElectron& ele, int hiBin) const;
 
 private:
   template <typename T>

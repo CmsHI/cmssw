@@ -11,7 +11,7 @@ ggHiNtuplizer = cms.EDAnalyzer("ggHiNtuplizer",
     isParticleGun = cms.bool(False),
 
     doEffectiveAreas = cms.bool(True),
-    effAreasConfigFile = cms.FileInPath('HeavyIonsAnalysis/EGMAnalysis/data/EffectiveAreas_94X_v0'),
+    effAreasConfigFile = cms.FileInPath('HeavyIonsAnalysis/EGMAnalysis/data/Run2_2018_PbPb/EffectiveAreas_94X_v0'),
 
     superClusters = cms.InputTag("reducedEgamma:reducedSuperClusters"),
 
