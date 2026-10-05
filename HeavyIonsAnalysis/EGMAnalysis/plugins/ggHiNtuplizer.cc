@@ -181,6 +181,7 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps)
     tree_->Branch("eleEta", &eleEta_);
     tree_->Branch("elePhi", &elePhi_);
     tree_->Branch("eleCharge", &eleCharge_);
+    tree_->Branch("eleTightCharge", &eleTightCharge_);
     tree_->Branch("eleEn", &eleEn_);
 
     tree_->Branch("eleMVAIso", &eleMVAIso_);
@@ -267,6 +268,7 @@ ggHiNtuplizer::ggHiNtuplizer(const edm::ParameterSet& ps)
 
     tree_->Branch("phoE", &phoE_);
     tree_->Branch("phoEt", &phoEt_);
+    tree_->Branch("phoRawEt", &phoRawEt_);
     tree_->Branch("phoEta", &phoEta_);
     tree_->Branch("phoPhi", &phoPhi_);
 
@@ -646,6 +648,7 @@ void ggHiNtuplizer::analyze(const edm::Event& e, const edm::EventSetup& es) {
     eleEta_.clear();
     elePhi_.clear();
     eleCharge_.clear();
+    eleTightCharge_.clear();
     eleEn_.clear();
 
     eleMVAIso_.clear();
@@ -729,6 +732,7 @@ void ggHiNtuplizer::analyze(const edm::Event& e, const edm::EventSetup& es) {
 
     phoE_.clear();
     phoEt_.clear();
+    phoRawEt_.clear();
     phoEta_.clear();
     phoPhi_.clear();
 
@@ -1356,6 +1360,7 @@ void ggHiNtuplizer::fillElectrons(const edm::Event& e, const edm::EventSetup& es
     eleEta_.push_back(ele->eta());
     elePhi_.push_back(ele->phi());
     eleCharge_.push_back(ele->charge());
+    eleTightCharge_.push_back(ele->isGsfCtfScPixChargeConsistent() + ele->isGsfScPixChargeConsistent());
     eleEn_.push_back(ele->energy());
 
     eleMVAIso_.push_back(ele->hasUserFloat("hiMVAIso") ? ele->userFloat("hiMVAIso") : -99);
@@ -1384,7 +1389,9 @@ void ggHiNtuplizer::fillElectrons(const edm::Event& e, const edm::EventSetup& es
     eleRawHoverE_.push_back(ele->full5x5_hcalOverEcal());
     eleRawHoverEBc_.push_back(ele->full5x5_hcalOverEcalBc());
     eleEoverP_.push_back(ele->eSuperClusterOverP());
-    eleEoverPInv_.push_back(1. / ele->ecalEnergy() - 1. / ele->trackMomentumAtVtx().R());
+    auto eOverP = ele->trackMomentumAtVtx().R() > 0. ? (ele->ecalEnergy() / ele->trackMomentumAtVtx().R())
+                                                     : ele->eSuperClusterOverP();
+    eleEoverPInv_.push_back((1. - eOverP) / ele->ecalEnergy());
     eleEcalE_.push_back(ele->ecalEnergy());
     eleRawEcalE_.push_back(ele->hasUserFloat("rawEcalEnergy") ? ele->userFloat("rawEcalEnergy") : ele->ecalEnergy());
     elePAtVtx_.push_back(ele->trackMomentumAtVtx().R());
@@ -1540,6 +1547,7 @@ void ggHiNtuplizer::fillPhotons(const edm::Event& e, const edm::EventSetup& es, 
 
     phoE_.push_back(pho->energy());
     phoEt_.push_back(pho->et());
+    phoRawEt_.push_back(pho->hasUserFloat("rawEt") ? pho->userFloat("rawEt") : pho->et());
     phoEta_.push_back(pho->eta());
     phoPhi_.push_back(pho->phi());
 

@@ -149,6 +149,7 @@ void HLTMuTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
           if (genPtl.numberOfMothers() > 0) {
             vector<int> momid;
             vector<int>::iterator it_jpsi, it_ups;
+            momid.reserve(genPtl.numberOfMothers());
             for (unsigned int mom = 0; mom < genPtl.numberOfMothers(); mom++) {
               //cout << "mom pid: " << genPtl.mother(mom)->pdgId() << endl;
               momid.push_back(genPtl.mother(mom)->pdgId());
