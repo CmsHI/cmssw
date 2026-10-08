@@ -89,12 +89,12 @@ void CorrectedEGammaProducerT<T>::calibrateObject(reco::GsfElectron& ele, double
 template <typename T>
 void CorrectedEGammaProducerT<T>::calibrateObject(reco::Photon& pho, double cent, bool isMC) const {
   const double aeta = std::abs(pho.superCluster()->eta());
-  const auto fsmear = isMC ? rng_->Gaus(1., cset_->at("PhotonSmear")->evaluate({"PhoEt", "nominal", aeta, cent})) : 1.0;
-  const auto fscale =
-      fsmear * cset_->at("PhotonScale")->evaluate({"PhoEt", isMC ? "mc" : "data", "nominal", aeta, cent});
+  const auto smear = isMC ? cset_->at("PhotonSmear")->evaluate({"PhoEt", "nominal", aeta, cent}) : 0.0;
+  const auto scale = cset_->at("PhotonScale")->evaluate({"PhoEt", isMC ? "mc" : "data", "nominal", aeta, cent});
+  const auto fscale = scale * (isMC ? rng_->Gaus(1., smear) : 1.0);
   const auto corEnergy = fscale * pho.getCorrectedEnergy(reco::Photon::P4type::regression2);
   const auto corEnergyError =
-      std::hypot(fscale * pho.getCorrectedEnergyError(reco::Photon::P4type::regression2), fsmear * corEnergy);
+      std::hypot(fscale * pho.getCorrectedEnergyError(reco::Photon::P4type::regression2), scale * smear * corEnergy);
   pho.setCorrectedEnergy(reco::Photon::P4type::regression2, corEnergy, corEnergyError, true);
 }
 
